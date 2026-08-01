@@ -55,6 +55,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='Ser paciente hoy',
             gratitud_1='Por el café',
         )
@@ -92,6 +93,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='Ser paciente hoy',
             gratitud_1='Por el café',
             que_ha_ido_bien='Entrenamiento bien',
@@ -118,6 +120,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='test',
             gratitud_1='test',
         )
@@ -153,6 +156,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='test',
         )
         response = self.client.get(reverse('diario:dashboard_diario'))
@@ -227,6 +231,7 @@ class DiarioEstadoFuncionTests(TestCase):
         prosoche = ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='test',
         )
         estado = calcular_estado_diario_hoy(prosoche)
@@ -239,6 +244,7 @@ class DiarioEstadoFuncionTests(TestCase):
         prosoche = ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
             fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='test',
             que_ha_ido_bien='test',
         )

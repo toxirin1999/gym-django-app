@@ -93,6 +93,37 @@ def _llamar_haiku(prompt: str, max_tokens: int = 120, _modulo: str = 'auto') -> 
     return texto
 
 
+def generar_respuesta_breve_apertura(*, cliente, estado_animo: int, direccion: str = '',
+                                     apoyo: str = '', molestia_zona: str = '',
+                                     molestia_nota: str = '', soberania: str = '') -> str:
+    """Voz breve de JOI tras la apertura; no crea otra presencia ni otro mensaje diario."""
+    animo = dict(((1, 'bajo'), (2, 'flojo'), (4, 'bien'), (5, 'pleno'))).get(
+        estado_animo, 'registrado'
+    )
+    contexto_trigger = (
+        "Responde al registro de apertura en una sola frase breve y concreta (máximo 28 "
+        "palabras). Reconoce una señal real; no hagas otra pregunta ni repitas la apertura "
+        "matutina previa. No inventes datos.\n"
+        f"Ánimo: {animo}. Dirección: {direccion or 'sin indicar'}. "
+        f"Apoyo: {apoyo or 'sin indicar'}. Molestia: {molestia_zona or 'sin indicar'} "
+        f"{molestia_nota or ''}. Acto de soberanía: {soberania or 'sin indicar'}."
+    )
+    if not cliente or not getattr(cliente, 'user_id', None):
+        return ''
+    prompt = "\n\n".join(filter(None, [
+        _bloque_narrativa(cliente.user),
+        _bloque_manual(cliente.user, incluir_narrativa=False),
+        contexto_trigger,
+    ]))
+    try:
+        texto = _llamar_haiku(prompt, max_tokens=60, _modulo='diario').strip()
+        if texto:
+            return texto
+    except Exception:
+        logger.exception('[JOI] No se pudo generar la respuesta breve de apertura')
+    return ''
+
+
 def construir_contexto(cliente) -> dict:
     """
     Facade: agrega los context builders por dominio en un único dict.
@@ -2500,7 +2531,7 @@ def _sintetizador_contexto_vital(user) -> dict:
                 g for g in [e.gratitud_1, e.gratitud_2, e.gratitud_3,
                              e.gratitud_4, e.gratitud_5] if g
             ]
-            if e.persona_quiero_ser or gratitudes or e.estado_animo:
+            if e.apertura_confirmada_en:
                 resultado['intencion_am'].append({
                     'fecha': str(e.fecha),
                     'quiero_ser': e.persona_quiero_ser or '',

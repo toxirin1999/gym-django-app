@@ -3,17 +3,7 @@ def _tiene_contenido(valor):
 
 
 def tiene_apertura_manana(prosoche):
-    if prosoche is None:
-        return False
-    campos = [
-        prosoche.persona_quiero_ser,
-        prosoche.gratitud_1,
-        prosoche.gratitud_2,
-        prosoche.gratitud_3,
-        prosoche.gratitud_4,
-        prosoche.gratitud_5,
-    ]
-    return any(_tiene_contenido(c) for c in campos)
+    return bool(prosoche and prosoche.apertura_confirmada_en)
 
 
 def tiene_cierre_noche(prosoche):

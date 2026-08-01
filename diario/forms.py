@@ -2,7 +2,28 @@
 
 from django import forms
 from django.core.exceptions import ValidationError
-from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto
+from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto, SeguimientoVires
+
+
+class AperturaDiariaForm(forms.Form):
+    ESTADOS_ANIMO = [(1, 'Bajo'), (2, 'Flojo'), (4, 'Bien'), (5, 'Pleno')]
+
+    estado_animo = forms.TypedChoiceField(
+        choices=ESTADOS_ANIMO, coerce=int, empty_value=None, required=True
+    )
+    intencion = forms.CharField(required=False, max_length=1000, strip=True)
+    gratitud_1 = forms.CharField(required=False, max_length=200, strip=True)
+    soberania = forms.CharField(required=False, max_length=200, strip=True)
+    molestia_zona = forms.ChoiceField(
+        required=False, choices=[('', 'Sin seleccionar'), *SeguimientoVires.MOLESTIA_ZONAS]
+    )
+    molestia_nota = forms.CharField(required=False, max_length=500, strip=True)
+
+    def clean(self):
+        cleaned = super().clean()
+        if cleaned.get('molestia_zona') in ('', 'ninguna'):
+            cleaned['molestia_nota'] = ''
+        return cleaned
 
 
 class PersonaImportanteForm(forms.ModelForm):

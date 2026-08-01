@@ -258,16 +258,17 @@ textarea.intencion::placeholder { color: var(--muted); }
 
     <form method="post" id="apertura-form">
         {% csrf_token %}
-        <input type="hidden" name="estado_animo" id="estado_animo_input" value="{{ entrada.estado_animo|default:4 }}">
+        {% if form.errors %}<div class="form-errors" role="alert">Corrige los campos señalados antes de continuar.</div>{% endif %}
+        <input type="hidden" name="estado_animo" id="estado_animo_input" value="{% if entrada.apertura_confirmada_en %}{{ entrada.estado_animo }}{% endif %}">
 
         <!-- Estado de ánimo (4 opciones, sin Neutral) -->
         <div class="section-card">
             <div class="section-label">¿Cómo estás?</div>
             <div class="mood-row">
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Bajo</span></button>
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 4 or entrada.estado_animo == 3 or not entrada.estado_animo %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
-                <button type="button" class="mood-btn {% if entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Bajo</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 4 %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
             </div>
         </div>
 
@@ -304,11 +305,16 @@ textarea.intencion::placeholder { color: var(--muted); }
         <div class="section-card">
             <div class="section-label">Acto de Soberanía</div>
             <p class="section-subtitle">Algo que harás solo para ti. No para rendir. No para demostrar.</p>
-            <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy...">
+            <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy..." value="{{ soberania_actual }}" maxlength="200">
         </div>
 
         <button type="submit" class="submit-btn">Comenzar el día</button>
     </form>
+    <div id="respuesta-joi-apertura" class="joi-block" role="status" aria-live="polite" hidden>
+        <div class="joi-label">JOI</div>
+        <div class="joi-msg"></div>
+    </div>
+    <div id="confirmacion-apertura" class="section-card" role="status" aria-live="polite" hidden></div>
 </div>
 
 <script>
@@ -383,8 +389,19 @@ document.getElementById('apertura-form').addEventListener('submit', function(e) 
             }).catch(err => console.log('JOI refresh no critical:', err));
         }
         if (d.success) {
-            // Guardado con éxito → redirigir al dashboard
-            setTimeout(() => window.location.href = "{% url 'diario:dashboard_diario' %}", 500);
+            const respuesta = document.getElementById('respuesta-joi-apertura');
+            const confirmacion = document.getElementById('confirmacion-apertura');
+            if (d.respuesta_joi) {
+                // Solo se atribuye voz a JOI cuando el sistema generó texto real.
+                respuesta.querySelector('.joi-msg').textContent = d.respuesta_joi;
+                respuesta.hidden = false;
+            } else {
+                confirmacion.textContent = d.confirmacion;
+                confirmacion.hidden = false;
+            }
+            document.getElementById('apertura-form').hidden = true;
+            (d.respuesta_joi ? respuesta : confirmacion).scrollIntoView({behavior: 'smooth', block: 'center'});
+            setTimeout(() => window.location.href = "{% url 'diario:dashboard_diario' %}", 2200);
         }
     })
     .catch(() => this.submit()); // Fallback: traditional POST

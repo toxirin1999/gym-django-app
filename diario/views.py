@@ -3081,55 +3081,118 @@ def presencia_apertura(request):
     hoy = timezone.localdate()
     mes_nombre = hoy.strftime('%B')
     año = hoy.year
+    response_status = 200
 
-    prosoche_mes, _ = ProsocheMes.objects.get_or_create(
-        usuario=request.user, mes=mes_nombre, año=año
-    )
-    entrada, _ = ProsocheDiario.objects.get_or_create(
-        prosoche_mes=prosoche_mes, fecha=hoy
-    )
-    vires, _ = SeguimientoVires.objects.get_or_create(
-        usuario=request.user, fecha=hoy
-    )
+    from diario.forms import AperturaDiariaForm
 
-    if request.method == 'POST':
-        entrada.persona_quiero_ser = request.POST.get('intencion', '')
-        entrada.estado_animo = int(request.POST.get('estado_animo', 4))
-        entrada.gratitud_1 = request.POST.get('gratitud_1', '')
-        soberania_text = request.POST.get('soberania', '').strip()
-        if soberania_text:
-            entrada.tareas_dia = [{"texto": soberania_text, "completada": False, "es_soberania": True}]
-        else:
-            entrada.tareas_dia = []
-        entrada.save()
+    entrada = ProsocheDiario.objects.filter(
+        prosoche_mes__usuario=request.user, fecha=hoy
+    ).first()
+    vires = SeguimientoVires.objects.filter(usuario=request.user, fecha=hoy).first()
 
-        molestia_zona = request.POST.get('molestia_zona', '').strip()
-        molestia_nota = request.POST.get('molestia_nota', '').strip()
-        if molestia_zona:
-            vires.molestia_zona = molestia_zona
-        if molestia_nota:
-            vires.molestia_nota = molestia_nota
-        vires.save()
+    tareas = entrada.tareas_dia if entrada else []
+    soberania_actual = next((
+        (t.get('texto') or '') for t in tareas
+        if isinstance(t, dict) and t.get('es_soberania')
+    ), '')
 
-        # Si es AJAX, devuelve JSON con el nuevo estado
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            from diario.services.estado_diario import calcular_estado_diario_hoy
-            estado_actual = calcular_estado_diario_hoy(entrada)
-            return JsonResponse({
-                'success': True,
-                'estado': estado_actual['estado'],
-                'titulo': 'Día abierto',
-                'detalle': 'La apertura está hecha. Falta cerrar el día.',
-                'refresh_joi': True,  # Signal frontend to update JOI estado
-            })
-
-        messages.success(request, 'Día comenzado.')
-        return redirect('clientes:mockup_demo')
-
+    form = AperturaDiariaForm(request.POST or None)
     try:
         cliente = request.user.cliente_perfil
     except Exception:
         cliente = None
+
+    if request.method == 'POST':
+        if not form.is_valid():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': False,
+                    'errors': form.errors.get_json_data(),
+                }, status=400)
+            response_status = 400
+            entrada = entrada or ProsocheDiario(fecha=hoy)
+            vires = vires or SeguimientoVires(usuario=request.user, fecha=hoy)
+        else:
+            from django.db import transaction
+            from joi.services import generar_respuesta_breve_apertura
+
+            datos = form.cleaned_data
+            with transaction.atomic():
+                prosoche_mes, _ = ProsocheMes.objects.get_or_create(
+                    usuario=request.user, mes=mes_nombre, año=año
+                )
+                entrada, _ = ProsocheDiario.objects.get_or_create(
+                    prosoche_mes=prosoche_mes, fecha=hoy
+                )
+                entrada.persona_quiero_ser = datos['intencion']
+                entrada.estado_animo = datos['estado_animo']
+                entrada.gratitud_1 = datos['gratitud_1']
+
+                tareas_no_soberanas = [
+                    t for t in (entrada.tareas_dia or [])
+                    if not (isinstance(t, dict) and t.get('es_soberania'))
+                ]
+                soberania_text = datos['soberania']
+                if soberania_text:
+                    tareas_no_soberanas.append({
+                        'texto': soberania_text,
+                        'completada': False,
+                        'es_soberania': True,
+                    })
+                entrada.tareas_dia = tareas_no_soberanas
+                entrada.apertura_confirmada_en = timezone.now()
+                entrada.respuesta_joi_apertura = ''
+
+                molestia_zona = datos['molestia_zona']
+                vires, _ = SeguimientoVires.objects.get_or_create(
+                    usuario=request.user, fecha=hoy
+                )
+                vires.molestia_zona = molestia_zona
+                vires.molestia_nota = datos['molestia_nota']
+                vires.save(update_fields=['molestia_zona', 'molestia_nota'])
+
+                entrada.save()
+
+            # La apertura ya está confirmada. La red/IA queda fuera de la transacción
+            # y nunca puede revertir ni retrasar locks sobre los datos del ritual.
+            respuesta_joi = ''
+            try:
+                respuesta_joi = generar_respuesta_breve_apertura(
+                    cliente=cliente,
+                    estado_animo=datos['estado_animo'],
+                    direccion=datos['intencion'],
+                    apoyo=datos['gratitud_1'],
+                    molestia_zona=molestia_zona,
+                    molestia_nota=datos['molestia_nota'],
+                    soberania=soberania_text,
+                ) or ''
+            except Exception:
+                logger.exception('No se pudo generar la respuesta JOI de apertura')
+            if respuesta_joi:
+                ProsocheDiario.objects.filter(pk=entrada.pk).update(
+                    respuesta_joi_apertura=respuesta_joi
+                )
+                entrada.respuesta_joi_apertura = respuesta_joi
+
+            # Si es AJAX, devuelve JSON con el nuevo estado y la voz breve de JOI.
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                from diario.services.estado_diario import calcular_estado_diario_hoy
+                estado_actual = calcular_estado_diario_hoy(entrada)
+                return JsonResponse({
+                    'success': True,
+                    'estado': estado_actual['estado'],
+                    'titulo': 'Día abierto',
+                    'detalle': 'La apertura está hecha. Falta cerrar el día.',
+                    'respuesta_joi': respuesta_joi,
+                    'confirmacion': 'Apertura guardada.',
+                    'refresh_joi': True,
+                })
+
+            messages.success(request, 'Día comenzado.')
+            return redirect('clientes:mockup_demo')
+
+    entrada = entrada or ProsocheDiario(fecha=hoy)
+    vires = vires or SeguimientoVires(usuario=request.user, fecha=hoy)
 
     pregunta_identidad = None
     semaforo = None
@@ -3190,6 +3253,8 @@ def presencia_apertura(request):
     context = {
         'entrada': entrada,
         'vires': vires,
+        'form': form,
+        'soberania_actual': soberania_actual,
         'pregunta_identidad': pregunta_identidad,
         'apertura_con_pregunta': apertura_con_pregunta,
         'semaforo': semaforo,
@@ -3197,7 +3262,7 @@ def presencia_apertura(request):
         'hoy': hoy,
         'radar_personas': radar_personas,
     }
-    return render(request, 'diario/presencia_apertura.html', context)
+    return render(request, 'diario/presencia_apertura.html', context, status=response_status)
 
 
 @login_required

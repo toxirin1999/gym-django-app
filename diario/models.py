@@ -533,6 +533,15 @@ class ProsocheDiario(models.Model):
         help_text="Timestamp de generación de la respuesta de cierre"
     )
 
+    apertura_confirmada_en = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Momento en que la apertura diaria quedó persistida con éxito"
+    )
+    respuesta_joi_apertura = models.TextField(
+        blank=True,
+        help_text="Respuesta breve de JOI al registro consciente de la apertura"
+    )
+
     # Fase 2 del CONTRATO_ANALIZADOR_GESTOS.md — se escribe únicamente desde
     # persistir_nucleo_cierre() (diario/services/cierre_service.py), nunca
     # por la mera apertura de la página de cierre. Migración conservadora:
