@@ -8549,9 +8549,18 @@ def briefing_entrenamiento(request, cliente_id):
 
     # Salto 1 → 2: leer ejercicios del cache de transporte (fix 414 URI Too Large).
     # El calendario los guardó con clave determinista al procesar el mes AJAX.
-    # Fallback: _calcular_ejercicios_dia los reconstruye sin request si el TTL expiró.
+    # Fallback 1: el dashboard enlaza aquí con '?ejercicios=' (JSON del próximo
+    #   entrenamiento) cuando el usuario nunca pasó por el calendario en esta sesión.
+    # Fallback 2: _calcular_ejercicios_dia los reconstruye sin request si todo lo anterior falla.
     _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
     ejercicios = cache.get(_cache_key_dia)
+    if ejercicios is None:
+        _ejercicios_get = request.GET.get('ejercicios', '')
+        if _ejercicios_get:
+            try:
+                ejercicios = json.loads(_ejercicios_get)
+            except Exception:
+                ejercicios = None
     if ejercicios is None:
         ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 

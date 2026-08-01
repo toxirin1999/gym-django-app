@@ -14,6 +14,7 @@ El fix: cache de transporte con claves cortas en vez de JSON en la URL.
   vista_entrenamiento_activo con fallback determinista.
 """
 
+import json
 from datetime import date
 from unittest.mock import patch, MagicMock
 
@@ -153,6 +154,35 @@ class FallbackCacheMiss_EntrenoActivoTests(_Base):
         })
         self.assertNotEqual(resp.status_code, 500)
         self.assertIn(resp.status_code, (200, 302))
+
+
+# ---------------------------------------------------------------------------
+# Test 3b: dashboard → briefing sin cache de calendario (botones "EMPEZAR
+#          ENTRENAMIENTO") llevan '?ejercicios=<json>'. Antes del fix, ese
+#          parámetro se ignoraba y _calcular_ejercicios_dia (sin plan en cache)
+#          devolvía [], vaciando la sesión aunque el dashboard mostrara el
+#          día correcto.
+# ---------------------------------------------------------------------------
+
+class FallbackGetEjercicios_BriefingTests(_Base):
+    """briefing_entrenamiento usa '?ejercicios=' del dashboard si el cache de calendario está vacío."""
+
+    def test_ejercicios_de_get_llegan_al_contexto_cuando_no_hay_cache_ni_plan(self):
+        ejercicios_dashboard = [
+            {'nombre': 'Peso Muerto', 'series': 4, 'repeticiones': 6,
+             'peso_kg': 120, 'rpe_objetivo': 8,
+             'tipo_ejercicio': 'compuesto_principal'},
+        ]
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+        resp = self.c.get(url, {
+            'fecha': self.fecha_str,
+            'rutina_nombre': 'Día 3 - Hipertrofia',
+            'ejercicios': json.dumps(ejercicios_dashboard),
+        })
+        self.assertEqual(resp.status_code, 200)
+        nombres = [e.get('nombre') for e in resp.context.get('ejercicios', [])]
+        self.assertIn('Peso Muerto', nombres,
+                       msg="El ejercicio pasado por '?ejercicios=' del dashboard no llegó al contexto del briefing")
 
 
 # ---------------------------------------------------------------------------
