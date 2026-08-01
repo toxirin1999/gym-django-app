@@ -132,6 +132,104 @@ def _manual_activo_equivalente(usuario, texto):
     )
 
 
+_PERSONA_SNAPSHOT_FIELDS = (
+    'estado', 'veces_mencionada', 'menciones_desde_descarte',
+)
+_MANUAL_SNAPSHOT_FIELDS = (
+    'entrada', 'origen', 'tipo', 'confianza', 'estado', 'activa',
+    'fuente_mensaje_id', 'ultima_evidencia', 'notas_revision',
+    'hipotesis_contraria',
+)
+
+
+def _snapshot(instance, fields):
+    return {field: getattr(instance, field) for field in fields}
+
+
+def _coincide_snapshot(instance, snapshot):
+    return all(getattr(instance, field, object()) == value for field, value in snapshot.items())
+
+
+def _desactivar_manual_si_seguro(usuario, item, *, legacy=False):
+    from joi.models import ManualDavid
+
+    manual_id = item if legacy else item.get('id')
+    manual = ManualDavid.objects.select_for_update().filter(pk=manual_id, user=usuario).first()
+    if not manual:
+        return
+    if legacy:
+        seguro = (
+            manual.origen == 'patron_detectado'
+            and manual.activa and manual.estado == 'activa'
+            and manual.ultima_evidencia is None and not manual.notas_revision
+        )
+    else:
+        seguro = item.get('created') and _coincide_snapshot(manual, item.get('after') or {})
+    if seguro:
+        manual.activa = False
+        manual.estado = 'descartada'
+        manual.save(update_fields=['activa', 'estado'])
+
+
+def _retraer_resultado(usuario, resultado):
+    """Retira solo las proyecciones atribuibles a un resultado completado."""
+    resultado = resultado or {}
+    ledger = resultado.get('ledger') if resultado.get('schema_version') == 2 else None
+
+    reflexiones = ledger.get('reflexiones', []) if ledger else resultado.get('reflexiones', [])
+    reflexion_ids = [item.get('id') if isinstance(item, dict) else item for item in reflexiones]
+    ReflexionLibre.objects.filter(usuario=usuario, pk__in=reflexion_ids).delete()
+
+    interacciones = ledger.get('interacciones', []) if ledger else resultado.get('interacciones', [])
+    interaccion_ids = [item.get('id') if isinstance(item, dict) else item for item in interacciones]
+    Interaccion.objects.filter(usuario=usuario, pk__in=interaccion_ids).delete()
+
+    sombras = ledger.get('sombras', []) if ledger else resultado.get('sombras', [])
+    sombra_ids = [item.get('id') if isinstance(item, dict) else item for item in sombras]
+    InteraccionSombra.objects.filter(
+        persona_interina__usuario=usuario, pk__in=sombra_ids,
+    ).delete()
+
+    manuales = ledger.get('manual', []) if ledger else resultado.get('manual', [])
+    for item in manuales:
+        _desactivar_manual_si_seguro(usuario, item, legacy=ledger is None)
+
+    # En legacy no hay estado anterior fiable: no se infieren contadores.
+    if not ledger:
+        return
+    for item in reversed(ledger.get('personas_interinas', [])):
+        persona = PersonaInterina.objects.select_for_update().filter(
+            pk=item.get('id'), usuario=usuario,
+        ).first()
+        if not persona or not _coincide_snapshot(persona, item.get('after') or {}):
+            continue
+        if item.get('created'):
+            if persona.persona_importante_id is None and not persona.interacciones.exists():
+                persona.delete()
+        else:
+            before = item.get('before') or {}
+            for field in _PERSONA_SNAPSHOT_FIELDS:
+                if field in before:
+                    setattr(persona, field, before[field])
+            persona.save(update_fields=list(before.keys()))
+
+
+def _retraer_version_anterior(op, usuario):
+    anterior = CierreNocturnoOperacion.objects.select_for_update().filter(
+        entrada_id=op.entrada_id,
+        estado='completed',
+        result_version__lt=op.result_version,
+    ).order_by('-result_version').first()
+    if not anterior:
+        return
+    _retraer_resultado(usuario, anterior.resultado)
+    historico = dict(anterior.resultado or {})
+    historico['retracted_by_version'] = op.result_version
+    anterior.resultado = historico
+    anterior.estado = 'superseded'
+    anterior.save(update_fields=['resultado', 'estado', 'updated_at'])
+
+
 def ejecutar_enriquecimiento_cierre(operacion_id):
     """IA fuera de locks; la proyección final se materializa una sola vez."""
     with transaction.atomic():
@@ -182,7 +280,12 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             op.save(update_fields=['estado', 'resultado', 'completed_at', 'updated_at'])
             return op.resultado
 
+        _retraer_version_anterior(op, usuario)
         ids = {'reflexiones': [], 'manual': [], 'interacciones': [], 'sombras': []}
+        ledger = {
+            'reflexiones': [], 'manual': [], 'interacciones': [],
+            'sombras': [], 'personas_interinas': [],
+        }
         etiquetas = ['cierre_dia', *(parseo.get('etiquetas') or [])]
         categoria_estoica = (enriquecido.get('categoria_estoica') or '').strip()
         if categoria_estoica and categoria_estoica not in etiquetas:
@@ -194,6 +297,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 etiquetas=','.join(etiquetas),
             )
             ids['reflexiones'].append(reflexion.pk)
+            ledger['reflexiones'].append({'id': reflexion.pk})
         simbiosis_respuesta = payload.get('simbiosis_respuesta')
         if simbiosis_respuesta:
             reflexion = ReflexionLibre.objects.create(
@@ -201,12 +305,17 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 titulo='Reflexión Simbiosis', etiquetas='simbiosis_respuesta',
             )
             ids['reflexiones'].append(reflexion.pk)
+            ledger['reflexiones'].append({'id': reflexion.pk})
 
         from joi.models import ManualDavid
         micro = (enriquecido.get('micro_verdad') or '').strip()
         if len(micro) > 5 and not _manual_activo_equivalente(usuario, micro):
             manual = ManualDavid.objects.create(user=usuario, entrada=micro, origen='patron_detectado')
             ids['manual'].append(manual.pk)
+            ledger['manual'].append({
+                'id': manual.pk, 'created': True,
+                'after': _snapshot(manual, _MANUAL_SNAPSHOT_FIELDS),
+            })
         tipos = {choice[0] for choice in Interaccion.TIPO_INTERACCION_CHOICES}
         for item in enriquecido.get('interacciones') or []:
             nombre = (item.get('persona') or '').strip()
@@ -222,6 +331,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 )
                 interaccion.personas.add(persona)
                 ids['interacciones'].append(interaccion.pk)
+                ledger['interacciones'].append({'id': interaccion.pk})
             else:
                 interina = PersonaInterina.objects.select_for_update().filter(
                     usuario=usuario, nombre__iexact=nombre,
@@ -229,6 +339,10 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 creada = interina is None
                 if creada:
                     interina = PersonaInterina.objects.create(usuario=usuario, nombre=nombre)
+                persona_ledger = {
+                    'id': interina.pk, 'created': creada,
+                    'before': None if creada else _snapshot(interina, _PERSONA_SNAPSHOT_FIELDS),
+                }
                 if not creada:
                     interina.veces_mencionada += 1
                     if interina.estado == 'descartada':
@@ -242,6 +356,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                     tipo_interaccion=tipo, friccion_no=payload['friccion_no'],
                 )
                 ids['sombras'].append(sombra.pk)
+                ledger['sombras'].append({'id': sombra.pk, 'persona_interina_id': interina.pk})
                 if creada:
                     nota = (
                         f"Entidad nueva detectada: '{nombre}'. "
@@ -252,6 +367,11 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                             user=usuario, entrada=nota, origen='patron_detectado',
                         )
                         ids['manual'].append(manual.pk)
+                        ledger['manual'].append({
+                            'id': manual.pk, 'created': True,
+                            'after': _snapshot(manual, _MANUAL_SNAPSHOT_FIELDS),
+                            'persona_interina_id': interina.pk,
+                        })
                 if (
                     interina.estado == 'descartada'
                     and interina.menciones_desde_descarte >= 2
@@ -262,9 +382,13 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 elif interina.estado == 'sombra' and interina.veces_mencionada >= 2:
                     interina.estado = 'radar'
                     interina.save(update_fields=['estado'])
+                interina.refresh_from_db()
+                persona_ledger['after'] = _snapshot(interina, _PERSONA_SNAPSHOT_FIELDS)
+                ledger['personas_interinas'].append(persona_ledger)
 
         resultado = {
-            **ids, 'respuesta_joi': respuesta or '',
+            **ids, 'schema_version': 2, 'ledger': ledger,
+            'respuesta_joi': respuesta or '',
             'propuesta_habito': enriquecido.get('propuesta_habito'),
             'simbiosis': {
                 'personas': personas,

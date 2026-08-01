@@ -1,5 +1,6 @@
 import json
 import uuid
+from datetime import timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -125,10 +126,10 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
         self.user = User.objects.create_user('cierre-proyecciones')
         self.hoy = timezone.localdate()
 
-    def _operacion(self, texto, expected=0):
+    def _operacion(self, texto, expected=0, fecha=None):
         resultado = ejecutar_cierre_nocturno(
             usuario=self.user,
-            fecha=self.hoy,
+            fecha=fecha or self.hoy,
             payload={
                 'reflexion_libre': texto,
                 'friccion_no': 3,
@@ -167,7 +168,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
 
         primera = self._operacion('Primera mención')
         self._enriquecer(primera, nombre='Ana', micro='')
-        segunda = self._operacion('Segunda mención', expected=1)
+        segunda = self._operacion('Segunda mención', fecha=self.hoy + timedelta(days=1))
         self._enriquecer(segunda, nombre='ana', micro='')
 
         self.assertEqual(PersonaInterina.objects.count(), 1)
@@ -193,7 +194,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
         self.assertEqual(interina.estado, 'descartada')
         self.assertEqual(interina.menciones_desde_descarte, 1)
 
-        segunda = self._operacion('Marta otra vez', expected=1)
+        segunda = self._operacion('Marta otra vez', fecha=self.hoy + timedelta(days=1))
         self._enriquecer(segunda, nombre='MARTA', micro='')
         interina.refresh_from_db()
         self.assertEqual(interina.estado, 'sombra')
