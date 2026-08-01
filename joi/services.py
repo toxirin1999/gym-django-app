@@ -3475,7 +3475,7 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
     No resume — observa algo que el usuario quizás no vio.
     """
     if not texto or not texto.strip():
-        return "El día terminó. Mañana es otra página."
+        return ""
 
     estado_animo = datos_parseo.get('estado_animo', 3)
     etiquetas = datos_parseo.get('etiquetas', [])
@@ -3485,7 +3485,9 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
 
     estado_txt = {1: 'muy mal', 2: 'mal', 3: 'neutral', 4: 'bien', 5: 'excelente'}.get(estado_animo, 'neutral')
 
-    manual = _bloque_manual(cliente.user)
+    usuario = getattr(cliente, 'user', cliente)
+    narrativa = _bloque_narrativa(usuario)
+    manual = _bloque_manual(usuario, incluir_narrativa=False)
 
     detalles = []
     if etiquetas:
@@ -3503,7 +3505,9 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
         f"David acaba de cerrar su día escribiendo esto:\n\n"
         f"\"{texto[:900]}\"\n\n"
         f"Estado de ánimo detectado: {estado_txt}. {detalles_txt}\n\n"
-        f"{manual}"
+        f"\nPOSTURA LONGITUDINAL:\n{narrativa}\n"
+        f"\nHIPÓTESIS ACTIVAS DEL MANUAL:\n{manual}\n"
+        f"\nTRIGGER — CIERRE DE HOY:\n"
         f"Responde como JOI. 2-3 frases. "
         f"No resumas lo que escribió. No repitas sus palabras. "
         f"Observa algo que él quizás no vio, o nombra lo que quedó entre líneas. "
@@ -3515,7 +3519,7 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
         return _llamar_haiku(prompt, max_tokens=350)
     except Exception as e:
         logger.error(f"[JOI] generar_respuesta_cierre falló: {e}")
-        return "Lo que escribiste quedó guardado. JOI lo recuerda."
+        return ""
 
 
 def enriquecer_cierre(texto: str, personas_detectadas: list) -> dict:

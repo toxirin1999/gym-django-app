@@ -550,6 +550,12 @@ class ProsocheDiario(models.Model):
         null=True, blank=True,
         help_text="Momento en que el núcleo del cierre diario quedó persistido con éxito"
     )
+    estado_animo_noche = models.IntegerField(
+        choices=[(1, 1), (2, 2), (4, 4), (5, 5)], null=True, blank=True,
+        help_text="Estado de ánimo elegido conscientemente al cierre",
+    )
+    cierre_version = models.PositiveIntegerField(default=0)
+    cierre_payload_hash = models.CharField(max_length=64, null=True, blank=True)
 
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_actualizacion = models.DateTimeField(auto_now=True)
@@ -610,6 +616,35 @@ class ProsocheDiario(models.Model):
         total += 1
 
         return round((completados / total) * 100) if total > 0 else 0
+
+
+class CierreNocturnoOperacion(models.Model):
+    ESTADOS = [
+        ('pending', 'Pendiente'), ('processing', 'Procesando'),
+        ('completed', 'Completada'), ('failed', 'Fallida'),
+        ('superseded', 'Reemplazada'), ('noop', 'Sin cambios'),
+    ]
+    entrada = models.ForeignKey(
+        ProsocheDiario, on_delete=models.CASCADE, related_name='operaciones_cierre'
+    )
+    idempotency_key = models.UUIDField()
+    expected_version = models.PositiveIntegerField()
+    result_version = models.PositiveIntegerField(null=True, blank=True)
+    payload_hash = models.CharField(max_length=64)
+    estado = models.CharField(max_length=16, choices=ESTADOS, default='pending')
+    enrichment_payload = models.JSONField(default=dict, blank=True)
+    resultado = models.JSONField(default=dict, blank=True)
+    error = models.TextField(blank=True)
+    processing_started_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['entrada', 'idempotency_key'], name='uniq_cierre_entrada_key'),
+            models.UniqueConstraint(fields=['entrada', 'result_version'], name='uniq_cierre_entrada_version'),
+        ]
 
 
 class ProsocheHabito(models.Model):

@@ -50,6 +50,7 @@ class RevisionSemanalJOITests(TestCase):
         ProsocheDiario.objects.create(
             prosoche_mes=mes, fecha=date(2026, 7, 22),
             persona_quiero_ser='Ser paciente', que_ha_ido_bien='Escuché con calma',
+            cierre_confirmado_en=timezone.now(),
         )
         datos = agregar_semana(self.user, inicio=date(2026, 7, 20), fin=date(2026, 7, 26))
         self.assertTrue(datos['hay_senales'])
@@ -75,7 +76,10 @@ class RevisionSemanalJOITests(TestCase):
     def test_fallo_no_finge_exito_y_permite_reintento(self, generar):
         inicio, fin = date(2026, 7, 20), date(2026, 7, 26)
         mes = ProsocheMes.objects.create(usuario=self.user, mes='7', año=2026)
-        ProsocheDiario.objects.create(prosoche_mes=mes, fecha=date(2026, 7, 22), que_ha_ido_bien='Algo')
+        ProsocheDiario.objects.create(
+            prosoche_mes=mes, fecha=date(2026, 7, 22), que_ha_ido_bien='Algo',
+            cierre_confirmado_en=timezone.now(),
+        )
         generar.side_effect = [None, MensajeJOI.objects.create(
             user=self.user, trigger='resumen_semanal', mensaje='Segundo intento', contexto={}
         )]

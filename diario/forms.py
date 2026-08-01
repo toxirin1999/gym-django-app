@@ -5,6 +5,40 @@ from django.core.exceptions import ValidationError
 from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto, SeguimientoVires
 
 
+class CierreDiarioForm(forms.Form):
+    reflexion_libre = forms.CharField(required=False, max_length=5000, strip=True)
+    friccion_no = forms.TypedChoiceField(
+        choices=[(i, str(i)) for i in range(1, 6)], coerce=int, required=True,
+    )
+    cuerpo_cierre = forms.ChoiceField(
+        required=False, choices=[('', 'Sin seleccionar'), *SeguimientoVires.CUERPO_CIERRE_CHOICES]
+    )
+    estado_animo_noche = forms.TypedChoiceField(
+        choices=[(1, 'Bajo'), (2, 'Flojo'), (4, 'Bien'), (5, 'Pleno')],
+        coerce=int, required=True,
+    )
+    habitos_completados = forms.JSONField(required=False, initial=list)
+    simbiosis_respuesta = forms.CharField(required=False, max_length=5000, strip=True)
+    simbiosis_pregunta = forms.CharField(required=False, max_length=5000, strip=True)
+    idempotency_key = forms.UUIDField(required=True)
+    expected_version = forms.IntegerField(required=True, min_value=0)
+
+    def __init__(self, *args, usuario=None, **kwargs):
+        self.usuario = usuario
+        super().__init__(*args, **kwargs)
+
+    def clean_habitos_completados(self):
+        ids = self.cleaned_data.get('habitos_completados') or []
+        if not isinstance(ids, list) or any(type(pk) is not int for pk in ids):
+            raise ValidationError('Debe ser una lista de identificadores enteros.')
+        validos = set(Gesto.objects.filter(
+            usuario=self.usuario, estado='activo', pk__in=ids
+        ).values_list('pk', flat=True))
+        if validos != set(ids):
+            raise ValidationError('Incluye gestos inexistentes, inactivos o ajenos.')
+        return sorted(validos)
+
+
 class AperturaDiariaForm(forms.Form):
     ESTADOS_ANIMO = [(1, 'Bajo'), (2, 'Flojo'), (4, 'Bien'), (5, 'Pleno')]
 

@@ -12,6 +12,7 @@ de día civil, y verifican que la app usa el día de Madrid, no el de UTC.
 """
 from datetime import date, datetime, timezone as dt_timezone
 from unittest.mock import patch
+import uuid
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -52,6 +53,8 @@ class PresenciaCierreMedianocheTestCase(TestCase):
             {
                 'reflexion_libre': '',
                 'habitos_completados': f'[{self.gesto.id}]',
+                'friccion_no': '3', 'estado_animo_noche': '4',
+                'idempotency_key': str(uuid.uuid4()), 'expected_version': '0',
             },
             SERVER_NAME='127.0.0.1',
         )

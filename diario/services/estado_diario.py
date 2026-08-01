@@ -7,15 +7,7 @@ def tiene_apertura_manana(prosoche):
 
 
 def tiene_cierre_noche(prosoche):
-    if prosoche is None:
-        return False
-    campos = [
-        prosoche.que_ha_ido_bien,
-        prosoche.reflexiones_dia,
-        prosoche.que_puedo_mejorar,
-        prosoche.felicidad,
-    ]
-    return any(_tiene_contenido(c) for c in campos)
+    return bool(prosoche and prosoche.cierre_confirmado_en)
 
 
 def calcular_estado_diario_hoy(prosoche_hoy):

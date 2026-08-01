@@ -274,6 +274,7 @@
         <a href="{% url 'clientes:mockup_demo' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
             Continuar →
         </a>
+        <a id="editar-cierre" href="{% url 'diario:presencia_cierre' %}?editar=1" style="display:block; margin-top:0.75rem; color:#7C7590; text-align:center;">Editar cierre</a>
     </div>
     {% endif %}
 
@@ -282,7 +283,7 @@
     (sería una incoherencia temporal).
     {% endcomment %}
     <!-- Header JOI nocturno -->
-    <div class="joi-header" {% if joi_respuesta %}style="display:none"{% endif %}>
+    <div class="joi-header" {% if not mostrar_form %}style="display:none"{% endif %}>
         <div class="joi-hora">Cierre del día · {{ hoy|fecha_es }}</div>
         <div class="joi-greeting">El día termina. Qué quedó en pie.</div>
     </div>
@@ -295,9 +296,11 @@
     </div>
     {% endif %}
 
-    <form method="post" id="cierre-form" {% if joi_respuesta %}style="display:none"{% endif %}>
+    <form method="post" id="cierre-form" {% if not mostrar_form %}style="display:none"{% endif %}>
         {% csrf_token %}
         <input type="hidden" name="habitos_completados" id="habitos_completados_input" value="[]">
+        <input type="hidden" name="idempotency_key" value="{{ form.idempotency_key.value }}">
+        <input type="hidden" name="expected_version" value="{{ form.expected_version.value|default:0 }}">
 
         <!-- Texto libre -->
         <textarea
@@ -332,9 +335,21 @@
                 <span>Sin peso</span>
                 <span>Muy costoso</span>
             </div>
-            <input type="range" name="friccion_no" id="friccion_slider" class="friccion-slider" min="1" max="5" step="1" value="3">
-            <div class="friccion-value" id="friccion_val">3</div>
+            <select name="friccion_no" id="friccion_slider" class="friccion-slider" required>
+                <option value="" {% if not form.friccion_no.value %}selected{% endif %}>Elige conscientemente</option>
+                {% for value in "12345" %}<option value="{{ value }}" {% if form.friccion_no.value|stringformat:'s' == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
+            </select>
             <p class="friccion-hint">¿Hubo algo que te costó sostener, decir o no cargar?</p>
+        </div>
+
+        <div class="friccion-card">
+            <div class="section-label">Estado de ánimo al cerrar</div>
+            <select name="estado_animo_noche" required class="friccion-slider">
+                <option value="" {% if not form.estado_animo_noche.value %}selected{% endif %}>Elige conscientemente</option>
+                {% for value, label in form.fields.estado_animo_noche.choices %}
+                <option value="{{ value }}" {% if form.estado_animo_noche.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
         </div>
 
         <!-- Cuerpo al cierre -->
@@ -354,15 +369,15 @@
         </div>
 
         <!-- Bloqueo de simbiosis — aparece inline ANTES de guardar -->
-        <input type="hidden" name="simbiosis_checked" id="simbiosis_checked" value="0">
         <input type="hidden" name="simbiosis_respuesta" id="simbiosis_respuesta_input" value="">
+        <input type="hidden" name="simbiosis_pregunta" id="simbiosis_pregunta_input" value="">
 
         <div id="simbiosis-block" style="display:none; background:#1E1B27; border:1.5px solid #7C3AED; border-radius:16px; padding:1.1rem 1.25rem; margin-bottom:0.75rem;">
             <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
             <div id="simbiosis-pregunta" style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;"></div>
             <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Responde antes de cerrar el día:</div>
             <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
-            <button type="button" onclick="confirmarSimbiosis()" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
+            <button type="button" id="confirmar-simbiosis" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
                 Respondido — cerrar el día
             </button>
         </div>
@@ -372,139 +387,77 @@
 </div>
 
 <script>
-const completados = new Set();
-
-{% for item in habitos_con_estado %}
-{% if item.completado %}completados.add({{ item.habito.id }});{% endif %}
-{% endfor %}
-
-function syncHabitos() {
-    document.getElementById('habitos_completados_input').value = JSON.stringify([...completados]);
-}
-
-document.querySelectorAll('.habito-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        const id = parseInt(chip.dataset.id);
-        if (completados.has(id)) {
-            completados.delete(id);
-            chip.classList.remove('completado');
-            chip.querySelector('.habito-check').textContent = '○';
-        } else {
-            completados.add(id);
-            chip.classList.add('completado');
-            chip.querySelector('.habito-check').textContent = '✓';
-        }
-        syncHabitos();
-    });
-});
-
+const formCierre = document.getElementById('cierre-form');
+const completados = new Set([{% for item in habitos_con_estado %}{% if item.completado %}{{ item.habito.id }},{% endif %}{% endfor %}]);
+const syncHabitos = () => document.getElementById('habitos_completados_input').value = JSON.stringify([...completados]);
+document.querySelectorAll('.habito-chip').forEach(chip => chip.addEventListener('click', () => {
+    const id = Number(chip.dataset.id);
+    completados.has(id) ? completados.delete(id) : completados.add(id);
+    chip.classList.toggle('completado', completados.has(id));
+    chip.querySelector('.habito-check').textContent = completados.has(id) ? '✓' : '○';
+    syncHabitos();
+}));
 syncHabitos();
 
-const friccionSlider = document.getElementById('friccion_slider');
-const friccionVal = document.getElementById('friccion_val');
-friccionSlider.addEventListener('input', () => friccionVal.textContent = friccionSlider.value);
-
-// ── Cuerpo al cierre chips ──
 const cuerpoInput = document.getElementById('cuerpo_cierre_input');
-document.querySelectorAll('.cuerpo-chip').forEach(chip => {
-    chip.addEventListener('click', () => {
-        const val = chip.dataset.val;
-        cuerpoInput.value = val;
-        document.querySelectorAll('.cuerpo-chip').forEach(c => {
-            c.style.borderColor = 'var(--border)';
-            c.style.background = 'transparent';
-            c.style.color = 'var(--muted)';
-        });
-        chip.style.borderColor = 'var(--accent)';
-        chip.style.background = 'var(--accent-light)';
-        chip.style.color = 'var(--accent)';
-    });
-});
+document.querySelectorAll('.cuerpo-chip').forEach(chip => chip.addEventListener('click', () => {
+    cuerpoInput.value = chip.dataset.val;
+    document.querySelectorAll('.cuerpo-chip').forEach(c => c.classList.toggle('completado', c === chip));
+}));
 
-function confirmarSimbiosis() {
-    const respuesta = document.getElementById('simbiosis-textarea').value.trim();
-    if (!respuesta) {
-        document.getElementById('simbiosis-textarea').style.borderColor = '#EF4444';
-        return;
-    }
-    document.getElementById('simbiosis_respuesta_input').value = respuesta;
-    document.getElementById('simbiosis_checked').value = '1';
+let simbiosisComprobada = false;
+document.getElementById('confirmar-simbiosis').addEventListener('click', () => {
+    const campo = document.getElementById('simbiosis-textarea');
+    if (!campo.value.trim()) { campo.style.borderColor = '#EF4444'; return; }
+    document.getElementById('simbiosis_respuesta_input').value = campo.value.trim();
+    simbiosisComprobada = true;
     document.getElementById('simbiosis-block').style.display = 'none';
-    // Submit real
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.textContent = 'Guardando...';
-    document.getElementById('cierre-form').submit();
-}
-
-document.getElementById('cierre-form').addEventListener('submit', function(e) {
-    if (document.getElementById('simbiosis_checked').value === '1') {
-        return; // ya comprobado, dejar pasar
-    }
-
-    const texto = document.querySelector('[name="reflexion_libre"]').value.trim();
-    if (!texto) return; // sin texto no hay que comprobar
-
-    e.preventDefault();
-    const btn = document.getElementById('submit-btn');
-    btn.disabled = true;
-    btn.textContent = 'JOI está leyendo...';
-
-    fetch("{% url 'diario:check_simbiosis_api' %}", {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({texto: texto}),
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (!d.bloqueo) {
-            document.getElementById('simbiosis_checked').value = '1';
-            btn.textContent = 'Guardando...';
-            document.getElementById('cierre-form').submit();
-        } else {
-            // Mostrar bloqueo inline
-            document.getElementById('simbiosis-pregunta').textContent = d.pregunta;
-            document.getElementById('simbiosis-block').style.display = 'block';
-            document.getElementById('simbiosis-block').scrollIntoView({behavior: 'smooth', block: 'center'});
-            btn.disabled = false;
-            btn.textContent = 'Cerrar el día';
-        }
-    })
-    .catch(() => {
-        // Si falla la comprobación, dejar pasar
-        document.getElementById('simbiosis_checked').value = '1';
-        btn.textContent = 'Guardando...';
-        document.getElementById('cierre-form').submit();
-    });
+    formCierre.requestSubmit();
 });
 
-// ── Cierre AJAX (app viva) ──
-document.getElementById('cierre-form').addEventListener('submit', function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    fetch(this.action || window.location.href, {
+async function enviarCierre() {
+    const respuesta = await fetch(formCierre.action || window.location.href, {
         method: 'POST',
         headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': '{{ csrf_token }}'},
-        body: formData
-    })
-    .then(r => r.json())
-    .then(d => {
-        if (d.success && d.refresh_joi) {
-            // Refrescar estado JOI en paralelo
-            fetch("{% url 'joi:joi_pulso_actual' %}", {
-                method: 'GET',
-                headers: {'X-Requested-With': 'XMLHttpRequest'},
-            }).catch(err => console.log('JOI refresh no critical:', err));
+        body: new FormData(formCierre),
+    });
+    const data = await respuesta.json();
+    if (!respuesta.ok) throw data;
+    const lectura = data.joi_respuesta || data.confirmacion;
+    const panel = document.createElement('div');
+    panel.id = 'cierre-respuesta-visible';
+    panel.className = 'intencion-card';
+    panel.textContent = lectura;
+    formCierre.replaceWith(panel);
+    setTimeout(() => { window.location.href = "{% url 'diario:dashboard_diario' %}"; }, 1800);
+}
+
+formCierre.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (!formCierre.reportValidity()) return;
+    const boton = document.getElementById('submit-btn');
+    boton.disabled = true;
+    try {
+        const texto = formCierre.elements.reflexion_libre.value.trim();
+        if (texto && !simbiosisComprobada) {
+            const precheck = await fetch("{% url 'diario:check_simbiosis_api' %}", {
+                method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json'},
+                body: JSON.stringify({texto}),
+            }).then(r => r.json());
+            if (precheck.bloqueo) {
+                document.getElementById('simbiosis-pregunta').textContent = precheck.pregunta;
+                document.getElementById('simbiosis_pregunta_input').value = precheck.pregunta;
+                document.getElementById('simbiosis-block').style.display = 'block';
+                boton.disabled = false;
+                return;
+            }
+            simbiosisComprobada = true;
         }
-        if (d.success) {
-            // Guardado con éxito → redirigir al dashboard
-            setTimeout(() => window.location.href = "{% url 'diario:dashboard_diario' %}", 500);
-        }
-    })
-    .catch(() => this.submit()); // Fallback: traditional POST
+        await enviarCierre();
+    } catch (error) {
+        boton.disabled = false;
+        boton.textContent = error.code === 'stale_version' ? 'Recarga para editar' : 'Reintentar cierre';
+    }
 });
 </script>
 {% endblock %}

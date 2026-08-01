@@ -76,6 +76,7 @@ class DiarioUIEstadoCicloTests(TestCase):
             prosoche_mes=self.mes,
             fecha=self.hoy,
             que_ha_ido_bien='Entrenamiento bien',
+            cierre_confirmado_en=timezone.now(),
         )
 
         self.client.login(username='testuser', password='pass123')
@@ -97,6 +98,7 @@ class DiarioUIEstadoCicloTests(TestCase):
             persona_quiero_ser='Ser paciente hoy',
             gratitud_1='Por el café',
             que_ha_ido_bien='Entrenamiento bien',
+            cierre_confirmado_en=timezone.now(),
         )
 
         self.client.login(username='testuser', password='pass123')
@@ -247,6 +249,7 @@ class DiarioEstadoFuncionTests(TestCase):
             apertura_confirmada_en=timezone.now(),
             persona_quiero_ser='test',
             que_ha_ido_bien='test',
+            cierre_confirmado_en=timezone.now(),
         )
         estado = calcular_estado_diario_hoy(prosoche)
         self.assertEqual(estado['estado'], 'dia_completo')

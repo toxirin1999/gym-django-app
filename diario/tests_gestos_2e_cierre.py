@@ -7,6 +7,7 @@ correcto sobre Gesto/RegistroGesto, mismo patrón ya usado en
 habito_toggle_dia / HabitosService.toggle_dia.
 """
 import json
+import uuid
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -58,6 +59,8 @@ class PresenciaCierrePostMarcarTestCase(TestCase):
             {
                 'reflexion_libre': '',
                 'habitos_completados': json.dumps([self.gesto.id]),
+                'friccion_no': '3', 'estado_animo_noche': '4',
+                'idempotency_key': str(uuid.uuid4()), 'expected_version': '0',
             },
             SERVER_NAME='127.0.0.1',
         )
@@ -86,6 +89,8 @@ class PresenciaCierrePostDesmarcarTestCase(TestCase):
             {
                 'reflexion_libre': '',
                 'habitos_completados': json.dumps([]),
+                'friccion_no': '3', 'estado_animo_noche': '4',
+                'idempotency_key': str(uuid.uuid4()), 'expected_version': '0',
             },
             SERVER_NAME='127.0.0.1',
         )
@@ -118,6 +123,8 @@ class PresenciaCierrePostSinCambioTestCase(TestCase):
                 'reflexion_libre': '',
                 # gesto_cumplido sigue marcado, gesto_pendiente sigue sin marcar
                 'habitos_completados': json.dumps([self.gesto_cumplido.id]),
+                'friccion_no': '3', 'estado_animo_noche': '4',
+                'idempotency_key': str(uuid.uuid4()), 'expected_version': '0',
             },
             SERVER_NAME='127.0.0.1',
         )

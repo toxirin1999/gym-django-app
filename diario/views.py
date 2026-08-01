@@ -3377,328 +3377,126 @@ def _generar_pregunta_simbiosis(persona_nombre, request):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def presencia_cierre(request):
-    """Ritual de cierre: texto libre + hábitos del día. JOI parsea el texto."""
+    """Cierre versionado: GET puro, POST validado e idempotente."""
+    import uuid
+    from diario.forms import CierreDiarioForm
+    from diario.models import CierreNocturnoOperacion
+    from diario.services import cierre_service
+    from diario.services.estado_diario import calcular_estado_diario_hoy
+
     hoy = timezone.localdate()
-    mes_nombre = hoy.strftime('%B')
-    año = hoy.year
-
-    prosoche_mes, _ = ProsocheMes.objects.get_or_create(
-        usuario=request.user, mes=mes_nombre, año=año
-    )
-    entrada, _ = ProsocheDiario.objects.get_or_create(
-        prosoche_mes=prosoche_mes, fecha=hoy
-    )
-
-    dia_num = hoy.day
+    entrada = ProsocheDiario.objects.filter(
+        prosoche_mes__usuario=request.user, fecha=hoy
+    ).first()
+    vires = SeguimientoVires.objects.filter(usuario=request.user, fecha=hoy).first()
     gestos_activos = Gesto.objects.filter(usuario=request.user, estado='activo')
-
-    def _construir_habitos_con_estado():
-        cumplidos_hoy = set(
-            RegistroGesto.objects.filter(
-                gesto__in=gestos_activos, fecha=hoy, estado='cumplido'
-            ).values_list('gesto_id', flat=True)
-        )
-        return [
-            {'habito': gesto, 'completado': gesto.id in cumplidos_hoy}
-            for gesto in gestos_activos
-        ]
-
-    habitos_con_estado = _construir_habitos_con_estado()
+    cumplidos = set(RegistroGesto.objects.filter(
+        gesto__in=gestos_activos, fecha=hoy, estado='cumplido'
+    ).values_list('gesto_id', flat=True))
+    habitos_con_estado = [
+        {'habito': gesto, 'completado': gesto.pk in cumplidos}
+        for gesto in gestos_activos
+    ]
 
     if request.method == 'POST':
-        texto_libre = request.POST.get('reflexion_libre', '').strip()
-        friccion_raw = request.POST.get('friccion_no')
-        cuerpo_raw = request.POST.get('cuerpo_cierre', '').strip()
-        habitos_ids_raw = request.POST.get('habitos_completados', '[]')
+        form = CierreDiarioForm(request.POST, usuario=request.user)
+        if not form.is_valid():
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': False, 'errors': form.errors.get_json_data()}, status=422)
+            messages.error(request, 'Revisa los campos del cierre.')
+            return redirect('diario:presencia_cierre')
+        datos = form.cleaned_data
+        payload = {campo: datos[campo] for campo in (
+            'reflexion_libre', 'friccion_no', 'cuerpo_cierre',
+            'estado_animo_noche', 'habitos_completados', 'simbiosis_respuesta',
+            'simbiosis_pregunta',
+        )}
+        try:
+            comando = cierre_service.ejecutar_cierre_nocturno(
+                usuario=request.user, fecha=hoy, payload=payload,
+                idempotency_key=datos['idempotency_key'],
+                expected_version=datos['expected_version'],
+            )
+        except cierre_service.ConflictoVersionCierre as exc:
+            cuerpo = {'success': False, 'code': 'stale_version', 'current_version': exc.version_actual}
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse(cuerpo, status=409)
+            messages.error(request, 'El cierre cambió en otra pestaña. Recarga antes de editar.')
+            return redirect('diario:presencia_cierre')
 
-        # Fase 2 del CONTRATO_ANALIZADOR_GESTOS.md — núcleo transaccional:
-        # reflexión + SeguimientoVires + sincronización de RegistroGesto +
-        # marcador de cierre confirmado, todo o nada. El enriquecimiento
-        # JOI/Gemini de abajo queda fuera a propósito (best-effort).
-        from diario.services.cierre_service import persistir_nucleo_cierre
-        persistir_nucleo_cierre(
-            usuario=request.user,
-            fecha=hoy,
-            entrada=entrada,
-            texto_libre=texto_libre,
-            friccion_raw=friccion_raw,
-            cuerpo_raw=cuerpo_raw,
-            habitos_completados_raw=habitos_ids_raw,
-            gestos_activos=gestos_activos,
-        )
-        habitos_con_estado = _construir_habitos_con_estado()
-
-        personas_detectadas = []
-
-        if texto_libre:
-            reflexion_obj = None
+        operacion_enriquecimiento = cierre_service.operacion_canonica(comando.operacion)
+        resultado_enriquecimiento = operacion_enriquecimiento.resultado or {}
+        if operacion_enriquecimiento.estado in ('pending', 'failed'):
             try:
-                from joi.services import parsear_cierre_diario, enriquecer_cierre
-
-                # ── Parseo básico ──────────────────────────────────────────
-                resultado = parsear_cierre_diario(texto_libre)
-                estado_animo = resultado.get('estado_animo', 3)
-                if estado_animo and 1 <= estado_animo <= 5:
-                    entrada.estado_animo = estado_animo
-                etiquetas_nuevas = resultado.get('etiquetas', [])
-                personas_detectadas = resultado.get('personas', [])
-
-                etiquetas_str = 'cierre_dia'
-                if personas_detectadas:
-                    etiquetas_str += ',' + ','.join([p.lower()[:20] for p in personas_detectadas])
-
-                # ── Enriquecimiento: Logos + ManualDavid + Simbiosis ───────
-                enriq = enriquecer_cierre(texto_libre, personas_detectadas)
-                titulo_logos = enriq.get('titulo_logos') or ''
-                categoria_estoica = enriq.get('categoria_estoica') or ''
-                micro_verdad = enriq.get('micro_verdad')
-                interacciones_data = enriq.get('interacciones') or []
-
-                if categoria_estoica:
-                    etiquetas_str += f',{categoria_estoica}'
-
-                # Crear ReflexionLibre con título generado por JOI
-                reflexion_obj = ReflexionLibre.objects.create(
-                    usuario=request.user,
-                    contenido=texto_libre,
-                    tipo='espontanea',
-                    titulo=titulo_logos,
-                    etiquetas=etiquetas_str,
-                )
-
-                if etiquetas_nuevas:
-                    entrada.etiquetas = ','.join(etiquetas_nuevas)
-                entrada.save()
-
-                # ── ManualDavid: micro-verdad ──────────────────────────────
-                if micro_verdad and len(micro_verdad.strip()) > 5:
-                    from joi.models import ManualDavid
-                    ya_existe = ManualDavid.objects.filter(
-                        user=request.user,
-                        entrada__icontains=micro_verdad[:30],
-                        activa=True,
-                    ).exists()
-                    if not ya_existe:
-                        ManualDavid.objects.create(
-                            user=request.user,
-                            entrada=micro_verdad.strip(),
-                            origen='patron_detectado',
-                        )
-
-                # ── Simbiosis: personas conocidas → Interaccion real ──────
-                # ── Personas desconocidas → perfil fantasma (PersonaInterina) ──
-                if interacciones_data:
-                    from diario.models import (
-                        PersonaImportante, Interaccion,
-                        PersonaInterina, InteraccionSombra,
-                    )
-                    from joi.models import ManualDavid
-                    tipos_validos = {c[0] for c in Interaccion.TIPO_INTERACCION_CHOICES}
-                    friccion_hoy = int(request.POST.get('friccion_no', 0) or 0)
-
-                    for item in interacciones_data:
-                        nombre = item.get('persona', '').strip()
-                        if not nombre:
-                            continue
-                        tipo = item.get('tipo', 'neutra')
-                        if tipo not in tipos_validos:
-                            tipo = 'neutra'
-
-                        persona_obj = (
-                            PersonaImportante.objects
-                            .filter(usuario=request.user, nombre__iexact=nombre)
-                            .first()
-                        )
-
-                        if persona_obj:
-                            # Persona conocida → Interaccion en Simbiosis
-                            interaccion = Interaccion.objects.create(
-                                usuario=request.user,
-                                titulo=item.get('titulo', f'Interacción con {nombre}')[:200],
-                                descripcion=item.get('descripcion', ''),
-                                mi_sentir=item.get('mi_sentir', ''),
-                                aprendizaje=item.get('aprendizaje', ''),
-                                tipo_interaccion=tipo,
-                            )
-                            interaccion.personas.add(persona_obj)
-                        else:
-                            # Persona desconocida → perfil fantasma
-                            interina, creada = PersonaInterina.objects.get_or_create(
-                                usuario=request.user,
-                                nombre__iexact=nombre,
-                                defaults={'nombre': nombre},
-                            )
-                            if not creada:
-                                update_kw = {'veces_mencionada': interina.veces_mencionada + 1}
-                                if interina.estado == 'descartada':
-                                    update_kw['menciones_desde_descarte'] = interina.menciones_desde_descarte + 1
-                                PersonaInterina.objects.filter(pk=interina.pk).update(**update_kw)
-                                interina.refresh_from_db()
-
-                            InteraccionSombra.objects.create(
-                                persona_interina=interina,
-                                descripcion=item.get('descripcion') or '',
-                                mi_sentir=item.get('mi_sentir') or '',
-                                aprendizaje=item.get('aprendizaje') or '',
-                                tipo_interaccion=tipo,
-                                friccion_no=friccion_hoy or None,
-                            )
-
-                            if creada:
-                                # Primera detección → nota en Manual de David
-                                ManualDavid.objects.create(
-                                    user=request.user,
-                                    entrada=(
-                                        f"Entidad nueva detectada: '{nombre}'. "
-                                        f"Pendiente de validación si se repite."
-                                    ),
-                                    origen='patron_detectado',
-                                )
-
-                            # Reaparece solo si tiene ≥2 menciones nuevas después de ser ignorada
-                            if interina.estado == 'descartada' and interina.menciones_desde_descarte >= 2:
-                                PersonaInterina.objects.filter(pk=interina.pk).update(
-                                    estado='sombra', menciones_desde_descarte=0
-                                )
-                                interina.refresh_from_db()
-                            # 2+ menciones en sombra → radar (elif: no solapar con reaparecer)
-                            elif interina.veces_mencionada >= 2 and interina.estado == 'sombra':
-                                PersonaInterina.objects.filter(pk=interina.pk).update(estado='radar')
-
+                resultado_enriquecimiento = cierre_service.ejecutar_enriquecimiento_cierre(
+                    operacion_enriquecimiento.pk
+                ) or {}
             except Exception as exc:
-                logger.warning(f"[presencia_cierre] enriquecimiento falló: {exc}")
-                if reflexion_obj is None:
-                    ReflexionLibre.objects.create(
-                        usuario=request.user,
-                        contenido=texto_libre,
-                        tipo='espontanea',
-                        etiquetas='cierre_dia',
-                    )
-
-        # Simbiosis_respuesta guard — save if provided (re-submission after simbiosis block)
-        simbiosis_respuesta = request.POST.get('simbiosis_respuesta', '').strip()
-        if simbiosis_respuesta:
-            ReflexionLibre.objects.create(
-                usuario=request.user,
-                contenido=simbiosis_respuesta,
-                titulo='Reflexión Simbiosis',
-                tipo='crisis',
-                etiquetas='simbiosis_respuesta',
-            )
-
-        # Simbiosis check: misma persona mencionada 3+ días consecutivos
-        simbiosis_bloqueo = None
-        simbiosis_pregunta = None
-        if personas_detectadas and not simbiosis_respuesta:
-            for persona_nombre in personas_detectadas:
-                dias_con_mencion = 0
-                for delta in range(1, 3):
-                    dia_pasado = hoy - timedelta(days=delta)
-                    mencionado = ReflexionLibre.objects.filter(
-                        usuario=request.user,
-                        fecha__date=dia_pasado,
-                        etiquetas__icontains=persona_nombre.lower()[:10]
-                    ).exists()
-                    if mencionado:
-                        dias_con_mencion += 1
-                if dias_con_mencion >= 2:
-                    simbiosis_bloqueo = persona_nombre
-                    break
-
-        if simbiosis_bloqueo:
-            simbiosis_pregunta = _generar_pregunta_simbiosis(simbiosis_bloqueo, request)
-            ReflexionLibre.objects.create(
-                usuario=request.user,
-                contenido=simbiosis_pregunta,
-                titulo=f'Simbiosis: {simbiosis_bloqueo}',
-                tipo='crisis',
-                etiquetas='simbiosis_joi',
-            )
-            context = {
-                'entrada': entrada,
-                'habitos_con_estado': habitos_con_estado,
-                'hoy': hoy,
-                'dia_num': dia_num,
-                'simbiosis_bloqueo': simbiosis_bloqueo,
-                'simbiosis_pregunta': simbiosis_pregunta,
+                logger.exception('El cierre quedó guardado, pero su enriquecimiento falló')
+                CierreNocturnoOperacion.objects.filter(pk=operacion_enriquecimiento.pk).update(
+                    estado='failed', error=str(exc)[:2000]
+                )
+                resultado_enriquecimiento = {}
+        if comando.operacion.pk != operacion_enriquecimiento.pk:
+            comando.operacion.resultado = {
+                **(comando.operacion.resultado or {}),
+                'canonical_operation_id': operacion_enriquecimiento.pk,
+                'canonical_result': resultado_enriquecimiento,
             }
-            return render(request, 'diario/presencia_cierre.html', context)
+            comando.operacion.save(update_fields=['resultado', 'updated_at'])
 
-        # ── Respuesta visible de JOI ──────────────────────────────────────
-        joi_respuesta = None
-        propuesta_habito = None
-        if texto_libre:
-            try:
-                from joi.services import generar_respuesta_cierre
-                _enriq = enriq if 'enriq' in locals() else {}
-                datos_para_joi = {
-                    'estado_animo': entrada.estado_animo,
-                    'etiquetas': (entrada.etiquetas or '').split(','),
-                    'personas': personas_detectadas,
-                    'micro_verdad': _enriq.get('micro_verdad'),
-                    'friccion_no': int(request.POST.get('friccion_no', 0) or 0),
-                }
-                joi_respuesta = generar_respuesta_cierre(texto_libre, datos_para_joi, request.user.cliente_perfil)
-
-                if joi_respuesta:
-                    entrada.respuesta_joi_cierre = joi_respuesta
-                    entrada.respuesta_joi_cierre_generada_en = timezone.now()
-                    entrada.save()
-
-                propuesta_habito = _enriq.get('propuesta_habito')
-                if propuesta_habito and propuesta_habito.get('nombre'):
-                    ya_existe = Gesto.objects.filter(
-                        usuario=request.user,
-                        nombre__iexact=propuesta_habito['nombre'],
-                    ).exists()
-                    if ya_existe:
-                        propuesta_habito = None
-            except Exception:
-                pass
-
-        # Si es AJAX, devuelve JSON con el nuevo estado
-        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            from diario.services.estado_diario import calcular_estado_diario_hoy
-            estado_actual = calcular_estado_diario_hoy(entrada)
-            return JsonResponse({
-                'success': True,
-                'estado': estado_actual['estado'],
-                'titulo': 'Día completo',
-                'detalle': 'Apertura y cierre registrados.',
-                'joi_respuesta': joi_respuesta,
-                'refresh_joi': True,  # Signal frontend to update JOI estado
-            })
-
-        context = {
-            'entrada': entrada,
-            'habitos_con_estado': habitos_con_estado,
-            'hoy': hoy,
-            'dia_num': dia_num,
-            'joi_respuesta': joi_respuesta,
-            'propuesta_habito': propuesta_habito,
-            'guardado': True,
+        estado = calcular_estado_diario_hoy(comando.entrada)
+        solo_noche = estado['estado'] == 'solo_noche'
+        respuesta = {
+            'success': True,
+            'estado': estado['estado'],
+            'titulo': 'Cierre registrado' if solo_noche else 'Día completo',
+            'detalle': ('El cierre quedó registrado; hoy no hubo apertura.' if solo_noche
+                        else 'Apertura y cierre registrados.'),
+            'joi_respuesta': resultado_enriquecimiento.get('respuesta_joi', ''),
+            'confirmacion': 'Cierre guardado.',
+            'version': comando.entrada.cierre_version,
+            'operacion': str(comando.operacion.idempotency_key),
+            'refresh_joi': bool(resultado_enriquecimiento.get('respuesta_joi')),
         }
-        return render(request, 'diario/presencia_cierre.html', context)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse(respuesta)
+        return redirect(f"{reverse('diario:presencia_cierre')}?cierre_operacion={comando.operacion.idempotency_key}")
 
-    # Phase Cierre Menor 1: el cierre NO debe traer el mensaje de apertura de
-    # mañana (incoherencia temporal: mensaje matutino en pantalla nocturna).
-    # El cierre solo muestra su propia lectura (respuesta_joi_cierre) si existe.
-
-    vires, _ = SeguimientoVires.objects.get_or_create(usuario=request.user, fecha=hoy)
-
-    # Si ya se generó respuesta de JOI hoy, mostrarla directamente (no regenerar)
-    joi_respuesta_guardada = entrada.respuesta_joi_cierre or None
-
-    context = {
-        'entrada': entrada,
-        'habitos_con_estado': habitos_con_estado,
-        'hoy': hoy,
-        'dia_num': dia_num,
-        'vires': vires,
-        'joi_respuesta': joi_respuesta_guardada,
-    }
-    return render(request, 'diario/presencia_cierre.html', context)
+    operacion = None
+    operacion_key = request.GET.get('cierre_operacion')
+    if operacion_key and entrada:
+        try:
+            operacion = CierreNocturnoOperacion.objects.filter(
+                entrada=entrada, idempotency_key=operacion_key
+            ).first()
+        except (ValueError, TypeError):
+            operacion = None
+    resultado = operacion.resultado if operacion else {}
+    entrada_presentacion = entrada or ProsocheDiario(fecha=hoy)
+    vires_presentacion = vires or SeguimientoVires(usuario=request.user, fecha=hoy)
+    cierre_confirmado = bool(entrada and entrada.cierre_confirmado_en)
+    form = CierreDiarioForm(usuario=request.user, initial={
+        'reflexion_libre': entrada_presentacion.reflexiones_dia,
+        'friccion_no': vires_presentacion.nivel_estres if cierre_confirmado else None,
+        'cuerpo_cierre': vires_presentacion.cuerpo_cierre if cierre_confirmado else '',
+        'estado_animo_noche': entrada_presentacion.estado_animo_noche if cierre_confirmado else None,
+        'habitos_completados': list(cumplidos),
+        'idempotency_key': uuid.uuid4(),
+        'expected_version': entrada_presentacion.cierre_version,
+    })
+    return render(request, 'diario/presencia_cierre.html', {
+        'entrada': entrada_presentacion, 'vires': vires_presentacion, 'form': form,
+        'habitos_con_estado': habitos_con_estado, 'hoy': hoy, 'dia_num': hoy.day,
+        'joi_respuesta': resultado.get('respuesta_joi') or (
+            entrada_presentacion.respuesta_joi_cierre if entrada else None
+        ),
+        'propuesta_habito': resultado.get('propuesta_habito'),
+        'guardado': bool(operacion),
+        'mostrar_form': request.GET.get('editar') == '1' or not cierre_confirmado,
+    })
 
 
 @login_required
