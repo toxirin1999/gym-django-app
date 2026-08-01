@@ -75,14 +75,25 @@ class TestDiaVacio(ExperienciaBase):
         self.assertEqual(lectura['texto_joi'], '')
 
     def test_centro_estado_limpio_hero(self):
-        """When no active signals, Centro Hero shows the clean/no-signals state
-        (copy actualizado en Phase 62G.1: 'Activo ahora' + 'Sin adaptaciones
-        persistentes activas', ya no el texto literal 'Sin señales activas')."""
+        """Sin señales, el Centro explica una sola vez que seguirá observando."""
         c = Client()
         c.login(username='tester_ux41', password='x')
         response = c.get(reverse('clientes:plan_decisiones'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Sin adaptaciones persistentes activas')
+        self.assertContains(
+            response,
+            'El plan no necesita ninguna decisión tuya ahora.',
+        )
+        self.assertContains(
+            response,
+            'Seguirá observando tus sesiones y te avisará cuando exista '
+            'evidencia suficiente para proponer un cambio.',
+        )
+        self.assertNotContains(
+            response,
+            'El sistema no tiene señales activas confirmadas para mostrar ahora.',
+        )
+        self.assertNotContains(response, 'Sin adaptaciones persistentes activas')
 
 
 # ── Phase 41.2 — Día complejo ─────────────────────────────────────────────

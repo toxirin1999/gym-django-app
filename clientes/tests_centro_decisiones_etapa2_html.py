@@ -87,7 +87,12 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
     def test_estados_vacios_son_honestos_y_no_inventan_inactividad(self):
         html = self._render_empty().lower()
         self.assertIn(
-            "el sistema no tiene señales activas confirmadas para mostrar ahora",
+            "el plan no necesita ninguna decisión tuya ahora",
+            html,
+        )
+        self.assertIn(
+            "seguirá observando tus sesiones y te avisará cuando exista "
+            "evidencia suficiente para proponer un cambio",
             html,
         )
         self.assertIn(
@@ -102,6 +107,8 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
             "no has entrenado",
             "falta de entrenamiento",
             "llevas tiempo sin entrenar",
+            "el sistema no tiene señales activas confirmadas",
+            "sin adaptaciones persistentes activas",
         ):
             self.assertNotIn(inference, html)
 
