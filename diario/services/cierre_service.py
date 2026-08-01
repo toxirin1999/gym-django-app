@@ -328,9 +328,11 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
         personas_permitidas = {
             (persona or '').strip().casefold() for persona in personas if (persona or '').strip()
         }
+        personas_contadas = set()
         for item in enriquecido.get('interacciones') or []:
             nombre = (item.get('persona') or '').strip()
-            if not nombre or nombre.casefold() not in personas_permitidas:
+            identidad = nombre.casefold()
+            if not nombre or identidad not in personas_permitidas:
                 continue
             tipo = item.get('tipo') if item.get('tipo') in tipos else 'neutra'
             persona = PersonaImportante.objects.filter(usuario=usuario, nombre__iexact=nombre).first()
@@ -354,7 +356,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                     'id': interina.pk, 'created': creada,
                     'before': None if creada else _snapshot(interina, _PERSONA_SNAPSHOT_FIELDS),
                 }
-                if not creada:
+                if not creada and identidad not in personas_contadas:
                     interina.veces_mencionada += 1
                     if interina.estado == 'descartada':
                         interina.menciones_desde_descarte += 1
@@ -365,7 +367,9 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                     persona_interina=interina, descripcion=item.get('descripcion') or '',
                     mi_sentir=item.get('mi_sentir') or '', aprendizaje=item.get('aprendizaje') or '',
                     tipo_interaccion=tipo, friccion_no=payload['friccion_no'],
+                    fecha=op.entrada.fecha,
                 )
+                personas_contadas.add(identidad)
                 ids['sombras'].append(sombra.pk)
                 ledger['sombras'].append({'id': sombra.pk, 'persona_interina_id': interina.pk})
                 if creada:

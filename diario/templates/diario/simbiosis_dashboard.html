@@ -140,6 +140,22 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     border-color: var(--muted);
     color: var(--text);
 }
+.radar-btn:focus-visible,
+.sim-cta:focus-visible,
+.circulo-item:focus-visible,
+.interaccion-titulo:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+}
+.radar-btn:disabled { cursor: wait; opacity: 0.62; }
+.radar-feedback {
+    min-height: 1.35rem;
+    margin: 0 0 0.75rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+}
+.radar-feedback.is-success { color: var(--green); }
+.radar-feedback.is-error { color: #FCA5A5; }
 
 /* ── Círculo ── */
 .circulo-item {
@@ -205,6 +221,21 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     justify-content: center;
 }
 .sim-cta:hover { color: var(--text); }
+
+@media (max-width: 560px) {
+    .sim-wrap { padding: 1rem 0.75rem 3rem; }
+    .sim-section { padding: 1.1rem; border-radius: 13px; }
+    .sim-metrics { justify-content: space-between; gap: 0.65rem; }
+    .radar-item { align-items: flex-start; flex-wrap: wrap; }
+    .radar-actions {
+        width: 100%;
+        padding-left: 1.25rem;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+    .radar-btn { min-height: 44px; padding: 0.55rem 0.75rem; }
+    .circulo-item { flex-wrap: wrap; }
+}
 </style>
 {% endblock %}
 
@@ -215,9 +246,9 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     <!-- ── Header ── -->
     <div class="sim-header">
         <h1 class="sim-title">Simbiosis</h1>
-        <p class="sim-subtitle">Lo que está apareciendo en tus vínculos.</p>
+        <p class="sim-subtitle">Señales detectadas en tus cierres y memoria de tus vínculos.</p>
         <div class="sim-boundary">
-            JOI no decide quién importa. Solo muestra lo que se repite.
+            Tú decides qué personas forman parte de tu círculo. Las detecciones son solo contexto para ayudarte a reconocer patrones.
         </div>
         <div class="sim-metrics">
             <div class="sim-metric">
@@ -235,25 +266,25 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         </div>
     </div>
 
-    <!-- ── Radar (prioridad 1 — requiere decisión) ── -->
+    <!-- ── Radar: señales repetidas que requieren decisión ── -->
     {% if personas_radar %}
     <div class="sim-section" style="border-color: rgba(167,139,250,0.25);">
-        <div class="sim-section-label">Personas que están apareciendo</div>
+        <div class="sim-section-label">Requieren tu decisión</div>
         <div class="sim-section-hint">
-            JOI las ha visto repetirse en tus cierres. Tú decides si forman parte de tu círculo o si solo fueron presencia puntual.
+            Estas personas se han repetido en varios cierres. Confirma si forman parte de tu círculo o descarta la señal por ahora.
         </div>
+        <p id="radar-feedback" class="radar-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
         <div id="radar-list">
         {% for p in personas_radar %}
         {% with ultima_sombra=p.interacciones.all|first %}
         <div class="radar-item" id="radar-{{ p.id }}">
-            <div class="radar-dot {% if p.estado == 'sombra' %}sombra{% endif %}"></div>
+            <div class="radar-dot"></div>
             <div style="flex:1;min-width:0;">
                 <div class="radar-name">{{ p.nombre }}</div>
                 <div class="radar-meta">
-                    {{ p.veces_mencionada }} vez{% if p.veces_mencionada != 1 %}es{% endif %} &middot;
+                    {{ p.veces_mencionada }} mención{% if p.veces_mencionada != 1 %}es{% endif %} &middot;
                     última {{ p.ultima_deteccion|date:"j M" }}
-                    {% if p.estado == 'sombra' %}&middot; <span style="color:rgba(124,117,144,0.7);">mención detectada</span>{% endif %}
-                    {% if p.estado == 'radar' %}&middot; <span style="color:var(--accent);">en el radar</span>{% endif %}
+                    &middot; <span style="color:var(--accent);">señal repetida</span>
                 </div>
                 {% if ultima_sombra and ultima_sombra.descripcion %}
                 <div style="font-size:0.72rem;color:rgba(124,117,144,0.55);margin-top:3px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
@@ -261,9 +292,9 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
                 </div>
                 {% endif %}
             </div>
-            <div class="radar-actions" style="flex-direction:column;align-items:flex-end;gap:0.35rem;">
-                <button class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Añadir</button>
-                <button class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" title="Se ocultará. Puede reaparecer si sigue mencionándose.">Ignorar</button>
+            <div class="radar-actions">
+                <button type="button" class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Añadir a {{ p.nombre }} al círculo">Añadir</button>
+                <button type="button" class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" title="Se ocultará. Puede reaparecer si sigue mencionándose." aria-label="Descartar por ahora la señal de {{ p.nombre }}">Ignorar</button>
             </div>
         </div>
         {% endwith %}
@@ -275,11 +306,30 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     </div>
     {% endif %}
 
+    <!-- ── Sombra: detecciones aisladas, solo informativas ── -->
+    {% if personas_sombra %}
+    <div class="sim-section">
+        <div class="sim-section-label">Señales recientes</div>
+        <div class="sim-section-hint">
+            Menciones aisladas detectadas en tus cierres. No necesitas decidir nada; solo pasarán al radar si se repiten.
+        </div>
+        {% for p in personas_sombra %}
+        <div class="radar-item" id="sombra-{{ p.id }}">
+            <div class="radar-dot sombra" aria-hidden="true"></div>
+            <div style="flex:1;min-width:0;">
+                <div class="radar-name">{{ p.nombre }}</div>
+                <div class="radar-meta">Mención detectada &middot; {{ p.ultima_deteccion|date:"j M" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- ── Círculo confirmado ── -->
     <div class="sim-section">
         <div class="sim-section-label">Círculo confirmado</div>
         <div class="sim-section-hint" style="margin-bottom:{% if personas %}1rem{% else %}0{% endif %};">
-            Personas que JOI puede usar como contexto estable.
+            Personas que has confirmado y cuyo historial quieres conservar como contexto estable.
         </div>
         {% if personas %}
         {% for persona in personas %}
@@ -332,34 +382,52 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 
 <script>
 const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
+const feedback = document.getElementById('radar-feedback');
 
-document.querySelectorAll('.promover-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        const nombre = this.dataset.nombre;
-        this.textContent = '...';
-        this.disabled = true;
-        fetch("{% url 'diario:promover_persona_interina' %}", {
+function mostrarFeedback(mensaje, tipo) {
+    if (!feedback) return;
+    feedback.textContent = mensaje;
+    feedback.className = `radar-feedback is-${tipo}`;
+}
+
+async function resolverPersona(button, accion) {
+    const id = button.dataset.id;
+    const nombre = button.dataset.nombre || 'La persona';
+    const row = document.getElementById('radar-' + id);
+    const buttons = row ? row.querySelectorAll('button') : [button];
+    buttons.forEach(control => { control.disabled = true; });
+    mostrarFeedback('Guardando tu decisión…', 'pending');
+
+    try {
+        const response = await fetch("{% url 'diario:promover_persona_interina' %}", {
             method: 'POST',
             headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-            body: JSON.stringify({id, accion: 'promover', nombre})
-        }).then(r => r.json()).then(() => location.reload()).catch(() => location.reload());
-    });
+            body: JSON.stringify({id, accion})
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok || !data.ok) {
+            throw new Error(data.error || 'No se pudo guardar la decisión.');
+        }
+
+        if (row) row.remove();
+        mostrarFeedback(
+            accion === 'promover'
+                ? `${nombre} se ha añadido a tu círculo.`
+                : `${nombre} se ha ocultado por ahora.`,
+            'success'
+        );
+    } catch (error) {
+        buttons.forEach(control => { control.disabled = false; });
+        mostrarFeedback(error.message || 'No se pudo guardar la decisión. Inténtalo de nuevo.', 'error');
+    }
+}
+
+document.querySelectorAll('.promover-btn').forEach(button => {
+    button.addEventListener('click', () => resolverPersona(button, 'promover'));
 });
 
-document.querySelectorAll('.descartar-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        const id = this.dataset.id;
-        const row = document.getElementById('radar-' + id);
-        if (row) row.style.opacity = '0.4';
-        fetch("{% url 'diario:promover_persona_interina' %}", {
-            method: 'POST',
-            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-            body: JSON.stringify({id, accion: 'descartar'})
-        }).then(r => r.json()).then(() => {
-            if (row) row.remove();
-        }).catch(() => location.reload());
-    });
+document.querySelectorAll('.descartar-btn').forEach(button => {
+    button.addEventListener('click', () => resolverPersona(button, 'descartar'));
 });
 </script>
 {% endblock %}

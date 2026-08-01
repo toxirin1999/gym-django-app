@@ -1059,6 +1059,10 @@ class PersonaImportante(models.Model):
 class Interaccion(models.Model):
     """Representa una interacción significativa con una o más personas."""
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
+    origen_sombra = models.OneToOneField(
+        'InteraccionSombra', null=True, blank=True, on_delete=models.CASCADE,
+        related_name='interaccion_migrada',
+    )
     personas = models.ManyToManyField(PersonaImportante, blank=True)
     titulo = models.CharField(max_length=200)
     descripcion = models.TextField(help_text="Describe la interacción. ¿Qué pasó?")
@@ -1477,7 +1481,7 @@ class InteraccionSombra(models.Model):
     ]
 
     persona_interina = models.ForeignKey(PersonaInterina, on_delete=models.CASCADE, related_name='interacciones')
-    fecha            = models.DateField(auto_now_add=True)
+    fecha            = models.DateField(default=timezone.localdate)
     descripcion      = models.TextField()
     mi_sentir        = models.TextField(blank=True)
     aprendizaje      = models.TextField(blank=True)

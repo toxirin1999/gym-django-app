@@ -75,7 +75,7 @@ def dashboard_diario(request):
     datos_semana = agregar_semana(request.user, inicio=inicio_semana, fin=fin_semana)
     revision_semanal = buscar_revision_semanal(request.user, clave_semana)
     n_radar = PersonaInterina.objects.filter(
-        usuario=request.user, estado__in=['sombra', 'radar']
+        usuario=request.user, estado='radar'
     ).count()
 
     context = {
@@ -1527,23 +1527,27 @@ def simbiosis_dashboard(request):
         usuario=request.user
     ).order_by('tipo_relacion', 'nombre')
 
-    ultimas_interacciones = Interaccion.objects.filter(
-        usuario=request.user
-    ).prefetch_related('personas').order_by('-fecha')[:8]
+    interacciones = Interaccion.objects.filter(usuario=request.user)
+    n_interacciones = interacciones.count()
+    ultimas_interacciones = interacciones.prefetch_related(
+        'personas'
+    ).order_by('-fecha')[:8]
 
-    # Solo sombra y radar — excluir promovidas y descartadas
-    personas_radar = PersonaInterina.objects.filter(
+    personas_interinas = PersonaInterina.objects.filter(
         usuario=request.user,
         estado__in=['sombra', 'radar'],
     ).prefetch_related('interacciones').order_by('-veces_mencionada', '-ultima_deteccion')
+    personas_sombra = personas_interinas.filter(estado='sombra')
+    personas_radar = personas_interinas.filter(estado='radar')
 
     context = {
         'personas': personas,
         'ultimas_interacciones': ultimas_interacciones,
+        'personas_sombra': personas_sombra,
         'personas_radar': personas_radar,
         'n_confirmadas': personas.count(),
         'n_radar': personas_radar.count(),
-        'n_interacciones': ultimas_interacciones.count(),
+        'n_interacciones': n_interacciones,
     }
     return render(request, 'diario/simbiosis_dashboard.html', context)
 
@@ -3738,40 +3742,53 @@ def promover_persona_interina(request):
     AJAX: promueve una PersonaInterina a PersonaImportante (accion=promover)
     o la descarta (accion=descartar).
     """
-    from diario.models import PersonaInterina, PersonaImportante, Interaccion, InteraccionSombra
+    from django.db import transaction
+    from diario.models import PersonaInterina, PersonaImportante, Interaccion
     try:
         data = json.loads(request.body)
-        interina = PersonaInterina.objects.get(id=data['id'], usuario=request.user)
-        accion = data.get('accion', 'descartar')
-
-        if accion == 'promover':
-            persona_real, _ = PersonaImportante.objects.get_or_create(
-                usuario=request.user,
-                nombre=interina.nombre,
-                defaults={'tipo_relacion': 'otro'},
+        accion = data.get('accion')
+        if accion not in ('promover', 'descartar'):
+            return JsonResponse({'ok': False, 'error': 'Acción no válida'}, status=400)
+        with transaction.atomic():
+            interina = PersonaInterina.objects.select_for_update().get(
+                id=data['id'], usuario=request.user,
             )
-            # Migrar interacciones sombra → Interaccion real
-            for sombra in interina.interacciones.all():
-                interaccion = Interaccion.objects.create(
-                    usuario=request.user,
-                    titulo=f'Mención detectada · {interina.nombre}',
-                    descripcion=sombra.descripcion,
-                    mi_sentir=sombra.mi_sentir,
-                    aprendizaje=sombra.aprendizaje,
-                    tipo_interaccion=sombra.tipo_interaccion,
-                    fecha=sombra.fecha,
-                )
-                interaccion.personas.add(persona_real)
-            interina.estado = 'promovida'
-            interina.persona_importante = persona_real
-            interina.save()
 
-        elif accion == 'descartar':
-            interina.estado = 'descartada'
-            interina.menciones_desde_descarte = 0
-            interina.save()
+            if accion == 'promover':
+                persona_real = PersonaImportante.objects.filter(
+                    usuario=request.user, nombre__iexact=interina.nombre,
+                ).first()
+                if persona_real is None:
+                    persona_real = PersonaImportante.objects.create(
+                        usuario=request.user,
+                        nombre=interina.nombre,
+                        tipo_relacion='otro',
+                    )
+                for sombra in interina.interacciones.select_for_update():
+                    interaccion, _ = Interaccion.objects.get_or_create(
+                        origen_sombra=sombra,
+                        defaults={
+                            'usuario': request.user,
+                            'titulo': f'Mención detectada · {interina.nombre}',
+                            'descripcion': sombra.descripcion,
+                            'mi_sentir': sombra.mi_sentir,
+                            'aprendizaje': sombra.aprendizaje,
+                            'tipo_interaccion': sombra.tipo_interaccion,
+                            'fecha': sombra.fecha,
+                        },
+                    )
+                    interaccion.personas.add(persona_real)
+                interina.estado = 'promovida'
+                interina.persona_importante = persona_real
+                interina.save(update_fields=['estado', 'persona_importante'])
+            else:
+                if interina.estado == 'promovida':
+                    return JsonResponse({'ok': False, 'error': 'Estado no válido'}, status=400)
+                interina.estado = 'descartada'
+                interina.menciones_desde_descarte = 0
+                interina.save(update_fields=['estado', 'menciones_desde_descarte'])
 
-        return JsonResponse({'ok': True})
+        return JsonResponse({'ok': True, 'accion': accion, 'estado': interina.estado})
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 

@@ -112,7 +112,7 @@
             </article>
             <article class="signal">
                 <h3 class="signal-label">Simbiosis</h3>
-                {% if n_radar %}<p class="radar-badge"><span class="radar-dot" aria-hidden="true"></span>{{ n_radar }} nombre{% if n_radar != 1 %}s{% endif %} repitiéndose en tus cierres.</p>{% else %}<p class="signal-empty">Sin nombres repitiéndose en tus cierres por ahora.</p>{% endif %}
+                {% if n_radar %}<p class="radar-badge"><span class="radar-dot" aria-hidden="true"></span>{{ n_radar }} vínculo{% if n_radar != 1 %}s{% endif %} requiere{% if n_radar != 1 %}n{% endif %} que lo{% if n_radar != 1 %}s{% endif %} revises.</p>{% else %}<p class="signal-empty">No hay vínculos pendientes de revisión.</p>{% endif %}
                 <a href="{% url 'diario:simbiosis_dashboard' %}" class="signal-link">Abrir Simbiosis&nbsp; →</a>
             </article>
             <article class="signal"><h3 class="signal-label">Gestos</h3><p class="signal-empty">Hábitos y gestos que el Diario está siguiendo.</p><a href="{% url 'diario:habitos_dashboard' %}" class="signal-link">Abrir Gestos&nbsp; →</a></article>

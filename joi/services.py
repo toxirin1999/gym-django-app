@@ -3325,11 +3325,6 @@ def generar_sintesis_joi(cliente) -> "MensajeJOI | None":
         logger.info(f"[JOI síntesis] {cliente.user.username} → mensaje generado (id={msg.id})")
 
         try:
-            extraer_entidades_simbiosis(cliente.user)
-        except Exception:
-            pass
-
-        try:
             generar_tema_abierto(cliente.user, msg)
         except Exception:
             pass

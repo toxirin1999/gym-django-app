@@ -1,4 +1,5 @@
 import uuid
+from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -154,3 +155,32 @@ class EdicionVersionadaProyeccionesTests(TestCase):
         self.assertEqual(primera.estado, 'completed')
         self.assertTrue(ReflexionLibre.objects.filter(pk__in=resultado_a['reflexiones']).exists())
         self.assertTrue(PersonaInterina.objects.filter(nombre='Ana').exists())
+
+    def test_sombra_usa_fecha_del_cierre_y_no_fecha_del_analisis(self):
+        self.fecha = date(2026, 5, 12)
+        operacion = self._operacion('Texto histórico', 0)
+
+        self._enriquecer(operacion, persona='Ana')
+
+        self.assertEqual(InteraccionSombra.objects.get().fecha, self.fecha)
+
+    def test_varias_interacciones_de_una_persona_cuentan_una_mencion_por_cierre(self):
+        operacion = self._operacion('Vi dos veces a Ana', 0)
+        with (
+            patch('joi.services.parsear_cierre_diario', return_value={
+                'personas': ['Ana'], 'etiquetas': [],
+            }),
+            patch('joi.services.enriquecer_cierre', return_value={
+                'micro_verdad': '',
+                'interacciones': [
+                    {'persona': 'Ana', 'tipo': 'neutra', 'descripcion': 'Primera'},
+                    {'persona': 'ana', 'tipo': 'apoyo', 'descripcion': 'Segunda'},
+                ],
+            }),
+            patch('joi.services.generar_respuesta_cierre', return_value='respuesta'),
+        ):
+            ejecutar_enriquecimiento_cierre(operacion.pk)
+
+        persona = PersonaInterina.objects.get()
+        self.assertEqual(persona.veces_mencionada, 1)
+        self.assertEqual(persona.interacciones.count(), 2)
