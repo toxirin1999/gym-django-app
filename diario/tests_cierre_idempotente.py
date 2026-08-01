@@ -279,6 +279,37 @@ class PresenciaCierreViewTests(TestCase):
         comando.operacion.save(update_fields=['estado', 'resultado', 'updated_at'])
         return comando.operacion
 
+    def test_lectura_inmediata_presenta_dia_completo_si_apertura_y_cierre_estan_confirmados(self):
+        operacion = self.operacion()
+        operacion.entrada.apertura_confirmada_en = timezone.now()
+        operacion.entrada.save(update_fields=['apertura_confirmada_en'])
+
+        response = self.client.get(f'{self.url}?cierre_operacion={operacion.idempotency_key}')
+
+        self.assertEqual(response.context['estado_cierre'], 'dia_completo')
+        self.assertContains(response, 'Día completo.')
+        self.assertContains(response, 'Apertura y cierre están registrados.')
+
+    def test_lectura_durable_sin_uuid_presenta_cierre_sin_apertura(self):
+        self.operacion()
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context['estado_cierre'], 'solo_noche')
+        self.assertContains(response, 'Cierre registrado.')
+        self.assertContains(response, 'Hoy no hubo apertura; el cierre está registrado.')
+
+    def test_texto_matutino_legacy_sin_confirmacion_no_convierte_el_cierre_en_dia_completo(self):
+        operacion = self.operacion()
+        operacion.entrada.persona_quiero_ser = 'Presente y sereno'
+        operacion.entrada.save(update_fields=['persona_quiero_ser'])
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context['estado_cierre'], 'solo_noche')
+        self.assertContains(response, 'Cierre registrado.')
+        self.assertNotContains(response, 'Día completo.')
+
     def test_get_es_puro(self):
         response = self.client.get(self.url)
         self.assertFalse(ProsocheMes.objects.exists())
@@ -452,13 +483,13 @@ class PresenciaCierreViewTests(TestCase):
             'interacciones': [], 'sombras': [], 'simbiosis': {'personas': []},
         })
         html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
-        self.assertIn('Cierre guardado.', html)
+        self.assertIn('Cierre registrado.', html)
         self.assertNotIn('Invitación de JOI', html)
 
     def test_fallo_enriquecimiento_no_afirma_aprendizajes(self):
         op = self.operacion(estado='failed', resultado={})
         html = self.client.get(f'{self.url}?cierre_operacion={op.idempotency_key}').content.decode()
-        self.assertIn('Cierre guardado.', html)
+        self.assertIn('Cierre registrado.', html)
         self.assertIn('análisis no está disponible', html)
         self.assertIn('puedes reintentarlo', html)
         self.assertNotIn('Relaciones detectadas', html)

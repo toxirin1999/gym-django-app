@@ -3524,6 +3524,60 @@ def generar_respuesta_cierre(texto: str, datos_parseo: dict, cliente) -> str:
         return ""
 
 
+def _historial_simbiosis(user, persona_nombre: str) -> str:
+    """Construye evidencia del trigger relacional; no contiene voz de JOI."""
+    from diario.models import ProsocheDiario, ReflexionLibre
+
+    desde = timezone.localdate() - timedelta(days=30)
+    cierres = (
+        ProsocheDiario.objects
+        .filter(
+            prosoche_mes__usuario=user,
+            fecha__gte=desde,
+            reflexiones_dia__icontains=persona_nombre,
+        )
+        .exclude(reflexiones_dia='')
+        .order_by('-fecha')[:3]
+    )
+    respuestas = ReflexionLibre.objects.filter(
+        usuario=user, titulo__startswith=f'Simbiosis: {persona_nombre}',
+    ).order_by('-fecha')[:2]
+    lineas = [
+        f"- Cierre [{entrada.fecha}]: {entrada.reflexiones_dia[:200]}"
+        for entrada in cierres
+    ]
+    lineas.extend(
+        f"- Respuesta previa [{respuesta.fecha.date()}]: {respuesta.contenido[:200]}"
+        for respuesta in respuestas
+    )
+    return '\n'.join(lineas)
+
+
+def generar_pregunta_simbiosis(user, persona_nombre: str) -> str:
+    """Genera la pregunta relacional desde la presencia canónica de JOI."""
+    persona_nombre = str(persona_nombre or '').strip()[:120]
+    if not persona_nombre or not user or not getattr(user, 'pk', None):
+        return ''
+
+    narrativa = _bloque_narrativa(user)
+    manual = _bloque_manual(user, incluir_narrativa=False)
+    historial = _historial_simbiosis(user, persona_nombre)
+    trigger = (
+        "TRIGGER — SIMBIOSIS RELACIONAL\n"
+        f"Persona mencionada hoy: {persona_nombre}.\n"
+        f"Historial específico:\n{historial or 'Sin historial específico previo.'}\n\n"
+        "Genera una sola pregunta de reflexión, directa y concreta. Si hay historial, "
+        "no repitas preguntas anteriores y apóyate únicamente en patrones observables. "
+        "Máximo 20 palabras. Solo la pregunta, sin explicación."
+    )
+    prompt = '\n\n'.join(filter(None, [narrativa, manual, trigger]))
+    try:
+        return _llamar_haiku(prompt, max_tokens=60, _modulo='diario').strip()
+    except Exception as exc:
+        logger.error('[JOI] generar_pregunta_simbiosis falló: %s', exc)
+        return ''
+
+
 def enriquecer_cierre(texto: str, personas_detectadas: list, *, strict=False) -> dict:
     """
     Una sola llamada a Claude que enriquece el cierre con cuatro cosas:

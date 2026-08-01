@@ -125,3 +125,67 @@ class AnalisisCierreUnicoTests(TestCase):
         self.assertFalse(PersonaInterina.objects.filter(nombre='Bea').exists())
         operacion = CierreNocturnoOperacion.objects.get(result_version=1)
         self.assertEqual(operacion.resultado['simbiosis']['personas'], ['Ana'])
+
+    @patch('joi.services.generar_pregunta_simbiosis', return_value='¿Qué esperas todavía de Ana?')
+    @patch('diario.services.analisis_cierre_service.analizar_texto')
+    def test_precheck_usa_la_voz_joi_y_firma_su_pregunta(self, analizar, generar):
+        from diario.services.analisis_cierre_service import verificar_artefacto
+
+        analizar.return_value = {
+            'estado': 'ok',
+            'parseo': {'personas': ['Ana'], 'impulsos': [], 'etiquetas': []},
+            'enriquecido': {},
+        }
+        hoy = timezone.localdate()
+        for dias in (1, 2):
+            reflexion = ReflexionLibre.objects.create(
+                usuario=self.user, contenido='Ana', etiquetas='ana',
+            )
+            ReflexionLibre.objects.filter(pk=reflexion.pk).update(
+                fecha=timezone.now() - timedelta(days=dias)
+            )
+
+        datos = self.client.post(
+            self.precheck, json.dumps({'texto': 'Hoy pensé en Ana'}),
+            content_type='application/json',
+        ).json()
+
+        self.assertTrue(datos['bloqueo'])
+        self.assertEqual(datos['pregunta'], '¿Qué esperas todavía de Ana?')
+        generar.assert_called_once_with(self.user, 'Ana')
+        artefacto = verificar_artefacto(
+            datos['analisis_cierre_token'], usuario=self.user, fecha=hoy,
+            texto='Hoy pensé en Ana',
+        )
+        self.assertEqual(artefacto['pregunta_simbiosis'], datos['pregunta'])
+
+    @patch('joi.services.generar_pregunta_simbiosis', return_value='')
+    @patch('diario.services.analisis_cierre_service.analizar_texto')
+    def test_sin_pregunta_autentica_el_precheck_no_bloquea(self, analizar, _generar):
+        analizar.return_value = {
+            'estado': 'ok',
+            'parseo': {'personas': ['Ana'], 'impulsos': [], 'etiquetas': []},
+            'enriquecido': {},
+        }
+        for dias in (1, 2):
+            reflexion = ReflexionLibre.objects.create(
+                usuario=self.user, contenido='Ana', etiquetas='ana',
+            )
+            ReflexionLibre.objects.filter(pk=reflexion.pk).update(
+                fecha=timezone.now() - timedelta(days=dias)
+            )
+
+        datos = self.client.post(
+            self.precheck, json.dumps({'texto': 'Hoy pensé en Ana'}),
+            content_type='application/json',
+        ).json()
+        self.assertFalse(datos['bloqueo'])
+        self.assertEqual(datos['persona'], '')
+        self.assertEqual(datos['pregunta'], '')
+
+    def test_diario_no_conserva_el_fallback_que_fingia_ser_joi(self):
+        from pathlib import Path
+        import diario.views
+
+        fuente = Path(diario.views.__file__).read_text()
+        self.assertNotIn('que aún no te das a ti mismo', fuente)

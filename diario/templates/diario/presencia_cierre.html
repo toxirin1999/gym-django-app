@@ -93,6 +93,8 @@
     color: rgba(237,233,227,0.7);
     font-size: 0.85rem;
     font-weight: 500;
+    font-family: inherit;
+    text-align: left;
     cursor: pointer;
     transition: all 0.15s;
     user-select: none;
@@ -247,7 +249,8 @@
 
     {% if guardado and not mostrar_form %}
     <section aria-labelledby="cierre-guardado-titulo" style="background:#1E1B27; border:1px solid #2E2A3A; border-radius:16px; padding:1.25rem; margin-bottom:1rem; box-shadow:0 2px 20px rgba(0,0,0,0.3);">
-        <h1 id="cierre-guardado-titulo" style="font-size:1.2rem; color:#EDE9E3; margin:0 0 1rem;">Cierre guardado.</h1>
+        <h1 id="cierre-guardado-titulo" style="font-size:1.2rem; color:#EDE9E3; margin:0 0 0.4rem;">{{ titulo_cierre }}</h1>
+        <p style="color:rgba(237,233,227,0.72); line-height:1.55; margin:0 0 1rem;">{{ detalle_cierre }}</p>
 
         {% if joi_respuesta %}
         <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:#7C7590; margin-bottom:0.9rem;">JOI</div>
@@ -433,6 +436,7 @@
         <!-- Texto libre -->
         <textarea
             name="reflexion_libre"
+            aria-label="Reflexión del día"
             class="diario-textarea"
             placeholder="Cuéntame tu día... Qué pasó, cómo te sentiste, qué resististe, quién apareció."
         >{{ entrada.reflexiones_dia }}</textarea>
@@ -443,15 +447,17 @@
         <div class="section-label">Gestos de hoy</div>
         <div class="habitos-grid" id="habitos-grid">
             {% for item in habitos_con_estado %}
-            <div class="habito-chip {% if item.habito.tipo == 'suelto' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
+            <button type="button"
+                class="habito-chip {% if item.habito.tipo == 'suelto' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
                  data-id="{{ item.habito.id }}"
-                 data-tipo="{{ item.habito.tipo }}">
+                 data-tipo="{{ item.habito.tipo }}"
+                 aria-pressed="{% if item.completado %}true{% else %}false{% endif %}">
                 <span class="habito-check">{% if item.completado %}✓{% else %}○{% endif %}</span>
                 {{ item.habito.nombre }}
                 {% if item.habito.tipo == 'suelto' %}
                     <span class="habito-tipo-badge badge-negativo">cuidar</span>
                 {% endif %}
-            </div>
+            </button>
             {% endfor %}
         </div>
         {% endif %}
@@ -463,7 +469,7 @@
                 <span>Sin peso</span>
                 <span>Muy costoso</span>
             </div>
-            <select name="friccion_no" id="friccion_slider" class="friccion-slider" required>
+            <select name="friccion_no" id="friccion_slider" class="friccion-slider" required aria-label="Fricción de los límites de hoy">
                 <option value="" {% if not form.friccion_no.value %}selected{% endif %}>Elige conscientemente</option>
                 {% for value in "12345" %}<option value="{{ value }}" {% if form.friccion_no.value|stringformat:'s' == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
             </select>
@@ -472,7 +478,7 @@
 
         <div class="friccion-card">
             <div class="section-label">Estado de ánimo al cerrar</div>
-            <select name="estado_animo_noche" required class="friccion-slider">
+            <select name="estado_animo_noche" required class="friccion-slider" aria-label="Estado de ánimo al cerrar">
                 <option value="" {% if not form.estado_animo_noche.value %}selected{% endif %}>Elige conscientemente</option>
                 {% for value, label in form.fields.estado_animo_noche.choices %}
                 <option value="{{ value }}" {% if form.estado_animo_noche.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
@@ -482,12 +488,13 @@
 
         <!-- Cuerpo al cierre -->
         <div class="friccion-card" style="padding-bottom:1.25rem;">
-            <div class="section-label">Cuerpo al cierre</div>
-            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;" id="cuerpo-chips">
+            <div class="section-label" id="cuerpo-cierre-label">Cuerpo al cierre</div>
+            <div style="display:flex;gap:0.6rem;flex-wrap:wrap;" id="cuerpo-chips" role="group" aria-labelledby="cuerpo-cierre-label">
                 {% for val, label in vires.CUERPO_CIERRE_CHOICES %}
                 <button type="button"
                     class="cuerpo-chip"
                     data-val="{{ val }}"
+                    aria-pressed="{% if vires.cuerpo_cierre == val %}true{% else %}false{% endif %}"
                     style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
                     {{ label }}
                 </button>
@@ -523,6 +530,7 @@ document.querySelectorAll('.habito-chip').forEach(chip => chip.addEventListener(
     const id = Number(chip.dataset.id);
     completados.has(id) ? completados.delete(id) : completados.add(id);
     chip.classList.toggle('completado', completados.has(id));
+    chip.setAttribute('aria-pressed', String(completados.has(id)));
     chip.querySelector('.habito-check').textContent = completados.has(id) ? '✓' : '○';
     syncHabitos();
 }));
@@ -531,7 +539,10 @@ syncHabitos();
 const cuerpoInput = document.getElementById('cuerpo_cierre_input');
 document.querySelectorAll('.cuerpo-chip').forEach(chip => chip.addEventListener('click', () => {
     cuerpoInput.value = chip.dataset.val;
-    document.querySelectorAll('.cuerpo-chip').forEach(c => c.classList.toggle('completado', c === chip));
+    document.querySelectorAll('.cuerpo-chip').forEach(c => {
+        c.classList.toggle('completado', c === chip);
+        c.setAttribute('aria-pressed', String(c === chip));
+    });
 }));
 
 let simbiosisComprobada = false;

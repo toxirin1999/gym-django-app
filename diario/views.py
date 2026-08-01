@@ -3325,8 +3325,10 @@ def check_simbiosis_api(request):
                 if mencionado:
                     dias_con_mencion += 1
             if dias_con_mencion >= 2:
-                pregunta = _generar_pregunta_simbiosis(persona_nombre, request)
-                persona_bloqueo = persona_nombre
+                from joi.services import generar_pregunta_simbiosis
+                pregunta = generar_pregunta_simbiosis(request.user, persona_nombre)
+                if pregunta:
+                    persona_bloqueo = persona_nombre
                 break
         artefacto = crear_artefacto(
             usuario=request.user, fecha=hoy, texto=texto, analisis=analisis,
@@ -3456,70 +3458,6 @@ def reintentar_analisis_cierre(request):
         resultado=resultado
     )
     return JsonResponse({'success': True, 'result_url': result_url})
-
-
-def _generar_pregunta_simbiosis(persona_nombre, request):
-    try:
-        from joi.services import _llamar_haiku
-        from datetime import timedelta as _td
-
-        hace_30 = timezone.localdate() - _td(days=30)
-
-        # Cierres recientes donde aparece esta persona
-        entradas = (
-            ProsocheDiario.objects
-            .filter(
-                prosoche_mes__usuario=request.user,
-                fecha__gte=hace_30,
-                reflexiones_dia__icontains=persona_nombre,
-            )
-            .exclude(reflexiones_dia='')
-            .order_by('-fecha')[:3]
-        )
-        fragmentos_cierres = [
-            f"- [{e.fecha}]: {e.reflexiones_dia[:200]}"
-            for e in entradas
-        ]
-
-        # Respuestas anteriores del usuario al bloqueo sobre esta persona
-        respuestas_previas = (
-            ReflexionLibre.objects
-            .filter(usuario=request.user, titulo__startswith=f'Simbiosis: {persona_nombre}')
-            .order_by('-fecha')[:2]
-        )
-        fragmentos_respuestas = [
-            f"- [{r.fecha.date()}]: {r.contenido[:200]}"
-            for r in respuestas_previas
-        ]
-
-        contexto_historico = ''
-        if fragmentos_cierres:
-            contexto_historico += (
-                f"\nApariciones recientes de {persona_nombre} en los cierres de David:\n"
-                + "\n".join(fragmentos_cierres)
-            )
-        if fragmentos_respuestas:
-            contexto_historico += (
-                f"\n\nRespuestas anteriores de David al bloqueo sobre {persona_nombre}:\n"
-                + "\n".join(fragmentos_respuestas)
-            )
-
-        instruccion_historial = (
-            "Usa el historial: no repitas preguntas anteriores y nota si hay un patrón "
-            "(espera, nostalgia, conflicto sin cerrar, búsqueda de validación, etc.)."
-            if contexto_historico else
-            "No hay historial previo. Genera una pregunta directa e incómoda."
-        )
-
-        prompt = (
-            f"David ha mencionado a '{persona_nombre}' en su cierre de hoy.\n"
-            f"{contexto_historico}\n\n"
-            f"Genera UNA sola pregunta de reflexión. {instruccion_historial}\n"
-            f"Máximo 20 palabras. Solo la pregunta, sin explicación."
-        )
-        return _llamar_haiku(prompt)
-    except Exception:
-        return f"¿Qué necesitas de {persona_nombre} que aún no te das a ti mismo?"
 
 
 @login_required
@@ -3747,6 +3685,13 @@ def presencia_cierre(request):
     entrada_presentacion = entrada or ProsocheDiario(fecha=hoy)
     vires_presentacion = vires or SeguimientoVires(usuario=request.user, fecha=hoy)
     cierre_confirmado = bool(entrada and entrada.cierre_confirmado_en)
+    estado_cierre = calcular_estado_diario_hoy(entrada)['estado'] if entrada else 'sin_entrada'
+    if estado_cierre == 'dia_completo':
+        titulo_cierre = 'Día completo.'
+        detalle_cierre = 'Apertura y cierre están registrados.'
+    else:
+        titulo_cierre = 'Cierre registrado.'
+        detalle_cierre = 'Hoy no hubo apertura; el cierre está registrado.'
     form = CierreDiarioForm(usuario=request.user, initial={
         'reflexion_libre': entrada_presentacion.reflexiones_dia,
         'friccion_no': vires_presentacion.nivel_estres if cierre_confirmado else None,
@@ -3778,6 +3723,9 @@ def presencia_cierre(request):
             if enriquecimiento_fallido else ''
         ),
         'version_cierre': entrada_presentacion.cierre_version,
+        'estado_cierre': estado_cierre,
+        'titulo_cierre': titulo_cierre,
+        'detalle_cierre': detalle_cierre,
         'guardado': bool(operacion) or cierre_confirmado,
         'mostrar_form': request.GET.get('editar') == '1' or not cierre_confirmado,
     })
