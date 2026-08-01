@@ -59,6 +59,7 @@ urlpatterns = [
          name='interaccion_editar'),
     path('simbiosis/persona/<int:persona_id>/', views.persona_detalle, name='persona_detalle'),
     path('simbiosis/persona/<int:persona_id>/eliminar/', views.eliminar_persona, name='eliminar_persona'),
+    path('simbiosis/persona/<int:persona_id>/restaurar/', views.restaurar_persona, name='restaurar_persona'),
     # Logos
     path('logos/', views.logos_dashboard, name='logos_dashboard'),
     path('logos/escribir/', views.logos_escritura_libre, name='logos_escritura_libre'),

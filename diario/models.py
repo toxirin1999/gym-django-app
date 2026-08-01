@@ -1050,6 +1050,10 @@ class PersonaImportante(models.Model):
     salud_relacion = models.IntegerField(default=3, validators=[MinValueValidator(1), MaxValueValidator(5)],
                                          help_text="Salud percibida de la relación (1=Mala, 5=Excelente)")
     notas = models.TextField(blank=True, help_text="Notas generales sobre esta persona o relación.")
+    archivada = models.BooleanField(
+        default=False,
+        help_text="Conserva el vínculo y su historial fuera del círculo activo.",
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

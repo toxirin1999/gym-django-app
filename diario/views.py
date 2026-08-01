@@ -1523,9 +1523,11 @@ def simbiosis_dashboard(request):
     """Dashboard de Simbiosis."""
     from diario.models import PersonaInterina
 
-    personas = PersonaImportante.objects.filter(
-        usuario=request.user
+    personas_usuario = PersonaImportante.objects.filter(usuario=request.user)
+    personas = personas_usuario.filter(
+        archivada=False,
     ).order_by('tipo_relacion', 'nombre')
+    personas_archivadas = personas_usuario.filter(archivada=True).order_by('nombre')
 
     interacciones = Interaccion.objects.filter(usuario=request.user)
     n_interacciones = interacciones.count()
@@ -1542,6 +1544,7 @@ def simbiosis_dashboard(request):
 
     context = {
         'personas': personas,
+        'personas_archivadas': personas_archivadas,
         'ultimas_interacciones': ultimas_interacciones,
         'personas_sombra': personas_sombra,
         'personas_radar': personas_radar,
@@ -1668,11 +1671,38 @@ def persona_detalle(request, persona_id):
 @login_required
 @require_http_methods(["POST"])
 def eliminar_persona(request, persona_id):
-    """Elimina una PersonaImportante y envía su interina de vuelta a sombra."""
+    """Archiva el vínculo y conserva intacto su historial."""
     persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
     persona.origen_interino.all().update(estado='sombra', persona_importante=None)
-    persona.delete()
+    if not persona.archivada:
+        persona.archivada = True
+        persona.save(update_fields=['archivada'])
+    messages.success(request, f'"{persona.nombre}" se ha archivado sin borrar su historial.')
     return redirect('diario:simbiosis_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_persona(request, persona_id):
+    """Devuelve un vínculo archivado al círculo activo de su propietario."""
+    persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
+    if persona.archivada:
+        persona.archivada = False
+        persona.save(update_fields=['archivada'])
+
+    from diario.models import PersonaInterina
+    interina = PersonaInterina.objects.filter(
+        usuario=request.user,
+        nombre__iexact=persona.nombre,
+        persona_importante__isnull=True,
+    ).first()
+    if interina:
+        interina.estado = 'promovida'
+        interina.persona_importante = persona
+        interina.save(update_fields=['estado', 'persona_importante'])
+
+    messages.success(request, f'"{persona.nombre}" vuelve a formar parte de tu círculo.')
+    return redirect('diario:persona_detalle', persona_id=persona.pk)
 
 
 # ============================================
@@ -3764,6 +3794,9 @@ def promover_persona_interina(request):
                         nombre=interina.nombre,
                         tipo_relacion='otro',
                     )
+                elif persona_real.archivada:
+                    persona_real.archivada = False
+                    persona_real.save(update_fields=['archivada'])
                 for sombra in interina.interacciones.select_for_update():
                     interaccion, _ = Interaccion.objects.get_or_create(
                         origen_sombra=sombra,

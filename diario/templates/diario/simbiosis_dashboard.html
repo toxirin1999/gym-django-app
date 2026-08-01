@@ -349,6 +349,26 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         <a href="{% url 'diario:persona_crear' %}" class="sim-cta">+ Añadir persona manualmente</a>
     </div>
 
+    {% if personas_archivadas %}
+    <div class="sim-section">
+        <div class="sim-section-label">Vínculos archivados</div>
+        <div class="sim-section-hint">
+            Su historial sigue guardado, pero estas personas no forman parte del círculo activo ni se usan como contexto relacional.
+        </div>
+        {% for persona in personas_archivadas %}
+        <div class="circulo-item">
+            <a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-name" style="color:inherit;text-decoration:none;">
+                {{ persona.nombre }}
+            </a>
+            <form method="post" action="{% url 'diario:restaurar_persona' persona.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="radar-btn add" aria-label="Restaurar a {{ persona.nombre }} en el círculo">Restaurar</button>
+            </form>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- ── Interacciones recientes ── -->
     <div class="sim-section">
         <div class="sim-section-label">Interacciones recientes</div>

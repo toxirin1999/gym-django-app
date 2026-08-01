@@ -2,6 +2,7 @@
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from .models import PersonaImportante, Interaccion, ProsocheHabito, TriggerHabito, Gesto, SeguimientoVires
 
 
@@ -111,7 +112,12 @@ class InteraccionForm(forms.ModelForm):
         # Si se proporcionó un usuario, filtramos el queryset del campo 'personas'
         # para mostrar solo las personas importantes de ESE usuario.
         if usuario:
-            self.fields['personas'].queryset = PersonaImportante.objects.filter(usuario=usuario)
+            disponibles = PersonaImportante.objects.filter(usuario=usuario, archivada=False)
+            if self.instance and self.instance.pk:
+                disponibles = PersonaImportante.objects.filter(usuario=usuario).filter(
+                    Q(archivada=False) | Q(interaccion=self.instance)
+                )
+            self.fields['personas'].queryset = disponibles.distinct()
 
 
 class GestoForm(forms.ModelForm):

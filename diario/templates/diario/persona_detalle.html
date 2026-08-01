@@ -128,14 +128,20 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             <span class="perf-badge tipo">
                 {% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}
             </span>
-            {% if origen == 'radar' %}
-            <span class="perf-badge radar">Desde el radar</span>
+            {% if persona.archivada %}
+            <span class="perf-badge">Vínculo archivado</span>
+            {% elif origen == 'radar' %}
+            <span class="perf-badge radar">Desde una detección</span>
             {% else %}
             <span class="perf-badge">Añadida manualmente</span>
             {% endif %}
         </div>
         <div class="perf-boundary">
-            JOI registra apariciones y contexto. No decide la importancia real del vínculo.
+            {% if persona.archivada %}
+            Conservas todo su historial, pero este vínculo no forma parte del círculo activo ni del contexto relacional.
+            {% else %}
+            Las apariciones registradas aportan contexto. Solo tú decides la importancia real del vínculo.
+            {% endif %}
         </div>
     </div>
 
@@ -156,7 +162,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             {% if origen == 'radar' and origen_interino %}
             <div class="perf-stat">
                 <span class="perf-stat-val">{{ origen_interino.veces_mencionada }}</span>
-                <span class="perf-stat-label">Menciones JOI</span>
+                <span class="perf-stat-label">Menciones detectadas</span>
             </div>
             <div class="perf-stat">
                 <span class="perf-stat-val">{{ origen_interino.primera_deteccion|date:"j M" }}</span>
@@ -186,7 +192,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
                 <div class="int-meta">
                     <span>{{ item.obj.fecha|date:"j M Y" }}</span>
                     {% if item.es_migrada %}
-                    <span class="int-tag joi">JOI</span>
+                    <span class="int-tag joi">Detectada en cierre</span>
                     {% else %}
                     <span class="int-tag manual">Manual</span>
                     {% endif %}
@@ -215,34 +221,47 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
     <div class="sim-section">
         <div class="sim-section-label">Acciones</div>
         <div class="accion-list">
+            {% if persona.archivada %}
+            <form method="post" action="{% url 'diario:restaurar_persona' persona.id %}" style="margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="accion-btn">
+                    <span>Restaurar en el círculo</span>
+                    <span class="accion-btn-arrow">→</span>
+                </button>
+            </form>
+            {% else %}
             <a href="{% url 'diario:persona_editar' persona.id %}" class="accion-btn">
                 <span>Editar tipo y notas</span>
                 <span class="accion-btn-arrow">→</span>
             </a>
             <button class="accion-btn danger" id="btn-eliminar">
-                <span>Eliminar del círculo</span>
+                <span>Archivar vínculo</span>
                 <span class="accion-btn-arrow">→</span>
             </button>
+            {% endif %}
         </div>
     </div>
 
-    <!-- Confirm eliminar (oculto hasta clic) -->
+    {% if not persona.archivada %}
+    <!-- Confirmar archivado (oculto hasta clic) -->
     <div id="confirm-eliminar" class="confirm-box" style="display:none;">
         <p class="confirm-msg">
-            Eliminar a <strong>{{ persona.nombre }}</strong> del círculo confirmado.
-            Las interacciones registradas se perderán. ¿Continuar?
+            Archivar a <strong>{{ persona.nombre }}</strong> fuera del círculo activo.
+            La persona y todas sus interacciones se conservarán y podrás restaurarla cuando quieras. ¿Continuar?
         </p>
         <div class="confirm-actions">
             <form method="post" action="{% url 'diario:eliminar_persona' persona.id %}" style="margin:0;">
                 {% csrf_token %}
-                <button type="submit" class="btn-confirmar">Sí, eliminar</button>
+                <button type="submit" class="btn-confirmar">Sí, archivar</button>
             </form>
             <button class="btn-cancelar" id="btn-cancelar">Cancelar</button>
         </div>
     </div>
+    {% endif %}
 
 </div>
 
+{% if not persona.archivada %}
 <script>
 document.getElementById('btn-eliminar').addEventListener('click', function() {
     document.getElementById('confirm-eliminar').style.display = 'block';
@@ -253,4 +272,5 @@ document.getElementById('btn-cancelar').addEventListener('click', function() {
     document.getElementById('btn-eliminar').style.display = 'flex';
 });
 </script>
+{% endif %}
 {% endblock %}

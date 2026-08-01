@@ -172,6 +172,7 @@ def build_life_context(cliente, hoy: date, semana_reciente: date, acwr=None) -> 
                 usuario=cliente.user,
                 estado='promovida',
                 persona_importante__isnull=False,
+                persona_importante__archivada=False,
                 veces_mencionada__gte=2,
                 ultima_deteccion__gte=hace_14,
             )
