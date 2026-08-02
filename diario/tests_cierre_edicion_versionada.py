@@ -184,3 +184,145 @@ class EdicionVersionadaProyeccionesTests(TestCase):
         persona = PersonaInterina.objects.get()
         self.assertEqual(persona.veces_mencionada, 1)
         self.assertEqual(persona.interacciones.count(), 2)
+
+
+class ReaparicionPersonaArchivadaEnCierreTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('cierre-persona-archivada')
+        self.fecha = date(2026, 7, 10)
+
+    def _operacion(self, texto, *, fecha=None, expected=0):
+        return ejecutar_cierre_nocturno(
+            usuario=self.user,
+            fecha=fecha or self.fecha,
+            payload={
+                'reflexion_libre': texto,
+                'friccion_no': 3,
+                'cuerpo_cierre': '',
+                'estado_animo_noche': 4,
+                'habitos_completados': [],
+                'simbiosis_respuesta': '',
+            },
+            idempotency_key=uuid.uuid4(),
+            expected_version=expected,
+        ).operacion
+
+    def _enriquecer(self, operacion, interacciones):
+        nombres = list(dict.fromkeys(
+            item['persona'] for item in interacciones if item.get('persona')
+        ))
+        with (
+            patch('joi.services.parsear_cierre_diario', return_value={
+                'personas': nombres, 'etiquetas': [],
+            }),
+            patch('joi.services.enriquecer_cierre', return_value={
+                'micro_verdad': '', 'interacciones': interacciones,
+            }),
+            patch('joi.services.generar_respuesta_cierre', return_value='respuesta'),
+        ):
+            return ejecutar_enriquecimiento_cierre(operacion.pk)
+
+    @staticmethod
+    def _item(nombre='Ana', descripcion='Encuentro'):
+        return {
+            'persona': nombre,
+            'tipo': 'neutra',
+            'descripcion': descripcion,
+        }
+
+    def test_persona_activa_sigue_generando_interaccion_real(self):
+        persona = PersonaImportante.objects.create(
+            usuario=self.user, nombre='Ana', archivada=False,
+        )
+
+        resultado = self._enriquecer(
+            self._operacion('Vi a Ana'), [self._item()],
+        )
+
+        self.assertEqual(len(resultado['interacciones']), 1)
+        self.assertEqual(resultado['sombras'], [])
+        self.assertEqual(Interaccion.objects.get().personas.get(), persona)
+        self.assertFalse(PersonaInterina.objects.exists())
+
+    def test_archivada_sin_interina_reaparece_como_primera_senal_sombra(self):
+        persona = PersonaImportante.objects.create(
+            usuario=self.user, nombre='ANA', archivada=True,
+        )
+
+        resultado = self._enriquecer(
+            self._operacion('Volví a ver a Ana'), [self._item('ana')],
+        )
+
+        persona.refresh_from_db()
+        interina = PersonaInterina.objects.get()
+        self.assertTrue(persona.archivada)
+        self.assertEqual(resultado['interacciones'], [])
+        self.assertEqual(len(resultado['sombras']), 1)
+        self.assertEqual(interina.estado, 'sombra')
+        self.assertEqual(interina.veces_mencionada, 1)
+        self.assertIsNone(interina.persona_importante)
+        self.assertEqual(PersonaImportante.objects.count(), 1)
+
+    def test_archivada_repetida_avanza_de_sombra_a_radar_sin_reactivarse(self):
+        persona = PersonaImportante.objects.create(
+            usuario=self.user, nombre='Ana', archivada=True,
+        )
+        primera = self._operacion('Vi a Ana', fecha=date(2026, 7, 10))
+        self._enriquecer(primera, [self._item()])
+
+        segunda = self._operacion('Volví a ver a Ana', fecha=date(2026, 7, 11))
+        self._enriquecer(segunda, [self._item()])
+
+        persona.refresh_from_db()
+        interina = PersonaInterina.objects.get()
+        self.assertTrue(persona.archivada)
+        self.assertEqual(interina.estado, 'radar')
+        self.assertEqual(interina.veces_mencionada, 2)
+        self.assertIsNone(interina.persona_importante)
+        self.assertEqual(Interaccion.objects.count(), 0)
+        self.assertEqual(InteraccionSombra.objects.count(), 2)
+
+    def test_varias_interacciones_archivada_cuentan_una_mencion_por_cierre(self):
+        persona = PersonaImportante.objects.create(
+            usuario=self.user, nombre='Ana', archivada=True,
+        )
+        interina = PersonaInterina.objects.create(
+            usuario=self.user, nombre='ANA', estado='sombra',
+            veces_mencionada=1,
+        )
+
+        self._enriquecer(self._operacion('Vi dos veces a Ana'), [
+            self._item('Ana', 'Primera'),
+            self._item('ana', 'Segunda'),
+        ])
+
+        persona.refresh_from_db()
+        interina.refresh_from_db()
+        self.assertTrue(persona.archivada)
+        self.assertEqual(interina.veces_mencionada, 2)
+        self.assertEqual(interina.estado, 'radar')
+        self.assertEqual(interina.interacciones.count(), 2)
+        self.assertEqual(Interaccion.objects.count(), 0)
+
+    def test_edicion_retrae_sombra_y_restaura_contador_de_archivada(self):
+        persona = PersonaImportante.objects.create(
+            usuario=self.user, nombre='Ana', archivada=True,
+        )
+        interina = PersonaInterina.objects.create(
+            usuario=self.user, nombre='Ana', estado='sombra',
+            veces_mencionada=1,
+        )
+        primera = self._operacion('Vi a Ana')
+        self._enriquecer(primera, [self._item()])
+        interina.refresh_from_db()
+        self.assertEqual((interina.estado, interina.veces_mencionada), ('radar', 2))
+
+        segunda = self._operacion('', expected=1)
+        self._enriquecer(segunda, [])
+
+        persona.refresh_from_db()
+        interina.refresh_from_db()
+        self.assertTrue(persona.archivada)
+        self.assertEqual((interina.estado, interina.veces_mencionada), ('sombra', 1))
+        self.assertFalse(InteraccionSombra.objects.exists())
+        self.assertFalse(Interaccion.objects.exists())

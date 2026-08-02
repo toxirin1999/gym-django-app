@@ -335,7 +335,14 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             if not nombre or identidad not in personas_permitidas:
                 continue
             tipo = item.get('tipo') if item.get('tipo') in tipos else 'neutra'
-            persona = PersonaImportante.objects.filter(usuario=usuario, nombre__iexact=nombre).first()
+            # Una persona archivada conserva su historial, pero ya no forma parte
+            # del círculo activo. Si reaparece, vuelve a pasar por el radar y
+            # requiere una reconfirmación explícita del usuario.
+            persona = PersonaImportante.objects.filter(
+                usuario=usuario,
+                nombre__iexact=nombre,
+                archivada=False,
+            ).first()
             if persona:
                 interaccion = Interaccion.objects.create(
                     usuario=usuario, titulo=(item.get('titulo') or nombre)[:200],
