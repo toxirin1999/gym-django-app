@@ -2,8 +2,10 @@
 
 {% block title %}Iniciar episodio de rehabilitación{% endblock %}
 
+{% block extra_css %}{% include "rehab/_offset_style.html" %}{% endblock %}
+
 {% block content %}
-<div class="container">
+<div class="container rehab-content-offset">
     <h1>Iniciar episodio de rehabilitación</h1>
     <form method="post">
         {% csrf_token %}
