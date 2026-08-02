@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
 
 from . import services
 from .forms import IniciarEpisodioForm, RegistrarSesionForm, RegistroDiarioForm
@@ -103,3 +104,35 @@ def registrar_sesion_view(request, episodio_id):
         'episodio': episodio,
         'prescripciones': prescripciones,
     })
+
+
+@login_required
+def proponer_avance_view(request):
+    cliente = request.user.cliente_perfil
+    episodio = (
+        EpisodioRehab.objects.filter(cliente=cliente, estado='ACTIVO')
+        .order_by('fecha_inicio')
+        .first()
+    )
+    resultado = None
+    if episodio is not None and episodio.fase_actual is not None:
+        resultado = services.evaluar_elegibilidad_avance(episodio, timezone.localdate())
+    return render(request, 'rehab/proponer_avance.html', {
+        'episodio': episodio,
+        'resultado': resultado,
+    })
+
+
+@login_required
+def confirmar_avance_view(request, episodio_id):
+    cliente = request.user.cliente_perfil
+    episodio = get_object_or_404(EpisodioRehab, pk=episodio_id, cliente=cliente)
+    if request.method == 'POST':
+        forzado = request.POST.get('forzado') == 'on'
+        try:
+            services.confirmar_avance(episodio, timezone.localdate(), forzado=forzado)
+        except ValidationError as e:
+            messages.error(request, str(e))
+        else:
+            messages.success(request, 'Fase avanzada correctamente.')
+    return redirect('rehab:proponer_avance')

@@ -3,6 +3,13 @@ from django.db import transaction
 
 from ..models import EjercicioSesionRehab, EpisodioRehab, RegistroDiarioRehab, SesionRehab, TransicionFase
 from .prescripcion_service import UMBRAL_DOLOR_PARADA, prescripcion_de_hoy
+from .transicion_service import (
+    aplicar_retroceso_automatico,
+    confirmar_avance,
+    detectar_estancamiento,
+    evaluar_elegibilidad_avance,
+    evaluar_retroceso,
+)
 
 __all__ = [
     'iniciar_episodio',
@@ -10,6 +17,11 @@ __all__ = [
     'registrar_sesion',
     'prescripcion_de_hoy',
     'UMBRAL_DOLOR_PARADA',
+    'evaluar_elegibilidad_avance',
+    'confirmar_avance',
+    'evaluar_retroceso',
+    'aplicar_retroceso_automatico',
+    'detectar_estancamiento',
 ]
 
 
@@ -60,6 +72,9 @@ def registrar_dolor_diario(episodio, fecha, dolor_manana, rigidez_manana, notas=
             'notas': notas,
         },
     )
+    # Fuera de la transacción de guardado: un fallo al evaluar retroceso no debe
+    # descartar el registro de dolor ya persistido.
+    aplicar_retroceso_automatico(episodio, fecha)
     return registro
 
 
@@ -107,4 +122,7 @@ def registrar_sesion(
                 dolor_ejercicio=item.get('dolor_ejercicio'),
                 completado=item.get('completado', False),
             )
+    # Fuera de la transacción de guardado: un fallo al evaluar retroceso no debe
+    # descartar la sesión ya persistida.
+    aplicar_retroceso_automatico(episodio, fecha)
     return sesion

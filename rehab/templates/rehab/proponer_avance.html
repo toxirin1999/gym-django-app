@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}Propuesta de avance de fase{% endblock %}
+
+{% block content %}
+<div class="container">
+    {% if not episodio %}
+    <p>No hay ningún episodio de rehabilitación activo.</p>
+    {% else %}
+    <h1>Propuesta de avance · {{ episodio.protocolo.nombre }}</h1>
+    <p>Fase actual: {{ episodio.fase_actual.nombre }}</p>
+
+    {% if resultado %}
+        {% if resultado.elegible %}
+        <p>Cumples los criterios para avanzar a la siguiente fase ({{ resultado.siguiente_fase.nombre }}).</p>
+        {% else %}
+        <p>Todavía no cumples los criterios para avanzar. Motivo: {{ resultado.motivo }}</p>
+        {% endif %}
+
+        <form method="post" action="{% url 'rehab:confirmar_avance' episodio.id %}">
+            {% csrf_token %}
+            <label>
+                <input type="checkbox" name="forzado"> Forzar avance (decisión del profesional)
+            </label>
+            <button type="submit">Confirmar avance de fase</button>
+        </form>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}
