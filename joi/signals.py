@@ -3,8 +3,16 @@ JOI reactivity signals: invalidate JOI estado when external events occur
 (gym sessions with high RPE, lesion reports, etc.)
 """
 from django.db.models.signals import post_save
+from django.db import transaction
 from django.dispatch import receiver
 from django.core.cache import cache as _cache
+
+
+@receiver(post_save, sender='diario.ReflexionLibre')
+def invalidar_contexto_joi_por_reflexion(sender, instance, **kwargs):
+    """La escritura actualiza la memoria disponible, sin generar presencia JOI."""
+    usuario_id = instance.usuario_id
+    transaction.on_commit(lambda: _cache.delete(f'joi_ctx_{usuario_id}'))
 
 
 @receiver(post_save, sender='entrenos.EntrenoRealizado')

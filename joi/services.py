@@ -2018,14 +2018,21 @@ def _hay_contexto_para_revision(cliente, ultima_revision) -> bool:
         pass
     try:
         from diario.models import ProsocheDiario, ReflexionLibre
+        from diario.services.logos_service import contiene_etiqueta
+        reflexiones_nuevas = list(
+            ReflexionLibre.objects
+            .filter(usuario=cliente.user, fecha__gte=ultima_revision)
+            .only('etiquetas')
+        )
         if (
             ProsocheDiario.objects
             .filter(prosoche_mes__usuario=cliente.user, fecha__gte=limite)
             .exists()
             or
-            ReflexionLibre.objects
-            .filter(usuario=cliente.user, fecha__gte=ultima_revision)
-            .exists()
+            any(
+                not contiene_etiqueta(reflexion.etiquetas, 'cierre_dia')
+                for reflexion in reflexiones_nuevas
+            )
         ):
             return True
     except Exception:
@@ -2873,12 +2880,17 @@ def extraer_entidades_simbiosis(user) -> list:
             pass
 
         try:
-            reflexiones = (
+            from diario.services.logos_service import contiene_etiqueta
+            candidatos = list(
                 ReflexionLibre.objects
                 .filter(usuario=user, fecha__gte=limite)
                 .exclude(contenido='')
-                .order_by('-fecha')[:3]
+                .order_by('-fecha')
             )
+            reflexiones = [
+                r for r in candidatos
+                if not contiene_etiqueta(r.etiquetas, 'cierre_dia')
+            ][:3]
             for r in reflexiones:
                 fragmentos.append(r.contenido[:300])
         except Exception:
@@ -3050,12 +3062,17 @@ def _leer_diario_reciente(user, dias: int = 7) -> str:
     # ── Logos: reflexiones libres ─────────────────────────────────────────────
     try:
         from diario.models import ReflexionLibre
-        reflexiones = (
+        from diario.services.logos_service import contiene_etiqueta
+        candidatos = list(
             ReflexionLibre.objects
             .filter(usuario=user, fecha__gte=limite)
             .exclude(contenido='')
-            .order_by('-fecha')[:2]
+            .order_by('-fecha')
         )
+        reflexiones = [
+            r for r in candidatos
+            if not contiene_etiqueta(r.etiquetas, 'cierre_dia')
+        ][:2]
         for r in reflexiones:
             titulo = f"[{r.titulo}] " if r.titulo else ''
             fragmentos.append(f"{titulo}{r.contenido[:300]}")
