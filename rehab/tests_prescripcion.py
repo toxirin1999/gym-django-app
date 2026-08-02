@@ -125,6 +125,46 @@ class DolorHoyAltoTests(PrescripcionDeHoyTestBase):
         self.assertFalse(resultado['puede_entrenar'])
         self.assertEqual(resultado['ejercicios'], [])
 
+    def test_dolor_hoy_alto_en_fase_1_alerta_no_hay_fase_anterior(self):
+        RegistroDiarioRehab.objects.create(
+            episodio=self.episodio,
+            fecha=date(2026, 1, 5),
+            dolor_manana=UMBRAL_DOLOR_PARADA,
+            rigidez_manana=5,
+        )
+
+        resultado = prescripcion_de_hoy(self.cliente, fecha=date(2026, 1, 5))
+
+        self.assertIn('no hay margen para retroceder', resultado['alerta'].lower())
+        self.assertIn('profesional', resultado['alerta'].lower())
+        self.assertNotIn('Considera retroceder de fase', resultado['alerta'])
+
+    def test_dolor_hoy_alto_en_fase_mayor_a_1_sugiere_retroceder(self):
+        fase2 = FaseProtocolo.objects.create(
+            protocolo=self.protocolo,
+            orden=2,
+            slug='fase-2-concentrica-presc',
+            nombre='Fase 2',
+            objetivo='x',
+            duracion_minima_dias=7,
+            duracion_tipica_dias=14,
+            reglas_avance={'min_sesiones': 6, 'umbral_dolor': 3, 'min_adherencia': 0.8},
+            reglas_retroceso={'dolor_post_24h_umbral': 5, 'sesiones_consecutivas_con_dolor': 2},
+            descripcion='x',
+        )
+        self.episodio.fase_actual = fase2
+        self.episodio.save(update_fields=['fase_actual'])
+        RegistroDiarioRehab.objects.create(
+            episodio=self.episodio,
+            fecha=date(2026, 1, 5),
+            dolor_manana=UMBRAL_DOLOR_PARADA,
+            rigidez_manana=5,
+        )
+
+        resultado = prescripcion_de_hoy(self.cliente, fecha=date(2026, 1, 5))
+
+        self.assertIn('Considera retroceder de fase', resultado['alerta'])
+
 
 class DolorMatinalPersistenteTests(PrescripcionDeHoyTestBase):
     def test_dolor_matinal_persistente_fuerza_parar(self):
@@ -140,6 +180,46 @@ class DolorMatinalPersistenteTests(PrescripcionDeHoyTestBase):
         self.assertEqual(resultado['estado'], 'PARAR')
         self.assertEqual(resultado['motivo'], 'dolor_matinal_persistente')
         self.assertFalse(resultado['puede_entrenar'])
+
+    def test_dolor_matinal_persistente_en_fase_1_alerta_no_hay_fase_anterior(self):
+        registrar_dolor_diario(
+            episodio=self.episodio, fecha=date(2026, 1, 4), dolor_manana=5, rigidez_manana=3,
+        )
+        registrar_dolor_diario(
+            episodio=self.episodio, fecha=date(2026, 1, 5), dolor_manana=5, rigidez_manana=3,
+        )
+
+        resultado = prescripcion_de_hoy(self.cliente, fecha=date(2026, 1, 5))
+
+        self.assertIn('no hay margen para retroceder', resultado['alerta'].lower())
+        self.assertIn('profesional', resultado['alerta'].lower())
+        self.assertNotIn('Considera retroceder de fase', resultado['alerta'])
+
+    def test_dolor_matinal_persistente_en_fase_mayor_a_1_sugiere_retroceder(self):
+        fase2 = FaseProtocolo.objects.create(
+            protocolo=self.protocolo,
+            orden=2,
+            slug='fase-2-concentrica-presc-persistente',
+            nombre='Fase 2',
+            objetivo='x',
+            duracion_minima_dias=7,
+            duracion_tipica_dias=14,
+            reglas_avance={'min_sesiones': 6, 'umbral_dolor': 3, 'min_adherencia': 0.8},
+            reglas_retroceso={'dolor_post_24h_umbral': 5, 'sesiones_consecutivas_con_dolor': 2},
+            descripcion='x',
+        )
+        self.episodio.fase_actual = fase2
+        self.episodio.save(update_fields=['fase_actual'])
+        registrar_dolor_diario(
+            episodio=self.episodio, fecha=date(2026, 1, 4), dolor_manana=5, rigidez_manana=3,
+        )
+        registrar_dolor_diario(
+            episodio=self.episodio, fecha=date(2026, 1, 5), dolor_manana=5, rigidez_manana=3,
+        )
+
+        resultado = prescripcion_de_hoy(self.cliente, fecha=date(2026, 1, 5))
+
+        self.assertIn('Considera retroceder de fase', resultado['alerta'])
 
 
 class SinDatosTests(PrescripcionDeHoyTestBase):

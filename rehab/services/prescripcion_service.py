@@ -160,6 +160,14 @@ def prescripcion_de_hoy(cliente, fecha=None):
         }
 
     if registro_hoy is not None and registro_hoy.dolor_manana >= UMBRAL_DOLOR_PARADA:
+        if fase is not None and fase.orden == 1:
+            sugerencia = (
+                'Ya estás en la fase más básica del protocolo — no hay margen para '
+                'retroceder más. Este nivel de dolor está fuera de lo que la app puede '
+                'gestionar sola: busca valoración de un profesional.'
+            )
+        else:
+            sugerencia = 'Considera retroceder de fase.'
         return {
             **base,
             'estado': 'PARAR',
@@ -169,7 +177,7 @@ def prescripcion_de_hoy(cliente, fecha=None):
             'puede_entrenar': False,
             'alerta': (
                 f'Dolor matinal {registro_hoy.dolor_manana}/10 supera el umbral de parada '
-                f'({UMBRAL_DOLOR_PARADA}). Considera retroceder de fase.'
+                f'({UMBRAL_DOLOR_PARADA}). {sugerencia}'
             ),
         }
 
@@ -182,6 +190,14 @@ def prescripcion_de_hoy(cliente, fecha=None):
         if len(registros_recientes) == sesiones_consecutivas and all(
             r.dolor_manana >= umbral_retroceso for r in registros_recientes
         ):
+            if fase is not None and fase.orden == 1:
+                sugerencia = (
+                    'Ya estás en la fase más básica del protocolo — no hay margen para '
+                    'retroceder más. Este nivel de dolor está fuera de lo que la app puede '
+                    'gestionar sola: busca valoración de un profesional.'
+                )
+            else:
+                sugerencia = 'Considera retroceder de fase.'
             return {
                 **base,
                 'estado': 'PARAR',
@@ -191,7 +207,7 @@ def prescripcion_de_hoy(cliente, fecha=None):
                 'puede_entrenar': False,
                 'alerta': (
                     f'Dolor matinal >= {umbral_retroceso}/10 durante {sesiones_consecutivas} días '
-                    'consecutivos. Considera retroceder de fase.'
+                    f'consecutivos. {sugerencia}'
                 ),
             }
 
