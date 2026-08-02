@@ -6,4 +6,7 @@ app_name = "rehab"
 
 urlpatterns = [
     path("", views.placeholder, name="placeholder"),
+    path("episodio/nuevo/", views.iniciar_episodio_view, name="iniciar_episodio"),
+    path("episodio/<int:episodio_id>/dolor/", views.registrar_dolor_view, name="registrar_dolor"),
+    path("episodio/<int:episodio_id>/sesion/", views.registrar_sesion_view, name="registrar_sesion"),
 ]

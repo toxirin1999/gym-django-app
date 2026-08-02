@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Registrar sesión de rehabilitación{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Registrar sesión · {{ episodio.protocolo.nombre }} ({{ episodio.fase_actual.nombre }})</h1>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <h2>Ejercicios de la fase actual</h2>
+        {% for prescripcion in prescripciones %}
+        <fieldset>
+            <legend>{{ prescripcion.ejercicio.nombre }} ({{ prescripcion.series }} series)</legend>
+            <label>Series completadas
+                <input type="number" name="presc_{{ prescripcion.id }}_series_completadas" min="0" value="{{ prescripcion.series }}">
+            </label>
+            <label>Carga (kg)
+                <input type="number" step="0.01" name="presc_{{ prescripcion.id }}_carga_kg">
+            </label>
+            <label>Dolor durante el ejercicio (0-10)
+                <input type="number" min="0" max="10" name="presc_{{ prescripcion.id }}_dolor_ejercicio">
+            </label>
+            <label>Completado
+                <input type="checkbox" name="presc_{{ prescripcion.id }}_completado" checked>
+            </label>
+        </fieldset>
+        {% empty %}
+        <p>Este episodio no tiene fase activa con ejercicios prescritos.</p>
+        {% endfor %}
+
+        <button type="submit">Registrar sesión</button>
+    </form>
+</div>
+{% endblock %}
