@@ -2,6 +2,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from ..models import EjercicioSesionRehab, EpisodioRehab, RegistroDiarioRehab, SesionRehab, TransicionFase
+from .evolucion_service import construir_evolucion
 from .prescripcion_service import UMBRAL_DOLOR_PARADA, prescripcion_de_hoy
 from .recorrido_service import construir_recorrido
 from .transicion_service import (
@@ -24,6 +25,7 @@ __all__ = [
     'aplicar_retroceso_automatico',
     'detectar_estancamiento',
     'construir_recorrido',
+    'construir_evolucion',
 ]
 
 

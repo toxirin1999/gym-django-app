@@ -163,6 +163,94 @@ def recorrido_view(request):
     })
 
 
+_EVOLUCION_VIEWBOX_ANCHO = 600
+_EVOLUCION_VIEWBOX_ALTO = 240
+_EVOLUCION_MARGEN_IZQ = 30
+_EVOLUCION_MARGEN_DER = 20
+_EVOLUCION_MARGEN_SUP = 24
+_EVOLUCION_MARGEN_INF = 20
+
+
+def _coordenadas_evolucion(evolucion):
+    puntos = evolucion['puntos']
+    area_x0 = _EVOLUCION_MARGEN_IZQ
+    area_x1 = _EVOLUCION_VIEWBOX_ANCHO - _EVOLUCION_MARGEN_DER
+    area_y0 = _EVOLUCION_MARGEN_SUP
+    area_y1 = _EVOLUCION_VIEWBOX_ALTO - _EVOLUCION_MARGEN_INF
+    area_ancho = area_x1 - area_x0
+    area_alto = area_y1 - area_y0
+
+    n = len(puntos)
+    # Eje X repartido por índice de punto, no por fecha proporcional: con datos
+    # irregulares (días sin registro) una escala temporal real dejaría huecos
+    # visuales confusos; el índice mantiene los puntos legibles y espaciados.
+    def x_de_indice(i):
+        if n <= 1:
+            return area_x0 + area_ancho / 2
+        return area_x0 + (area_ancho * i / (n - 1))
+
+    def y_de_dolor(valor):
+        return area_y1 - (valor / 10 * area_alto)
+
+    puntos_manana = []
+    puntos_durante = []
+    for i, punto in enumerate(puntos):
+        x = x_de_indice(i)
+        if punto['dolor_manana'] is not None:
+            puntos_manana.append(f"{x:.1f},{y_de_dolor(punto['dolor_manana']):.1f}")
+        if punto['dolor_durante'] is not None:
+            puntos_durante.append(f"{x:.1f},{y_de_dolor(punto['dolor_durante']):.1f}")
+
+    fechas_indice = {punto['fecha']: i for i, punto in enumerate(puntos)}
+    eventos_x = []
+    for evento in evolucion['eventos']:
+        indice = fechas_indice.get(evento['fecha'])
+        if indice is None:
+            continue
+        eventos_x.append({
+            'x': round(x_de_indice(indice), 1),
+            'direccion': evento['direccion'],
+            'fase_nombre': evento['fase_nombre'],
+        })
+
+    lineas_grid = [
+        {'y': round(y_de_dolor(v), 1), 'valor': v}
+        for v in range(0, 11, 2)
+    ]
+
+    return {
+        'viewbox': f'0 0 {_EVOLUCION_VIEWBOX_ANCHO} {_EVOLUCION_VIEWBOX_ALTO}',
+        'area_x0': area_x0,
+        'area_x1': area_x1,
+        'area_y0': area_y0,
+        'area_y1': area_y1,
+        'polilinea_manana': ' '.join(puntos_manana),
+        'polilinea_durante': ' '.join(puntos_durante),
+        'eventos': eventos_x,
+        'lineas_grid': lineas_grid,
+    }
+
+
+@login_required
+def evolucion_view(request):
+    cliente = request.user.cliente_perfil
+    episodio = (
+        EpisodioRehab.objects.filter(cliente=cliente, estado='ACTIVO')
+        .order_by('fecha_inicio')
+        .first()
+    )
+    if episodio is None:
+        return render(request, 'rehab/evolucion.html', {'episodio': None, 'evolucion': None, 'grafico': None})
+
+    evolucion = services.construir_evolucion(episodio)
+    grafico = _coordenadas_evolucion(evolucion) if evolucion['puntos'] else None
+    return render(request, 'rehab/evolucion.html', {
+        'episodio': episodio,
+        'evolucion': evolucion,
+        'grafico': grafico,
+    })
+
+
 @login_required
 def confirmar_avance_view(request, episodio_id):
     cliente = request.user.cliente_perfil

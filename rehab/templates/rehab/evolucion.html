@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Rehab · Evolución{% endblock %}
+
+{% block extra_css %}{% include "rehab/_offset_style.html" %}
+<style>
+    .rehab-evolucion-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.25rem 1.5rem; background: #fafafa; color: #1a1a1a; margin-bottom: 1.5rem; }
+    .rehab-evolucion-svg { width: 100%; height: auto; display: block; }
+    .rehab-evolucion-leyenda { display: flex; gap: 1.5rem; flex-wrap: wrap; margin: 0.75rem 0 1.25rem; font-size: 0.9rem; color: #333333; }
+    .rehab-evolucion-leyenda-item { display: flex; align-items: center; gap: 0.4rem; }
+    .rehab-evolucion-leyenda-punto { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+    .rehab-evolucion-tabla { width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #1a1a1a; }
+    .rehab-evolucion-tabla th, .rehab-evolucion-tabla td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid #e0e0e0; }
+    .rehab-evolucion-tabla th { color: #555555; font-weight: 600; }
+    .rehab-vacio { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; text-align: center; color: #1a1a1a; }
+    .rehab-vacio a { color: #1a1a1a; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container rehab-content-offset">
+    <h1>Evolución del dolor</h1>
+
+    {% if not episodio %}
+    <div class="rehab-vacio">
+        <p>No tienes ningún episodio de rehabilitación activo todavía.</p>
+        <p><a href="{% url 'rehab:iniciar_episodio' %}">Iniciar un episodio de rehabilitación</a></p>
+    </div>
+    {% else %}
+    <p>{{ episodio.protocolo.nombre }} · {{ evolucion.fecha_desde }} — {{ evolucion.fecha_hasta }}</p>
+
+    {% if not grafico %}
+    <div class="rehab-vacio">
+        <p>Todavía no hay datos suficientes para mostrar evolución.</p>
+    </div>
+    {% else %}
+    <div class="rehab-evolucion-card">
+        <svg class="rehab-evolucion-svg" viewBox="{{ grafico.viewbox }}" role="img" aria-label="Evolución del dolor matinal y en sesión, con las transiciones de fase marcadas">
+            {% for linea in grafico.lineas_grid %}
+            <line x1="{{ grafico.area_x0 }}" y1="{{ linea.y }}" x2="{{ grafico.area_x1 }}" y2="{{ linea.y }}" stroke="#e5e5e5" stroke-width="1" />
+            <text x="{{ grafico.area_x0 }}" y="{{ linea.y }}" dx="-6" dy="3" font-size="8" fill="#999999" text-anchor="end">{{ linea.valor }}</text>
+            {% endfor %}
+
+            {% for evento in grafico.eventos %}
+            <line x1="{{ evento.x }}" y1="{{ grafico.area_y0 }}" x2="{{ evento.x }}" y2="{{ grafico.area_y1 }}" stroke="#999999" stroke-width="1" stroke-dasharray="3,3" />
+            <text x="{{ evento.x }}" y="{{ grafico.area_y0 }}" dy="-4" font-size="8" fill="#666666" text-anchor="start" transform="rotate(-35 {{ evento.x }} {{ grafico.area_y0 }})">{{ evento.fase_nombre }}</text>
+            {% endfor %}
+
+            {% if grafico.polilinea_manana %}
+            <polyline points="{{ grafico.polilinea_manana }}" fill="none" stroke="#0397AB" stroke-width="2" />
+            {% endif %}
+            {% if grafico.polilinea_durante %}
+            <polyline points="{{ grafico.polilinea_durante }}" fill="none" stroke="#C84B31" stroke-width="2" />
+            {% endif %}
+        </svg>
+
+        <div class="rehab-evolucion-leyenda">
+            <span class="rehab-evolucion-leyenda-item"><span class="rehab-evolucion-leyenda-punto" style="background:#0397AB;"></span>Dolor matinal</span>
+            <span class="rehab-evolucion-leyenda-item"><span class="rehab-evolucion-leyenda-punto" style="background:#C84B31;"></span>Dolor en sesión</span>
+        </div>
+    </div>
+
+    <table class="rehab-evolucion-tabla">
+        <thead>
+            <tr><th>Fecha</th><th>Dolor matinal</th><th>Dolor en sesión</th></tr>
+        </thead>
+        <tbody>
+            {% for punto in evolucion.puntos %}
+            <tr>
+                <td>{{ punto.fecha|date:"Y-m-d" }}</td>
+                <td>{{ punto.dolor_manana|default_if_none:"—" }}</td>
+                <td>{{ punto.dolor_durante|default_if_none:"—" }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% endif %}
+
+    <p><a href="{% url 'rehab:hoy' %}">Volver a Hoy</a></p>
+    {% endif %}
+</div>
+{% endblock %}
