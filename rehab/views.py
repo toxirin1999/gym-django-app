@@ -1,7 +1,6 @@
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
-from django.http import HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 
@@ -10,8 +9,31 @@ from .forms import IniciarEpisodioForm, RegistrarSesionForm, RegistroDiarioForm
 from .models import EpisodioRehab
 
 
-def placeholder(request):
-    return HttpResponse("Rehab: en construcción.")
+@login_required
+def hoy_view(request):
+    cliente = request.user.cliente_perfil
+    episodio = (
+        EpisodioRehab.objects.filter(cliente=cliente, estado='ACTIVO')
+        .order_by('fecha_inicio')
+        .first()
+    )
+    if episodio is None:
+        return render(request, 'rehab/hoy.html', {'episodio': None, 'prescripcion': None})
+
+    fecha = timezone.localdate()
+    prescripcion = services.prescripcion_de_hoy(cliente)
+    estancamiento = None
+    elegibilidad = None
+    if episodio.fase_actual is not None:
+        estancamiento = services.detectar_estancamiento(episodio, fecha)
+        elegibilidad = services.evaluar_elegibilidad_avance(episodio, fecha)
+
+    return render(request, 'rehab/hoy.html', {
+        'episodio': episodio,
+        'prescripcion': prescripcion,
+        'estancamiento': estancamiento,
+        'elegibilidad': elegibilidad,
+    })
 
 
 @login_required
@@ -33,7 +55,7 @@ def iniciar_episodio_view(request):
                 form.add_error(None, e)
             else:
                 messages.success(request, 'Episodio de rehabilitación iniciado.')
-                return redirect('rehab:placeholder')
+                return redirect('rehab:hoy')
     else:
         form = IniciarEpisodioForm()
     return render(request, 'rehab/iniciar_episodio.html', {'form': form})
@@ -54,7 +76,7 @@ def registrar_dolor_view(request, episodio_id):
                 notas=form.cleaned_data['notas'],
             )
             messages.success(request, 'Registro diario guardado.')
-            return redirect('rehab:placeholder')
+            return redirect('rehab:hoy')
     else:
         form = RegistroDiarioForm()
     return render(request, 'rehab/registrar_dolor.html', {'form': form, 'episodio': episodio})
@@ -96,7 +118,7 @@ def registrar_sesion_view(request, episodio_id):
                 notas=form.cleaned_data['notas'],
             )
             messages.success(request, 'Sesión registrada.')
-            return redirect('rehab:placeholder')
+            return redirect('rehab:hoy')
     else:
         form = RegistrarSesionForm()
     return render(request, 'rehab/registrar_sesion.html', {
