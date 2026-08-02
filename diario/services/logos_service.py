@@ -1,6 +1,92 @@
 from datetime import timedelta
 
+from django.contrib.auth import get_user_model
+from django.db import IntegrityError, transaction
+from django.db.models import F
 from django.utils import timezone
+
+
+def tokenizar_etiquetas(valor):
+    """Separa un CSV y deduplica semánticamente conservando su primera grafía."""
+    if not valor:
+        return []
+    partes = valor if isinstance(valor, (list, tuple)) else str(valor).split(',')
+    resultado = []
+    vistos = set()
+    for parte in partes:
+        etiqueta = str(parte).strip()
+        clave = etiqueta.casefold()
+        if etiqueta and clave not in vistos:
+            vistos.add(clave)
+            resultado.append(etiqueta)
+    return resultado
+
+
+def normalizar_etiquetas(valor):
+    return ','.join(tokenizar_etiquetas(valor))
+
+
+def contiene_etiqueta(etiquetas, buscada):
+    clave = (buscada or '').strip().casefold()
+    return bool(clave) and any(e.casefold() == clave for e in tokenizar_etiquetas(etiquetas))
+
+
+def _sumar_puntos_virtud(usuario, tipo, puntos):
+    from diario.models import Virtud
+
+    virtud, _ = Virtud.objects.get_or_create(
+        usuario=usuario, tipo=tipo,
+        defaults={'puntos': 0, 'nivel': 'aprendiz'},
+    )
+    Virtud.objects.filter(pk=virtud.pk).update(puntos=F('puntos') + puntos)
+    virtud.refresh_from_db()
+    virtud.actualizar_nivel()
+    return virtud
+
+
+def _otorgar_insignias_guiadas(usuario):
+    from diario.models import Insignia, InsigniaUsuario, ReflexionLibre
+
+    total = ReflexionLibre.objects.filter(usuario=usuario, reflexion_guiada__isnull=False).count()
+    for cantidad, codigo in {
+        1: 'primera_reflexion_guiada', 5: 'explorador_curioso',
+        10: 'mente_abierta', 25: 'buscador_sabiduria', 50: 'filosofo_practico',
+    }.items():
+        if total >= cantidad:
+            insignia = Insignia.objects.filter(codigo=codigo).first()
+            if insignia:
+                InsigniaUsuario.objects.get_or_create(usuario=usuario, insignia=insignia)
+
+
+@transaction.atomic
+def completar_reflexion_guiada(*, usuario, tema, contenido, estado_animo_post=None):
+    """Crea y recompensa una guiada exactamente una vez por usuario/tema."""
+    from diario.models import ReflexionGuiadaTema, ReflexionLibre
+
+    get_user_model().objects.select_for_update().get(pk=usuario.pk)
+    tema = ReflexionGuiadaTema.objects.select_for_update().get(pk=tema.pk)
+    existente = ReflexionLibre.objects.filter(usuario=usuario, reflexion_guiada=tema).first()
+    if existente:
+        return existente, False
+    try:
+        with transaction.atomic():
+            reflexion = ReflexionLibre.objects.create(
+                usuario=usuario, titulo=tema.titulo, contenido=contenido,
+                tipo='guiada', reflexion_guiada=tema,
+                estado_animo_post=estado_animo_post,
+            )
+    except IntegrityError:
+        return ReflexionLibre.objects.get(usuario=usuario, reflexion_guiada=tema), False
+
+    ReflexionGuiadaTema.objects.filter(pk=tema.pk).update(
+        veces_completada=F('veces_completada') + 1,
+    )
+    _sumar_puntos_virtud(usuario, 'sabiduria', 10)
+    if tema.categoria == 'social':
+        _sumar_puntos_virtud(usuario, 'justicia', 5)
+    sincronizar_racha_escritura(usuario)
+    _otorgar_insignias_guiadas(usuario)
+    return reflexion, True
 
 
 def validar_estado_animo_post(valor):

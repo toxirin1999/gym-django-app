@@ -1,10 +1,12 @@
 from datetime import date
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
 from diario.models import ReflexionGuiadaTema, ReflexionLibre, Virtud
+from diario.services.logos_service import completar_reflexion_guiada, normalizar_etiquetas
 
 
 class LogosIntegridadTests(TestCase):
@@ -143,3 +145,84 @@ class LogosIntegridadTests(TestCase):
             Virtud.objects.get(usuario=self.user, tipo="sabiduria").puntos,
             55,
         )
+
+    def test_servicio_guiado_es_idempotente_y_recompensa_una_sola_vez(self):
+        primera, creada_primera = completar_reflexion_guiada(
+            usuario=self.user,
+            tema=self.tema,
+            contenido="Primera respuesta",
+            estado_animo_post=4,
+        )
+        segunda, creada_segunda = completar_reflexion_guiada(
+            usuario=self.user,
+            tema=self.tema,
+            contenido="Respuesta repetida",
+            estado_animo_post=5,
+        )
+
+        self.assertTrue(creada_primera)
+        self.assertFalse(creada_segunda)
+        self.assertEqual(primera.pk, segunda.pk)
+        self.assertEqual(ReflexionLibre.objects.filter(usuario=self.user).count(), 1)
+        self.tema.refresh_from_db()
+        self.assertEqual(self.tema.veces_completada, 1)
+        virtud = Virtud.objects.get(usuario=self.user, tipo="sabiduria")
+        self.assertEqual(virtud.puntos, 10)
+        self.assertIn(virtud.nivel, dict(Virtud.NIVEL_CHOICES))
+
+    def test_post_guiado_delega_en_servicio_y_recompensa_una_sola_vez(self):
+        with patch(
+            "diario.services.logos_service.completar_reflexion_guiada",
+            wraps=completar_reflexion_guiada,
+        ) as completar:
+            response = self.client.post(
+                reverse("diario:logos_reflexion_guiada", args=[self.tema.slug]),
+                {"contenido": "Respuesta", "estado_animo_post": "4"},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        completar.assert_called_once()
+        self.client.post(
+            reverse("diario:logos_reflexion_guiada", args=[self.tema.slug]),
+            {"contenido": "Repetida", "estado_animo_post": "5"},
+        )
+        self.assertEqual(ReflexionLibre.objects.filter(usuario=self.user).count(), 1)
+        self.assertEqual(Virtud.objects.get(usuario=self.user, tipo="sabiduria").puntos, 10)
+        self.tema.refresh_from_db()
+        self.assertEqual(self.tema.veces_completada, 1)
+
+    def test_normalizador_etiquetas_casefold_trim_dedupe_y_sin_vacios(self):
+        self.assertEqual(
+            normalizar_etiquetas("  Amor, FOCO, amor ,, Foco , Decisión "),
+            "Amor,FOCO,Decisión",
+        )
+
+    def test_altas_y_ediciones_guardan_etiquetas_normalizadas(self):
+        self.client.post(
+            reverse("diario:logos_escritura_libre"),
+            {"contenido": "Texto", "etiquetas": " Amor, amor,  FOCO ,,"},
+        )
+        reflexion = ReflexionLibre.objects.get(usuario=self.user)
+        self.assertEqual(reflexion.etiquetas, "Amor,FOCO")
+
+        self.client.post(
+            reverse("diario:logos_editar_reflexion", args=[reflexion.pk]),
+            {"contenido": "Editado", "etiquetas": " foco, Calma,FOCO "},
+        )
+        reflexion.refresh_from_db()
+        self.assertEqual(reflexion.etiquetas, "foco,Calma")
+
+    def test_filtro_etiqueta_es_por_token_exacto_y_opciones_sin_duplicados(self):
+        amor = ReflexionLibre.objects.create(
+            usuario=self.user, titulo="Amor", contenido="A", etiquetas="Amor,FOCO",
+        )
+        ReflexionLibre.objects.create(
+            usuario=self.user, titulo="Desamor", contenido="B", etiquetas="desamor,foco",
+        )
+
+        response = self.client.get(
+            reverse("diario:logos_lista_reflexiones"), {"etiqueta": "amor"},
+        )
+
+        self.assertEqual([r.pk for r in response.context["reflexiones"]], [amor.pk])
+        self.assertEqual(response.context["etiquetas_disponibles"], ["amor", "desamor", "foco"])

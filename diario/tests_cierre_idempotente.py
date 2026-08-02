@@ -146,7 +146,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
         )
         return resultado.operacion
 
-    def _enriquecer(self, operacion, *, nombre='Ana', micro='Necesito poner límites claros.'):
+    def _enriquecer(self, operacion, *, nombre='Ana', micro='Necesito poner límites claros.', etiquetas=None):
         enriquecido = {
             'titulo_logos': 'Un límite sereno',
             'categoria_estoica': 'templanza',
@@ -159,7 +159,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
         }
         with (
             patch('joi.services.parsear_cierre_diario', return_value={
-                'personas': [nombre] if nombre else [], 'etiquetas': ['limites'],
+                'personas': [nombre] if nombre else [], 'etiquetas': etiquetas or ['limites'],
             }),
             patch('joi.services.enriquecer_cierre', return_value=enriquecido),
             patch('joi.services.generar_respuesta_cierre', return_value='Lectura'),
@@ -224,6 +224,20 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
 
         etiquetas = ReflexionLibre.objects.get().etiquetas.split(',')
         self.assertIn('templanza', etiquetas)
+
+    def test_cierre_normaliza_etiquetas_semanticas(self):
+        operacion = self._operacion('Hoy elegí con claridad')
+        self._enriquecer(
+            operacion, nombre='', micro='',
+            etiquetas=[' Amor ', 'amor', '', 'FOCO', ' foco '],
+        )
+
+        self.assertEqual(
+            ReflexionLibre.objects.get().etiquetas,
+            'cierre_dia,Amor,FOCO,templanza',
+        )
+        operacion.entrada.refresh_from_db()
+        self.assertEqual(operacion.entrada.etiquetas, 'Amor,FOCO')
 
 
 class PresenciaCierreViewTests(TestCase):

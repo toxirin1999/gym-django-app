@@ -17,6 +17,7 @@ from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from .forms import PersonaImportanteForm, InteraccionForm
 from .services import HabitosService
+from .services.logos_service import contiene_etiqueta, normalizar_etiquetas
 
 from .models import (
     ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia,
@@ -1782,7 +1783,7 @@ def logos_escritura_libre(request):
     if request.method == 'POST':
         titulo = request.POST.get('titulo', '').strip()
         contenido = request.POST.get('contenido', '').strip()
-        etiquetas = request.POST.get('etiquetas', '').strip()
+        etiquetas = normalizar_etiquetas(request.POST.get('etiquetas', ''))
         estado_animo_post = request.POST.get('estado_animo_post')
 
         if not contenido:
@@ -1857,7 +1858,7 @@ def logos_editar_reflexion(request, reflexion_id):
     if request.method == 'POST':
         titulo = request.POST.get('titulo', '').strip()
         contenido = request.POST.get('contenido', '').strip()
-        etiquetas = request.POST.get('etiquetas', '').strip()
+        etiquetas = normalizar_etiquetas(request.POST.get('etiquetas', ''))
 
         if not contenido:
             messages.error(request, 'El contenido de la reflexión no puede estar vacío.')
@@ -1902,7 +1903,7 @@ def logos_lista_reflexiones(request):
 
     etiqueta_filtro = request.GET.get('etiqueta')
     if etiqueta_filtro:
-        reflexiones = reflexiones.filter(etiquetas__icontains=etiqueta_filtro)
+        reflexiones = reflexiones.filter(pk__in=[r.pk for r in reflexiones.only('pk', 'etiquetas') if contiene_etiqueta(r.etiquetas, etiqueta_filtro)])
 
     busqueda = request.GET.get('q')
     if busqueda:
@@ -1918,7 +1919,7 @@ def logos_lista_reflexiones(request):
     etiquetas_set = set()
     for r in todas_reflexiones:
         if r.etiquetas:
-            etiquetas_set.update([e.strip() for e in r.etiquetas.split(',')])
+            etiquetas_set.update([e.strip().casefold() for e in r.etiquetas.split(',') if e.strip()])
     etiquetas_disponibles = sorted(list(etiquetas_set))
 
     context = {
@@ -1951,17 +1952,6 @@ def logos_reflexion_guiada(request, slug):
     ya_completada = reflexion_completada is not None
 
     if request.method == 'POST':
-        if ya_completada:
-            reflexion_existente = ReflexionLibre.objects.filter(
-                usuario=request.user,
-                reflexion_guiada=tema,
-            ).first()
-            messages.info(request, 'Esta reflexión guiada ya estaba completada.')
-            return redirect(
-                'diario:logos_ver_reflexion',
-                reflexion_id=reflexion_existente.id,
-            )
-
         contenido = request.POST.get('contenido', '').strip()
         estado_animo_post = request.POST.get('estado_animo_post')
 
@@ -1976,46 +1966,14 @@ def logos_reflexion_guiada(request, slug):
             return redirect('diario:logos_reflexion_guiada', slug=slug)
 
         # Crear la reflexión
-        reflexion = ReflexionLibre.objects.create(
-            usuario=request.user,
-            titulo=tema.titulo,
-            contenido=contenido,
-            tipo='guiada',
-            reflexion_guiada=tema,
-            estado_animo_post=estado_animo_post
+        from diario.services.logos_service import completar_reflexion_guiada
+        reflexion, creada = completar_reflexion_guiada(
+            usuario=request.user, tema=tema, contenido=contenido,
+            estado_animo_post=estado_animo_post,
         )
-
-        # Actualizar estadísticas del tema
-        tema.veces_completada += 1
-        tema.save()
-
-        # Actualizar racha de escritura
-        from diario.services.logos_service import sincronizar_racha_escritura
-        racha = sincronizar_racha_escritura(request.user)
-        racha_crecio = True
-
-        # Otorgar puntos de virtudes
-        virtud_sabiduria, created_sabiduria = Virtud.objects.get_or_create(
-            usuario=request.user,
-            tipo='sabiduria',
-            defaults={'puntos': 0, 'nivel': 1}  # Eliminamos el campo 'nombre'
-        )
-        virtud_sabiduria.puntos += 10
-        if not virtud_sabiduria.actualizar_nivel():
-            virtud_sabiduria.save(update_fields=['puntos'])
-
-        # 2. Virtud de la Justicia (si aplica)
-        if tema.categoria == 'social':
-            virtud_justicia, created_justicia = Virtud.objects.get_or_create(
-                usuario=request.user,
-                tipo='justicia',
-                defaults={'puntos': 0, 'nivel': 1}  # Eliminamos el campo 'nombre'
-            )
-            virtud_justicia.puntos += 5
-            virtud_justicia.actualizar_nivel()
-
-        # Verificar insignias
-        verificar_insignias_reflexiones_guiadas(request.user)
+        if not creada:
+            messages.info(request, "Esta reflexión guiada ya estaba completada.")
+            return redirect("diario:logos_ver_reflexion", reflexion_id=reflexion.id)
 
         messages.success(request, f'¡Reflexión completada! +10 puntos de Sabiduría.')
         return redirect('diario:logos_ver_reflexion', reflexion_id=reflexion.id)

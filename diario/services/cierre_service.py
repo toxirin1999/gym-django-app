@@ -305,6 +305,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             'reflexiones': [], 'manual': [], 'interacciones': [],
             'sombras': [], 'personas_interinas': [],
         }
+        from diario.services.logos_service import normalizar_etiquetas
         etiquetas = ['cierre_dia', *(parseo.get('etiquetas') or [])]
         categoria_estoica = (enriquecido.get('categoria_estoica') or '').strip()
         if categoria_estoica and categoria_estoica not in etiquetas:
@@ -313,7 +314,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             reflexion = ReflexionLibre.objects.create(
                 usuario=usuario, contenido=texto, tipo='espontanea',
                 titulo=(enriquecido.get('titulo_logos') or '')[:200],
-                etiquetas=','.join(etiquetas),
+                etiquetas=normalizar_etiquetas(etiquetas),
             )
             _asignar_fecha_cierre(reflexion, entrada.fecha)
             ids['reflexiones'].append(reflexion.pk)
@@ -431,7 +432,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 'respuesta': simbiosis_respuesta or '',
             },
         }
-        entrada.etiquetas = ','.join(parseo.get('etiquetas') or [])
+        entrada.etiquetas = normalizar_etiquetas(parseo.get('etiquetas') or [])
         entrada.respuesta_joi_cierre = respuesta or ''
         entrada.respuesta_joi_cierre_generada_en = timezone.now() if respuesta else None
         entrada.save(update_fields=['etiquetas', 'respuesta_joi_cierre', 'respuesta_joi_cierre_generada_en', 'fecha_actualizacion'])
