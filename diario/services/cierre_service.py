@@ -3,6 +3,7 @@ import json
 import re
 import unicodedata
 from dataclasses import dataclass
+from datetime import datetime, time
 
 from django.db import transaction
 from django.utils import timezone
@@ -232,6 +233,16 @@ def _retraer_version_anterior(op, usuario):
     anterior.save(update_fields=['resultado', 'estado', 'updated_at'])
 
 
+def _asignar_fecha_cierre(reflexion, fecha):
+    """Alinea una proyección Logos con el día en que el usuario escribió."""
+    instante = timezone.make_aware(
+        datetime.combine(fecha, time(hour=12)),
+        timezone.get_current_timezone(),
+    )
+    ReflexionLibre.objects.filter(pk=reflexion.pk).update(fecha=instante)
+    reflexion.fecha = instante
+
+
 def ejecutar_enriquecimiento_cierre(operacion_id):
     """IA fuera de locks; la proyección final se materializa una sola vez."""
     with transaction.atomic():
@@ -304,6 +315,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 titulo=(enriquecido.get('titulo_logos') or '')[:200],
                 etiquetas=','.join(etiquetas),
             )
+            _asignar_fecha_cierre(reflexion, entrada.fecha)
             ids['reflexiones'].append(reflexion.pk)
             ledger['reflexiones'].append({'id': reflexion.pk})
         simbiosis_respuesta = payload.get('simbiosis_respuesta')
@@ -312,6 +324,7 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 usuario=usuario, contenido=simbiosis_respuesta, tipo='crisis',
                 titulo='Reflexión Simbiosis', etiquetas='simbiosis_respuesta',
             )
+            _asignar_fecha_cierre(reflexion, entrada.fecha)
             ids['reflexiones'].append(reflexion.pk)
             ledger['reflexiones'].append({'id': reflexion.pk})
 
@@ -427,6 +440,8 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
         op.completed_at = timezone.now()
         op.error = ''
         op.save(update_fields=['resultado', 'estado', 'completed_at', 'error', 'updated_at'])
+        from diario.services.logos_service import sincronizar_racha_escritura
+        sincronizar_racha_escritura(usuario)
         return resultado
 
 

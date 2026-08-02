@@ -1398,6 +1398,8 @@ class RachaEscritura(models.Model):
         if not self.fecha_ultima_entrada:
             self.dias_consecutivos = 1
             self.fecha_ultima_entrada = hoy
+            self.racha_maxima = 1
+            self.fecha_racha_maxima = hoy
             self.total_dias_escritos = 1
             self.save()
             return False
@@ -1428,6 +1430,9 @@ class RachaEscritura(models.Model):
             self.dias_consecutivos = 1
             self.fecha_ultima_entrada = hoy
             self.total_dias_escritos += 1
+            if self.racha_maxima < self.dias_consecutivos:
+                self.racha_maxima = self.dias_consecutivos
+                self.fecha_racha_maxima = hoy
             self.save()
             return False  # Racha rota
 

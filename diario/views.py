@@ -1760,8 +1760,9 @@ def logos_dashboard(request):
         tipo='guiada'
     ).count()
 
-    # Racha de escritura
-    racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
+    # Racha de escritura (ReflexionLibre es la fuente canónica y repara legado)
+    from diario.services.logos_service import sincronizar_racha_escritura
+    racha = sincronizar_racha_escritura(request.user)
 
     context = {
         'reflexiones_recientes': reflexiones_recientes,
@@ -1810,8 +1811,9 @@ def logos_escritura_libre(request):
         )
 
         # Actualizar racha de escritura
-        racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
-        racha_crecio = racha.actualizar_racha(timezone.localdate())
+        from diario.services.logos_service import sincronizar_racha_escritura
+        racha = sincronizar_racha_escritura(request.user)
+        racha_crecio = True
 
         # Otorgar puntos de Sabiduría
         virtud_sabiduria, _ = Virtud.objects.get_or_create(
@@ -1991,8 +1993,9 @@ def logos_reflexion_guiada(request, slug):
         tema.save()
 
         # Actualizar racha de escritura
-        racha, _ = RachaEscritura.objects.get_or_create(usuario=request.user)
-        racha_crecio = racha.actualizar_racha(timezone.localdate())
+        from diario.services.logos_service import sincronizar_racha_escritura
+        racha = sincronizar_racha_escritura(request.user)
+        racha_crecio = True
 
         # Otorgar puntos de virtudes
         virtud_sabiduria, created_sabiduria = Virtud.objects.get_or_create(
