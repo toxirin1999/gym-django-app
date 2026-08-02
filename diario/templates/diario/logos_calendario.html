@@ -1,126 +1,18 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
-
-{% block title %}Calendario de Reflexiones - Logos{% endblock %}
-
+{% block title %}Logos · Preguntas guiadas{% endblock %}
+{% block body_class %}diario-dark logos-page{% endblock %}
+{% block extra_css %}
+<style>
+    .logos-page{--ink:#f0eadf;--muted:#938c83;--gold:#c4a365;--line:rgba(235,226,208,.14);background:#0d0c10!important;color:var(--ink)}.logos-shell{width:min(100% - 2rem,1000px);margin:auto;padding:clamp(2.7rem,7vw,5.8rem) 0 5rem}.logos-back,.logos-link{color:var(--gold);font:700 .62rem/1.4 Manrope,sans-serif;letter-spacing:.12em;text-decoration:none;text-transform:uppercase}.logos-header{max-width:48rem;margin:clamp(2.5rem,7vw,5rem) 0 4rem}.logos-kicker{color:var(--gold);font:700 .62rem/1.4 Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase}.logos-header h1{margin:.6rem 0 .8rem;font:500 clamp(3rem,8vw,5.8rem)/.9 'Crimson Pro',serif;letter-spacing:-.05em}.logos-header p{max-width:40rem;margin:0;color:#999188;font:400 .88rem/1.75 Manrope,sans-serif}
+    .logos-month{display:grid;grid-template-columns:8rem minmax(0,1fr);gap:2rem;margin-top:3rem}.logos-month h2{margin:0;color:#777068;font:600 .64rem/1.5 Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase}.logos-topics{border-top:1px solid var(--line)}.logos-topic{display:grid;grid-template-columns:4rem minmax(0,1fr) auto;gap:1.5rem;align-items:start;padding:1.5rem 0;border-bottom:1px solid var(--line)}.logos-day{color:#bca466;font:500 1.8rem/1 'Crimson Pro',serif}.logos-topic h3{margin:0 0 .35rem;color:#ddd4c8;font:500 1.35rem/1.2 'Crimson Pro',serif}.logos-topic p{max-width:37rem;margin:0;color:#888078;font:400 .76rem/1.65 Manrope,sans-serif}.logos-status{display:block;margin-top:.6rem;color:#716a63;font:700 .58rem/1.4 Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase}.logos-status--done{color:#a89464}.logos-empty{padding:3rem 0;border-block:1px solid var(--line);color:#918980;font:400 .86rem/1.7 Manrope,sans-serif}.logos-back:focus-visible,.logos-link:focus-visible{outline:2px solid #e4ca8b;outline-offset:4px}
+    @media (max-width:720px){.logos-month{grid-template-columns:1fr;gap:.8rem}.logos-topic{grid-template-columns:3rem 1fr}.logos-topic .logos-link{grid-column:2}}
+    @media (prefers-reduced-motion: reduce){.logos-link{transition:none}}
+</style>
+{% endblock %}
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body text-center p-4">
-            <i class="fas fa-calendar-alt fa-3x text-primary mb-3"></i>
-            <h1 class="text-gradient">Calendario de Reflexiones Guiadas</h1>
-            <p class="lead text-muted">Un viaje de crecimiento personal a lo largo del año</p>
-        </div>
-    </div>
-
-    <!-- Introducción -->
-    <div class="alert alert-info mb-4">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>¿Cómo funciona?</strong> Cada reflexión guiada se activa en una fecha específica del año, 
-        vinculada a eventos significativos, días internacionales o momentos filosóficos. 
-        Puedes completarlas en cualquier momento, pero te sugerimos hacerlo en su fecha correspondiente 
-        para conectar con el contexto global.
-    </div>
-
-    <!-- Calendario por Meses -->
-    {% for mes, reflexiones in reflexiones_por_mes.items %}
-    <div class="card shadow-sm mb-4">
-        <div class="card-header">
-            <h4 class="mb-0">
-                <i class="far fa-calendar me-2"></i>
-                {% if mes == 1 %}Enero
-                {% elif mes == 2 %}Febrero
-                {% elif mes == 3 %}Marzo
-                {% elif mes == 4 %}Abril
-                {% elif mes == 5 %}Mayo
-                {% elif mes == 6 %}Junio
-                {% elif mes == 7 %}Julio
-                {% elif mes == 8 %}Agosto
-                {% elif mes == 9 %}Septiembre
-                {% elif mes == 10 %}Octubre
-                {% elif mes == 11 %}Noviembre
-                {% elif mes == 12 %}Diciembre
-                {% endif %}
-            </h4>
-        </div>
-        <div class="card-body">
-            <div class="row">
-                {% for reflexion in reflexiones %}
-                <div class="col-md-6 mb-3">
-                    <div class="card h-100" style="border-left: 4px solid {{ reflexion.color }};">
-                        <div class="card-body">
-                            <div class="d-flex align-items-start mb-2">
-                                <div class="me-3 text-center" style="min-width: 60px;">
-                                    <div class="badge bg-primary" style="font-size: 1.2rem;">
-                                        {{ reflexion.fecha_activacion.day }}
-                                    </div>
-                                    <small class="text-muted d-block">
-                                        {{ reflexion.fecha_activacion|date:"M" }}
-                                    </small>
-                                </div>
-                                <div class="flex-grow-1">
-                                    <h6 class="mb-1">
-                                        <i class="{{ reflexion.icono }} me-1" style="color: {{ reflexion.color }};"></i>
-                                        {{ reflexion.titulo }}
-                                    </h6>
-                                    <span class="badge bg-light text-dark small">{{ reflexion.get_categoria_display }}</span>
-                                </div>
-                            </div>
-                            
-                            <p class="small text-muted mb-2">{{ reflexion.contexto|truncatewords:15 }}</p>
-                            
-                            <blockquote class="blockquote-footer small fst-italic mb-3">
-                                "{{ reflexion.cita_filosofica|truncatewords:12 }}"
-                            </blockquote>
-                            
-                            <a href="{% url 'diario:logos_reflexion_guiada' reflexion.slug %}" class="btn btn-sm btn-outline-primary w-100">
-                                <i class="fas fa-pen-fancy me-1"></i>Ver Reflexión
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </div>
-    {% empty %}
-    <div class="card shadow-sm">
-        <div class="card-body text-center p-5">
-            <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-            <h5>No hay reflexiones guiadas disponibles</h5>
-            <p class="text-muted">Pronto añadiremos más reflexiones al calendario.</p>
-        </div>
-    </div>
-    {% endfor %}
-
-    <!-- Información Adicional -->
-    <div class="card shadow-soft mt-4">
-        <div class="card-header">
-            <h5 class="mb-0"><i class="fas fa-lightbulb me-2"></i>Sobre las Reflexiones Guiadas</h5>
-        </div>
-        <div class="card-body">
-            <p>Las reflexiones guiadas están diseñadas para:</p>
-            <ul>
-                <li><strong>Expandir tu perspectiva:</strong> Cada reflexión te introduce a un tema importante que quizás no habías considerado.</li>
-                <li><strong>Conectar con el mundo:</strong> Muchas reflexiones están vinculadas a días internacionales de conciencia sobre causas sociales, salud o medio ambiente.</li>
-                <li><strong>Profundizar tu práctica filosófica:</strong> Incluyen citas y enseñanzas de filósofos estoicos y pensadores griegos.</li>
-                <li><strong>Motivar la acción:</strong> Cada reflexión sugiere una acción concreta que puedes realizar ese día.</li>
-            </ul>
-            
-            <div class="alert alert-success mt-3">
-                <i class="fas fa-trophy me-2"></i>
-                <strong>Recompensas:</strong> Al completar reflexiones guiadas, ganas puntos de Sabiduría y desbloqueas insignias especiales.
-            </div>
-        </div>
-    </div>
-
-    <!-- Botón de Regreso -->
-    <div class="text-center mt-4">
-        <a href="{% url 'diario:logos_dashboard' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
-        </a>
-    </div>
+<div class="logos-shell" data-logos-view="guided-index">
+    <a class="logos-back" href="{% url 'diario:logos_dashboard' %}">← Volver a Logos</a>
+    <header class="logos-header"><div class="logos-kicker">Preguntas situadas · Todo el año</div><h1>Índice de preguntas guiadas</h1><p>No es una agenda que debas completar. Es una colección temática ordenada por fecha: abre una pregunta cuando su contexto te resulte útil.</p></header>
+    {% for mes, reflexiones in reflexiones_por_mes.items %}<section class="logos-month" aria-labelledby="mes-{{ mes }}"><h2 id="mes-{{ mes }}">{% if mes == 1 %}Enero{% elif mes == 2 %}Febrero{% elif mes == 3 %}Marzo{% elif mes == 4 %}Abril{% elif mes == 5 %}Mayo{% elif mes == 6 %}Junio{% elif mes == 7 %}Julio{% elif mes == 8 %}Agosto{% elif mes == 9 %}Septiembre{% elif mes == 10 %}Octubre{% elif mes == 11 %}Noviembre{% else %}Diciembre{% endif %}</h2><div class="logos-topics">{% for reflexion in reflexiones %}<article class="logos-topic" data-logos-status="{% if reflexion.id in temas_completados %}completed{% else %}available{% endif %}"><time class="logos-day" datetime="{{ reflexion.fecha_activacion|date:'Y-m-d' }}">{{ reflexion.fecha_activacion.day|stringformat:'02d' }}</time><div><h3>{{ reflexion.titulo }}</h3><p>{{ reflexion.contexto|truncatewords:25 }}</p><span class="logos-status {% if reflexion.id in temas_completados %}logos-status--done{% endif %}">{% if reflexion.id in temas_completados %}Completada · disponible en tu archivo{% else %}Disponible · {{ reflexion.get_categoria_display }}{% endif %}</span></div><a class="logos-link" href="{% url 'diario:logos_reflexion_guiada' reflexion.slug %}">{% if reflexion.id in temas_completados %}Revisar{% else %}Abrir{% endif %} →</a></article>{% endfor %}</div></section>{% empty %}<section class="logos-empty"><h2>Aún no hay preguntas guiadas</h2><p>Cuando haya temas disponibles, aparecerán aquí ordenados por fecha.</p></section>{% endfor %}
 </div>
 {% endblock %}
-

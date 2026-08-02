@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 from django.contrib import messages
 from django.http import JsonResponse
 import random
@@ -1910,6 +1911,7 @@ def logos_lista_reflexiones(request):
         )
 
     reflexiones = reflexiones.order_by('-fecha')
+    pagina_reflexiones = Paginator(reflexiones, 12).get_page(request.GET.get('page'))
 
     # Obtener todas las etiquetas únicas del usuario
     todas_reflexiones = ReflexionLibre.objects.filter(usuario=request.user)
@@ -1920,7 +1922,7 @@ def logos_lista_reflexiones(request):
     etiquetas_disponibles = sorted(list(etiquetas_set))
 
     context = {
-        'reflexiones': reflexiones,
+        'reflexiones': pagina_reflexiones,
         'etiquetas_disponibles': etiquetas_disponibles,
         'tipo_filtro': tipo_filtro,
         'etiqueta_filtro': etiqueta_filtro,
@@ -1942,10 +1944,11 @@ def logos_reflexion_guiada(request, slug):
     tema = get_object_or_404(ReflexionGuiadaTema, slug=slug, activa=True)
 
     # Verificar si el usuario ya completó esta reflexión
-    ya_completada = ReflexionLibre.objects.filter(
+    reflexion_completada = ReflexionLibre.objects.filter(
         usuario=request.user,
         reflexion_guiada=tema
-    ).exists()
+    ).first()
+    ya_completada = reflexion_completada is not None
 
     if request.method == 'POST':
         if ya_completada:
@@ -2020,6 +2023,7 @@ def logos_reflexion_guiada(request, slug):
     context = {
         'tema': tema,
         'ya_completada': ya_completada,
+        'reflexion_completada': reflexion_completada,
         'preguntas': tema.get_preguntas(),
     }
 
@@ -2034,6 +2038,12 @@ def logos_calendario_reflexiones(request):
     reflexiones = ReflexionGuiadaTema.objects.filter(
         activa=True
     ).order_by('fecha_activacion')
+    temas_completados = set(
+        ReflexionLibre.objects.filter(
+            usuario=request.user,
+            reflexion_guiada__isnull=False,
+        ).values_list('reflexion_guiada_id', flat=True)
+    )
 
     # Agrupar por mes
     reflexiones_por_mes = {}
@@ -2045,6 +2055,7 @@ def logos_calendario_reflexiones(request):
 
     context = {
         'reflexiones_por_mes': reflexiones_por_mes,
+        'temas_completados': temas_completados,
     }
 
     return render(request, 'diario/logos_calendario.html', context)

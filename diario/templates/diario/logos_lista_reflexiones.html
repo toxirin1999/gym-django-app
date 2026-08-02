@@ -1,182 +1,32 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
 {% load custom_filters %}
-{% block title %}Mis Reflexiones - Logos{% endblock %}
-
-{% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="text-gradient mb-2"><i class="fas fa-book-open me-3"></i>Mis Reflexiones</h1>
-                    <p class="text-muted mb-0">Explora tu viaje de autoconocimiento</p>
-                </div>
-                <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-primary">
-                    <i class="fas fa-plus me-2"></i>Nueva Reflexión
-                </a>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Filtros -->
-        <div class="col-lg-3">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h6>
-                </div>
-                <div class="card-body">
-                    <form method="get" action="{% url 'diario:logos_lista_reflexiones' %}">
-                        
-                        <!-- Búsqueda por texto -->
-                        <div class="mb-3">
-                            <label for="busqueda" class="form-label small">Buscar</label>
-                            <input 
-                                type="text" 
-                                class="form-control form-control-sm" 
-                                id="busqueda" 
-                                name="q" 
-                                value="{{ busqueda }}"
-                                placeholder="Buscar en título o contenido..."
-                            >
-                        </div>
-
-                        <!-- Filtro por tipo -->
-                        <div class="mb-3">
-                            <label for="tipo" class="form-label small">Tipo</label>
-                            <select class="form-select form-select-sm" id="tipo" name="tipo">
-                                <option value="">Todos los tipos</option>
-                                <option value="espontanea" {% if tipo_filtro == 'espontanea' %}selected{% endif %}>Espontánea</option>
-                                <option value="guiada" {% if tipo_filtro == 'guiada' %}selected{% endif %}>Guiada</option>
-                                <option value="crisis" {% if tipo_filtro == 'crisis' %}selected{% endif %}>Apoyo</option>
-                            </select>
-                        </div>
-
-                        <!-- Filtro por etiqueta -->
-                        {% if etiquetas_disponibles %}
-                        <div class="mb-3">
-                            <label for="etiqueta" class="form-label small">Etiqueta</label>
-                            <select class="form-select form-select-sm" id="etiqueta" name="etiqueta">
-                                <option value="">Todas las etiquetas</option>
-                                {% for etiqueta in etiquetas_disponibles %}
-                                <option value="{{ etiqueta }}" {% if etiqueta_filtro == etiqueta %}selected{% endif %}>{{ etiqueta }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        {% endif %}
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-sm">
-                                <i class="fas fa-search me-1"></i>Filtrar
-                            </button>
-                            <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-outline-secondary btn-sm">
-                                <i class="fas fa-times me-1"></i>Limpiar
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Estadísticas Rápidas -->
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h6>
-                </div>
-                <div class="card-body">
-                    <div class="text-center mb-2">
-                        <h3 class="text-primary mb-0">{{ reflexiones.count }}</h3>
-                        <small class="text-muted">reflexiones encontradas</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Lista de Reflexiones -->
-        <div class="col-lg-9">
-            {% if reflexiones %}
-            <div class="row">
-                {% for reflexion in reflexiones %}
-                <div class="col-md-6 mb-4">
-                    <div class="card shadow-sm h-100 hover-lift">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between align-items-start mb-2">
-                                <h5 class="card-title mb-0">{{ reflexion.titulo|truncatewords:8 }}</h5>
-                                <span class="badge bg-secondary">{{ reflexion.get_tipo_display }}</span>
-                            </div>
-                            
-                            <p class="text-muted small mb-2">
-                                <i class="far fa-calendar me-1"></i>{{ reflexion.fecha|date:"d/m/Y" }}
-                            </p>
-                            
-                            <p class="card-text text-muted small">
-                                {{ reflexion.contenido|truncatewords:20 }}
-                            </p>
-                            
-                            {% if reflexion.etiquetas %}
-                            <div class="mb-2">
-                                {% for etiqueta in reflexion.etiquetas|split:","|slice:":3" %}
-
-                                <span class="badge bg-light text-dark small">{{ etiqueta|trim }}</span>
-                                {% endfor %}
-                            </div>
-                            {% endif %}
-                            
-                            {% if reflexion.estado_animo_post %}
-                            <div class="mb-3">
-                                {% if reflexion.estado_animo_post == 1 %}
-                                    <span>😔</span>
-                                {% elif reflexion.estado_animo_post == 2 %}
-                                    <span>😐</span>
-                                {% elif reflexion.estado_animo_post == 3 %}
-                                    <span>🙂</span>
-                                {% elif reflexion.estado_animo_post == 4 %}
-                                    <span>😊</span>
-                                {% elif reflexion.estado_animo_post == 5 %}
-                                    <span>😄</span>
-                                {% endif %}
-                            </div>
-                            {% endif %}
-                            
-                            <a href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" class="btn btn-sm btn-outline-primary w-100">
-                                <i class="fas fa-eye me-1"></i>Ver Completa
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <div class="card shadow-sm">
-                <div class="card-body text-center p-5">
-                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <h5>No se encontraron reflexiones</h5>
-                    <p class="text-muted">
-                        {% if busqueda or tipo_filtro or etiqueta_filtro %}
-                        Intenta ajustar los filtros o realiza una búsqueda diferente.
-                        {% else %}
-                        Aún no has escrito ninguna reflexión. ¡Empieza hoy!
-                        {% endif %}
-                    </p>
-                    <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-primary">
-                        <i class="fas fa-feather-alt me-2"></i>Escribir Primera Reflexión
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-        </div>
-    </div>
-</div>
-
+{% block title %}Logos · Archivo{% endblock %}
+{% block body_class %}diario-dark logos-page{% endblock %}
+{% block extra_css %}
 <style>
-.hover-lift {
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
-}
-.hover-lift:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
+    .logos-page{--ink:#f0eadf;--muted:#938c83;--gold:#c4a365;--line:rgba(235,226,208,.14);background:#0d0c10!important;color:var(--ink)}
+    .logos-shell{width:min(100% - 2rem,1040px);margin:auto;padding:clamp(2.7rem,7vw,5.8rem) 0 5rem}.logos-top{display:flex;justify-content:space-between;align-items:end;gap:2rem;margin-bottom:3rem}
+    .logos-kicker{color:var(--gold);font:700 .62rem/1.4 Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase}.logos-top h1{margin:.55rem 0 .5rem;font:500 clamp(3rem,8vw,6rem)/.88 'Crimson Pro',serif;letter-spacing:-.05em}.logos-top p{max-width:35rem;margin:0;color:#979087;font:400 .86rem/1.7 Manrope,sans-serif}
+    .logos-link{color:var(--gold);font:700 .62rem/1.4 Manrope,sans-serif;letter-spacing:.12em;text-decoration:none;text-transform:uppercase}.logos-write{white-space:nowrap;padding:.8rem 1rem;border:1px solid rgba(196,163,101,.45)}
+    .logos-search{display:grid;grid-template-columns:minmax(13rem,2fr) 1fr 1fr auto;gap:1rem;align-items:end;padding:1.35rem 0 1.6rem;border-block:1px solid var(--line)}.logos-field label{display:block;margin-bottom:.45rem;color:#777068;font:700 .58rem/1.4 Manrope,sans-serif;letter-spacing:.12em;text-transform:uppercase}.logos-control{width:100%;padding:.7rem .1rem;color:#ddd4c8;background:#0d0c10;border:0;border-bottom:1px solid rgba(235,226,208,.24);border-radius:0;font:500 .8rem/1.4 Manrope,sans-serif}.logos-filter{padding:.75rem 1rem;color:#17130e;background:#d5b979;border:1px solid #d5b979;font:700 .62rem/1 Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase}
+    .logos-results-head{display:flex;justify-content:space-between;gap:1rem;margin:2.5rem 0 1rem;color:#716a63;font:600 .62rem/1.5 Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase}.logos-list{border-top:1px solid var(--line)}.logos-entry{display:grid;grid-template-columns:8rem minmax(0,1fr) auto;gap:clamp(1rem,4vw,2.7rem);align-items:baseline;padding:1.55rem 0;border-bottom:1px solid var(--line)}.logos-entry time,.logos-type{color:#746e66;font:600 .59rem/1.4 Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase}.logos-entry h2{margin:0 0 .35rem;color:#ddd4c8;font:500 1.35rem/1.2 'Crimson Pro',serif}.logos-entry p{margin:0;color:#8d867e;font:400 .78rem/1.65 Manrope,sans-serif}.logos-tags{margin-top:.5rem;color:#9e895d;font:600 .62rem/1.5 Manrope,sans-serif}
+    .logos-empty{padding:clamp(3rem,8vw,6rem) 0;border-block:1px solid var(--line);text-align:center}.logos-empty h2{margin:0 0 .5rem;font:500 2rem/1.1 'Crimson Pro',serif}.logos-empty p{color:#888078;font:400 .8rem/1.6 Manrope,sans-serif}.logos-pagination{display:flex;justify-content:center;align-items:center;gap:1.4rem;margin-top:2.2rem;color:#777068;font:600 .64rem/1.4 Manrope,sans-serif}.logos-link:focus-visible,.logos-control:focus-visible,.logos-filter:focus-visible{outline:2px solid #e4ca8b;outline-offset:4px}
+    @media (max-width:720px){.logos-top{display:block}.logos-write{display:inline-block;margin-top:1.5rem}.logos-search{grid-template-columns:1fr 1fr}.logos-search .logos-field:first-child{grid-column:1/-1}.logos-entry{grid-template-columns:1fr auto}.logos-entry time{grid-column:1/-1}}
+    @media (prefers-reduced-motion: reduce){.logos-link{transition:none}}
 </style>
 {% endblock %}
-
+{% block content %}
+<div class="logos-shell" data-logos-view="archive">
+    <header class="logos-top"><div><div class="logos-kicker">Logos · Memoria escrita</div><h1>Tu archivo</h1><p>Busca una frase, filtra una etapa y vuelve a las páginas que aún tienen algo que decir.</p></div><a class="logos-link logos-write" data-logos-action="write" href="{% url 'diario:logos_escritura_libre' %}">Escribir una página</a></header>
+    <form class="logos-search" method="get" action="{% url 'diario:logos_lista_reflexiones' %}" role="search">
+        <div class="logos-field"><label for="busqueda">Buscar en el texto</label><input class="logos-control" id="busqueda" name="q" type="search" value="{{ busqueda|default:'' }}" placeholder="Una palabra o una frase"></div>
+        <div class="logos-field"><label for="tipo">Tipo</label><select class="logos-control" id="tipo" name="tipo"><option value="">Todos</option><option value="espontanea" {% if tipo_filtro == 'espontanea' %}selected{% endif %}>Espontánea</option><option value="guiada" {% if tipo_filtro == 'guiada' %}selected{% endif %}>Guiada</option><option value="crisis" {% if tipo_filtro == 'crisis' %}selected{% endif %}>Apoyo</option></select></div>
+        <div class="logos-field"><label for="etiqueta">Etiqueta</label><select class="logos-control" id="etiqueta" name="etiqueta"><option value="">Todas</option>{% for etiqueta in etiquetas_disponibles %}<option value="{{ etiqueta }}" {% if etiqueta_filtro == etiqueta %}selected{% endif %}>{{ etiqueta }}</option>{% endfor %}</select></div>
+        <button class="logos-filter" type="submit">Filtrar</button>
+    </form>
+    <div class="logos-results-head"><span>{{ reflexiones.paginator.count }} páginas encontradas</span>{% if busqueda or tipo_filtro or etiqueta_filtro %}<a class="logos-link" href="{% url 'diario:logos_lista_reflexiones' %}">Limpiar filtros</a>{% endif %}</div>
+    {% if reflexiones %}<section class="logos-list" aria-label="Páginas del archivo">{% for reflexion in reflexiones %}<article class="logos-entry"><time datetime="{{ reflexion.fecha|date:'c' }}">{{ reflexion.fecha|date:'d M Y' }}</time><div><span class="logos-type">{{ reflexion.get_tipo_display }}</span><h2>{{ reflexion.titulo|default:'Sin título' }}</h2><p>{{ reflexion.contenido|truncatewords:24 }}</p>{% if reflexion.etiquetas %}<div class="logos-tags">{% for etiqueta in reflexion.etiquetas|split:','|slice:':3' %}#{{ etiqueta|trim }} {% endfor %}</div>{% endif %}</div><a class="logos-link" href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" aria-label="Leer {{ reflexion.titulo }}">Leer →</a></article>{% endfor %}</section>
+    {% else %}<section class="logos-empty"><h2>{% if busqueda or tipo_filtro or etiqueta_filtro %}Ninguna página coincide{% else %}El archivo está en blanco{% endif %}</h2><p>{% if busqueda or tipo_filtro or etiqueta_filtro %}Prueba con otros términos o vuelve a ver el archivo completo.{% else %}Cuando guardes una reflexión, aparecerá aquí.{% endif %}</p>{% if busqueda or tipo_filtro or etiqueta_filtro %}<a class="logos-link" href="{% url 'diario:logos_lista_reflexiones' %}">Limpiar filtros</a>{% endif %}</section>{% endif %}
+    {% if reflexiones.paginator.num_pages > 1 %}<nav class="logos-pagination" aria-label="Paginación del archivo">{% if reflexiones.has_previous %}<a class="logos-link" href="?page={{ reflexiones.previous_page_number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}{% if tipo_filtro %}&tipo={{ tipo_filtro|urlencode }}{% endif %}{% if etiqueta_filtro %}&etiqueta={{ etiqueta_filtro|urlencode }}{% endif %}">← Anterior</a>{% endif %}<span>Página {{ reflexiones.number }} de {{ reflexiones.paginator.num_pages }}</span>{% if reflexiones.has_next %}<a class="logos-link" href="?page={{ reflexiones.next_page_number }}{% if busqueda %}&q={{ busqueda|urlencode }}{% endif %}{% if tipo_filtro %}&tipo={{ tipo_filtro|urlencode }}{% endif %}{% if etiqueta_filtro %}&etiqueta={{ etiqueta_filtro|urlencode }}{% endif %}">Siguiente →</a>{% endif %}</nav>{% endif %}
+</div>
+{% endblock %}
