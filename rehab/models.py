@@ -114,6 +114,7 @@ class RegistroDiarioRehab(models.Model):
     fecha = models.DateField()
     dolor_manana = models.PositiveSmallIntegerField()
     rigidez_manana = models.PositiveSmallIntegerField()
+    bandera_roja = models.BooleanField(default=False)
     notas = models.TextField(blank=True)
 
     class Meta:

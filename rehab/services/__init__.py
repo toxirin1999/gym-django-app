@@ -1,7 +1,16 @@
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from .models import EjercicioSesionRehab, EpisodioRehab, RegistroDiarioRehab, SesionRehab, TransicionFase
+from ..models import EjercicioSesionRehab, EpisodioRehab, RegistroDiarioRehab, SesionRehab, TransicionFase
+from .prescripcion_service import UMBRAL_DOLOR_PARADA, prescripcion_de_hoy
+
+__all__ = [
+    'iniciar_episodio',
+    'registrar_dolor_diario',
+    'registrar_sesion',
+    'prescripcion_de_hoy',
+    'UMBRAL_DOLOR_PARADA',
+]
 
 
 def iniciar_episodio(cliente, protocolo, lateralidad, fecha_inicio, dolor_basal_inicial, notas=''):
