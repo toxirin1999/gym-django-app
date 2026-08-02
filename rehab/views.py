@@ -167,7 +167,7 @@ _EVOLUCION_VIEWBOX_ANCHO = 600
 _EVOLUCION_VIEWBOX_ALTO = 240
 _EVOLUCION_MARGEN_IZQ = 30
 _EVOLUCION_MARGEN_DER = 20
-_EVOLUCION_MARGEN_SUP = 24
+_EVOLUCION_MARGEN_SUP = 48
 _EVOLUCION_MARGEN_INF = 20
 
 
@@ -194,12 +194,23 @@ def _coordenadas_evolucion(evolucion):
 
     puntos_manana = []
     puntos_durante = []
+    circulos_manana = []
+    circulos_durante = []
     for i, punto in enumerate(puntos):
         x = x_de_indice(i)
         if punto['dolor_manana'] is not None:
-            puntos_manana.append(f"{x:.1f},{y_de_dolor(punto['dolor_manana']):.1f}")
+            y = y_de_dolor(punto['dolor_manana'])
+            puntos_manana.append(f"{x:.1f},{y:.1f}")
+            circulos_manana.append({'x': round(x, 1), 'y': round(y, 1)})
         if punto['dolor_durante'] is not None:
-            puntos_durante.append(f"{x:.1f},{y_de_dolor(punto['dolor_durante']):.1f}")
+            y = y_de_dolor(punto['dolor_durante'])
+            puntos_durante.append(f"{x:.1f},{y:.1f}")
+            circulos_durante.append({'x': round(x, 1), 'y': round(y, 1)})
+
+    # A media altura entre el techo del viewBox y el inicio de la cuadrícula:
+    # deja hueco por encima de la fila de la etiqueta "10" del eje Y, que se
+    # dibuja justo debajo de area_y0.
+    evento_label_y = round(area_y0 / 2, 1)
 
     fechas_indice = {punto['fecha']: i for i, punto in enumerate(puntos)}
     eventos_x = []
@@ -209,6 +220,7 @@ def _coordenadas_evolucion(evolucion):
             continue
         eventos_x.append({
             'x': round(x_de_indice(indice), 1),
+            'label_y': evento_label_y,
             'direccion': evento['direccion'],
             'fase_nombre': evento['fase_nombre'],
         })
@@ -226,6 +238,8 @@ def _coordenadas_evolucion(evolucion):
         'area_y1': area_y1,
         'polilinea_manana': ' '.join(puntos_manana),
         'polilinea_durante': ' '.join(puntos_durante),
+        'circulos_manana': circulos_manana,
+        'circulos_durante': circulos_durante,
         'eventos': eventos_x,
         'lineas_grid': lineas_grid,
     }

@@ -9,6 +9,7 @@ from clientes.models import Cliente
 from rehab.models import EjercicioRehab, FaseProtocolo, PrescripcionEjercicio, ProtocoloRehab, SesionRehab
 from rehab.services import iniciar_episodio, registrar_dolor_diario, registrar_sesion
 from rehab.services.evolucion_service import construir_evolucion
+from rehab.views import _coordenadas_evolucion
 
 
 class EvolucionRehabTestBase(TestCase):
@@ -139,6 +140,43 @@ class ConstruirEvolucionServicioTests(EvolucionRehabTestBase):
         evolucion = construir_evolucion(episodio_nuevo, fecha=date(2026, 3, 1))
 
         self.assertEqual(evolucion['puntos'], [])
+
+
+class CoordenadasEvolucionTests(EvolucionRehabTestBase):
+    def test_un_solo_punto_expone_un_circulo_por_serie_con_datos(self):
+        registrar_dolor_diario(episodio=self.episodio, fecha=date(2026, 1, 1), dolor_manana=6, rigidez_manana=2)
+        self._crear_sesion(self.fase1, date(2026, 1, 1), dolor_durante=4)
+
+        evolucion = construir_evolucion(self.episodio, fecha=date(2026, 1, 1))
+        grafico = _coordenadas_evolucion(evolucion)
+
+        self.assertEqual(len(evolucion['puntos']), 1)
+        self.assertEqual(len(grafico['circulos_manana']), 1)
+        self.assertEqual(len(grafico['circulos_durante']), 1)
+        self.assertIn('x', grafico['circulos_manana'][0])
+        self.assertIn('y', grafico['circulos_manana'][0])
+
+    def test_circulos_coinciden_en_cantidad_con_puntos_con_datos(self):
+        registrar_dolor_diario(episodio=self.episodio, fecha=date(2026, 1, 1), dolor_manana=8, rigidez_manana=3)
+        registrar_dolor_diario(episodio=self.episodio, fecha=date(2026, 1, 2), dolor_manana=7, rigidez_manana=2)
+        self._crear_sesion(self.fase1, date(2026, 1, 2), dolor_durante=5)
+
+        evolucion = construir_evolucion(self.episodio, fecha=date(2026, 1, 5))
+        grafico = _coordenadas_evolucion(evolucion)
+
+        self.assertEqual(len(grafico['circulos_manana']), 2)
+        self.assertEqual(len(grafico['circulos_durante']), 1)
+
+    def test_etiqueta_fase_no_comparte_fila_con_etiqueta_eje_y(self):
+        registrar_dolor_diario(episodio=self.episodio, fecha=date(2026, 1, 1), dolor_manana=6, rigidez_manana=2)
+
+        evolucion = construir_evolucion(self.episodio, fecha=date(2026, 1, 1))
+        grafico = _coordenadas_evolucion(evolucion)
+
+        self.assertEqual(len(grafico['eventos']), 1)
+        y_evento = grafico['eventos'][0]['label_y']
+        y_grid_superior = min(linea['y'] for linea in grafico['lineas_grid'])
+        self.assertLess(y_evento, y_grid_superior - 6)
 
 
 class EvolucionViewTests(EvolucionRehabTestBase):

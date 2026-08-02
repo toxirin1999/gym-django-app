@@ -43,7 +43,7 @@
 
             {% for evento in grafico.eventos %}
             <line x1="{{ evento.x }}" y1="{{ grafico.area_y0 }}" x2="{{ evento.x }}" y2="{{ grafico.area_y1 }}" stroke="#999999" stroke-width="1" stroke-dasharray="3,3" />
-            <text x="{{ evento.x }}" y="{{ grafico.area_y0 }}" dy="-4" font-size="8" fill="#666666" text-anchor="start" transform="rotate(-35 {{ evento.x }} {{ grafico.area_y0 }})">{{ evento.fase_nombre }}</text>
+            <text x="{{ evento.x }}" y="{{ evento.label_y }}" font-size="8" fill="#666666" text-anchor="start" transform="rotate(-35 {{ evento.x }} {{ evento.label_y }})">{{ evento.fase_nombre }}</text>
             {% endfor %}
 
             {% if grafico.polilinea_manana %}
@@ -52,6 +52,12 @@
             {% if grafico.polilinea_durante %}
             <polyline points="{{ grafico.polilinea_durante }}" fill="none" stroke="#C84B31" stroke-width="2" />
             {% endif %}
+            {% for circulo in grafico.circulos_manana %}
+            <circle cx="{{ circulo.x }}" cy="{{ circulo.y }}" r="3" fill="#0397AB" />
+            {% endfor %}
+            {% for circulo in grafico.circulos_durante %}
+            <circle cx="{{ circulo.x }}" cy="{{ circulo.y }}" r="3" fill="#C84B31" />
+            {% endfor %}
         </svg>
 
         <div class="rehab-evolucion-leyenda">
