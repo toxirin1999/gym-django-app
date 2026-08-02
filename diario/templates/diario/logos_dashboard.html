@@ -1,169 +1,234 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
-{% load custom_filters %}
-{% block title %}Logos - Reflexiones{% endblock %}
+{% block title %}Logos · Escribir para comprender{% endblock %}
+{% block body_class %}diario-dark logos-page{% endblock %}
 
-{% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body text-center p-4">
-            <h1 class="text-gradient"><i class="fas fa-scroll me-3"></i>Logos</h1>
-            <p class="lead text-muted">Tu espacio de reflexión y crecimiento personal</p>
-        </div>
-    </div>
-
-    <div class="row">
-        <!-- Columna Principal -->
-        <div class="col-lg-8">
-
-            <!-- Reflexión del Día -->
-            {% if reflexion_del_dia %}
-            <div class="card shadow-soft mb-4" style="border-left: 4px solid {{ reflexion_del_dia.color }};">
-                <div class="card-header d-flex align-items-center">
-                    <i class="{{ reflexion_del_dia.icono }} fa-2x me-3" style="color: {{ reflexion_del_dia.color }};"></i>
-                    <div>
-                        <h5 class="mb-0">Reflexión del Día</h5>
-                        <small class="text-muted">{{ reflexion_del_dia.get_categoria_display }}</small>
-                    </div>
-                </div>
-                <div class="card-body">
-                    <h4>{{ reflexion_del_dia.titulo }}</h4>
-                    <p class="text-muted">{{ reflexion_del_dia.contexto|truncatewords:50 }}</p>
-                    <blockquote class="blockquote bg-light p-3 rounded fst-italic">
-                        <p class="mb-0">"{{ reflexion_del_dia.cita_filosofica }}"</p>
-                        <footer class="blockquote-footer mt-2">{{ reflexion_del_dia.autor_cita }}</footer>
-                    </blockquote>
-                    <div class="text-center mt-3">
-                        <a href="{% url 'diario:logos_reflexion_guiada' reflexion_del_dia.slug %}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-pen-fancy me-2"></i>Comenzar Reflexión
-                        </a>
-                    </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="card shadow-soft mb-4">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-calendar-day fa-3x text-muted mb-3"></i>
-                    <h5>No hay reflexión guiada para hoy</h5>
-                    <p class="text-muted">Pero siempre puedes escribir libremente tus pensamientos.</p>
-                    <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-feather-alt me-2"></i>Escribir Libremente
-                    </a>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Reflexiones Recientes -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Reflexiones Recientes</h5>
-                    <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-sm btn-outline-secondary">
-                        Ver Todas
-                    </a>
-                </div>
-                <div class="card-body">
-                    {% if reflexiones_recientes %}
-                    <div class="list-group list-group-flush">
-                        {% for reflexion in reflexiones_recientes %}
-                        <a href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" class="list-group-item list-group-item-action">
-                            <div class="d-flex w-100 justify-content-between">
-                                <h6 class="mb-1">{{ reflexion.titulo }}</h6>
-                                <small class="text-muted">{{ reflexion.fecha|date:"d/m/Y" }}</small>
-                            </div>
-                            <p class="mb-1 small text-muted">{{ reflexion.contenido|truncatewords:15 }}</p>
-                            <small>
-                                <span class="badge bg-secondary">{{ reflexion.get_tipo_display }}</span>
-                                {% if reflexion.etiquetas %}
-                                {% for etiqueta in reflexion.etiquetas|split:',' %}
-                                <span class="badge bg-light text-dark">{{ etiqueta|trim }}</span>
-                                {% endfor %}
-                                {% endif %}
-
-                            </small>
-                        </a>
-                        {% endfor %}
-                    </div>
-                    {% else %}
-                    <p class="text-muted text-center p-3">Aún no has escrito ninguna reflexión. ¡Empieza hoy!</p>
-                    {% endif %}
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Columna Lateral -->
-        <div class="col-lg-4">
-
-            <!-- Racha de Escritura -->
-            <div class="card shadow-soft mb-4 text-center">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-fire text-danger me-2"></i>Tu Racha</h5>
-                </div>
-                <div class="card-body">
-                    <h1 class="display-3 text-primary">{{ racha.dias_consecutivos }}</h1>
-                    <p class="text-muted">días consecutivos escribiendo</p>
-                    <hr>
-                    <div class="row text-center">
-                        <div class="col-6">
-                            <p class="mb-0 small text-muted">Racha Máxima</p>
-                            <h4 class="text-success">{{ racha.racha_maxima }}</h4>
-                        </div>
-                        <div class="col-6">
-                            <p class="mb-0 small text-muted">Total Días</p>
-                            <h4 class="text-info">{{ racha.total_dias_escritos }}</h4>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Estadísticas -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estadísticas</h5>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="small">Total de Reflexiones</span>
-                            <strong>{{ total_reflexiones }}</strong>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-primary" role="progressbar" style="width: 100%"></div>
-                        </div>
-                    </div>
-                    <div class="mb-3">
-                        <div class="d-flex justify-content-between mb-1">
-                            <span class="small">Reflexiones Guiadas</span>
-                            <strong>{{ reflexiones_guiadas_completadas }}</strong>
-                        </div>
-                        <div class="progress" style="height: 8px;">
-                            <div class="progress-bar bg-success" role="progressbar" style="width: {% widthratio reflexiones_guiadas_completadas 50 100 %}%"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Acciones Rápidas -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
-                </div>
-                <div class="card-body">
-                    <a href="{% url 'diario:logos_escritura_libre' %}" class="btn btn-primary w-100 mb-2">
-                        <i class="fas fa-feather-alt me-2"></i>Escribir Libremente
-                    </a>
-                    <a href="{% url 'diario:logos_calendario' %}" class="btn btn-outline-secondary w-100 mb-2">
-                        <i class="fas fa-calendar-alt me-2"></i>Ver Calendario
-                    </a>
-                    <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-outline-secondary w-100">
-                        <i class="fas fa-search me-2"></i>Buscar Reflexiones
-                    </a>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
+{% block extra_css %}
+<style>
+    .logos-page {
+        --logos-ink: #f0eadf;
+        --logos-muted: #938c83;
+        --logos-gold: #c4a365;
+        --logos-line: rgba(235, 226, 208, .13);
+        --logos-paper: rgba(25, 22, 28, .88);
+        background: #0d0c10 !important;
+    }
+    .logos-page::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(circle at 78% 8%, rgba(151, 111, 62, .13), transparent 30%),
+            linear-gradient(90deg, transparent 49.9%, rgba(255,255,255,.014) 50%, transparent 50.1%);
+    }
+    .logos-shell {
+        position: relative;
+        width: min(100% - 2rem, 1040px);
+        margin: 0 auto;
+        padding: clamp(2.75rem, 7vw, 6rem) 0 5rem;
+    }
+    .logos-masthead { max-width: 47rem; margin-bottom: clamp(2.5rem, 6vw, 5rem); }
+    .logos-kicker, .logos-index {
+        color: var(--logos-gold);
+        font: 700 .62rem/1.4 Manrope, sans-serif;
+        letter-spacing: .2em;
+        text-transform: uppercase;
+    }
+    .logos-title {
+        margin: .7rem 0 .8rem;
+        color: var(--logos-ink);
+        font: 500 clamp(3.2rem, 10vw, 7rem)/.84 'Crimson Pro', Georgia, serif;
+        letter-spacing: -.055em;
+    }
+    .logos-intro {
+        max-width: 35rem;
+        margin: 0;
+        color: #aaa298;
+        font: 400 clamp(.9rem, 2vw, 1.02rem)/1.75 Manrope, sans-serif;
+    }
+    .logos-primary {
+        position: relative;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: clamp(2rem, 7vw, 6rem);
+        align-items: end;
+        padding: clamp(1.7rem, 5vw, 3.4rem);
+        overflow: hidden;
+        background: linear-gradient(145deg, rgba(34, 30, 36, .96), rgba(18, 16, 21, .98));
+        border: 1px solid rgba(196, 163, 101, .3);
+        box-shadow: 0 35px 90px rgba(0, 0, 0, .24);
+    }
+    .logos-primary::after {
+        content: '“';
+        position: absolute;
+        right: .03em;
+        top: -.32em;
+        color: rgba(196, 163, 101, .045);
+        font: 500 clamp(12rem, 35vw, 25rem)/1 'Crimson Pro', serif;
+        pointer-events: none;
+    }
+    .logos-primary__copy, .logos-primary__action { position: relative; z-index: 1; }
+    .logos-primary h2 {
+        max-width: 38rem;
+        margin: .7rem 0 .8rem;
+        color: var(--logos-ink);
+        font: 500 clamp(2rem, 5vw, 3.7rem)/.98 'Crimson Pro', Georgia, serif;
+    }
+    .logos-primary p { max-width: 38rem; margin: 0; color: #aaa298; font: 400 .9rem/1.7 Manrope, sans-serif; }
+    .logos-primary__meta { display: block; margin-top: 1rem; color: #746d65; font: 600 .62rem/1.5 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .logos-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 195px;
+        padding: 1rem 1.35rem;
+        color: #17130e;
+        background: #d5b979;
+        border: 1px solid #d5b979;
+        border-radius: 1px;
+        font: 700 .67rem/1 Manrope, sans-serif;
+        letter-spacing: .12em;
+        text-decoration: none;
+        text-transform: uppercase;
+        transition: background .2s ease, transform .2s ease;
+    }
+    .logos-cta::after { content: '→'; margin-left: 1rem; font-size: 1rem; }
+    .logos-cta:hover { color: #17130e; background: #e3c989; transform: translateY(-2px); }
+    .logos-section { margin-top: clamp(3.5rem, 8vw, 6.5rem); }
+    .logos-section__head { display: flex; justify-content: space-between; align-items: end; gap: 2rem; margin-bottom: 1.35rem; }
+    .logos-section h2 {
+        margin: .5rem 0 0;
+        color: var(--logos-ink);
+        font: 500 clamp(1.8rem, 4vw, 2.8rem)/1 'Crimson Pro', Georgia, serif;
+    }
+    .logos-section__note { max-width: 25rem; margin: 0; color: #777068; font: 400 .75rem/1.6 Manrope, sans-serif; }
+    .logos-memory { border-top: 1px solid var(--logos-line); }
+    .logos-entry {
+        display: grid;
+        grid-template-columns: 8rem minmax(0, 1fr) auto;
+        gap: clamp(1rem, 4vw, 2.5rem);
+        align-items: baseline;
+        padding: 1.5rem 0;
+        border-bottom: 1px solid var(--logos-line);
+    }
+    .logos-entry time { color: #746e66; font: 600 .6rem/1.4 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .logos-entry h3 { margin: 0 0 .35rem; color: #ddd4c8; font: 500 1.25rem/1.2 'Crimson Pro', serif; }
+    .logos-entry p { margin: 0; color: var(--logos-muted); font: 400 .8rem/1.65 Manrope, sans-serif; }
+    .logos-entry__link, .logos-text-link {
+        color: var(--logos-gold);
+        font: 700 .61rem/1.4 Manrope, sans-serif;
+        letter-spacing: .1em;
+        text-decoration: none;
+        text-transform: uppercase;
+    }
+    .logos-empty { padding: 1.8rem 0; border-block: 1px solid var(--logos-line); color: var(--logos-muted); font: 400 .85rem/1.7 Manrope, sans-serif; }
+    .logos-signals {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        margin: 0;
+        border-block: 1px solid var(--logos-line);
+    }
+    .logos-signal { padding: 1.55rem 1.8rem 1.55rem 0; }
+    .logos-signal + .logos-signal { padding-left: 1.8rem; border-left: 1px solid var(--logos-line); }
+    .logos-signal dt { color: #827b72; font: 700 .59rem/1.4 Manrope, sans-serif; letter-spacing: .13em; text-transform: uppercase; }
+    .logos-signal dd { margin: .6rem 0 0; color: var(--logos-ink); font: 500 2rem/1 'Crimson Pro', serif; }
+    .logos-signal small { display: block; margin-top: .5rem; color: #716a63; font: 400 .68rem/1.5 Manrope, sans-serif; }
+    .logos-navigation { display: grid; grid-template-columns: 1fr 1fr; border-block: 1px solid var(--logos-line); }
+    .logos-destination { padding: 1.5rem 2rem 1.6rem 0; }
+    .logos-destination + .logos-destination { padding-left: 2rem; border-left: 1px solid var(--logos-line); }
+    .logos-destination h3 { margin: 0 0 .35rem; color: #ddd4c8; font: 500 1.25rem/1.2 'Crimson Pro', serif; }
+    .logos-destination p { margin: 0 0 .9rem; color: #777068; font: 400 .74rem/1.6 Manrope, sans-serif; }
+    .logos-cta:focus-visible, .logos-entry__link:focus-visible, .logos-text-link:focus-visible {
+        outline: 2px solid #e4ca8b;
+        outline-offset: 4px;
+    }
+    @media (max-width: 720px) {
+        .logos-primary { grid-template-columns: 1fr; }
+        .logos-primary__action, .logos-cta { width: 100%; }
+        .logos-section__head { display: block; }
+        .logos-section__note { margin-top: .7rem; }
+        .logos-entry { grid-template-columns: 1fr auto; }
+        .logos-entry time { grid-column: 1 / -1; }
+        .logos-signals, .logos-navigation { grid-template-columns: 1fr; }
+        .logos-signal + .logos-signal, .logos-destination + .logos-destination { padding-left: 0; border-left: 0; border-top: 1px solid var(--logos-line); }
+        .logos-signal, .logos-destination { padding: 1.25rem 0; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+        .logos-cta { transition: none; }
+        .logos-cta:hover { transform: none; }
+    }
+</style>
 {% endblock %}
 
+{% block content %}
+<div id="logos-main" class="logos-shell">
+    <header class="logos-masthead">
+        <div class="logos-kicker">Diario · Memoria escrita</div>
+        <h1 class="logos-title">Logos</h1>
+        <p class="logos-intro">Un lugar para pensar despacio. Pon en palabras lo que todavía no tiene forma y vuelve después para reconocer lo que ha cambiado.</p>
+    </header>
+
+    <section class="logos-primary" data-logos-region="primary" aria-labelledby="logos-primary-title">
+        <div class="logos-primary__copy">
+            {% if reflexion_del_dia %}
+                <div class="logos-index">01 · La pregunta de hoy</div>
+                <h2 id="logos-primary-title">{{ reflexion_del_dia.titulo }}</h2>
+                <p>{{ reflexion_del_dia.contexto|truncatewords:34 }}</p>
+                <span class="logos-primary__meta">{{ reflexion_del_dia.get_categoria_display }}</span>
+            {% else %}
+                <div class="logos-index">01 · Página en blanco</div>
+                <h2 id="logos-primary-title">Escribe para comprender</h2>
+                <p>Pon en palabras lo que todavía no tiene forma. No hace falta llegar con una conclusión.</p>
+            {% endif %}
+        </div>
+        <div class="logos-primary__action">
+            {% if reflexion_del_dia %}
+                <a data-logos-primary-action class="logos-cta" href="{% url 'diario:logos_reflexion_guiada' reflexion_del_dia.slug %}">Abrir la reflexión guiada</a>
+            {% else %}
+                <a data-logos-primary-action class="logos-cta" href="{% url 'diario:logos_escritura_libre' %}">Escribir una reflexión</a>
+            {% endif %}
+        </div>
+    </section>
+
+    <section class="logos-section" data-logos-region="memory" aria-labelledby="logos-memory-title">
+        <div class="logos-section__head">
+            <div><div class="logos-index">02 · Volver a lo escrito</div><h2 id="logos-memory-title">Memoria reciente</h2></div>
+            <p class="logos-section__note">Las últimas páginas, sin convertirlas en un marcador. Leer también forma parte de escribir.</p>
+        </div>
+        {% if reflexiones_recientes %}
+            <div class="logos-memory">
+                {% for reflexion in reflexiones_recientes %}
+                    <article class="logos-entry">
+                        <time datetime="{{ reflexion.fecha|date:'c' }}">{{ reflexion.fecha|date:'d M Y' }}</time>
+                        <div><h3>{{ reflexion.titulo }}</h3><p>{{ reflexion.contenido|truncatewords:20 }}</p></div>
+                        <a class="logos-entry__link" href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" aria-label="Leer {{ reflexion.titulo }}">Leer →</a>
+                    </article>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="logos-empty">Todavía no hay páginas guardadas. La primera puede ser breve y provisional.</p>
+        {% endif %}
+    </section>
+
+    <section class="logos-section" data-logos-region="signals" aria-labelledby="logos-signals-title">
+        <div class="logos-section__head">
+            <div><div class="logos-index">03 · Señales discretas</div><h2 id="logos-signals-title">Lo que deja la práctica</h2></div>
+        </div>
+        <dl class="logos-signals">
+            <div class="logos-signal"><dt>Días escritos</dt><dd>{{ racha.total_dias_escritos }}</dd><small>Días distintos con una página guardada.</small></div>
+            <div class="logos-signal"><dt>Racha actual</dt><dd>{{ racha.dias_consecutivos }}</dd><small>{% if racha.dias_consecutivos %}La escritura sigue cerca.{% else %}La racha está en pausa. Puedes volver cuando lo necesites.{% endif %}</small></div>
+            <div class="logos-signal"><dt>Total de reflexiones</dt><dd>{{ total_reflexiones }}</dd><small>Páginas libres y guiadas en tu archivo.</small></div>
+        </dl>
+    </section>
+
+    <section class="logos-section" data-logos-region="navigation" aria-labelledby="logos-navigation-title">
+        <div class="logos-section__head">
+            <div><div class="logos-index">04 · Explorar</div><h2 id="logos-navigation-title">Archivo y preguntas</h2></div>
+        </div>
+        <div class="logos-navigation">
+            <article class="logos-destination"><h3>Tu archivo</h3><p>Todas las páginas, ordenadas para buscar y releer.</p><a class="logos-text-link" href="{% url 'diario:logos_lista_reflexiones' %}">Abrir el archivo →</a></article>
+            <article class="logos-destination"><h3>Calendario guiado</h3><p>Preguntas situadas en fechas concretas del año.</p><a class="logos-text-link" href="{% url 'diario:logos_calendario' %}">Explorar el calendario →</a></article>
+        </div>
+    </section>
+</div>
+{% endblock %}

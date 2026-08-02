@@ -1755,11 +1755,6 @@ def logos_dashboard(request):
 
     # Estadísticas
     total_reflexiones = ReflexionLibre.objects.filter(usuario=request.user).count()
-    reflexiones_guiadas_completadas = ReflexionLibre.objects.filter(
-        usuario=request.user,
-        tipo='guiada'
-    ).count()
-
     # Racha de escritura (ReflexionLibre es la fuente canónica y repara legado)
     from diario.services.logos_service import sincronizar_racha_escritura
     racha = sincronizar_racha_escritura(request.user)
@@ -1768,7 +1763,6 @@ def logos_dashboard(request):
         'reflexiones_recientes': reflexiones_recientes,
         'reflexion_del_dia': reflexion_del_dia,
         'total_reflexiones': total_reflexiones,
-        'reflexiones_guiadas_completadas': reflexiones_guiadas_completadas,
         'racha': racha,
     }
 
