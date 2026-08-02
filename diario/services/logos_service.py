@@ -6,6 +6,22 @@ from django.db.models import F
 from django.utils import timezone
 
 
+def seleccionar_tema_del_dia(fecha=None):
+    """Selecciona el tema activo exacto o, en segundo lugar, el recurrente."""
+    from diario.models import ReflexionGuiadaTema
+
+    fecha = fecha or timezone.localdate()
+    activos = ReflexionGuiadaTema.objects.filter(activa=True)
+    exacto = activos.filter(fecha_activacion=fecha).order_by('fecha_activacion', 'id').first()
+    if exacto:
+        return exacto
+    return activos.filter(
+        es_recurrente=True,
+        fecha_activacion__month=fecha.month,
+        fecha_activacion__day=fecha.day,
+    ).order_by('-fecha_activacion', 'id').first()
+
+
 def tokenizar_etiquetas(valor):
     """Separa un CSV y deduplica semánticamente conservando su primera grafía."""
     if not valor:

@@ -1,3 +1,6 @@
+from datetime import date, timedelta
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
@@ -26,6 +29,65 @@ class LogosDashboardUITests(TestCase):
             pregunta_1="¿Qué merece hoy tu atención?",
             accion_sugerida="Nombrarlo sin prisa.",
         )
+
+    def _crear_tema(self, slug, fecha, **overrides):
+        datos = {
+            "titulo": slug.replace("-", " ").title(),
+            "slug": slug,
+            "fecha_activacion": fecha,
+            "contexto": "Contexto",
+            "cita_filosofica": "Cita",
+            "autor_cita": "Autor",
+            "pregunta_1": "Pregunta",
+            "accion_sugerida": "Acción",
+        }
+        datos.update(overrides)
+        return ReflexionGuiadaTema.objects.create(**datos)
+
+    def _dashboard_en(self, fecha):
+        with patch("diario.services.logos_service.timezone.localdate", return_value=fecha):
+            return self.client.get(self.url)
+
+    def test_selector_exacto_gana_a_recurrente(self):
+        hoy = date(2026, 8, 15)
+        recurrente = self._crear_tema(
+            "recurrente", hoy.replace(year=hoy.year - 1), es_recurrente=True,
+        )
+        exacto = self._crear_tema("exacto", hoy, es_recurrente=False)
+
+        response = self._dashboard_en(hoy)
+
+        self.assertEqual(response.context["reflexion_del_dia"], exacto)
+        self.assertNotEqual(response.context["reflexion_del_dia"], recurrente)
+
+    def test_selector_recurrente_cruza_de_ano(self):
+        hoy = date(2026, 8, 15)
+        recurrente = self._crear_tema(
+            "recurrente-otro-ano", hoy.replace(year=hoy.year - 2), es_recurrente=True,
+        )
+        self.assertEqual(self._dashboard_en(hoy).context["reflexion_del_dia"], recurrente)
+
+    def test_selector_no_muestra_no_recurrente_antiguo(self):
+        hoy = date(2026, 8, 15)
+        self._crear_tema(
+            "antiguo-no-recurrente", hoy.replace(year=hoy.year - 1), es_recurrente=False,
+        )
+        self.assertIsNone(self._dashboard_en(hoy).context["reflexion_del_dia"])
+
+    def test_selector_no_muestra_tema_anterior_del_mismo_mes(self):
+        hoy = date(2026, 8, 15)
+        fecha_anterior = hoy - timedelta(days=1)
+        self._crear_tema("anterior-del-mes", fecha_anterior, es_recurrente=True)
+        self.assertIsNone(self._dashboard_en(hoy).context["reflexion_del_dia"])
+
+    def test_selector_excluye_inactivos(self):
+        hoy = date(2026, 8, 15)
+        self._crear_tema("exacto-inactivo", hoy, activa=False)
+        self._crear_tema(
+            "recurrente-inactivo", hoy.replace(year=hoy.year - 1),
+            activa=False, es_recurrente=True,
+        )
+        self.assertIsNone(self._dashboard_en(hoy).context["reflexion_del_dia"])
 
     def test_portada_tiene_estructura_editorial_accesible_sin_cards_genericas(self):
         response = self.client.get(self.url)

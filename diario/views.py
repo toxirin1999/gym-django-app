@@ -17,7 +17,9 @@ from django.views.decorators.http import require_http_methods
 from django.urls import reverse
 from .forms import PersonaImportanteForm, InteraccionForm
 from .services import HabitosService
-from .services.logos_service import contiene_etiqueta, normalizar_etiquetas
+from .services.logos_service import (
+    contiene_etiqueta, normalizar_etiquetas, seleccionar_tema_del_dia,
+)
 
 from .models import (
     ProsocheMes, ProsocheSemana, ProsocheDiario, ProsocheHabito, ProsocheHabitoDia,
@@ -1741,19 +1743,7 @@ def logos_dashboard(request):
         usuario=request.user
     ).order_by('-fecha')[:5]
 
-    # Reflexión guiada del día (si existe)
-    reflexion_del_dia = ReflexionGuiadaTema.objects.filter(
-        activa=True,
-        fecha_activacion=hoy
-    ).first()
-
-    # Si no hay reflexión para hoy exacto, buscar la más reciente del mes
-    if not reflexion_del_dia:
-        reflexion_del_dia = ReflexionGuiadaTema.objects.filter(
-            activa=True,
-            fecha_activacion__month=hoy.month,
-            fecha_activacion__day__lte=hoy.day
-        ).order_by('-fecha_activacion').first()
+    reflexion_del_dia = seleccionar_tema_del_dia(hoy)
 
     # Estadísticas
     total_reflexiones = ReflexionLibre.objects.filter(usuario=request.user).count()
