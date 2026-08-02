@@ -1,134 +1,55 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
-
-{% block title %}Editar: {{ reflexion.titulo }} - Logos{% endblock %}
-
+{% block title %}Logos · Editar {{ reflexion.titulo }}{% endblock %}
+{% block body_class %}diario-dark logos-page{% endblock %}
+{% block extra_css %}
+<style>
+    .logos-page { --ink:#f0eadf; --muted:#938c83; --gold:#c4a365; --line:rgba(235,226,208,.14); background:#0d0c10!important; color:var(--ink); }
+    .logos-editor { width:min(100% - 2rem,900px); margin:0 auto; padding:clamp(2.5rem,7vw,5.5rem) 0 5rem; }
+    .logos-back,.logos-secondary { color:var(--gold); font:700 .63rem/1.4 Manrope,sans-serif; letter-spacing:.12em; text-decoration:none; text-transform:uppercase; }
+    .logos-header { max-width:43rem; margin:clamp(2.4rem,6vw,4.5rem) 0 3rem; }
+    .logos-kicker { color:var(--gold); font:700 .62rem/1.4 Manrope,sans-serif; letter-spacing:.2em; text-transform:uppercase; }
+    .logos-header h1 { margin:.55rem 0 .7rem; font:500 clamp(2.8rem,8vw,5.4rem)/.9 'Crimson Pro',Georgia,serif; letter-spacing:-.045em; }
+    .logos-header p { margin:0; color:#888078; font:400 .78rem/1.6 Manrope,sans-serif; }
+    .logos-form { padding-top:2rem; border-top:1px solid var(--line); }
+    .logos-errors { margin:0 0 1.5rem; color:#e3b2a5; font:600 .76rem/1.6 Manrope,sans-serif; }
+    .logos-errors:empty { display:none; }
+    .logos-field { margin-bottom:1.8rem; } .logos-field--title { max-width:35rem; }
+    .logos-label,.logos-form legend { display:block; margin-bottom:.65rem; color:#b7afa5; font:700 .65rem/1.4 Manrope,sans-serif; letter-spacing:.12em; text-transform:uppercase; }
+    .logos-form legend { float:none; width:auto; } .logos-optional { color:#6f6962; font-weight:500; }
+    .logos-input,.logos-textarea { width:100%; padding:.9rem 0; color:var(--ink); background:transparent; border:0; border-bottom:1px solid rgba(235,226,208,.22); border-radius:0; font:500 1.25rem/1.5 'Crimson Pro',Georgia,serif; }
+    .logos-textarea { min-height:23rem; padding:1.2rem; resize:vertical; background:rgba(28,25,30,.56); border:1px solid rgba(196,163,101,.26); font-size:clamp(1.15rem,2vw,1.38rem); line-height:1.75; }
+    .logos-details { display:grid; grid-template-columns:1fr 1.25fr; gap:clamp(1.5rem,5vw,3rem); margin-top:2.2rem; }
+    .logos-help { margin:.55rem 0 0; color:#777068; font:400 .72rem/1.55 Manrope,sans-serif; }
+    .logos-mood { display:flex; flex-wrap:wrap; gap:.45rem; } .logos-mood input { position:absolute; opacity:0; }
+    .logos-mood label { display:grid; place-items:center; min-width:2.8rem; min-height:2.6rem; padding:.45rem; border:1px solid var(--line); cursor:pointer; }
+    .logos-mood input:checked + label { background:#d5b979; border-color:#d5b979; }
+    .logos-actions { display:flex; align-items:center; gap:1.5rem; padding-top:1.5rem; border-top:1px solid var(--line); }
+    .logos-submit { padding:1rem 1.45rem; color:#17130e; background:#d5b979; border:1px solid #d5b979; border-radius:1px; font:700 .67rem/1 Manrope,sans-serif; letter-spacing:.12em; text-transform:uppercase; transition:background .2s ease,transform .2s ease; }
+    .logos-input:focus-visible,.logos-textarea:focus-visible,.logos-mood input:focus-visible + label,.logos-submit:focus-visible,.logos-back:focus-visible,.logos-secondary:focus-visible { outline:2px solid #e4ca8b; outline-offset:4px; }
+    @media (max-width:720px) { .logos-details { grid-template-columns:1fr; } .logos-actions { align-items:stretch; flex-direction:column; } .logos-submit { width:100%; } .logos-secondary { text-align:center; padding:.6rem; } }
+    @media (prefers-reduced-motion: reduce) { .logos-submit { transition:none; } }
+</style>
+{% endblock %}
 {% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body text-center p-4">
-            <i class="fas fa-edit fa-3x text-primary mb-3"></i>
-            <h1 class="text-gradient">Editar Reflexión</h1>
-            <p class="text-muted mb-0">{{ reflexion.titulo }}</p>
+<div class="logos-editor" data-logos-view="edit">
+    <a class="logos-back" href="{% url 'diario:logos_ver_reflexion' reflexion.id %}">← Volver a la lectura</a>
+    <header class="logos-header"><div class="logos-kicker">Revisión · {{ reflexion.fecha|date:'d M Y' }}</div><h1>Editar la página</h1><p>El original permanece reconocible hasta que guardes los cambios.</p></header>
+    <form class="logos-form" method="post" aria-describedby="logos-form-errors">
+        {% csrf_token %}
+        <p class="logos-errors" id="logos-form-errors" role="status">{% if messages %}Revisa los avisos antes de continuar.{% endif %}</p>
+        <div class="logos-field logos-field--title"><label class="logos-label" for="titulo">Título <span class="logos-optional">· opcional</span></label><input class="logos-input" id="titulo" name="titulo" type="text" maxlength="200" value="{{ reflexion.titulo }}"></div>
+        <div class="logos-field"><label class="logos-label" for="contenido">Tu página</label><textarea class="logos-textarea" id="contenido" name="contenido" required>{{ reflexion.contenido }}</textarea></div>
+        <div class="logos-details">
+            <div class="logos-field"><label class="logos-label" for="etiquetas">Etiquetas <span class="logos-optional">· opcional</span></label><input class="logos-input" id="etiquetas" name="etiquetas" type="text" maxlength="500" value="{{ reflexion.etiquetas }}"><p class="logos-help">Separadas por comas.</p></div>
+            <fieldset class="logos-field"><legend>Después de escribir <span class="logos-optional">· opcional</span></legend><div class="logos-mood">
+                <input id="animo1" name="estado_animo_post" type="radio" value="1" {% if reflexion.estado_animo_post == 1 %}checked{% endif %}><label for="animo1" aria-label="Mal">😔</label>
+                <input id="animo2" name="estado_animo_post" type="radio" value="2" {% if reflexion.estado_animo_post == 2 %}checked{% endif %}><label for="animo2" aria-label="Regular">😐</label>
+                <input id="animo3" name="estado_animo_post" type="radio" value="3" {% if reflexion.estado_animo_post == 3 or not reflexion.estado_animo_post %}checked{% endif %}><label for="animo3" aria-label="Bien">🙂</label>
+                <input id="animo4" name="estado_animo_post" type="radio" value="4" {% if reflexion.estado_animo_post == 4 %}checked{% endif %}><label for="animo4" aria-label="Muy bien">😊</label>
+                <input id="animo5" name="estado_animo_post" type="radio" value="5" {% if reflexion.estado_animo_post == 5 %}checked{% endif %}><label for="animo5" aria-label="Excelente">😄</label>
+            </div></fieldset>
         </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8 mx-auto">
-            
-            <!-- Formulario de Edición -->
-            <div class="card shadow-soft">
-                <div class="card-header">
-                    <h5 class="mb-0"><i class="fas fa-pen-nib me-2"></i>Editar Contenido</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="titulo" class="form-label">Título</label>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="titulo" 
-                                name="titulo" 
-                                value="{{ reflexion.titulo }}"
-                                placeholder="Título de tu reflexión"
-                            >
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="contenido" class="form-label">Contenido</label>
-                            <textarea 
-                                class="form-control" 
-                                id="contenido" 
-                                name="contenido" 
-                                rows="15" 
-                                required
-                            >{{ reflexion.contenido }}</textarea>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="etiquetas" class="form-label">Etiquetas</label>
-                            <input 
-                                type="text" 
-                                class="form-control" 
-                                id="etiquetas" 
-                                name="etiquetas" 
-                                value="{{ reflexion.etiquetas }}"
-                                placeholder="Ej: miedo, gratitud, decisión"
-                            >
-                            <div class="form-text">
-                                Separa las etiquetas con comas.
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="form-label">¿Cómo te sientes ahora?</label>
-                            <div class="d-flex justify-content-between flex-wrap">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo1" value="1" {% if reflexion.estado_animo_post == 1 %}checked{% endif %}>
-                                    <label class="form-check-label" for="animo1">😔 Mal</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo2" value="2" {% if reflexion.estado_animo_post == 2 %}checked{% endif %}>
-                                    <label class="form-check-label" for="animo2">😐 Regular</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo3" value="3" {% if reflexion.estado_animo_post == 3 or not reflexion.estado_animo_post %}checked{% endif %}>
-                                    <label class="form-check-label" for="animo3">🙂 Bien</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo4" value="4" {% if reflexion.estado_animo_post == 4 %}checked{% endif %}>
-                                    <label class="form-check-label" for="animo4">😊 Muy bien</label>
-                                </div>
-                                <div class="form-check">
-                                    <input class="form-check-input" type="radio" name="estado_animo_post" id="animo5" value="5" {% if reflexion.estado_animo_post == 5 %}checked{% endif %}>
-                                    <label class="form-check-label" for="animo5">😄 Excelente</label>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="alert alert-info">
-                            <i class="fas fa-info-circle me-2"></i>
-                            <strong>Nota:</strong> La fecha de modificación se actualizará automáticamente.
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg">
-                                <i class="fas fa-save me-2"></i>Guardar Cambios
-                            </button>
-                            <a href="{% url 'diario:logos_ver_reflexion' reflexion.id %}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-2"></i>Cancelar
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <!-- Información de la Reflexión -->
-            <div class="card shadow-sm mt-4">
-                <div class="card-body">
-                    <div class="row text-center">
-                        <div class="col-md-4">
-                            <small class="text-muted d-block">Tipo</small>
-                            <strong>{{ reflexion.get_tipo_display }}</strong>
-                        </div>
-                        <div class="col-md-4">
-                            <small class="text-muted d-block">Creada</small>
-                            <strong>{{ reflexion.fecha|date:"d/m/Y" }}</strong>
-                        </div>
-                        <div class="col-md-4">
-                            <small class="text-muted d-block">Última modificación</small>
-                            <strong>{{ reflexion.fecha_modificacion|date:"d/m/Y" }}</strong>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </div>
-    </div>
+        <div class="logos-actions"><button class="logos-submit" type="submit">Guardar cambios</button><a class="logos-secondary" href="{% url 'diario:logos_ver_reflexion' reflexion.id %}">Cancelar</a></div>
+    </form>
 </div>
 {% endblock %}
-

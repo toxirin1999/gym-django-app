@@ -1,143 +1,62 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
 {% load custom_filters %}
-{% block title %}{{ reflexion.titulo }} - Logos{% endblock %}
-
-{% block content %}
-<div class="fade-in-up">
-    <!-- Encabezado -->
-    <div class="card shadow-soft mb-4">
-        <div class="card-body">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h1 class="text-gradient mb-2">{{ reflexion.titulo }}</h1>
-                    <p class="text-muted mb-0">
-                        <i class="far fa-calendar me-2"></i>{{ reflexion.fecha|date:"l, d \d\e F \d\e Y \a \l\a\s H:i" }}
-                    </p>
-                </div>
-                <div>
-                    <span class="badge bg-secondary">{{ reflexion.get_tipo_display }}</span>
-                    {% if reflexion.favorita %}
-                    <span class="badge bg-warning"><i class="fas fa-star"></i> Favorita</span>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-lg-8">
-
-            <!-- Contenido de la Reflexión -->
-            <div class="card shadow-soft mb-4">
-                <div class="card-body">
-                    <div class="reflexion-contenido" style="white-space: pre-wrap; line-height: 1.8; font-size: 1.05rem;">
-                        {{ reflexion.contenido }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Reflexión Guiada Asociada (si aplica) -->
-            {% if reflexion.reflexion_guiada %}
-            <div class="card shadow-sm mb-4" style="border-left: 4px solid {{ reflexion.reflexion_guiada.color }};">
-                <div class="card-header">
-                    <h6 class="mb-0">
-                        <i class="{{ reflexion.reflexion_guiada.icono }} me-2"></i>
-                        Reflexión Guiada: {{ reflexion.reflexion_guiada.titulo }}
-                    </h6>
-                </div>
-                <div class="card-body">
-                    <blockquote class="blockquote mb-0 fst-italic">
-                        <p class="small">"{{ reflexion.reflexion_guiada.cita_filosofica }}"</p>
-                        <footer class="blockquote-footer">{{ reflexion.reflexion_guiada.autor_cita }}</footer>
-                    </blockquote>
-                </div>
-            </div>
-            {% endif %}
-
-            <!-- Acciones -->
-            <div class="d-flex gap-2 mb-4">
-                <a href="{% url 'diario:logos_editar_reflexion' reflexion.id %}" class="btn btn-primary">
-                    <i class="fas fa-edit me-2"></i>Editar
-                </a>
-                <a href="{% url 'diario:logos_lista_reflexiones' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-list me-2"></i>Ver Todas
-                </a>
-                <a href="{% url 'diario:logos_dashboard' %}" class="btn btn-outline-secondary">
-                    <i class="fas fa-home me-2"></i>Dashboard
-                </a>
-            </div>
-
-        </div>
-
-        <!-- Columna Lateral -->
-        <div class="col-lg-4">
-
-            <!-- Metadata -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-header">
-                    <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información</h6>
-                </div>
-                <div class="card-body">
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Tipo</small>
-                        <strong>{{ reflexion.get_tipo_display }}</strong>
-                    </div>
-
-                    {% if reflexion.etiquetas %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block mb-2">Etiquetas</small>
-                        {% for etiqueta in reflexion.etiquetas|split:"," %}
-
-                        <span class="badge bg-light text-dark me-1 mb-1">{{ etiqueta|trim }}</span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
-
-                    {% if reflexion.estado_animo_post %}
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Estado después de escribir</small>
-                        <div class="mt-2">
-                            {% if reflexion.estado_animo_post == 1 %}
-                            <span class="fs-3">😔</span> <strong>Mal</strong>
-                            {% elif reflexion.estado_animo_post == 2 %}
-                            <span class="fs-3">😐</span> <strong>Regular</strong>
-                            {% elif reflexion.estado_animo_post == 3 %}
-                            <span class="fs-3">🙂</span> <strong>Bien</strong>
-                            {% elif reflexion.estado_animo_post == 4 %}
-                            <span class="fs-3">😊</span> <strong>Muy bien</strong>
-                            {% elif reflexion.estado_animo_post == 5 %}
-                            <span class="fs-3">😄</span> <strong>Excelente</strong>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Creada</small>
-                        <strong>{{ reflexion.fecha|date:"d/m/Y H:i" }}</strong>
-                    </div>
-
-                    {% if reflexion.fecha_modificacion != reflexion.fecha %}
-                    <div class="mb-0">
-                        <small class="text-muted d-block">Última modificación</small>
-                        <strong>{{ reflexion.fecha_modificacion|date:"d/m/Y H:i" }}</strong>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Cita Inspiradora -->
-            <div class="card shadow-sm">
-                <div class="card-body text-center p-4">
-                    <i class="fas fa-quote-left fa-2x text-muted mb-3"></i>
-                    <p class="fst-italic mb-3">"La escritura es el espejo del alma."</p>
-                    <small class="text-muted">— Proverbio estoico</small>
-                </div>
-            </div>
-
-        </div>
-    </div>
-</div>
+{% block title %}Logos · {{ reflexion.titulo }}{% endblock %}
+{% block body_class %}diario-dark logos-page{% endblock %}
+{% block extra_css %}
+<style>
+    .logos-page { --ink:#f0eadf; --muted:#938c83; --gold:#c4a365; --line:rgba(235,226,208,.14); background:#0d0c10!important; color:var(--ink); }
+    .logos-page::before { content:''; position:fixed; inset:0; pointer-events:none; background:radial-gradient(circle at 78% 6%,rgba(151,111,62,.11),transparent 31%); }
+    .logos-reader { position:relative; width:min(100% - 2rem,1000px); margin:0 auto; padding:clamp(2.5rem,7vw,5.5rem) 0 5rem; }
+    .logos-back,.logos-action { color:var(--gold); font:700 .63rem/1.4 Manrope,sans-serif; letter-spacing:.12em; text-decoration:none; text-transform:uppercase; }
+    .logos-header { max-width:48rem; margin:clamp(2.5rem,7vw,5rem) 0 2rem; }
+    .logos-kicker { color:var(--gold); font:700 .62rem/1.4 Manrope,sans-serif; letter-spacing:.2em; text-transform:uppercase; }
+    .logos-header h1 { margin:.65rem 0 .85rem; color:var(--ink); font:500 clamp(2.8rem,8vw,5.8rem)/.92 'Crimson Pro',Georgia,serif; letter-spacing:-.045em; }
+    .logos-date { color:#777068; font:600 .65rem/1.5 Manrope,sans-serif; letter-spacing:.1em; text-transform:uppercase; }
+    .logos-layout { display:grid; grid-template-columns:minmax(0,1fr) 15rem; gap:clamp(2.5rem,7vw,6rem); padding:clamp(2.2rem,5vw,4rem) 0; border-block:1px solid var(--line); }
+    .logos-prose { margin:0; color:#d9d0c4; white-space:pre-wrap; overflow-wrap:anywhere; font:400 clamp(1.2rem,2.2vw,1.48rem)/1.82 'Crimson Pro',Georgia,serif; }
+    .logos-guided { margin-top:3rem; padding:1.3rem 0 0 1.3rem; border-top:1px solid var(--line); border-left:2px solid var(--gold); }
+    .logos-guided h2 { margin:0 0 .7rem; font:500 1.3rem/1.2 'Crimson Pro',serif; }
+    .logos-guided blockquote { margin:0; color:#918980; font:italic 400 1rem/1.65 'Crimson Pro',serif; }
+    .logos-meta { margin:0; }
+    .logos-meta__item { padding:0 0 1.25rem; margin-bottom:1.25rem; border-bottom:1px solid var(--line); }
+    .logos-meta dt { margin-bottom:.45rem; color:#6f6962; font:700 .58rem/1.4 Manrope,sans-serif; letter-spacing:.14em; text-transform:uppercase; }
+    .logos-meta dd { margin:0; color:#aaa298; font:500 .76rem/1.6 Manrope,sans-serif; }
+    .logos-tag { display:inline-block; margin:.15rem .3rem .15rem 0; color:#bda66f; }
+    .logos-footer { display:flex; align-items:center; gap:2rem; padding-top:1.5rem; }
+    .logos-action--primary { padding:.8rem 1.1rem; color:#17130e; background:#d5b979; border:1px solid #d5b979; }
+    .logos-back:focus-visible,.logos-action:focus-visible { outline:2px solid #e4ca8b; outline-offset:4px; }
+    @media (max-width:720px) { .logos-layout { grid-template-columns:1fr; } .logos-meta { display:grid; grid-template-columns:1fr 1fr; gap:1rem; } .logos-meta__item { margin:0; } .logos-footer { justify-content:space-between; } }
+    @media (prefers-reduced-motion: reduce) { .logos-action { transition:none; } }
+</style>
 {% endblock %}
-
+{% block content %}
+<article class="logos-reader" data-logos-view="read">
+    <a class="logos-back" href="{% url 'diario:logos_lista_reflexiones' %}">← Volver al archivo</a>
+    <header class="logos-header">
+        <div class="logos-kicker">Página guardada{% if reflexion.favorita %} · Favorita{% endif %}</div>
+        <h1>{{ reflexion.titulo|default:'Sin título' }}</h1>
+        <time class="logos-date" datetime="{{ reflexion.fecha|date:'c' }}">{{ reflexion.fecha|date:'d M Y · H:i' }}</time>
+    </header>
+    <div class="logos-layout">
+        <div>
+            <p class="logos-prose">{{ reflexion.contenido }}</p>
+            {% if reflexion.reflexion_guiada %}
+                <aside class="logos-guided" aria-labelledby="guided-title">
+                    <h2 id="guided-title">{{ reflexion.reflexion_guiada.titulo }}</h2>
+                    <blockquote>“{{ reflexion.reflexion_guiada.cita_filosofica }}” — {{ reflexion.reflexion_guiada.autor_cita }}</blockquote>
+                </aside>
+            {% endif %}
+        </div>
+        <dl class="logos-meta" aria-label="Datos de la reflexión">
+            <div class="logos-meta__item" data-logos-meta="type"><dt>Tipo</dt><dd>{{ reflexion.get_tipo_display }}</dd></div>
+            <div class="logos-meta__item" data-logos-meta="tags"><dt>Etiquetas</dt><dd>{% if reflexion.etiquetas %}{% for etiqueta in reflexion.etiquetas|split:',' %}<span class="logos-tag">#{{ etiqueta|trim }}</span>{% endfor %}{% else %}Sin etiquetas{% endif %}</dd></div>
+            <div class="logos-meta__item" data-logos-meta="mood"><dt>Después de escribir</dt><dd>{% if reflexion.estado_animo_post == 1 %}😔 Mal{% elif reflexion.estado_animo_post == 2 %}😐 Regular{% elif reflexion.estado_animo_post == 3 %}🙂 Bien{% elif reflexion.estado_animo_post == 4 %}😊 Muy bien{% elif reflexion.estado_animo_post == 5 %}😄 Excelente{% else %}Sin registrar{% endif %}</dd></div>
+            {% if reflexion.fecha_modificacion != reflexion.fecha %}<div class="logos-meta__item"><dt>Última revisión</dt><dd>{{ reflexion.fecha_modificacion|date:'d M Y · H:i' }}</dd></div>{% endif %}
+        </dl>
+    </div>
+    <footer class="logos-footer">
+        <a class="logos-action logos-action--primary" data-logos-action="edit" href="{% url 'diario:logos_editar_reflexion' reflexion.id %}">Editar</a>
+        <a class="logos-action" data-logos-action="archive" href="{% url 'diario:logos_lista_reflexiones' %}">Volver al archivo</a>
+    </footer>
+</article>
+{% endblock %}
