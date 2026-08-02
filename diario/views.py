@@ -1793,6 +1793,12 @@ def logos_escritura_libre(request):
             messages.error(request, 'El contenido de la reflexión no puede estar vacío.')
             return redirect('diario:logos_escritura_libre')
 
+        from diario.services.logos_service import validar_estado_animo_post
+        mood_valido, estado_animo_post = validar_estado_animo_post(estado_animo_post)
+        if not mood_valido:
+            messages.error(request, 'El estado de ánimo debe ser un valor entre 1 y 5.')
+            return redirect('diario:logos_escritura_libre')
+
         # Crear la reflexión
         reflexion = ReflexionLibre.objects.create(
             usuario=request.user,
@@ -1800,7 +1806,7 @@ def logos_escritura_libre(request):
             contenido=contenido,
             etiquetas=etiquetas,
             tipo='espontanea',
-            estado_animo_post=int(estado_animo_post) if estado_animo_post else None
+            estado_animo_post=estado_animo_post
         )
 
         # Actualizar racha de escritura
@@ -1808,9 +1814,14 @@ def logos_escritura_libre(request):
         racha_crecio = racha.actualizar_racha(timezone.localdate())
 
         # Otorgar puntos de Sabiduría
-        virtud_sabiduria = Virtud.objects.get(usuario=request.user, tipo='sabiduria')
+        virtud_sabiduria, _ = Virtud.objects.get_or_create(
+            usuario=request.user,
+            tipo='sabiduria',
+        )
         virtud_sabiduria.puntos += 5
         nivel_subio = virtud_sabiduria.actualizar_nivel()
+        if not nivel_subio:
+            virtud_sabiduria.save(update_fields=['puntos'])
 
         # Mensaje de éxito
         messages.success(request, '¡Reflexión guardada! +5 puntos de Sabiduría.')
@@ -1847,13 +1858,26 @@ def logos_editar_reflexion(request, reflexion_id):
     reflexion = get_object_or_404(ReflexionLibre, id=reflexion_id, usuario=request.user)
 
     if request.method == 'POST':
-        reflexion.titulo = request.POST.get('titulo', '').strip()
-        reflexion.contenido = request.POST.get('contenido', '').strip()
-        reflexion.etiquetas = request.POST.get('etiquetas', '').strip()
+        titulo = request.POST.get('titulo', '').strip()
+        contenido = request.POST.get('contenido', '').strip()
+        etiquetas = request.POST.get('etiquetas', '').strip()
 
-        estado_animo_post = request.POST.get('estado_animo_post')
-        if estado_animo_post:
-            reflexion.estado_animo_post = int(estado_animo_post)
+        if not contenido:
+            messages.error(request, 'El contenido de la reflexión no puede estar vacío.')
+            return redirect('diario:logos_editar_reflexion', reflexion_id=reflexion.id)
+
+        from diario.services.logos_service import validar_estado_animo_post
+        mood_valido, estado_animo_post = validar_estado_animo_post(
+            request.POST.get('estado_animo_post')
+        )
+        if not mood_valido:
+            messages.error(request, 'El estado de ánimo debe ser un valor entre 1 y 5.')
+            return redirect('diario:logos_editar_reflexion', reflexion_id=reflexion.id)
+
+        reflexion.titulo = titulo
+        reflexion.contenido = contenido
+        reflexion.etiquetas = etiquetas
+        reflexion.estado_animo_post = estado_animo_post
 
         reflexion.save()
 
@@ -1928,11 +1952,28 @@ def logos_reflexion_guiada(request, slug):
     ).exists()
 
     if request.method == 'POST':
+        if ya_completada:
+            reflexion_existente = ReflexionLibre.objects.filter(
+                usuario=request.user,
+                reflexion_guiada=tema,
+            ).first()
+            messages.info(request, 'Esta reflexión guiada ya estaba completada.')
+            return redirect(
+                'diario:logos_ver_reflexion',
+                reflexion_id=reflexion_existente.id,
+            )
+
         contenido = request.POST.get('contenido', '').strip()
         estado_animo_post = request.POST.get('estado_animo_post')
 
         if not contenido:
             messages.error(request, 'Debes escribir tu reflexión antes de guardar.')
+            return redirect('diario:logos_reflexion_guiada', slug=slug)
+
+        from diario.services.logos_service import validar_estado_animo_post
+        mood_valido, estado_animo_post = validar_estado_animo_post(estado_animo_post)
+        if not mood_valido:
+            messages.error(request, 'El estado de ánimo debe ser un valor entre 1 y 5.')
             return redirect('diario:logos_reflexion_guiada', slug=slug)
 
         # Crear la reflexión
@@ -1942,7 +1983,7 @@ def logos_reflexion_guiada(request, slug):
             contenido=contenido,
             tipo='guiada',
             reflexion_guiada=tema,
-            estado_animo_post=int(estado_animo_post) if estado_animo_post else None
+            estado_animo_post=estado_animo_post
         )
 
         # Actualizar estadísticas del tema
@@ -1960,7 +2001,8 @@ def logos_reflexion_guiada(request, slug):
             defaults={'puntos': 0, 'nivel': 1}  # Eliminamos el campo 'nombre'
         )
         virtud_sabiduria.puntos += 10
-        virtud_sabiduria.actualizar_nivel()
+        if not virtud_sabiduria.actualizar_nivel():
+            virtud_sabiduria.save(update_fields=['puntos'])
 
         # 2. Virtud de la Justicia (si aplica)
         if tema.categoria == 'social':
