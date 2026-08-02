@@ -503,6 +503,13 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
               padding:4px 9px;text-decoration:none;white-space:nowrap;">
       <i class="fab fa-strava"></i> Strava
     </a>
+    <a href="{% url 'rehab:hoy' %}"
+       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+              color:rgba(45,190,150,.6);border:1px solid rgba(45,190,150,.22);border-radius:2px;
+              padding:4px 9px;text-decoration:none;white-space:nowrap;">
+      <i class="fa-solid fa-bone"></i> Rehab
+    </a>
     <div class="rb-live">
       <div class="rb-live-dot"></div>
       {{ hoy|date:"D d/M"|upper }}
