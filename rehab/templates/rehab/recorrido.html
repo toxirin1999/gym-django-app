@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}Rehab · Recorrido{% endblock %}
+
+{% block extra_css %}{% include "rehab/_offset_style.html" %}
+<style>
+    .rehab-fase-item { border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1rem; background: #fafafa; color: #1a1a1a; }
+    .rehab-fase-badge { display: inline-block; padding: 0.3rem 0.8rem; border-radius: 999px; font-weight: 600; font-size: 0.85rem; margin-bottom: 0.5rem; }
+    .rehab-fase-badge-completada { background: #e6f6ea; color: #1e6b32; border: 1px solid #a9dcb8; }
+    .rehab-fase-badge-actual { background: #fff4e5; color: #7a4a00; border: 1px solid #f0c988; }
+    .rehab-fase-badge-futura { background: #eeeeee; color: #444444; border: 1px solid #cccccc; }
+    .rehab-fase-fechas { color: #555555; margin: 0.35rem 0; }
+    .rehab-ejercicio-lista { list-style: none; padding: 0; margin: 0.5rem 0 0; }
+    .rehab-ejercicio-lista li { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.5rem 0.8rem; margin-bottom: 0.4rem; color: #1a1a1a; }
+    .rehab-vacio { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; text-align: center; color: #1a1a1a; }
+    .rehab-vacio a { color: #1a1a1a; font-weight: 700; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container rehab-content-offset">
+    <h1>Recorrido del protocolo</h1>
+
+    {% if not episodio %}
+    <div class="rehab-vacio">
+        <p>No tienes ningún episodio de rehabilitación activo todavía.</p>
+        <p><a href="{% url 'rehab:iniciar_episodio' %}">Iniciar un episodio de rehabilitación</a></p>
+    </div>
+    {% else %}
+    <p>{{ episodio.protocolo.nombre }}</p>
+
+    {% for item in recorrido %}
+    <div class="rehab-fase-item">
+        {% if item.estado == 'completada' %}
+        <span class="rehab-fase-badge rehab-fase-badge-completada">Completada</span>
+        {% elif item.estado == 'actual' %}
+        <span class="rehab-fase-badge rehab-fase-badge-actual">En curso</span>
+        {% else %}
+        <span class="rehab-fase-badge rehab-fase-badge-futura">Próxima</span>
+        {% endif %}
+
+        <h2>{{ item.fase.nombre }}</h2>
+        <p>{{ item.fase.objetivo }}</p>
+
+        {% if item.fecha_inicio %}
+        <p class="rehab-fase-fechas">
+            Desde {{ item.fecha_inicio }}
+            {% if item.fecha_fin %}hasta {{ item.fecha_fin }}{% endif %}
+            {% if item.duracion_dias is not None %}
+            · {{ item.duracion_dias }} días (típico {{ item.duracion_tipica_dias }} días)
+            {% endif %}
+        </p>
+        {% else %}
+        <p class="rehab-fase-fechas">Típico {{ item.duracion_tipica_dias }} días</p>
+        {% endif %}
+
+        {% if item.ejercicios %}
+        <ul class="rehab-ejercicio-lista">
+            {% for ejercicio in item.ejercicios %}
+            <li>{{ ejercicio.ejercicio }} — {{ ejercicio.series }} series</li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <p><a href="{% url 'rehab:hoy' %}">Volver a Hoy</a></p>
+    {% endif %}
+</div>
+{% endblock %}

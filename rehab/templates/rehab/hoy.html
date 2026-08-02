@@ -91,6 +91,7 @@
         {% if prescripcion.puede_entrenar %}
         <a class="rehab-accion-primaria" href="{% url 'rehab:registrar_sesion' episodio.id %}">Registrar sesión</a>
         {% endif %}
+        <a class="rehab-accion-secundaria" href="{% url 'rehab:recorrido' %}">Ver recorrido completo</a>
     </div>
     {% endif %}
 </div>

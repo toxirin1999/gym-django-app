@@ -3,6 +3,7 @@ from django.db import transaction
 
 from ..models import EjercicioSesionRehab, EpisodioRehab, RegistroDiarioRehab, SesionRehab, TransicionFase
 from .prescripcion_service import UMBRAL_DOLOR_PARADA, prescripcion_de_hoy
+from .recorrido_service import construir_recorrido
 from .transicion_service import (
     aplicar_retroceso_automatico,
     confirmar_avance,
@@ -22,6 +23,7 @@ __all__ = [
     'evaluar_retroceso',
     'aplicar_retroceso_automatico',
     'detectar_estancamiento',
+    'construir_recorrido',
 ]
 
 

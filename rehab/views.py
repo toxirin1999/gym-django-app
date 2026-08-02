@@ -146,6 +146,24 @@ def proponer_avance_view(request):
 
 
 @login_required
+def recorrido_view(request):
+    cliente = request.user.cliente_perfil
+    episodio = (
+        EpisodioRehab.objects.filter(cliente=cliente, estado='ACTIVO')
+        .order_by('fecha_inicio')
+        .first()
+    )
+    if episodio is None:
+        return render(request, 'rehab/recorrido.html', {'episodio': None, 'recorrido': None})
+
+    recorrido = services.construir_recorrido(episodio)
+    return render(request, 'rehab/recorrido.html', {
+        'episodio': episodio,
+        'recorrido': recorrido,
+    })
+
+
+@login_required
 def confirmar_avance_view(request, episodio_id):
     cliente = request.user.cliente_perfil
     episodio = get_object_or_404(EpisodioRehab, pk=episodio_id, cliente=cliente)
