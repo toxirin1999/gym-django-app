@@ -274,3 +274,132 @@ class RedirectsApuntanAHoyTests(DashboardRehabTestBase):
         )
         self.assertEqual(response.status_code, 302)
         self.assertNotIn('placeholder', response.url)
+
+
+class HoyViewJerarquiaBotonesSinDatosTests(DashboardRehabTestBase):
+    def setUp(self):
+        super().setUp()
+        self.episodio = iniciar_episodio(
+            cliente=self.cliente,
+            protocolo=self.protocolo,
+            lateralidad='derecha',
+            fecha_inicio=HOY - timedelta(days=10),
+            dolor_basal_inicial=4,
+        )
+        self.client.login(username='paciente_dashboard', password='x')
+
+    def test_registrar_dolor_es_la_unica_accion_primaria(self):
+        response = self.client.get(reverse('rehab:hoy'))
+        contenido = response.content.decode()
+
+        registrar_dolor_url = reverse('rehab:registrar_dolor', args=[self.episodio.id])
+        self.assertIn(
+            f'<a class="rehab-accion-primaria" href="{registrar_dolor_url}">Registrar dolor de hoy</a>',
+            contenido,
+        )
+        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 1)
+
+
+class HoyViewJerarquiaBotonesPuedeEntrenarTests(DashboardRehabTestBase):
+    def setUp(self):
+        super().setUp()
+        self.episodio = iniciar_episodio(
+            cliente=self.cliente,
+            protocolo=self.protocolo,
+            lateralidad='derecha',
+            fecha_inicio=HOY - timedelta(days=10),
+            dolor_basal_inicial=4,
+        )
+        RegistroDiarioRehab.objects.create(
+            episodio=self.episodio,
+            fecha=HOY,
+            dolor_manana=1,
+            rigidez_manana=1,
+        )
+        self.client.login(username='paciente_dashboard', password='x')
+
+    def test_registrar_sesion_es_primaria_y_editar_dolor_secundaria(self):
+        response = self.client.get(reverse('rehab:hoy'))
+        contenido = response.content.decode()
+
+        registrar_sesion_url = reverse('rehab:registrar_sesion', args=[self.episodio.id])
+        registrar_dolor_url = reverse('rehab:registrar_dolor', args=[self.episodio.id])
+
+        self.assertIn(
+            f'<a class="rehab-accion-primaria" href="{registrar_sesion_url}">Registrar sesión</a>',
+            contenido,
+        )
+        self.assertIn(
+            f'<a class="rehab-accion-secundaria" href="{registrar_dolor_url}">Editar dolor de hoy</a>',
+            contenido,
+        )
+        self.assertNotIn('Registrar dolor de hoy', contenido)
+        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 1)
+
+
+class HoyViewJerarquiaBotonesPararTests(DashboardRehabTestBase):
+    def setUp(self):
+        super().setUp()
+        self.episodio = iniciar_episodio(
+            cliente=self.cliente,
+            protocolo=self.protocolo,
+            lateralidad='derecha',
+            fecha_inicio=HOY - timedelta(days=10),
+            dolor_basal_inicial=4,
+        )
+        RegistroDiarioRehab.objects.create(
+            episodio=self.episodio,
+            fecha=HOY,
+            dolor_manana=8,
+            rigidez_manana=5,
+        )
+        self.client.login(username='paciente_dashboard', password='x')
+
+    def test_parar_sin_accion_primaria_editar_dolor_y_sin_progreso_de_fase(self):
+        response = self.client.get(reverse('rehab:hoy'))
+        contenido = response.content.decode()
+
+        self.assertIn('PARAR', contenido)
+        self.assertIn('Editar dolor de hoy', contenido)
+        self.assertNotIn('Registrar dolor de hoy', contenido)
+        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
+        self.assertNotIn('Progreso de fase', contenido)
+        self.assertNotIn('sesiones necesarias en esta fase', contenido)
+
+
+class HoyViewJerarquiaBotonesDescansoProgramadoTests(DashboardRehabTestBase):
+    def setUp(self):
+        super().setUp()
+        self.episodio = iniciar_episodio(
+            cliente=self.cliente,
+            protocolo=self.protocolo,
+            lateralidad='derecha',
+            fecha_inicio=HOY - timedelta(days=10),
+            dolor_basal_inicial=4,
+        )
+        for i in range(5):
+            SesionRehab.objects.create(
+                episodio=self.episodio,
+                fase=self.fase1,
+                fecha=HOY - timedelta(days=i),
+                estado='COMPLETADA',
+                dolor_durante=1,
+            )
+        RegistroDiarioRehab.objects.create(
+            episodio=self.episodio,
+            fecha=HOY,
+            dolor_manana=2,
+            rigidez_manana=1,
+        )
+        self.client.login(username='paciente_dashboard', password='x')
+
+    def test_descanso_programado_editar_dolor_sin_primaria_y_progreso_fase_visible(self):
+        response = self.client.get(reverse('rehab:hoy'))
+        contenido = response.content.decode()
+
+        self.assertIn('DESCANSO_PROGRAMADO', contenido)
+        self.assertIn('Editar dolor de hoy', contenido)
+        self.assertNotIn('Registrar dolor de hoy', contenido)
+        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
+        self.assertIn('Progreso de fase', contenido)
+        self.assertIn('sesiones necesarias en esta fase', contenido)

@@ -76,7 +76,7 @@
     </div>
     {% endif %}
 
-    {% if prescripcion.criterio_avance_texto %}
+    {% if prescripcion.criterio_avance_texto and prescripcion.estado != 'PARAR' %}
     <div class="rehab-seccion">
         <h2>Progreso de fase</h2>
         <p class="rehab-progreso">
@@ -87,7 +87,11 @@
     {% endif %}
 
     <div class="rehab-acciones">
-        <a class="rehab-accion-secundaria" href="{% url 'rehab:registrar_dolor' episodio.id %}">Registrar dolor de hoy</a>
+        {% if prescripcion.estado == 'SIN_DATOS' %}
+        <a class="rehab-accion-primaria" href="{% url 'rehab:registrar_dolor' episodio.id %}">Registrar dolor de hoy</a>
+        {% else %}
+        <a class="rehab-accion-secundaria" href="{% url 'rehab:registrar_dolor' episodio.id %}">Editar dolor de hoy</a>
+        {% endif %}
         {% if prescripcion.puede_entrenar %}
         <a class="rehab-accion-primaria" href="{% url 'rehab:registrar_sesion' episodio.id %}">Registrar sesión</a>
         {% endif %}
