@@ -20,6 +20,7 @@
     .rehab-ejercicio-lista { list-style: none; padding: 0; margin: 0; }
     .rehab-ejercicio-lista li { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 0.5rem; color: #1a1a1a; }
     .rehab-progreso { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem 1rem; color: #333333; }
+    .rehab-progreso-secundario { color: var(--lol-text-dim); font-size: 0.8rem; margin-top: 0.25rem; margin-bottom: 1.25rem; }
     .rehab-acciones { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
     .rehab-acciones a { display: inline-block; padding: 0.6rem 1.1rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
     .rehab-accion-primaria { background: #1a1a1a; color: #ffffff; }
@@ -76,14 +77,20 @@
     </div>
     {% endif %}
 
-    {% if prescripcion.criterio_avance_texto and prescripcion.estado != 'PARAR' %}
-    <div class="rehab-seccion">
-        <h2>Progreso de fase</h2>
-        <p class="rehab-progreso">
-            Día {{ prescripcion.dias_en_fase }} en esta fase.
-            {{ prescripcion.criterio_avance_texto }}
+    {% if prescripcion.criterio_avance_texto %}
+        {% if prescripcion.estado == 'PARAR' %}
+        <p class="rehab-progreso-secundario">
+            Esto no es lo prioritario ahora, pero por si quieres verlo: {{ prescripcion.criterio_avance_texto }}
         </p>
-    </div>
+        {% else %}
+        <div class="rehab-seccion">
+            <h2>Progreso de fase</h2>
+            <p class="rehab-progreso">
+                Día {{ prescripcion.dias_en_fase }} en esta fase.
+                {{ prescripcion.criterio_avance_texto }}
+            </p>
+        </div>
+        {% endif %}
     {% endif %}
 
     <div class="rehab-acciones">

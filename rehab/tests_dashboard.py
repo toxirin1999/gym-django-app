@@ -363,8 +363,16 @@ class HoyViewJerarquiaBotonesPararTests(DashboardRehabTestBase):
         self.assertIn('Editar dolor de hoy', contenido)
         self.assertNotIn('Registrar dolor de hoy', contenido)
         self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
-        self.assertNotIn('Progreso de fase', contenido)
-        self.assertNotIn('sesiones necesarias en esta fase', contenido)
+        self.assertNotIn('<h2>Progreso de fase</h2>', contenido)
+        self.assertIn('sesiones necesarias en esta fase', contenido)
+        self.assertIn('<p class="rehab-progreso-secundario">', contenido)
+
+    def test_parar_muestra_nota_secundaria_de_progreso_de_fase(self):
+        response = self.client.get(reverse('rehab:hoy'))
+        contenido = response.content.decode()
+
+        self.assertIn('<p class="rehab-progreso-secundario">', contenido)
+        self.assertIn('sesiones necesarias en esta fase', contenido)
 
 
 class HoyViewJerarquiaBotonesDescansoProgramadoTests(DashboardRehabTestBase):
@@ -401,5 +409,6 @@ class HoyViewJerarquiaBotonesDescansoProgramadoTests(DashboardRehabTestBase):
         self.assertIn('Editar dolor de hoy', contenido)
         self.assertNotIn('Registrar dolor de hoy', contenido)
         self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
-        self.assertIn('Progreso de fase', contenido)
+        self.assertIn('<h2>Progreso de fase</h2>', contenido)
         self.assertIn('sesiones necesarias en esta fase', contenido)
+        self.assertNotIn('<p class="rehab-progreso-secundario">', contenido)
