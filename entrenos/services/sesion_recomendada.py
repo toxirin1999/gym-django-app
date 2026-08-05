@@ -525,12 +525,23 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         causa = 'sesion_hoy'
         estado = 'entrenar'
 
+    # Las causas 'pendiente_prioritaria'/'pendiente_normal' tienen un mensaje fijo
+    # en _MENSAJES_POR_CAUSA, pero decision_base['mensaje'] (construido en
+    # obtener_sesion_recomendada_hoy) ya trae el "Quedó pendiente ayer/hace N
+    # días" calculado a partir de sesion_programada.fecha_prevista — perderlo
+    # aquí es lo que hacía que una sesión atrasada pareciera "la de hoy con la
+    # fecha mal" en vez de "la sesión de hace N días que sigue pendiente".
+    if decision['tipo'] == 'pendiente':
+        mensaje = decision_base.get('mensaje') or _MENSAJES_POR_CAUSA.get(causa, '')
+    else:
+        mensaje = _MENSAJES_POR_CAUSA.get(causa, decision.get('mensaje', ''))
+
     decision.update({
         'estado': estado,
         'causa_principal': causa,
         'modo_reducido': estado == 'version_reducida',
         'contexto_fisico': contexto,
-        'mensaje': _MENSAJES_POR_CAUSA.get(causa, decision.get('mensaje', '')),
+        'mensaje': mensaje,
     })
     return decision
 

@@ -1040,6 +1040,20 @@ class TestPhase3A_AplicarContexto(SesionProgramadaBase):
         self.assertEqual(d['estado'], 'entrenar')
         self.assertEqual(d['causa_principal'], 'pendiente_prioritaria')
 
+    def test_pendiente_conserva_mensaje_con_cuanto_lleva_atrasada(self):
+        """
+        Regresión: una sesión pendiente de alta prioridad mostraba el texto fijo
+        "Esta sesión sostiene el bloque..." y perdía el "Quedó pendiente ayer/hace
+        N días" que ya traía calculado obtener_sesion_recomendada_hoy — el usuario
+        no podía saber, mirando la tarjeta, que era una sesión atrasada y no la de
+        hoy con una fecha equivocada.
+        """
+        base = self._base('pendiente')
+        base['mensaje'] = 'Quedó pendiente hace 2 días. Sigue siendo la siguiente pieza útil del plan.'
+        d = _aplicar_contexto(base, self._ctx(), self.hoy)
+        self.assertEqual(d['causa_principal'], 'pendiente_prioritaria')
+        self.assertIn('Quedó pendiente hace 2 días', d['mensaje'])
+
     def test_descanso_no_cambia_por_contexto(self):
         base = self._base('descanso')
         base['tipo'] = 'descanso'
