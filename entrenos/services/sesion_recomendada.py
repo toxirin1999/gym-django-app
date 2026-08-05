@@ -106,7 +106,10 @@ def buscar_entreno_realizado_esta_semana(cliente, hoy, rutina_nombre):
 
 
 def _fecha_completada(cliente, fecha):
-    if EntrenoRealizado.objects.filter(cliente=cliente, fecha=fecha).exists():
+    from django.db.models import Q
+    if EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion=fecha) | Q(fecha_ejecucion__isnull=True, fecha=fecha)
+    ).exists():
         return True
     try:
         if ActividadRealizada.objects.filter(cliente=cliente, tipo='gym', fecha=fecha).exists():

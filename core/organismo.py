@@ -306,9 +306,15 @@ def _check_en_margen(usuario, decision_gym=None):
         # Retorna None para que resolver pase a OBSERVANDO/SILENCIO.
         # Misma razón que Check 5: sin try/except local, fail-safe hacia el
         # except general de la función en vez de fail-open hacia EN_MARGEN.
+        # fecha_ejecucion (día real de guardado) es el criterio correcto aquí;
+        # fecha (día del plan) se usa solo como fallback en registros previos
+        # al campo, para no romper el comportamiento con histórico.
+        from django.db.models import Q
+        _hoy_local = timezone.localdate()
         if EntrenoRealizado.objects.filter(
             cliente=cliente,
-            fecha=timezone.localdate()
+        ).filter(
+            Q(fecha_ejecucion=_hoy_local) | Q(fecha_ejecucion__isnull=True, fecha=_hoy_local)
         ).exists():
             logger.debug(f"Check 6: EntrenoRealizado hoy encontrado para {cliente.id} → retornando None")
             return None

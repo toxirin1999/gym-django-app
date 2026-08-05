@@ -123,6 +123,7 @@ def importar_liftin_completo(request):
                 'cliente': cliente,
                 'rutina': rutina,
                 'fecha': fecha,
+                'fecha_ejecucion': fecha,
                 'fuente_datos': 'liftin',
                 'procesado_gamificacion': False,
                 'notas_liftin': '',

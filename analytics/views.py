@@ -3600,6 +3600,7 @@ def api_marcar_entreno_completado(request, cliente_id):
         entreno = EntrenoRealizado.objects.create(
             cliente=cliente,
             fecha=fecha_entreno,
+            fecha_ejecucion=timezone.localdate(),
             nombre=rutina_nombre,
         )
 

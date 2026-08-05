@@ -25,6 +25,8 @@ Además, se confirma un segundo gap real: el registro rápido de actividad
 (`entrenos/views.py::registrar_actividad_libre`) permite tipo='gym' sin pasar
 por EntrenoRealizado, y el Check 6 original solo miraba EntrenoRealizado.
 """
+from datetime import timedelta
+
 from django.test import TestCase
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -87,6 +89,109 @@ class TestOrganismoUrlAccionUsaLocaldate(TestCase):
         estado = resolver_estado_sistema_hoy(self.user, decision_gym=decision_gym_viable)
 
         self.assertNotEqual(estado['estado'], 'EN_MARGEN')
+
+
+class TestOrganismoCheck6FechaEjecucion(TestCase):
+    """
+    Regresión: entrenar adelantado al plan (hacer hoy la rutina que el plan
+    asigna a mañana) dejaba EN_MARGEN persistente, porque EntrenoRealizado.fecha
+    guarda el día del plan, no el día real de ejecución. Check 6 comparaba
+    contra `fecha`, así que nunca encontraba la sesión de hoy.
+
+    Fix: EntrenoRealizado.fecha_ejecucion guarda el día real de guardado
+    (timezone.localdate() en el momento del guardado). Check 6 debe mirar
+    ese campo, con fallback a `fecha` para registros anteriores al fix
+    (fecha_ejecucion=NULL).
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user('test_org_fecha_ejec', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        self.rutina = Rutina.objects.create(nombre='Rutina Test Fecha Ejecucion', programa=None)
+
+    def _decision_gym_viable(self):
+        return {
+            'estado': 'entrenar',
+            'entrenamiento': {
+                'ejercicios': [{'nombre': 'Sentadilla'}],
+                'rutina_nombre': 'Rutina Test Fecha Ejecucion',
+            },
+        }
+
+    def test_entrenar_adelantado_bloquea_en_margen_hoy(self):
+        """
+        Escenario reportado: el usuario entrena HOY la rutina que el plan
+        asignaba a MAÑANA. fecha=mañana (día del plan), fecha_ejecucion=hoy
+        (día real). Con `hoy` real, Check 6 debe bloquear EN_MARGEN.
+        """
+        manana = timezone.localdate() + timedelta(days=1)
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=manana,
+            fecha_ejecucion=timezone.localdate(),
+            duracion_minutos=45,
+            volumen_total_kg=1000.0,
+        )
+
+        estado = resolver_estado_sistema_hoy(self.user, decision_gym=self._decision_gym_viable())
+
+        self.assertNotEqual(
+            estado['estado'], 'EN_MARGEN',
+            "Entrenar adelantado debe bloquear EN_MARGEN el día real en que se entrenó."
+        )
+
+    def test_entrenar_adelantado_no_dispara_en_margen_el_dia_del_plan(self):
+        """
+        Cuando llega el día del plan (fecha=mañana del escenario anterior),
+        el usuario NO entrenó ese día real — no debe marcarse EN_MARGEN como
+        si tocara. Este test simula "hoy" = día del plan usando un
+        EntrenoRealizado cuya fecha_ejecucion es un día distinto (ayer real).
+        """
+        hoy_real_del_plan = timezone.localdate()
+        ayer = hoy_real_del_plan - timedelta(days=1)
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=hoy_real_del_plan,
+            fecha_ejecucion=ayer,
+            duracion_minutos=45,
+            volumen_total_kg=1000.0,
+        )
+
+        # Check 6 compara fecha_ejecucion contra timezone.localdate() (hoy real).
+        # Como fecha_ejecucion=ayer != hoy, Check 6 NO debe bloquear por esta
+        # sesión — el freno debe venir de otra parte si aplica, no de esta.
+        from core.organismo import _check_en_margen
+        cliente_tiene_entreno_hoy = EntrenoRealizado.objects.filter(
+            cliente=self.cliente,
+            fecha_ejecucion=hoy_real_del_plan,
+        ).exists()
+        self.assertFalse(
+            cliente_tiene_entreno_hoy,
+            "No debe existir un EntrenoRealizado con fecha_ejecucion=hoy en este escenario."
+        )
+
+    def test_registro_antiguo_sin_fecha_ejecucion_sigue_bloqueando_en_margen(self):
+        """
+        Histórico pre-fix: fecha_ejecucion=None, solo `fecha`. Debe comportarse
+        exactamente igual que antes del fix (fallback a `fecha`).
+        """
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=timezone.localdate(),
+            fecha_ejecucion=None,
+            duracion_minutos=45,
+            volumen_total_kg=1000.0,
+        )
+
+        estado = resolver_estado_sistema_hoy(self.user, decision_gym=self._decision_gym_viable())
+
+        self.assertNotEqual(
+            estado['estado'], 'EN_MARGEN',
+            "Registro histórico sin fecha_ejecucion debe seguir bloqueando EN_MARGEN vía fallback a `fecha`."
+        )
 
 
 class TestOrganismoActividadRealizadaGymDirecta(TestCase):

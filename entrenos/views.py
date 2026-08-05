@@ -796,7 +796,9 @@ def entrenos_filtrados(request, rango):
     hoy = date.today()
 
     if rango == "hoy":
-        queryset = EntrenoRealizado.objects.filter(fecha=hoy)
+        queryset = EntrenoRealizado.objects.filter(
+            Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+        )
         titulo = "Entrenamientos de hoy"
     elif rango == "semana":
         inicio = hoy - timedelta(days=hoy.weekday())
@@ -1206,7 +1208,7 @@ def empezar_entreno(request, rutina_id):
                     messages.error(request, "⚠️ Cliente inválido. No se puede continuar.")
                     return redirect('hacer_entreno')
 
-            entreno = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina)
+            entreno = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha_ejecucion=timezone.localdate())
 
             try:
                 # Procesar cada ejercicio de la rutina
@@ -2981,6 +2983,7 @@ def importar_liftin_completo(request):
                     'cliente': cliente,
                     'rutina': rutina,  # ✅ OBLIGATORIO según DB
                     'fecha': fecha,
+                    'fecha_ejecucion': timezone.localdate(),
                     'fuente_datos': 'liftin',
                     'procesado_gamificacion': False,  # ✅ Campo obligatorio según DB
                     'notas_liftin': notas_liftin_completas,  # ✅ Campo correcto para notas
@@ -4150,7 +4153,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         _calorias_raw = request.POST.get('calorias_quemadas')
 
         entreno = EntrenoRealizado.objects.create(
-            cliente=cliente, fecha=fecha, rutina=rutina_obj, fuente_datos='manual',
+            cliente=cliente, fecha=fecha, fecha_ejecucion=timezone.localdate(), rutina=rutina_obj, fuente_datos='manual',
             duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()

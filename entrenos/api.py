@@ -75,10 +75,12 @@ class ImportarEntrenamientoAPI(LiftinAPIView):
             )
 
             # Crear entrenamiento
+            _fecha_entreno = datetime.fromisoformat(data['fecha'].replace('Z', '+00:00')).date()
             entreno = EntrenoRealizado.objects.create(
                 cliente=cliente,
                 rutina=rutina,
-                fecha=datetime.fromisoformat(data['fecha'].replace('Z', '+00:00')).date(),
+                fecha=_fecha_entreno,
+                fecha_ejecucion=_fecha_entreno,
                 fuente_datos='liftin',
                 duracion_minutos=data['duracion_minutos'],
                 calorias_quemadas=data.get('calorias_quemadas'),

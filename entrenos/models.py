@@ -285,6 +285,10 @@ class EntrenoRealizado(models.Model):
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     rutina = models.ForeignKey('rutinas.Rutina', on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
+    fecha_ejecucion = models.DateField(
+        null=True, blank=True, db_index=True,
+        help_text="Día real en que se guardó la sesión (timezone.localdate() en el momento del guardado), distinto de 'fecha' que es el día del plan al que pertenece la rutina.",
+    )
     procesado_gamificacion = models.BooleanField(default=False)
 
     # Campos adicionales opcionales

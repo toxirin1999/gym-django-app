@@ -238,7 +238,10 @@ def calculadora_bloques(request):
 
     # Detección de doble sesión (Hyrox + Gym el mismo día)
     from entrenos.models import EntrenoRealizado
-    entrenos_hoy = EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).count()
+    from django.db.models import Q
+    entrenos_hoy = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+    ).count()
     doble_sesion = entrenos_hoy >= 2
 
     # Calcular calidad de bloques del día (% verde)

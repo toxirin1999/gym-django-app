@@ -1000,7 +1000,9 @@ def _get_dashboard_context_data(request, cliente):
     from entrenos.models import ActividadRealizada as _AR
     from django.db.models import Q as _Q2
     entreno_hoy_realizado = (
-        EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists()
+        EntrenoRealizado.objects.filter(cliente=cliente).filter(
+            _Q2(fecha_ejecucion=hoy) | _Q2(fecha_ejecucion__isnull=True, fecha=hoy)
+        ).exists()
         or _AR.objects.filter(
             cliente=cliente, tipo='gym', fuente='manual',
         ).filter(_Q2(fecha=hoy) | _Q2(fecha_realizado=hoy)).exists()
@@ -1031,7 +1033,9 @@ def _get_dashboard_context_data(request, cliente):
     # Si también se hizo exactamente hoy, tomar ese objeto
     if entreno_hoy_realizado and not entreno_realizado_obj:
         entreno_realizado_obj = EntrenoRealizado.objects.filter(
-            cliente=cliente, fecha=hoy,
+            cliente=cliente,
+        ).filter(
+            _Q2(fecha_ejecucion=hoy) | _Q2(fecha_ejecucion__isnull=True, fecha=hoy)
         ).prefetch_related('ejercicios_realizados').order_by('-fecha').first()
         if not entreno_realizado_obj:
             # Sesión guardada hoy pero con fecha planificada distinta (e.g. recuperar sesión pasada)
@@ -2328,7 +2332,9 @@ def dashboard(request):
     inicio_mes = hoy.replace(day=1)
     inicio_anio = hoy.replace(month=1, day=1)
 
-    entrenos_hoy = EntrenoRealizado.objects.filter(fecha=hoy).count()
+    entrenos_hoy = EntrenoRealizado.objects.filter(
+        Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+    ).count()
     entrenos_semana = EntrenoRealizado.objects.filter(fecha__gte=inicio_semana).count()
     entrenos_mes = EntrenoRealizado.objects.filter(fecha__gte=inicio_mes).count()
     entrenos_anio = EntrenoRealizado.objects.filter(fecha__gte=inicio_anio).count()
@@ -2615,7 +2621,9 @@ def dashboard(request):
     # LISTAS DE ENTRENOS (TU CÓDIGO EXISTENTE)
     # ================================================================
 
-    entrenos_hoy_lista = EntrenoRealizado.objects.filter(fecha=hoy).select_related('cliente', 'rutina')
+    entrenos_hoy_lista = EntrenoRealizado.objects.filter(
+        Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+    ).select_related('cliente', 'rutina')
     entrenos_semana_lista = EntrenoRealizado.objects.filter(fecha__gte=inicio_semana).select_related('cliente',
                                                                                                      'rutina')
     entrenos_mes_lista = EntrenoRealizado.objects.filter(fecha__gte=inicio_mes).select_related('cliente', 'rutina')
@@ -3339,7 +3347,9 @@ def panel_entrenador(request):
     total_clientes_activos = clientes_qs.count()
     total_revisiones = RevisionProgreso.objects.count()
     hoy = timezone.now().date()
-    entrenos_hoy_count = EntrenoRealizado.objects.filter(fecha=hoy).count()
+    entrenos_hoy_count = EntrenoRealizado.objects.filter(
+        Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+    ).count()
     entrenos_semana_count = EntrenoRealizado.objects.filter(fecha__gte=hoy - timedelta(days=7)).count()
 
     # --- 4. LÓGICA ENRIQUECIDA PARA LISTAS Y MÓDULOS ---
@@ -4154,6 +4164,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         entreno = EntrenoRealizado.objects.create(
             cliente=cliente,
             fecha=fecha,
+            fecha_ejecucion=timezone.localdate(),
             rutina=rutina_obj,
             fuente_datos='manual',
             duracion_minutos=request.POST.get('duracion_minutos') or None,
