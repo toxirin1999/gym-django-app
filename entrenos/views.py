@@ -140,6 +140,15 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
 
     Busca en los modelos EjercicioRealizado y EjercicioLiftinDetallado.
 
+    Deliberadamente NO filtra por rango de reps (Phase Gym Peso 2.2 X.3):
+    esta función alimenta el DISPLAY literal ("última vez hiciste X kg"),
+    que debe mostrar la sesión más reciente tal cual, sea cual sea su rango
+    de reps. El cálculo de peso recomendado sí es bucket-aware por separado
+    en obtener_ancla_ejercicio/resolver_peso_objetivo. Ver también
+    reps_compatibles_con_objetivo en entrenos/utils/utils.py, usada en
+    _cambios_relevantes (cierre_entrenamiento_service.py) para el resumen
+    post-sesión, que es donde sí importa no comparar entre rangos de reps.
+
     Retorna un diccionario con 'peso', 'fecha', 'series', 'repeticiones' y 'volumen',
     o None si no se encuentra.
     """

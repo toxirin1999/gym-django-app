@@ -24,6 +24,7 @@ from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
 )
+from entrenos.utils.utils import reps_compatibles_con_objetivo
 from joi.models import MensajeJOI
 
 
@@ -161,13 +162,24 @@ def _cambios_relevantes(cliente, entreno, ejercicios):
             })
             continue
 
-        anterior = (
+        # Fase Gym — Ejercicio Bidiario: un mismo nombre de ejercicio puede estar
+        # prescrito en dos días de la semana con rangos de reps muy distintos
+        # (ej. "Fondos en Paralelas" a 8 reps un día y a 15 reps otro). Comparar
+        # el peso de hoy contra la ocurrencia más reciente sin más criterio
+        # mezclaba ambos hilos y producía "bajadas" que en realidad eran solo
+        # el otro rango de reps con su peso naturalmente más ligero/pesado.
+        # Se busca la ocurrencia anterior más reciente cuyas reps reales sean
+        # compatibles con las de hoy (ver reps_compatibles_con_objetivo).
+        anterior = None
+        for candidato in (
             EjercicioRealizado.objects
             .filter(entreno__cliente=cliente, nombre_ejercicio=ej.nombre_ejercicio, completado=True)
             .exclude(entreno_id=entreno.id)
             .order_by('-entreno__fecha', '-id')
-            .first()
-        )
+        ):
+            if reps_compatibles_con_objetivo(candidato.repeticiones, ej.repeticiones):
+                anterior = candidato
+                break
         if anterior is None:
             continue
 

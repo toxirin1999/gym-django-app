@@ -71,6 +71,34 @@ def nombres_ejercicio_equivalentes(a, b):
     return False
 
 
+def reps_compatibles_con_objetivo(reps_realizadas, rango_reps_objetivo, tolerancia=4):
+    """
+    True si `reps_realizadas` (reps reales de una ocurrencia pasada del ejercicio)
+    pertenece al mismo esquema de repeticiones que `rango_reps_objetivo` (el rango
+    prescrito para la sesión de hoy, ej. "8" o "12-15").
+
+    Evita que un mismo nombre de ejercicio prescrito en dos rangos de reps muy
+    distintos en días distintos de la semana (ej. "Fondos en Paralelas" a 8 reps
+    un día y a 15 reps otro) se traten como el mismo hilo de progresión — el peso
+    de un rango de reps bajo no es comparable al de un rango alto para el mismo
+    movimiento, y compararlos produce diferencias de peso sin sentido en el
+    resumen ("bajaste peso" cuando en realidad son dos estímulos distintos).
+
+    Si no hay datos suficientes para decidir, no descarta (True) — mantiene el
+    comportamiento previo a este fix para no romper casos sin rango objetivo.
+    """
+    if reps_realizadas is None or not rango_reps_objetivo:
+        return True
+    try:
+        partes = [int(p.strip()) for p in str(rango_reps_objetivo).split('-') if p.strip()]
+        if not partes:
+            return True
+        punto_medio_objetivo = sum(partes) / len(partes)
+        return abs(float(reps_realizadas) - punto_medio_objetivo) <= tolerancia
+    except (ValueError, TypeError):
+        return True
+
+
 def nombre_ejercicio_display(nombre):
     """
     Versión para mostrar al usuario: Title Case limpio.

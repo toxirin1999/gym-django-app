@@ -198,6 +198,50 @@ class TestCambiosRelevantes(CierreEntrenamientoBase):
 
         self.assertEqual(ctx['cambios_relevantes'], [])
 
+    def test_no_compara_contra_rango_de_reps_distinto(self):
+        """
+        Regresión: "Fondos en Paralelas" prescrito a 8 reps un día de la semana
+        y a 15 reps otro se comparaba contra la ocurrencia más reciente sin
+        importar las reps — si el día anterior fue el de 15 reps (peso más
+        ligero, esperable) y hoy toca el de 8 reps (peso más pesado, también
+        esperable), el resumen marcaba "subida" o "bajada" sin sentido según
+        qué día tocara. Ahora debe comparar contra la última ocurrencia con
+        reps compatibles (mismo rango), no la más reciente en el calendario.
+        """
+        # Semana pasada: día de 8 reps con más peso.
+        dia_8 = self._crear_entreno(date(2026, 5, 27))
+        self._crear_ejercicio(dia_8, nombre_ejercicio='Fondos en Paralelas', peso_kg=40.0, repeticiones=8)
+        # Ayer: día de 15 reps con menos peso (normal para ese rango, no una bajada real).
+        dia_15 = self._crear_entreno(date(2026, 5, 30))
+        self._crear_ejercicio(dia_15, nombre_ejercicio='Fondos en Paralelas', peso_kg=25.0, repeticiones=15)
+
+        # Hoy vuelve a tocar el día de 8 reps, con el mismo peso que la última vez a 8 reps.
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Fondos en Paralelas', peso_kg=40.0, repeticiones=8)
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        cambios = ctx['cambios_relevantes']
+        self.assertEqual(len(cambios), 1)
+        # Mismo peso que la última vez a 8 reps (40 kg) → 'mantenida', no 'subida' frente a los 25 kg de 15 reps.
+        self.assertEqual(cambios[0]['tipo'], 'mantenida')
+
+    def test_sin_historico_compatible_no_aparece_como_cambio(self):
+        """Si solo hay historial de un rango de reps incompatible, no debe compararse contra él."""
+        dia_15 = self._crear_entreno(date(2026, 5, 30))
+        self._crear_ejercicio(dia_15, nombre_ejercicio='Fondos en Paralelas', peso_kg=25.0, repeticiones=15)
+
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Fondos en Paralelas', peso_kg=40.0, repeticiones=8)
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertEqual(ctx['cambios_relevantes'], [])
+
 
 # ── Caso 4: lectura del plan / próxima vez ───────────────────────────────────
 
