@@ -1,16 +1,20 @@
-{% extends "base.html" %}
+{% extends "rehab/base_rehab.html" %}
 
-{% block title %}Iniciar episodio de rehabilitación{% endblock %}
-
-{% block extra_css %}{% include "rehab/_offset_style.html" %}{% endblock %}
+{% block title %}Iniciar episodio{% endblock %}
+{% block body_class %}rehab-dark{% endblock %}
 
 {% block content %}
-<div class="container rehab-content-offset">
-    <h1>Iniciar episodio de rehabilitación</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Iniciar episodio</button>
-    </form>
+<div class="rehab-wrap">
+    <header class="rehab-header">
+        <div><div class="rehab-kicker">Rehabilitación</div><h1 class="rehab-title">Iniciar episodio</h1></div>
+    </header>
+
+    <section class="rehab-panel rehab-form">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Iniciar episodio</button>
+        </form>
+    </section>
 </div>
 {% endblock %}

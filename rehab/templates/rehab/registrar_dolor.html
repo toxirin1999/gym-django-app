@@ -1,16 +1,21 @@
-{% extends "base.html" %}
+{% extends "rehab/base_rehab.html" %}
 
 {% block title %}Registrar dolor diario{% endblock %}
-
-{% block extra_css %}{% include "rehab/_offset_style.html" %}{% endblock %}
+{% block body_class %}rehab-dark{% endblock %}
 
 {% block content %}
-<div class="container rehab-content-offset">
-    <h1>Registrar dolor diario · {{ episodio.protocolo.nombre }}</h1>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Guardar registro</button>
-    </form>
+<div class="rehab-wrap">
+    <header class="rehab-header">
+        <div><div class="rehab-kicker">Rehabilitación</div><h1 class="rehab-title">Registrar dolor</h1></div>
+    </header>
+    <div class="rehab-subtitle">{{ episodio.protocolo.nombre }}</div>
+
+    <section class="rehab-panel rehab-form">
+        <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Guardar registro</button>
+        </form>
+    </section>
 </div>
 {% endblock %}

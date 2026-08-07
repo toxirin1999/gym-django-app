@@ -1,0 +1,189 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Rehab{% endblock %} · Protocolo de recuperación</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body.rehab-dark {
+            --ink: #f0eadf;
+            --ash: #918a81;
+            --gold: #c4a365;
+            --line: rgba(235, 226, 208, .12);
+            --panel: rgba(24, 21, 28, .82);
+            --alert: #b1543f;
+            background: #0d0c10;
+            color: var(--ink);
+            font-family: Manrope, sans-serif;
+        }
+        .rehab-nav {
+            background: rgba(12, 11, 16, .88) !important;
+            border-bottom: 1px solid rgba(235, 226, 208, .1) !important;
+            backdrop-filter: blur(18px);
+        }
+        .rehab-nav__inner { max-width: 1120px; margin: 0 auto; min-height: 68px; }
+        .rehab-brand { display: inline-flex; align-items: center; gap: .75rem; text-decoration: none; }
+        .rehab-brand__mark {
+            width: 30px; height: 30px; display: grid; place-items: center;
+            border: 1px solid rgba(196, 163, 101, .55); border-radius: 50%;
+            color: #c4a365; font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem;
+        }
+        .rehab-brand__name { display: block; color: #f3eee4; font: 600 1rem/1 'Crimson Pro', Georgia, serif; letter-spacing: .08em; }
+        .rehab-brand__motto { display: block; margin-top: .2rem; color: #8e887e; font: 600 .56rem/1 Manrope, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+        .rehab-nav .nav-link { color: #aaa399 !important; font: 600 .72rem/1 Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+        .rehab-nav .nav-link:hover, .rehab-nav .nav-link:focus-visible, .rehab-nav .nav-link.active { color: #e2c98f !important; }
+        .rehab-nav .nav-link.active::after { content: ''; display: block; width: 18px; height: 1px; margin: .45rem auto 0; background: #c4a365; }
+        .rehab-nav .dropdown-menu { background: #141219; border: 1px solid rgba(235, 226, 208, .12); border-radius: 4px; padding: .45rem; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
+        .rehab-nav .dropdown-item { color: #bbb4aa; border-radius: 2px; font-size: .82rem; padding: .58rem .75rem; }
+        .rehab-nav .dropdown-item:hover, .rehab-nav .dropdown-item:focus { color: #f3eee4; background: rgba(196, 163, 101, .1); }
+        .rehab-nav .dropdown-header { color: #716b63; font-size: .58rem; letter-spacing: .15em; text-transform: uppercase; }
+        .rehab-nav .navbar-toggler { border-color: rgba(235, 226, 208, .18); }
+        .rehab-nav .navbar-toggler:focus-visible { outline: 2px solid #d2b777; outline-offset: 3px; box-shadow: none; }
+        .rehab-main { min-height: calc(100vh - 68px); }
+        .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 2000; padding: .7rem 1rem; color: #111; background: #e2c98f; }
+        .skip-link:focus { top: 1rem; }
+        a { color: var(--gold); }
+        a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+            outline: 2px solid #e4ca8b; outline-offset: 3px;
+        }
+
+        /* --- Componentes compartidos por las 7 plantillas de Rehab --- */
+        .rehab-wrap { position: relative; width: min(100% - 2rem, 980px); margin: 0 auto; padding: clamp(2.4rem, 7vw, 5.5rem) 0 5rem; }
+        .rehab-header { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1rem; margin-bottom: clamp(2rem, 5vw, 3.2rem); }
+        .rehab-kicker, .section-index { color: var(--gold); font: 700 .62rem/1.4 Manrope, sans-serif; letter-spacing: .2em; text-transform: uppercase; }
+        .rehab-title { margin: .65rem 0 0; color: var(--ink); font: 500 clamp(2.2rem, 6vw, 4rem)/.95 'Crimson Pro', Georgia, serif; letter-spacing: -.035em; }
+        .rehab-subtitle { padding-bottom: .35rem; color: var(--ash); font: 500 .82rem/1.6 Manrope, sans-serif; }
+        .section-heading { margin: .55rem 0 0; color: var(--ink); font: 500 clamp(1.5rem, 3.6vw, 2.3rem)/1.1 'Crimson Pro', Georgia, serif; }
+
+        .rehab-panel { position: relative; padding: clamp(1.5rem, 5vw, 2.6rem); margin-bottom: 2rem; background: linear-gradient(145deg, rgba(33,29,36,.94), rgba(18,16,21,.96)); border: 1px solid rgba(196,163,101,.27); border-radius: 2px; box-shadow: 0 35px 90px rgba(0,0,0,.24); }
+        .rehab-panel h2 { margin: 0 0 .8rem; color: var(--ink); font: 500 1.5rem/1.15 'Crimson Pro', Georgia, serif; }
+
+        .rehab-vacio { padding: clamp(2.6rem, 8vw, 4.2rem) 1.5rem; text-align: center; }
+        .rehab-vacio p { max-width: 30rem; margin: 0 auto 1.25rem; color: var(--ash); font: 400 .92rem/1.7 Manrope, sans-serif; }
+        .rehab-vacio p:last-child { margin-bottom: 0; }
+
+        .rehab-btn-primary, .rehab-btn-secondary { display: inline-flex; align-items: center; justify-content: center; min-width: 150px; padding: .85rem 1.3rem; border-radius: 1px; font: 700 .66rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; text-align: center; transition: transform .2s ease, background .2s ease, border-color .2s ease; cursor: pointer; }
+        .rehab-btn-primary { color: #17130e; background: #d5b979; border: 1px solid #d5b979; }
+        .rehab-btn-primary::after { content: '→'; margin-left: .9rem; font-size: 1rem; }
+        .rehab-btn-primary:hover { color: #17130e; background: #e3c989; transform: translateY(-2px); }
+        .rehab-btn-secondary { color: var(--ash); background: transparent; border: 1px solid var(--line); }
+        .rehab-btn-secondary:hover { color: var(--ink); border-color: rgba(196,163,101,.5); }
+        .rehab-acciones { display: flex; flex-wrap: wrap; gap: .9rem; margin-top: 1.5rem; }
+
+        .rehab-estado { display: inline-flex; align-items: center; gap: .55rem; margin-bottom: 1.1rem; font: 700 .64rem/1 Manrope, sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+        .rehab-estado-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ash); }
+        .rehab-estado.gold { color: var(--gold); } .rehab-estado.gold .rehab-estado-dot { background: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.15); }
+        .rehab-estado.alert { color: var(--alert); } .rehab-estado.alert .rehab-estado-dot { background: var(--alert); box-shadow: 0 0 0 3px rgba(177,84,63,.16); }
+        .rehab-estado.ash { color: var(--ash); }
+
+        .rehab-alerta, .rehab-estancamiento, .rehab-avance-cta { padding: .85rem 1.1rem; margin-bottom: 1.25rem; border-radius: 2px; font: 400 .86rem/1.6 Manrope, sans-serif; }
+        .rehab-alerta { color: #e3c9a5; background: rgba(196,163,101,.08); border: 1px solid rgba(196,163,101,.3); }
+        .rehab-estancamiento { color: #e3b3a4; background: rgba(177,84,63,.1); border: 1px solid rgba(177,84,63,.35); }
+        .rehab-avance-cta { color: #d9d0c2; background: rgba(196,163,101,.06); border: 1px solid rgba(196,163,101,.22); }
+        .rehab-avance-cta a { color: var(--gold); font-weight: 700; }
+
+        .rehab-ejercicio-lista { list-style: none; padding: 0; margin: 0; border-top: 1px solid var(--line); }
+        .rehab-ejercicio-lista li { padding: .8rem .1rem; color: #d7cec1; font: 400 .88rem/1.5 Manrope, sans-serif; border-bottom: 1px solid var(--line); }
+
+        .rehab-progreso { color: var(--ash); font: 400 .86rem/1.7 Manrope, sans-serif; }
+        .rehab-progreso-secundario { margin: 0 0 1.5rem; color: #7f786f; font: 400 .8rem/1.65 Manrope, sans-serif; font-style: italic; }
+
+        .rehab-grid { display: grid; grid-template-columns: repeat(var(--cols, 2), 1fr); border-top: 1px solid var(--line); }
+        .rehab-grid > * { min-width: 0; padding: 1.5rem 1.6rem 1.6rem 0; }
+        .rehab-grid > * + * { padding-left: 1.6rem; border-left: 1px solid var(--line); }
+
+        .rehab-form label { display: block; margin: 0 0 .35rem; color: var(--ash); font: 600 .62rem/1.4 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+        .rehab-form p { margin: 0 0 1.4rem; }
+        .rehab-form input[type=text], .rehab-form input[type=number], .rehab-form input[type=date], .rehab-form input[type=email], .rehab-form textarea, .rehab-form select {
+            width: 100%; padding: .7rem .85rem; color: var(--ink); background: rgba(0,0,0,.4); border: 1px solid var(--line); border-radius: 2px; font: 400 .88rem/1.5 Manrope, sans-serif;
+        }
+        .rehab-form select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c4a365'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right .9rem center; }
+        .rehab-form textarea { min-height: 6rem; resize: vertical; }
+        .rehab-form input:focus, .rehab-form textarea:focus, .rehab-form select:focus { outline: none; border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.15); }
+        .rehab-form input[type=checkbox] { width: auto; margin-right: .5rem; accent-color: var(--gold); }
+        .rehab-form ul.errorlist { margin: -.9rem 0 1rem; padding: 0; list-style: none; color: var(--alert); font: 600 .78rem/1.5 Manrope, sans-serif; }
+        .rehab-form fieldset { padding: 1.3rem 1.4rem 1.5rem; margin: 0 0 1.25rem; background: rgba(255,255,255,.02); border: 1px solid var(--line); border-radius: 2px; }
+        .rehab-form legend { padding: 0 .4rem; color: var(--ink); font: 500 1rem/1.2 'Crimson Pro', Georgia, serif; }
+        .rehab-form button[type=submit] { display: inline-flex; align-items: center; justify-content: center; margin-top: .5rem; padding: .85rem 1.6rem; color: #17130e; background: #d5b979; border: 1px solid #d5b979; border-radius: 1px; font: 700 .68rem/1 Manrope, sans-serif; letter-spacing: .12em; text-transform: uppercase; transition: transform .2s ease, background .2s ease; }
+        .rehab-form button[type=submit]:hover { background: #e3c989; transform: translateY(-2px); }
+        .rehab-form button[type=submit]::after { content: '→'; margin-left: .9rem; font-size: 1rem; }
+
+        .rehab-tabla { width: 100%; border-collapse: collapse; }
+        .rehab-tabla th, .rehab-tabla td { padding: .55rem .7rem; color: #cfc6ba; font: 400 .82rem/1.5 Manrope, sans-serif; text-align: left; border-bottom: 1px solid var(--line); }
+        .rehab-tabla th { color: var(--ash); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; font-size: .68rem; }
+
+        @media (max-width: 720px) {
+            .rehab-header { grid-template-columns: 1fr; }
+            .rehab-subtitle { padding: 0; }
+            .rehab-grid { grid-template-columns: 1fr; }
+            .rehab-grid > * + * { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
+            .rehab-btn-primary, .rehab-btn-secondary { width: 100%; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .rehab-btn-primary, .rehab-btn-secondary, .rehab-form button[type=submit] { transition: none; }
+            .rehab-btn-primary:hover, .rehab-form button[type=submit]:hover { transform: none; }
+        }
+
+        @media (max-width: 991.98px) {
+            .rehab-nav__inner { padding-block: .65rem; }
+            .rehab-nav .navbar-collapse { padding-top: .8rem; }
+            .rehab-nav .nav-link { padding-block: .7rem; }
+            .rehab-nav .nav-link.active::after { margin: .3rem 0 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+        }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="rehab-dark {% block body_class %}{% endblock %}">
+    <a class="skip-link" href="#contenido-rehab">Saltar al contenido</a>
+    <nav class="navbar navbar-expand-lg sticky-top rehab-nav" aria-label="Navegación principal de Rehab">
+        <div class="container-fluid rehab-nav__inner">
+            <a class="navbar-brand rehab-brand" href="{% url 'rehab:hoy' %}" aria-label="Rehab, protocolo de recuperación">
+                <span class="rehab-brand__mark" aria-hidden="true">R</span>
+                <span><span class="rehab-brand__name">Rehab</span><span class="rehab-brand__motto">Protocolo de recuperación</span></span>
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#rehabNav" aria-controls="rehabNav" aria-expanded="false" aria-label="Abrir navegación">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="rehabNav">
+                <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-2">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'hoy' %}active{% endif %}" href="{% url 'rehab:hoy' %}"{% if request.resolver_match.url_name == 'hoy' %} aria-current="page"{% endif %}>Hoy</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'recorrido' %}active{% endif %}" href="{% url 'rehab:recorrido' %}"{% if request.resolver_match.url_name == 'recorrido' %} aria-current="page"{% endif %}>Recorrido</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'evolucion' %}active{% endif %}" href="{% url 'rehab:evolucion' %}"{% if request.resolver_match.url_name == 'evolucion' %} aria-current="page"{% endif %}>Evolución</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de {{ user.username }}"><i class="far fa-user" aria-hidden="true"></i></a>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="/">Volver a Gym</a></li>
+                            <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar sesión</a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main id="contenido-rehab" class="rehab-main">
+        {% if messages %}
+        <div class="container pt-3" aria-live="polite">
+            {% for message in messages %}<div class="alert alert-{{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+        </div>
+        {% endif %}
+        {% block content %}{% endblock %}
+    </main>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

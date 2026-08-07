@@ -1,110 +1,83 @@
-{% extends "base.html" %}
+{% extends "rehab/base_rehab.html" %}
 
-{% block title %}Rehab · Hoy{% endblock %}
+{% block title %}Hoy{% endblock %}
+{% block body_class %}rehab-dark{% endblock %}
 
 {% block content %}
-<style>
-    .rehab-hoy { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 640px; margin: 0 auto; padding-top: 140px; color: #1a1a1a; }
-    .rehab-hoy h1 { font-size: 1.4rem; margin-bottom: 0.25rem; }
-    .rehab-hoy .subtitulo { color: #555; margin-top: 0; margin-bottom: 1.25rem; }
-    .rehab-estado-badge { display: inline-block; padding: 0.35rem 0.9rem; border-radius: 999px; font-weight: 600; font-size: 0.95rem; margin-bottom: 0.75rem; }
-    .rehab-estado-parar { background: #fdeaea; color: #9c1c1c; border: 1px solid #f3b8b8; }
-    .rehab-estado-ok { background: #e6f6ea; color: #1e6b32; border: 1px solid #a9dcb8; }
-    .rehab-estado-neutro { background: #eeeeee; color: #444444; border: 1px solid #cccccc; }
-    .rehab-alerta { background: #fff4e5; color: #7a4a00; border: 1px solid #f0c988; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
-    .rehab-estancamiento { background: #fdeaea; color: #7a1414; border: 1px solid #f3b8b8; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
-    .rehab-avance-cta { background: #e6f6ea; color: #1e6b32; border: 1px solid #a9dcb8; border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
-    .rehab-avance-cta a { color: #1e6b32; font-weight: 600; }
-    .rehab-seccion { margin-bottom: 1.5rem; }
-    .rehab-seccion h2 { font-size: 1.05rem; color: #1a1a1a; margin-bottom: 0.5rem; }
-    .rehab-ejercicio-lista { list-style: none; padding: 0; margin: 0; }
-    .rehab-ejercicio-lista li { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.6rem 0.9rem; margin-bottom: 0.5rem; color: #1a1a1a; }
-    .rehab-progreso { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 0.75rem 1rem; color: #333333; }
-    .rehab-progreso-secundario { color: var(--lol-text-dim); font-size: 0.8rem; margin-top: 0.25rem; margin-bottom: 1.25rem; }
-    .rehab-acciones { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
-    .rehab-acciones a { display: inline-block; padding: 0.6rem 1.1rem; border-radius: 8px; text-decoration: none; font-weight: 600; }
-    .rehab-accion-primaria { background: #1a1a1a; color: #ffffff; }
-    .rehab-accion-secundaria { background: #ffffff; color: #1a1a1a; border: 1px solid #cccccc; }
-    .rehab-vacio { background: #f7f7f7; border: 1px solid #e0e0e0; border-radius: 8px; padding: 1.5rem; text-align: center; color: #1a1a1a; }
-    .rehab-vacio a { color: #1a1a1a; font-weight: 700; }
-</style>
-
-<div class="rehab-hoy">
-    <h1>Rehab · Hoy</h1>
+<div class="rehab-wrap">
+    <header class="rehab-header">
+        <div><div class="rehab-kicker">Rehabilitación</div><h1 class="rehab-title">Hoy</h1></div>
+    </header>
 
     {% if not episodio %}
-    <div class="rehab-vacio">
+    <div class="rehab-panel rehab-vacio">
         <p>No tienes ningún episodio de rehabilitación activo todavía.</p>
-        <p><a href="{% url 'rehab:iniciar_episodio' %}">Iniciar un episodio de rehabilitación</a></p>
+        <p><a href="{% url 'rehab:iniciar_episodio' %}" class="rehab-btn-primary">Iniciar episodio</a></p>
     </div>
     {% else %}
-    <p class="subtitulo">{{ episodio.protocolo.nombre }}{% if episodio.fase_actual %} · {{ episodio.fase_actual.nombre }}{% endif %}</p>
+    <div class="rehab-subtitle">{{ episodio.protocolo.nombre }}{% if episodio.fase_actual %} · {{ episodio.fase_actual.nombre }}{% endif %}</div>
 
-    {% if prescripcion.estado == 'PARAR' %}
-    <span class="rehab-estado-badge rehab-estado-parar">{{ prescripcion.estado }}</span>
-    {% elif prescripcion.estado == 'ENTRENAR_HOY' or prescripcion.estado == 'PRECAUCION' %}
-    <span class="rehab-estado-badge rehab-estado-ok">{{ prescripcion.estado }}</span>
-    {% else %}
-    <span class="rehab-estado-badge rehab-estado-neutro">{{ prescripcion.estado }}</span>
-    {% endif %}
+    <section class="rehab-panel" aria-labelledby="estado-hoy">
+        {% if prescripcion.estado == 'PARAR' %}
+        <div class="rehab-estado alert"><span class="rehab-estado-dot" aria-hidden="true"></span>{{ prescripcion.estado }}</div>
+        {% elif prescripcion.estado == 'ENTRENAR_HOY' or prescripcion.estado == 'PRECAUCION' %}
+        <div class="rehab-estado gold"><span class="rehab-estado-dot" aria-hidden="true"></span>{{ prescripcion.estado }}</div>
+        {% else %}
+        <div class="rehab-estado ash"><span class="rehab-estado-dot" aria-hidden="true"></span>{{ prescripcion.estado }}</div>
+        {% endif %}
 
-    <div class="rehab-seccion">
-        <h2>{{ prescripcion.titulo }}</h2>
+        <h2 id="estado-hoy">{{ prescripcion.titulo }}</h2>
         {% if prescripcion.alerta %}
         <div class="rehab-alerta">{{ prescripcion.alerta }}</div>
         {% endif %}
-    </div>
 
-    {% if estancamiento.estancado %}
-    <div class="rehab-estancamiento">{{ estancamiento.mensaje }}</div>
-    {% endif %}
+        {% if estancamiento.estancado %}
+        <div class="rehab-estancamiento">{{ estancamiento.mensaje }}</div>
+        {% endif %}
 
-    {% if elegibilidad.elegible %}
-    <div class="rehab-avance-cta">
-        Cumples los criterios para avanzar a la siguiente fase.
-        <a href="{% url 'rehab:proponer_avance' %}">Ver propuesta de avance</a>
-    </div>
-    {% endif %}
+        {% if elegibilidad.elegible %}
+        <div class="rehab-avance-cta">
+            Cumples los criterios para avanzar a la siguiente fase.
+            <a href="{% url 'rehab:proponer_avance' %}">Ver propuesta de avance</a>
+        </div>
+        {% endif %}
 
-    {% if prescripcion.ejercicios %}
-    <div class="rehab-seccion">
-        <h2>Ejercicios de hoy</h2>
+        {% if prescripcion.ejercicios %}
+        <div class="section-index">Ejercicios de hoy</div>
         <ul class="rehab-ejercicio-lista">
             {% for ejercicio in prescripcion.ejercicios %}
             <li>{{ ejercicio.ejercicio }} — {{ ejercicio.series }} series</li>
             {% endfor %}
         </ul>
-    </div>
-    {% endif %}
+        {% endif %}
 
-    {% if prescripcion.criterio_avance_texto %}
-        {% if prescripcion.estado == 'PARAR' %}
-        <p class="rehab-progreso-secundario">
-            Esto no es lo prioritario ahora, pero por si quieres verlo: {{ prescripcion.criterio_avance_texto }}
-        </p>
-        {% else %}
-        <div class="rehab-seccion">
-            <h2>Progreso de fase</h2>
+        {% if prescripcion.criterio_avance_texto %}
+            {% if prescripcion.estado == 'PARAR' %}
+            <p class="rehab-progreso-secundario">
+                Esto no es lo prioritario ahora, pero por si quieres verlo: {{ prescripcion.criterio_avance_texto }}
+            </p>
+            {% else %}
+            <div class="section-index" style="margin-top: 1.6rem;">Progreso de fase</div>
             <p class="rehab-progreso">
                 Día {{ prescripcion.dias_en_fase }} en esta fase.
                 {{ prescripcion.criterio_avance_texto }}
             </p>
-        </div>
+            {% endif %}
         {% endif %}
-    {% endif %}
 
-    <div class="rehab-acciones">
-        {% if prescripcion.estado == 'SIN_DATOS' %}
-        <a class="rehab-accion-primaria" href="{% url 'rehab:registrar_dolor' episodio.id %}">Registrar dolor de hoy</a>
-        {% else %}
-        <a class="rehab-accion-secundaria" href="{% url 'rehab:registrar_dolor' episodio.id %}">Editar dolor de hoy</a>
-        {% endif %}
-        {% if prescripcion.puede_entrenar %}
-        <a class="rehab-accion-primaria" href="{% url 'rehab:registrar_sesion' episodio.id %}">Registrar sesión</a>
-        {% endif %}
-        <a class="rehab-accion-secundaria" href="{% url 'rehab:recorrido' %}">Ver recorrido completo</a>
-        <a class="rehab-accion-secundaria" href="{% url 'rehab:evolucion' %}">Ver evolución del dolor</a>
-    </div>
+        <div class="rehab-acciones">
+            {% if prescripcion.estado == 'SIN_DATOS' %}
+            <a class="rehab-btn-primary" href="{% url 'rehab:registrar_dolor' episodio.id %}">Registrar dolor de hoy</a>
+            {% else %}
+            <a class="rehab-btn-secondary" href="{% url 'rehab:registrar_dolor' episodio.id %}">Editar dolor de hoy</a>
+            {% endif %}
+            {% if prescripcion.puede_entrenar %}
+            <a class="rehab-btn-primary" href="{% url 'rehab:registrar_sesion' episodio.id %}">Registrar sesión</a>
+            {% endif %}
+            <a class="rehab-btn-secondary" href="{% url 'rehab:recorrido' %}">Ver recorrido completo</a>
+            <a class="rehab-btn-secondary" href="{% url 'rehab:evolucion' %}">Ver evolución del dolor</a>
+        </div>
+    </section>
     {% endif %}
 </div>
 {% endblock %}

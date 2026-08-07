@@ -1,32 +1,38 @@
-{% extends "base.html" %}
+{% extends "rehab/base_rehab.html" %}
 
 {% block title %}Propuesta de avance de fase{% endblock %}
-
-{% block extra_css %}{% include "rehab/_offset_style.html" %}{% endblock %}
+{% block body_class %}rehab-dark{% endblock %}
 
 {% block content %}
-<div class="container rehab-content-offset">
+<div class="rehab-wrap">
+    <header class="rehab-header">
+        <div><div class="rehab-kicker">Rehabilitación</div><h1 class="rehab-title">Propuesta de avance</h1></div>
+    </header>
+
     {% if not episodio %}
-    <p>No hay ningún episodio de rehabilitación activo.</p>
+    <div class="rehab-panel rehab-vacio">
+        <p>No hay ningún episodio de rehabilitación activo.</p>
+    </div>
     {% else %}
-    <h1>Propuesta de avance · {{ episodio.protocolo.nombre }}</h1>
-    <p>Fase actual: {{ episodio.fase_actual.nombre }}</p>
+    <div class="rehab-subtitle">{{ episodio.protocolo.nombre }}</div>
 
-    {% if resultado %}
-        {% if resultado.elegible %}
-        <p>Cumples los criterios para avanzar a la siguiente fase ({{ resultado.siguiente_fase.nombre }}).</p>
-        {% else %}
-        <p>Todavía no cumples los criterios para avanzar. Motivo: {{ resultado.motivo }}</p>
+    <section class="rehab-panel">
+        <p class="rehab-progreso">Fase actual: {{ episodio.fase_actual.nombre }}</p>
+
+        {% if resultado %}
+            {% if resultado.elegible %}
+            <div class="rehab-avance-cta">Cumples los criterios para avanzar a la siguiente fase ({{ resultado.siguiente_fase.nombre }}).</div>
+            {% else %}
+            <div class="rehab-alerta">Todavía no cumples los criterios para avanzar. Motivo: {{ resultado.motivo }}</div>
+            {% endif %}
+
+            <form method="post" action="{% url 'rehab:confirmar_avance' episodio.id %}" class="rehab-form">
+                {% csrf_token %}
+                <p><label><input type="checkbox" name="forzado" style="width:auto;"> Forzar avance (decisión del profesional)</label></p>
+                <button type="submit">Confirmar avance de fase</button>
+            </form>
         {% endif %}
-
-        <form method="post" action="{% url 'rehab:confirmar_avance' episodio.id %}">
-            {% csrf_token %}
-            <label>
-                <input type="checkbox" name="forzado"> Forzar avance (decisión del profesional)
-            </label>
-            <button type="submit">Confirmar avance de fase</button>
-        </form>
-    {% endif %}
+    </section>
     {% endif %}
 </div>
 {% endblock %}
