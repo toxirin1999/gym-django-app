@@ -78,6 +78,9 @@ class PersonaImportanteForm(forms.ModelForm):
     class Meta:
         model = PersonaImportante
         fields = ['nombre', 'tipo_relacion', 'salud_relacion', 'notas']
+        error_messages = {
+            'nombre': {'required': 'Este campo es obligatorio.'},
+        }
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Marco Aurelio'}),
             'tipo_relacion': forms.Select(attrs={'class': 'form-select'}),
@@ -102,7 +105,11 @@ class InteraccionForm(forms.ModelForm):
             'titulo': forms.TextInput(
                 attrs={'class': 'form-control', 'placeholder': 'Ej: Conversación sobre el futuro'}),
             'fecha': forms.DateInput(attrs={'class': 'form-control', 'type': 'date'}),
-            'personas': forms.SelectMultiple(attrs={'class': 'form-select', 'size': '5'}),
+            'personas': forms.CheckboxSelectMultiple(attrs={
+                'class': 'personas-checklist',
+                'aria-labelledby': 'personas-label',
+                'aria-describedby': 'personas-help',
+            }),
             'tipo_interaccion': forms.Select(attrs={'class': 'form-select'}),
             'descripcion': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 4, 'placeholder': '¿Qué sucedió exactamente?'}),
@@ -117,6 +124,12 @@ class InteraccionForm(forms.ModelForm):
         # Extraemos el usuario que se pasa desde la vista
         usuario = kwargs.pop('usuario', None)
         super().__init__(*args, **kwargs)
+
+        self.fields['fecha'].error_messages['invalid'] = 'Introduce una fecha válida.'
+        self.fields['personas'].label = 'Personas involucradas'
+        self.fields['personas'].help_text = (
+            'Elige una o varias personas. Puedes registrar la interacción sin asociarla a nadie.'
+        )
 
         # Si se proporcionó un usuario, filtramos el queryset del campo 'personas'
         # para mostrar solo las personas importantes de ESE usuario.

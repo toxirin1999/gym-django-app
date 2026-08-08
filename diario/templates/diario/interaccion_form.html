@@ -1,71 +1,92 @@
 {% extends 'diario/base_stoic.html' %}
 
-{% block title %}
-{% if instance %}Editar Interacción{% else %}Registrar Interacción{% endif %}
+{% block title %}{% if instance %}Editar interacción{% else %}Registrar interacción{% endif %}{% endblock %}
+
+{% block extra_css %}
+<style>
+:root { --sim-bg: #13111A; --sim-card: #1E1B27; --sim-border: #353043; --sim-text: #EDE9E3; --sim-muted: #A39CAD; --sim-accent: #A78BFA; --sim-error: #FCA5A5; }
+body { background: var(--sim-bg) !important; color: var(--sim-text); }
+.sim-form-wrap { max-width: 680px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+.sim-back { color: var(--sim-muted); text-decoration: none; font-size: .82rem; display: inline-flex; min-height: 44px; align-items: center; }
+.sim-back:hover { color: var(--sim-accent); }
+.sim-heading { margin: 1rem 0 1.5rem; }
+.sim-kicker { color: var(--sim-accent); font-size: .68rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.sim-title { color: var(--sim-text); font-size: clamp(1.7rem, 5vw, 2.35rem); line-height: 1.08; margin: .4rem 0 .55rem; }
+.sim-intro { color: var(--sim-muted); line-height: 1.6; margin: 0; max-width: 62ch; }
+.sim-form-card { background: var(--sim-card); border: 1px solid var(--sim-border); border-radius: 16px; padding: 1.5rem; box-shadow: 0 20px 55px rgba(0,0,0,.22); }
+.sim-form-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1rem; }
+.sim-field { margin-bottom: 1.15rem; }
+.sim-field.full { grid-column: 1 / -1; }
+.sim-label { display: block; color: var(--sim-text); font-size: .84rem; font-weight: 650; margin-bottom: .45rem; }
+.sim-field input:not([type="checkbox"]), .sim-field select, .sim-field textarea { width: 100%; min-height: 44px; color: var(--sim-text); background: #17141F; border: 1px solid var(--sim-border); border-radius: 9px; padding: .72rem .8rem; }
+.sim-field textarea { resize: vertical; }
+.sim-field input::placeholder, .sim-field textarea::placeholder { color: #756E80; }
+.sim-field input:focus, .sim-field select:focus, .sim-field textarea:focus { border-color: var(--sim-accent); box-shadow: 0 0 0 3px rgba(167,139,250,.16); outline: none; }
+.sim-help { color: var(--sim-muted); font-size: .74rem; line-height: 1.45; margin: .4rem 0 0; }
+.sim-divider { border: 0; border-top: 1px solid var(--sim-border); margin: .5rem 0 1.25rem; }
+.sim-section-title { color: var(--sim-text); font-size: 1rem; margin: 0 0 .35rem; }
+.sim-section-copy { color: var(--sim-muted); font-size: .78rem; line-height: 1.5; margin-bottom: 1rem; }
+.personas-checklist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .55rem; }
+.personas-checklist > div { min-width: 0; }
+.personas-checklist label { min-height: 44px; display: flex; align-items: center; gap: .65rem; padding: .65rem .75rem; border: 1px solid var(--sim-border); border-radius: 999px; color: var(--sim-text); background: #17141F; cursor: pointer; font-size: .78rem; }
+.personas-checklist input { width: 18px; height: 18px; flex: 0 0 18px; accent-color: var(--sim-accent); }
+.personas-checklist label:has(input:checked) { color: #DCD1FF; border-color: var(--sim-accent); background: rgba(167,139,250,.12); }
+.errorlist { color: var(--sim-error); list-style: none; padding: 0; margin: .42rem 0 0; font-size: .78rem; }
+.sim-form-error { color: var(--sim-error); background: rgba(252,165,165,.08); border: 1px solid rgba(252,165,165,.25); border-radius: 9px; padding: .75rem; margin-bottom: 1rem; }
+.sim-actions { display: flex; gap: .75rem; margin-top: .4rem; }
+.sim-button { min-height: 44px; border-radius: 9px; padding: .7rem 1rem; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; text-decoration: none; border: 1px solid transparent; }
+.sim-button.primary { color: #17131F; background: var(--sim-accent); }
+.sim-button.secondary { color: var(--sim-text); background: transparent; border-color: var(--sim-border); }
+.sim-back:focus-visible, .sim-button:focus-visible, .sim-field input:focus-visible, .sim-field select:focus-visible, .sim-field textarea:focus-visible, .personas-checklist label:focus-within { outline: 2px solid var(--sim-accent); outline-offset: 3px; }
+@media (max-width: 560px) { .sim-form-wrap { padding: 1rem .75rem 3rem; } .sim-form-card { padding: 1.1rem; border-radius: 13px; } .sim-form-grid, .personas-checklist { grid-template-columns: 1fr; gap: 0; } .personas-checklist { gap: .5rem; } .sim-actions { flex-direction: column; } .sim-button { width: 100%; } }
+@media (min-width: 768px) { .sim-form-wrap { padding-top: 2.75rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="fade-in-up">
-    <div class="card shadow-strong">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-handshake me-2"></i>
-                {% if instance %}
-                Editando Interacción: {{ instance.titulo }}
-                {% else %}
-                Registrar Nueva Interacción
-                {% endif %}
-            </h5>
+<main class="sim-form-wrap">
+    <a class="sim-back" href="{% url 'diario:simbiosis_dashboard' %}">Volver a Simbiosis</a>
+    <header class="sim-heading">
+        <div class="sim-kicker">Historial consciente</div>
+        <h1 class="sim-title">{% if instance %}Editar interacción{% else %}Registrar interacción{% endif %}</h1>
+        <p class="sim-intro">Registrar una interacción es opcional. Este formulario crea una entrada registrada manualmente; las señales detectadas desde tus cierres se identifican por separado.</p>
+    </header>
+    <form method="post" class="sim-form-card" novalidate>
+        {% csrf_token %}
+        {% if form.non_field_errors %}<div class="sim-form-error" role="alert">{{ form.non_field_errors }}</div>{% endif %}
+        <div class="sim-form-grid">
+            <div class="sim-field">
+                <label class="sim-label" for="{{ form.titulo.id_for_label }}">Título</label>{{ form.titulo }}{{ form.titulo.errors }}
+            </div>
+            <div class="sim-field">
+                <label class="sim-label" for="{{ form.fecha.id_for_label }}">Fecha</label>{{ form.fecha }}{{ form.fecha.errors }}
+            </div>
+            <div class="sim-field full">
+                <span class="sim-label" id="personas-label">{{ form.personas.label }}</span>
+                {{ form.personas }}{{ form.personas.errors }}
+                <p class="sim-help" id="personas-help">{{ form.personas.help_text }}</p>
+            </div>
+            <div class="sim-field full">
+                <label class="sim-label" for="{{ form.tipo_interaccion.id_for_label }}">Tipo de interacción</label>{{ form.tipo_interaccion }}{{ form.tipo_interaccion.errors }}
+            </div>
         </div>
-        <div class="card-body">
-            <form method="post">
-                {% csrf_token %}
-
-                <div class="row">
-                    <div class="col-md-8 mb-3">
-                        <label for="{{ form.titulo.id_for_label }}" class="form-label">Título</label>
-                        {{ form.titulo }}
-                    </div>
-                    <div class="col-md-4 mb-3">
-                        <label for="{{ form.fecha.id_for_label }}" class="form-label">Fecha de la Interacción</label>
-                        {{ form.fecha }}
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.personas.id_for_label }}" class="form-label">Persona(s) Involucrada(s)</label>
-                        {{ form.personas }}
-                        <small class="form-text text-muted">Puedes seleccionar varias personas manteniendo pulsada la tecla Ctrl (o Cmd en Mac).</small>
-                    </div>
-                    <div class="col-md-6 mb-3">
-                        <label for="{{ form.tipo_interaccion.id_for_label }}" class="form-label">Tipo de Interacción</label>
-                        {{ form.tipo_interaccion }}
-                    </div>
-                </div>
-
-                <hr class="my-4">
-                <h6 class="text-muted">Reflexión sobre la Interacción</h6>
-
-                <div class="mb-3">
-                    <label for="{{ form.descripcion.id_for_label }}" class="form-label">Descripción</label>
-                    {{ form.descripcion }}
-                </div>
-                <div class="mb-3">
-                    <label for="{{ form.mi_sentir.id_for_label }}" class="form-label">Mi Sentir</label>
-                    {{ form.mi_sentir }}
-                </div>
-                <div class="mb-3">
-                    <label for="{{ form.aprendizaje.id_for_label }}" class="form-label">Aprendizaje</label>
-                    {{ form.aprendizaje }}
-                </div>
-
-                <div class="d-flex gap-2 mt-4">
-                    <button type="submit" class="btn btn-success"><i class="fas fa-save me-2"></i>Guardar Interacción</button>
-                    <a href="{% url 'diario:simbiosis_dashboard' %}" class="btn btn-secondary">Cancelar</a>
-                </div>
-            </form>
+        <hr class="sim-divider">
+        <h2 class="sim-section-title">Lo que quieres recordar</h2>
+        <p class="sim-section-copy">Describe hechos y tu experiencia con tus propias palabras. Sentir y aprendizaje pueden quedar vacíos.</p>
+        <div class="sim-field">
+            <label class="sim-label" for="{{ form.descripcion.id_for_label }}">Descripción</label>{{ form.descripcion }}{{ form.descripcion.errors }}
         </div>
-    </div>
-</div>
+        <div class="sim-field">
+            <label class="sim-label" for="{{ form.mi_sentir.id_for_label }}">Cómo me sentí</label>{{ form.mi_sentir }}{{ form.mi_sentir.errors }}
+        </div>
+        <div class="sim-field">
+            <label class="sim-label" for="{{ form.aprendizaje.id_for_label }}">Qué aprendí</label>{{ form.aprendizaje }}{{ form.aprendizaje.errors }}
+        </div>
+        <div class="sim-actions">
+            <button class="sim-button primary" type="submit">Guardar interacción</button>
+            <a class="sim-button secondary" href="{% url 'diario:simbiosis_dashboard' %}">Cancelar</a>
+        </div>
+    </form>
+</main>
 {% endblock %}
