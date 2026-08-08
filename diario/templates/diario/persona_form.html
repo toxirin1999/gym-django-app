@@ -34,6 +34,9 @@
                     <div class="col-md-6 mb-3">
                         <label for="{{ form.salud_relacion.id_for_label }}" class="form-label">{{ form.salud_relacion.label }}</label>
                         {{ form.salud_relacion }}
+                        {% if form.salud_relacion.errors %}
+                        <div class="invalid-feedback d-block">{{ form.salud_relacion.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
 

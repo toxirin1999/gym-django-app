@@ -63,21 +63,30 @@ class AperturaDiariaForm(forms.Form):
 
 
 class PersonaImportanteForm(forms.ModelForm):
+    salud_relacion = forms.TypedChoiceField(
+        required=False,
+        coerce=int,
+        empty_value=None,
+        choices=[('', 'Sin valorar'), *[(valor, str(valor)) for valor in range(1, 6)]],
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        label='Salud de la Relación (1=Mala, 5=Excelente)',
+        error_messages={
+            'invalid_choice': 'Elige Sin valorar o un valor entre 1 y 5.',
+        },
+    )
+
     class Meta:
         model = PersonaImportante
         fields = ['nombre', 'tipo_relacion', 'salud_relacion', 'notas']
         widgets = {
             'nombre': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ej: Marco Aurelio'}),
             'tipo_relacion': forms.Select(attrs={'class': 'form-select'}),
-            'salud_relacion': forms.NumberInput(
-                attrs={'class': 'form-control', 'type': 'range', 'min': '1', 'max': '5'}),
             'notas': forms.Textarea(
                 attrs={'class': 'form-control', 'rows': 3, 'placeholder': '¿Qué representa esta persona para ti?'}),
         }
         labels = {
             'nombre': 'Nombre de la Persona',
             'tipo_relacion': 'Tipo de Relación',
-            'salud_relacion': 'Salud de la Relación (1=Mala, 5=Excelente)',
             'notas': 'Notas Adicionales',
         }
 

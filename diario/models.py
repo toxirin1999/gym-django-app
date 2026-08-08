@@ -1047,8 +1047,13 @@ class PersonaImportante(models.Model):
         ('otro', 'Otro'),
     ]
     tipo_relacion = models.CharField(max_length=20, choices=TIPO_RELACION_CHOICES, default='amigo')
-    salud_relacion = models.IntegerField(default=3, validators=[MinValueValidator(1), MaxValueValidator(5)],
-                                         help_text="Salud percibida de la relación (1=Mala, 5=Excelente)")
+    salud_relacion = models.IntegerField(
+        null=True,
+        blank=True,
+        default=None,
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+        help_text="Salud percibida de la relación (1=Mala, 5=Excelente)",
+    )
     notas = models.TextField(blank=True, help_text="Notas generales sobre esta persona o relación.")
     archivada = models.BooleanField(
         default=False,

@@ -150,6 +150,10 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         <div class="sim-section-label">Resumen</div>
         <div class="perf-stats">
             <div class="perf-stat">
+                <span class="perf-stat-val">{% if persona.salud_relacion is not None %}{{ persona.salud_relacion }}/5{% else %}Sin valorar{% endif %}</span>
+                <span class="perf-stat-label">Salud del vínculo</span>
+            </div>
+            <div class="perf-stat">
                 <span class="perf-stat-val">{{ n_interacciones }}</span>
                 <span class="perf-stat-label">Interacciones</span>
             </div>

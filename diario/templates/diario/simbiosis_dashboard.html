@@ -353,9 +353,13 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             <div class="circulo-tipo">
                 {% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}
             </div>
-            <div class="salud-bar">
+            {% if persona.salud_relacion is not None %}
+            <div class="salud-bar" id="salud-bar-{{ persona.id }}" aria-label="Salud del vínculo: {{ persona.salud_relacion }} de 5">
                 <div class="salud-fill" style="width:{{ persona.salud_relacion|mul:20 }}%;"></div>
             </div>
+            {% else %}
+            <div class="circulo-tipo">Sin valorar</div>
+            {% endif %}
         </a>
         {% endfor %}
         {% else %}
