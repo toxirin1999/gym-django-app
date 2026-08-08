@@ -1,9 +1,11 @@
+import json
 import uuid
 from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from diario.models import (
@@ -136,6 +138,39 @@ class EdicionVersionadaProyeccionesTests(TestCase):
 
         self.assertFalse(Interaccion.objects.filter(pk__in=resultado_a['interacciones']).exists())
         self.assertTrue(Interaccion.objects.filter(pk__in=resultado_b['interacciones']).exists())
+
+    def test_edicion_retrae_promocion_automatica_y_conserva_datos_manuales(self):
+        primera = self._operacion('Texto A', 0)
+        resultado_a = self._enriquecer(primera, persona='Ana')
+        sombra = InteraccionSombra.objects.get(pk=resultado_a['sombras'][0])
+        interina = sombra.persona_interina
+
+        self.client.force_login(self.user)
+        respuesta = self.client.post(
+            reverse('diario:promover_persona_interina'),
+            data=json.dumps({'id': interina.pk, 'accion': 'promover'}),
+            content_type='application/json',
+        )
+        self.assertEqual(respuesta.status_code, 200)
+
+        persona = PersonaImportante.objects.get(usuario=self.user, nombre='Ana')
+        automatica = Interaccion.objects.get(origen_sombra=sombra)
+        manual = Interaccion.objects.create(
+            usuario=self.user,
+            titulo='Registro manual',
+            descripcion='Creada conscientemente por el usuario.',
+            fecha=self.fecha,
+        )
+        manual.personas.add(persona)
+
+        segunda = self._operacion('Texto B sin esa persona', 1)
+        self._enriquecer(segunda)
+
+        self.assertFalse(InteraccionSombra.objects.filter(pk=sombra.pk).exists())
+        self.assertFalse(Interaccion.objects.filter(pk=automatica.pk).exists())
+        self.assertTrue(PersonaImportante.objects.filter(pk=persona.pk).exists())
+        self.assertTrue(Interaccion.objects.filter(pk=manual.pk).exists())
+        self.assertTrue(manual.personas.filter(pk=persona.pk).exists())
 
     def test_fallo_materializando_b_revierte_retraccion_de_a(self):
         primera = self._operacion('Texto A', 0)
