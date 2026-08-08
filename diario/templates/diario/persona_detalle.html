@@ -185,7 +185,11 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         <div class="int-item">
             <div class="int-dot {% if item.es_migrada %}joi{% endif %}"></div>
             <div style="flex:1;min-width:0;">
+                {% if item.es_migrada %}
+                <span class="int-title">{{ item.obj.titulo }}</span>
+                {% else %}
                 <a href="{% url 'diario:interaccion_editar' item.obj.id %}" class="int-title">{{ item.obj.titulo }}</a>
+                {% endif %}
                 {% if item.obj.descripcion %}
                 <div class="int-desc">{{ item.obj.descripcion|truncatewords:14 }}</div>
                 {% endif %}

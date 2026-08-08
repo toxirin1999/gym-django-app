@@ -203,6 +203,16 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 .interaccion-titulo:hover { color: var(--accent); }
 .interaccion-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
 .interaccion-meta { font-size: 0.7rem; color: rgba(124,117,144,0.6); margin-top: 3px; }
+.interaccion-origen {
+    display: inline-flex; margin-left: 0.35rem; padding: 0.1rem 0.4rem;
+    border-radius: 3px; background: var(--accent-light); color: var(--accent);
+    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+.sombra-evidencia {
+    margin-top: 0.25rem; color: rgba(237,233,227,0.62); font-size: 0.72rem;
+    font-style: italic; line-height: 1.45;
+}
 
 /* ── Empty states ── */
 .sim-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; text-align: center; padding: 1rem 0; }
@@ -252,16 +262,16 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         </div>
         <div class="sim-metrics">
             <div class="sim-metric">
-                <span class="sim-metric-val">{{ n_confirmadas }}</span>
-                <span class="sim-metric-label">Confirmadas</span>
+                <span class="sim-metric-val">{{ n_senales }}</span>
+                <span class="sim-metric-label">Señales observadas</span>
             </div>
             <div class="sim-metric">
-                <span class="sim-metric-val">{{ n_radar }}</span>
-                <span class="sim-metric-label">En radar</span>
+                <span class="sim-metric-val">{{ n_por_decidir }}</span>
+                <span class="sim-metric-label">Por decidir</span>
             </div>
             <div class="sim-metric">
                 <span class="sim-metric-val">{{ n_interacciones }}</span>
-                <span class="sim-metric-label">Interacciones</span>
+                <span class="sim-metric-label">Historial</span>
             </div>
         </div>
     </div>
@@ -314,13 +324,18 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             Menciones aisladas detectadas en tus cierres. No necesitas decidir nada; solo pasarán al radar si se repiten.
         </div>
         {% for p in personas_sombra %}
+        {% with ultima_sombra=p.interacciones.all|first %}
         <div class="radar-item" id="sombra-{{ p.id }}">
             <div class="radar-dot sombra" aria-hidden="true"></div>
             <div style="flex:1;min-width:0;">
                 <div class="radar-name">{{ p.nombre }}</div>
                 <div class="radar-meta">Mención detectada &middot; {{ p.ultima_deteccion|date:"j M" }}</div>
+                {% if ultima_sombra and ultima_sombra.descripcion %}
+                <div class="sombra-evidencia">“{{ ultima_sombra.descripcion|truncatechars:90 }}”</div>
+                {% endif %}
             </div>
         </div>
+        {% endwith %}
         {% endfor %}
     </div>
     {% endif %}
@@ -375,14 +390,23 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         {% if ultimas_interacciones %}
         {% for interaccion in ultimas_interacciones %}
         <div class="interaccion-item">
-            <div class="interaccion-dot"></div>
+            <div class="interaccion-dot{% if interaccion.origen_sombra_id %} detectada{% endif %}"></div>
             <div>
+                {% if interaccion.origen_sombra_id %}
+                <span class="interaccion-titulo">{{ interaccion.titulo }}</span>
+                {% else %}
                 <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="interaccion-titulo">{{ interaccion.titulo }}</a>
+                {% endif %}
                 {% if interaccion.descripcion %}
                 <div class="interaccion-desc">{{ interaccion.descripcion|truncatewords:18 }}</div>
                 {% endif %}
                 <div class="interaccion-meta">
                     {{ interaccion.fecha|date:"j M Y" }}
+                    {% if interaccion.origen_sombra_id %}
+                    <span class="interaccion-origen">Detectada en cierre</span>
+                    {% else %}
+                    <span class="interaccion-origen">Registrada manualmente</span>
+                    {% endif %}
                     {% with personas_list=interaccion.personas.all %}
                     {% if personas_list %}
                     &middot; {{ personas_list|join:", " }}

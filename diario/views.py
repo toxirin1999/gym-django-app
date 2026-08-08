@@ -1545,6 +1545,8 @@ def simbiosis_dashboard(request):
     ).prefetch_related('interacciones').order_by('-veces_mencionada', '-ultima_deteccion')
     personas_sombra = personas_interinas.filter(estado='sombra')
     personas_radar = personas_interinas.filter(estado='radar')
+    n_sombra = personas_sombra.count()
+    n_por_decidir = personas_radar.count()
 
     context = {
         'personas': personas,
@@ -1553,7 +1555,9 @@ def simbiosis_dashboard(request):
         'personas_sombra': personas_sombra,
         'personas_radar': personas_radar,
         'n_confirmadas': personas.count(),
-        'n_radar': personas_radar.count(),
+        'n_radar': n_por_decidir,
+        'n_senales': n_sombra + n_por_decidir,
+        'n_por_decidir': n_por_decidir,
         'n_interacciones': n_interacciones,
     }
     return render(request, 'diario/simbiosis_dashboard.html', context)
@@ -1595,7 +1599,12 @@ def interaccion_crear_editar(request, interaccion_id=None):
     """
     instance = None
     if interaccion_id:
-        instance = get_object_or_404(Interaccion, id=interaccion_id, usuario=request.user)
+        instance = get_object_or_404(
+            Interaccion,
+            id=interaccion_id,
+            usuario=request.user,
+            origen_sombra__isnull=True,
+        )
 
     if request.method == 'POST':
         # Pasamos el usuario al formulario para que pueda filtrar el campo 'personas'
@@ -1657,7 +1666,7 @@ def persona_detalle(request, persona_id):
 
     origen_interino = persona.origen_interino.first()
     interacciones_anotadas = [
-        {'obj': i, 'es_migrada': i.titulo.startswith('Mención detectada ·')}
+        {'obj': i, 'es_migrada': i.origen_sombra_id is not None}
         for i in interacciones
     ]
 
