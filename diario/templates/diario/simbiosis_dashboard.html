@@ -114,6 +114,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 .radar-meta { font-size: 0.75rem; color: var(--muted); }
 .radar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 .radar-btn {
+    min-height: 44px;
     padding: 0.3rem 0.75rem;
     border-radius: 100px;
     border: 1.5px solid var(--border);
@@ -193,11 +194,13 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 .interaccion-item:last-child { border-bottom: none; }
 .interaccion-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 0.45rem; }
 .interaccion-titulo {
+    min-height: 44px;
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text);
     text-decoration: none;
-    display: block;
+    display: inline-flex;
+    align-items: center;
     margin-bottom: 2px;
 }
 .interaccion-titulo:hover { color: var(--accent); }
@@ -219,6 +222,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 
 /* ── CTA link ── */
 .sim-cta {
+    min-height: 44px;
     display: inline-flex; align-items: center; gap: 0.4rem;
     font-size: 0.75rem; font-weight: 600;
     letter-spacing: 0.08em; text-transform: uppercase;
@@ -405,6 +409,19 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         </div>
         {% endfor %}
     </div>
+    {% endif %}
+
+    {% if identidades_absorbidas %}
+    <details class="sim-section">
+        <summary class="sim-section-label" style="cursor:pointer;min-height:44px;display:flex;align-items:center;">Identidades absorbidas ({{ identidades_absorbidas|length }})</summary>
+        <div class="sim-section-hint">Auditoría de nombres unificados. Sus interacciones permanecen enlazadas al registro original.</div>
+        {% for identidad in identidades_absorbidas %}
+        <div class="circulo-item">
+            <span class="circulo-name">{{ identidad.nombre }}</span>
+            <span class="circulo-tipo">integrada en {{ identidad.fusionada_en.nombre }}</span>
+        </div>
+        {% endfor %}
+    </details>
     {% endif %}
 
     <!-- ── Interacciones recientes ── -->

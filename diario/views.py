@@ -1529,9 +1529,12 @@ def simbiosis_dashboard(request):
 
     personas_usuario = PersonaImportante.objects.filter(usuario=request.user)
     personas = personas_usuario.filter(
-        archivada=False,
+        archivada=False, fusionada_en__isnull=True,
     ).order_by('tipo_relacion', 'nombre')
-    personas_archivadas = personas_usuario.filter(archivada=True).order_by('nombre')
+    personas_archivadas = personas_usuario.filter(archivada=True, fusionada_en__isnull=True).order_by('nombre')
+    identidades_absorbidas = personas_usuario.filter(
+        fusionada_en__isnull=False,
+    ).select_related('fusionada_en').order_by('nombre')
 
     interacciones = Interaccion.objects.filter(usuario=request.user)
     n_interacciones = interacciones.count()
@@ -1554,6 +1557,7 @@ def simbiosis_dashboard(request):
     context = {
         'personas': personas,
         'personas_archivadas': personas_archivadas,
+        'identidades_absorbidas': identidades_absorbidas,
         'ultimas_interacciones': ultimas_interacciones,
         'personas_sombra': personas_sombra,
         'personas_radar': personas_radar,
@@ -1579,9 +1583,23 @@ def persona_crear_editar(request, persona_id=None):
     if request.method == 'POST':
         form = PersonaImportanteForm(request.POST, instance=instance)
         if form.is_valid():
-            persona = form.save(commit=False)
-            persona.usuario = request.user
-            persona.save()
+            if instance:
+                from diario.services.identidad_simbiosis_service import corregir_identidad
+                corregir_identidad(
+                    instance,
+                    nombre=form.cleaned_data['nombre'],
+                    tipo_entidad=form.cleaned_data['tipo_entidad'],
+                )
+                instance.refresh_from_db()
+                persona = instance
+                persona.tipo_relacion = form.cleaned_data['tipo_relacion']
+                persona.salud_relacion = form.cleaned_data['salud_relacion']
+                persona.notas = form.cleaned_data['notas']
+                persona.save(update_fields=['tipo_relacion', 'salud_relacion', 'notas'])
+            else:
+                persona = form.save(commit=False)
+                persona.usuario = request.user
+                persona.save()
             # La afirmación manual del usuario prevalece sobre una antigua
             # exclusión del parser, sin materializar el historial sombra.
             from diario.models import PersonaInterina
@@ -1670,9 +1688,12 @@ def lectura_semanal(request):
 
 @login_required
 def persona_detalle(request, persona_id):
-    """Perfil de vínculo legible — Phase Simbiosis 1.3."""
+    """Perfil agregado de una identidad canónica y sus identidades absorbidas."""
     persona = get_object_or_404(PersonaImportante, id=persona_id, usuario=request.user)
-    interacciones = persona.interaccion_set.all().order_by('-fecha')
+    from diario.services.lectura_relacional_service import construir_lectura_relacional
+    lectura = construir_lectura_relacional(persona, usuario=request.user)
+    persona = lectura['persona_raiz']
+    interacciones = lectura['interacciones']
 
     origen_interino = persona.origen_interino.first()
     interacciones_anotadas = [
@@ -1687,8 +1708,73 @@ def persona_detalle(request, persona_id):
         'ultima_interaccion': interacciones.first(),
         'origen_interino': origen_interino,
         'origen': 'radar' if origen_interino else 'manual',
+        'lectura': lectura,
+        'identidades_absorbidas': lectura['identidades_absorbidas'],
+        'candidatas_fusion': PersonaImportante.objects.filter(
+            usuario=request.user, fusionada_en__isnull=True,
+            tipo_entidad=persona.tipo_entidad,
+        ).exclude(pk=persona.pk).order_by('nombre'),
+        'operacion_fusion_id': __import__('uuid').uuid4(),
+        'operaciones_fusion': [
+            {'operacion': op, 'clave_deshacer': __import__('uuid').uuid4()}
+            for op in persona.operaciones_identidad_destino.filter(
+                usuario=request.user, tipo='fusionar', operacion_deshacer__isnull=True,
+            ).order_by('-creado_en')
+        ],
     }
     return render(request, 'diario/persona_detalle.html', context)
+
+
+def _uuid_post(request):
+    import uuid
+    try:
+        return uuid.UUID(request.POST.get('operacion_id', ''))
+    except (ValueError, TypeError, AttributeError):
+        return None
+
+
+@login_required
+@require_http_methods(["POST"])
+def persona_fusionar(request, persona_id):
+    """Fusiona lógicamente dos identidades del propietario sin mover historial."""
+    from django.http import HttpResponseBadRequest
+    from django.core.exceptions import ValidationError
+    from diario.services.identidad_simbiosis_service import fusionar_personas
+    origen = get_object_or_404(PersonaImportante, pk=persona_id, usuario=request.user)
+    destino = get_object_or_404(
+        PersonaImportante, pk=request.POST.get('destino_id'), usuario=request.user,
+    )
+    clave = _uuid_post(request)
+    if request.POST.get('confirmar') != '1' or clave is None:
+        return HttpResponseBadRequest('Confirma la fusión e incluye una clave válida.')
+    try:
+        fusionar_personas(origen, destino, operacion_id=clave)
+    except ValidationError as exc:
+        return HttpResponseBadRequest('; '.join(exc.messages))
+    messages.success(request, f'“{origen.nombre}” queda registrada como identidad absorbida de “{destino.nombre}”. El historial no se ha movido.')
+    return redirect('diario:persona_detalle', persona_id=destino.pk)
+
+
+@login_required
+@require_http_methods(["POST"])
+def identidad_deshacer(request, operacion_id):
+    """Deshace una operación propia mediante POST confirmado e idempotente."""
+    from django.http import HttpResponseBadRequest
+    from django.core.exceptions import ValidationError
+    from diario.models import OperacionIdentidadSimbiosis
+    from diario.services.identidad_simbiosis_service import deshacer_operacion_identidad
+    operacion = get_object_or_404(
+        OperacionIdentidadSimbiosis, pk=operacion_id, usuario=request.user,
+    )
+    clave = _uuid_post(request)
+    if request.POST.get('confirmar') != '1' or clave is None:
+        return HttpResponseBadRequest('Confirma la operación e incluye una clave válida.')
+    try:
+        deshacer_operacion_identidad(operacion, operacion_id=clave)
+    except ValidationError as exc:
+        return HttpResponseBadRequest('; '.join(exc.messages))
+    messages.success(request, 'La fusión se ha deshecho. Cada identidad conserva su historial original.')
+    return redirect('diario:persona_detalle', persona_id=operacion.origen_id)
 
 
 @login_required

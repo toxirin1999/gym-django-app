@@ -63,6 +63,13 @@ class AperturaDiariaForm(forms.Form):
 
 
 class PersonaImportanteForm(forms.ModelForm):
+    tipo_entidad = forms.ChoiceField(
+        choices=[('', 'Elige persona o grupo'), ('persona', 'Persona'), ('grupo', 'Grupo')],
+        required=False,
+        initial='persona',
+        label='Tipo de identidad',
+        widget=forms.Select(attrs={'class': 'form-select'}),
+    )
     salud_relacion = forms.TypedChoiceField(
         required=False,
         coerce=int,
@@ -77,7 +84,7 @@ class PersonaImportanteForm(forms.ModelForm):
 
     class Meta:
         model = PersonaImportante
-        fields = ['nombre', 'tipo_relacion', 'salud_relacion', 'notas']
+        fields = ['nombre', 'tipo_entidad', 'tipo_relacion', 'salud_relacion', 'notas']
         error_messages = {
             'nombre': {'required': 'Este campo es obligatorio.'},
         }
@@ -92,6 +99,23 @@ class PersonaImportanteForm(forms.ModelForm):
             'tipo_relacion': 'Tipo de Relación',
             'notas': 'Notas Adicionales',
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance and self.instance.pk and self.instance.tipo_entidad == 'sin_clasificar':
+            self.fields['tipo_entidad'].choices = [
+                ('sin_clasificar', 'Sin clasificar (registro anterior)'),
+                ('persona', 'Persona'), ('grupo', 'Grupo'),
+            ]
+
+    def clean_tipo_entidad(self):
+        valor = self.cleaned_data.get('tipo_entidad')
+        if valor:
+            return valor
+        if self.instance and self.instance.pk:
+            return self.instance.tipo_entidad
+        # Compatibilidad con clientes antiguos que todavía no envían el campo.
+        return 'persona'
 
 
 class InteraccionForm(forms.ModelForm):

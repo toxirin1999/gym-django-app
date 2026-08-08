@@ -70,7 +70,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 .int-item:first-child { padding-top: 0; }
 .int-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 0.45rem; }
 .int-dot.joi { background: var(--accent); }
-.int-title { font-size: 0.88rem; font-weight: 600; color: var(--text); display: block; margin-bottom: 2px; text-decoration: none; }
+.int-title { min-height: 44px; font-size: 0.88rem; font-weight: 600; color: var(--text); display: inline-flex; align-items: center; margin-bottom: 2px; text-decoration: none; }
 .int-title:hover { color: var(--accent); }
 .int-desc { font-size: 0.75rem; color: var(--muted); line-height: 1.4; }
 .int-meta { font-size: 0.68rem; color: rgba(124,117,144,0.6); margin-top: 3px; display: flex; align-items: center; gap: 0.5rem; }
@@ -113,6 +113,11 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
 }
 .notas-text { font-size: 0.9rem; color: var(--text); line-height: 1.6; }
 .notas-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; }
+.accion-btn, .back-link, .btn-confirmar, .btn-cancelar, select { min-height: 44px; }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 560px) { .perf-wrap { padding: 1rem .75rem 3rem; } .sim-section { padding: 1rem; } .confirm-actions { flex-direction: column; } }
+@media (min-width: 768px) { .perf-wrap { padding-top: 2.25rem; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
 </style>
 {% endblock %}
 
@@ -181,9 +186,29 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         </div>
     </div>
 
-    <!-- Interacciones -->
+    <section class="sim-section" aria-labelledby="hechos-title">
+        <div class="sim-section-label" id="hechos-title">Hechos registrados</div>
+        <div class="perf-stats">
+            <div class="perf-stat"><span class="perf-stat-val">{{ lectura.hechos.total_interacciones }}</span><span class="perf-stat-label">Interacciones exactas</span></div>
+            {% if lectura.hechos.primera_fecha %}<div class="perf-stat"><span class="perf-stat-val">{{ lectura.hechos.primera_fecha|date:"j M Y" }}</span><span class="perf-stat-label">Primera fecha</span></div>{% endif %}
+            {% if lectura.hechos.ultima_fecha %}<div class="perf-stat"><span class="perf-stat-val">{{ lectura.hechos.ultima_fecha|date:"j M Y" }}</span><span class="perf-stat-label">Última fecha</span></div>{% endif %}
+        </div>
+    </section>
+
+    <section class="sim-section" aria-labelledby="patrones-title">
+        <div class="sim-section-label" id="patrones-title">Patrones observados</div>
+        <p class="notas-text">{{ lectura.patrones.texto }}</p>
+        <p class="notas-empty">Muestra: {{ lectura.patrones.muestra }} registros; umbral: {{ lectura.patrones.umbral }}. No explica causas ni define la relación.</p>
+        {% if lectura.temas %}
+        <div class="sim-section-label">Palabras frecuentes</div>
+        <p class="notas-text">{% for tema in lectura.temas %}{{ tema.palabra }} ({{ tema.apariciones }}){% if not forloop.last %}, {% endif %}{% endfor %}</p>
+        <p class="notas-empty">Derivadas por frecuencia simple del texto registrado; se excluyen palabras comunes.</p>
+        {% endif %}
+    </section>
+
+    <!-- Timeline de interacciones -->
     <div class="sim-section">
-        <div class="sim-section-label">Interacciones</div>
+        <div class="sim-section-label">Timeline manual y detectada</div>
         {% if interacciones %}
         {% for item in interacciones %}
         <div class="int-item">
@@ -214,6 +239,34 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
         </p>
         {% endif %}
     </div>
+
+    {% if candidatas_fusion %}
+    <section class="sim-section" aria-labelledby="fusion-title">
+        <div class="sim-section-label" id="fusion-title">Unificar identidad</div>
+        <p class="notas-text">Elige otra identidad raíz. La fusión no mueve ni reescribe el historial.</p>
+        <form method="post" action="{% url 'diario:persona_fusionar' persona.id %}" onsubmit="return confirm('¿Confirmas la fusión? El nombre actual quedará visible en la auditoría.');">
+            {% csrf_token %}<input type="hidden" name="operacion_id" value="{{ operacion_fusion_id }}"><input type="hidden" name="confirmar" value="1">
+            <label class="sim-section-label" for="destino_id">Identidad canónica</label>
+            <select id="destino_id" name="destino_id" required style="width:100%;background:var(--bg);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:.7rem;margin-bottom:.75rem;">
+                <option value="">Selecciona una identidad</option>{% for candidata in candidatas_fusion %}<option value="{{ candidata.id }}">{{ candidata.nombre }}</option>{% endfor %}
+            </select>
+            <button class="accion-btn" type="submit">Confirmar fusión</button>
+        </form>
+    </section>
+    {% endif %}
+
+    {% if identidades_absorbidas %}
+    <section class="sim-section" aria-labelledby="audit-title">
+        <div class="sim-section-label" id="audit-title">Identidades absorbidas</div>
+        {% for identidad in identidades_absorbidas %}<p class="notas-text">{{ identidad.nombre }} — historial conservado en su enlace original.</p>{% endfor %}
+        {% for item in operaciones_fusion %}
+        <form method="post" action="{% url 'diario:identidad_deshacer' item.operacion.id %}" onsubmit="return confirm('¿Confirmas que quieres deshacer esta fusión?');">
+            {% csrf_token %}<input type="hidden" name="operacion_id" value="{{ item.clave_deshacer }}"><input type="hidden" name="confirmar" value="1">
+            <button class="accion-btn" type="submit">Deshacer fusión de {{ item.operacion.origen.nombre }}</button>
+        </form>
+        {% endfor %}
+    </section>
+    {% endif %}
 
     <!-- Notas -->
     <div class="sim-section">

@@ -53,6 +53,12 @@ body { background: var(--sim-bg) !important; color: var(--sim-text); }
                 {{ form.nombre }}
                 {{ form.nombre.errors }}
             </div>
+            <div class="sim-field full">
+                <label class="sim-label" for="{{ form.tipo_entidad.id_for_label }}">{{ form.tipo_entidad.label }}</label>
+                {{ form.tipo_entidad }}
+                {{ form.tipo_entidad.errors }}
+                <p class="sim-help">Indica si confirmas una persona concreta o un grupo. Los registros anteriores sin clasificar siguen siendo editables.</p>
+            </div>
             <div class="sim-field">
                 <label class="sim-label" for="{{ form.tipo_relacion.id_for_label }}">{{ form.tipo_relacion.label }}</label>
                 {{ form.tipo_relacion }}
