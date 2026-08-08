@@ -1037,6 +1037,19 @@ class PersonaImportante(models.Model):
     """Representa a una persona importante en la vida del usuario."""
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=100)
+    TIPO_ENTIDAD_CHOICES = [
+        ('sin_clasificar', 'Sin clasificar'),
+        ('persona', 'Persona'),
+        ('grupo', 'Grupo'),
+    ]
+    tipo_entidad = models.CharField(
+        max_length=16, choices=TIPO_ENTIDAD_CHOICES, default='sin_clasificar',
+    )
+    nombre_normalizado = models.CharField(max_length=100, db_index=True, editable=False, default='')
+    fusionada_en = models.ForeignKey(
+        'self', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='identidades_fusionadas',
+    )
 
     TIPO_RELACION_CHOICES = [
         ('familia', 'Familia'),
@@ -1060,6 +1073,24 @@ class PersonaImportante(models.Model):
         help_text="Conserva el vínculo y su historial fuera del círculo activo.",
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    def clean(self):
+        super().clean()
+        if self.fusionada_en_id:
+            if self.fusionada_en_id == self.pk:
+                raise ValidationError({'fusionada_en': 'Una identidad no puede fusionarse consigo misma.'})
+            if self.fusionada_en.usuario_id != self.usuario_id:
+                raise ValidationError({'fusionada_en': 'Las identidades deben pertenecer al mismo usuario.'})
+            if self.fusionada_en.tipo_entidad != self.tipo_entidad:
+                raise ValidationError({'fusionada_en': 'No se pueden fusionar tipos de entidad distintos.'})
+
+    def save(self, *args, **kwargs):
+        from diario.services.identidad_simbiosis_service import normalizar_nombre_identidad
+        self.nombre = ' '.join((self.nombre or '').split())
+        self.nombre_normalizado = normalizar_nombre_identidad(self.nombre)
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'nombre_normalizado'}
+        return super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.nombre} ({self.get_tipo_relacion_display()}) - {self.usuario.username}"
@@ -1462,6 +1493,11 @@ class PersonaInterina(models.Model):
 
     usuario             = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personas_interinas')
     nombre              = models.CharField(max_length=100)
+    tipo_entidad = models.CharField(
+        max_length=16, choices=PersonaImportante.TIPO_ENTIDAD_CHOICES,
+        default='sin_clasificar',
+    )
+    nombre_normalizado = models.CharField(max_length=100, db_index=True, editable=False, default='')
     estado              = models.CharField(max_length=12, choices=ESTADO_CHOICES, default='sombra')
     veces_mencionada             = models.PositiveIntegerField(default=1)
     menciones_desde_descarte     = models.PositiveIntegerField(default=0)
@@ -1480,6 +1516,94 @@ class PersonaInterina(models.Model):
 
     def __str__(self):
         return f"[{self.get_estado_display()}] {self.nombre} ({self.usuario.username}) x{self.veces_mencionada}"
+
+    def save(self, *args, **kwargs):
+        from diario.services.identidad_simbiosis_service import normalizar_nombre_identidad
+        self.nombre = ' '.join((self.nombre or '').split())
+        self.nombre_normalizado = normalizar_nombre_identidad(self.nombre)
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'nombre_normalizado'}
+        return super().save(*args, **kwargs)
+
+
+class AliasSimbiosis(models.Model):
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='alias_simbiosis')
+    nombre = models.CharField(max_length=100)
+    nombre_normalizado = models.CharField(max_length=100, db_index=True, editable=False)
+    persona_confirmada = models.ForeignKey(
+        PersonaImportante, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='alias_simbiosis',
+    )
+    persona_interina = models.ForeignKey(
+        PersonaInterina, null=True, blank=True, on_delete=models.CASCADE,
+        related_name='alias_simbiosis',
+    )
+    origen = models.CharField(max_length=24, default='manual')
+    activo = models.BooleanField(default=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    (models.Q(persona_confirmada__isnull=False) & models.Q(persona_interina__isnull=True)) |
+                    (models.Q(persona_confirmada__isnull=True) & models.Q(persona_interina__isnull=False))
+                ),
+                name='alias_simbiosis_exactamente_un_objetivo',
+            ),
+            models.UniqueConstraint(
+                fields=['usuario', 'persona_confirmada', 'nombre_normalizado'],
+                name='alias_simbiosis_confirmada_normalizado_unico',
+            ),
+            models.UniqueConstraint(
+                fields=['usuario', 'persona_interina', 'nombre_normalizado'],
+                name='alias_simbiosis_interina_normalizado_unico',
+            ),
+        ]
+
+    def clean(self):
+        super().clean()
+        objetivo = self.persona_confirmada or self.persona_interina
+        if objetivo and objetivo.usuario_id != self.usuario_id:
+            raise ValidationError({'usuario': 'El alias y su objetivo deben pertenecer al mismo usuario.'})
+
+    def save(self, *args, **kwargs):
+        from diario.services.identidad_simbiosis_service import normalizar_nombre_identidad
+        self.nombre = ' '.join((self.nombre or '').split())
+        self.nombre_normalizado = normalizar_nombre_identidad(self.nombre)
+        if kwargs.get('update_fields') is not None:
+            kwargs['update_fields'] = set(kwargs['update_fields']) | {'nombre_normalizado'}
+        return super().save(*args, **kwargs)
+
+
+class OperacionIdentidadSimbiosis(models.Model):
+    TIPO_CHOICES = [
+        ('corregir', 'Corregir identidad'),
+        ('fusionar', 'Fusionar identidades'),
+        ('deshacer', 'Deshacer operación'),
+    ]
+    id = models.UUIDField(primary_key=True, default=__import__('uuid').uuid4, editable=False)
+    usuario = models.ForeignKey(User, on_delete=models.CASCADE, related_name='operaciones_identidad_simbiosis')
+    tipo = models.CharField(max_length=16, choices=TIPO_CHOICES)
+    origen = models.ForeignKey(
+        PersonaImportante, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='operaciones_identidad_origen',
+    )
+    destino = models.ForeignKey(
+        PersonaImportante, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='operaciones_identidad_destino',
+    )
+    interina = models.ForeignKey(
+        PersonaInterina, null=True, blank=True, on_delete=models.PROTECT,
+        related_name='operaciones_identidad',
+    )
+    payload = models.JSONField(default=dict, blank=True)
+    deshace_a = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='operacion_deshacer',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
 
 
 class InteraccionSombra(models.Model):
