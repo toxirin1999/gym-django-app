@@ -38,7 +38,7 @@
     .semana-chip-num { color: var(--ink); font: 500 1.35rem/1 'Crimson Pro', serif; }
     .semana-chip-label { color: var(--ash); font: 600 .57rem/1 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .radar-dot { display: inline-block; width: 6px; height: 6px; margin-right: .5rem; background: var(--gold); border-radius: 50%; }
-    .signal-link { display: inline-flex; color: var(--gold); font: 700 .61rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; }
+    .signal-link { min-height:44px; display: inline-flex; align-items:center; color: var(--gold); font: 700 .61rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; }
     .signal-link:hover { color: #ecd393; }
     .tools-head { display: flex; justify-content: space-between; align-items: end; gap: 2rem; }
     .tools-note { max-width: 25rem; margin: 0; color: #787169; font: 400 .76rem/1.6 Manrope, sans-serif; }
@@ -48,7 +48,7 @@
     .tool-group h3 { margin: 0 0 .35rem; color: #d8cfc2; font: 500 1.15rem/1.2 'Crimson Pro', serif; }
     .tool-group p { min-height: 2.6rem; margin: 0 0 1rem; color: #777068; font: 400 .7rem/1.5 Manrope, sans-serif; }
     .tool-links { display: flex; flex-direction: column; align-items: flex-start; gap: .55rem; }
-    .tool-link { color: #a9a198; font: 600 .72rem/1.4 Manrope, sans-serif; text-decoration: none; }
+    .tool-link { min-height:44px; display:inline-flex; align-items:center; color: #a9a198; font: 600 .72rem/1.4 Manrope, sans-serif; text-decoration: none; }
     .tool-link:hover { color: var(--gold); }
     @media (max-width: 720px) {
         .diario-header, .hoy-section { grid-template-columns: 1fr; }
@@ -112,7 +112,10 @@
             </article>
             <article class="signal">
                 <h3 class="signal-label">Simbiosis</h3>
-                {% if n_radar %}<p class="radar-badge"><span class="radar-dot" aria-hidden="true"></span>{{ n_radar }} vínculo{% if n_radar != 1 %}s{% endif %} requiere{% if n_radar != 1 %}n{% endif %} que lo{% if n_radar != 1 %}s{% endif %} revises.</p>{% else %}<p class="signal-empty">No hay vínculos pendientes de revisión.</p>{% endif %}
+                {% if n_radar %}<p class="radar-badge"><span class="radar-dot" aria-hidden="true"></span>{{ n_radar }} vínculo{% if n_radar != 1 %}s{% endif %} requiere{% if n_radar != 1 %}n{% endif %} tu decisión <span class="visually-hidden">{{ n_radar }} vínculo{% if n_radar != 1 %}s{% endif %} requiere{% if n_radar != 1 %}n{% endif %} que lo{% if n_radar != 1 %}s{% endif %} revises</span></p>
+                {% elif n_sombra %}<p class="signal-empty">{{ n_sombra }} {% if n_sombra == 1 %}mención observada{% else %}menciones observadas{% endif %}, ninguna requiere decidir</p>
+                {% elif n_confirmadas or n_interacciones %}<p class="signal-empty">Tu círculo está estable</p>
+                {% else %}<p class="signal-empty">Tu mapa relacional aún está por comenzar</p>{% endif %}
                 <a href="{% url 'diario:simbiosis_dashboard' %}" class="signal-link">Abrir Simbiosis&nbsp; →</a>
             </article>
             <article class="signal"><h3 class="signal-label">Gestos</h3><p class="signal-empty">Hábitos y gestos que el Diario está siguiendo.</p><a href="{% url 'diario:habitos_dashboard' %}" class="signal-link">Abrir Gestos&nbsp; →</a></article>

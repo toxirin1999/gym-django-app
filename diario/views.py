@@ -81,6 +81,13 @@ def dashboard_diario(request):
     n_radar = PersonaInterina.objects.filter(
         usuario=request.user, estado='radar'
     ).count()
+    n_sombra = PersonaInterina.objects.filter(
+        usuario=request.user, estado='sombra'
+    ).count()
+    n_confirmadas = PersonaImportante.objects.filter(
+        usuario=request.user, archivada=False, fusionada_en__isnull=True,
+    ).count()
+    n_interacciones = Interaccion.objects.filter(usuario=request.user).count()
 
     context = {
         'hoy': hoy,
@@ -89,6 +96,9 @@ def dashboard_diario(request):
         'datos_semana': datos_semana,
         'revision_semanal': revision_semanal,
         'n_radar': n_radar,
+        'n_sombra': n_sombra,
+        'n_confirmadas': n_confirmadas,
+        'n_interacciones': n_interacciones,
     }
     return render(request, 'diario/dashboard.html', context)
 
@@ -1540,7 +1550,7 @@ def simbiosis_dashboard(request):
     n_interacciones = interacciones.count()
     ultimas_interacciones = interacciones.prefetch_related(
         'personas'
-    ).order_by('-fecha')[:8]
+    ).order_by('-fecha', '-id')[:8]
 
     personas_interinas = PersonaInterina.objects.filter(
         usuario=request.user,

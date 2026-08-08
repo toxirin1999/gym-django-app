@@ -1,526 +1,120 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
 {% load custom_filters %}
 {% block title %}Simbiosis{% endblock %}
-
 {% block extra_css %}
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700&display=swap');
 :root {
-    --bg:     #13111A;
-    --card:   #1E1B27;
-    --border: #2E2A3A;
-    --text:   #EDE9E3;
-    --muted:  #7C7590;
-    --accent: #A78BFA;
-    --accent-light: rgba(167,139,250,0.12);
-    --green:  #34D399;
-    --green-light: rgba(52,211,153,0.12);
-    --radius: 16px;
-    --shadow: 0 2px 20px rgba(0,0,0,0.3);
+    --sim-paper: #0d0c10; --sim-ink: #f0eadf; --sim-muted: #918a81;
+    --sim-line: rgba(235,226,208,.14); --sim-gold: #c4a365;
+    --sim-violet: #a78bfa; --sim-danger: #f0a0a0;
 }
 * { box-sizing: border-box; }
-body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSystemFont, sans-serif !important; color: var(--text); }
-
-.sim-wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
-
-/* ── Header ── */
-.sim-header { margin-bottom: 1.75rem; }
-.sim-title {
-    font-size: 1.6rem;
-    font-weight: 700;
-    color: var(--text);
-    margin-bottom: 0.35rem;
-    letter-spacing: -0.01em;
+body { background: var(--sim-paper) !important; color: var(--sim-ink); font-family: Manrope, sans-serif !important; }
+.sim-wrap { max-width: 980px; margin: 0 auto; padding: clamp(2rem,6vw,5rem) 1.25rem 6rem; }
+.sim-header { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(14rem,.65fr); gap:3rem; padding-bottom:2.5rem; border-bottom:1px solid var(--sim-ink); }
+.sim-kicker,.chapter-index,.sim-section-label { color:var(--sim-gold); font-size:.69rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
+.sim-title,.chapter-title { font-family:'Crimson Pro',serif; font-weight:400; letter-spacing:-.025em; }
+.sim-title { font-size:clamp(3.8rem,10vw,7rem); line-height:.78; margin:.6rem 0 1.2rem; }
+.sim-subtitle { max-width:34rem; font-family:'Crimson Pro',serif; font-size:1.35rem; line-height:1.35; color:var(--sim-muted); }
+.sim-boundary { align-self:end; border-left:2px solid var(--sim-gold); padding-left:1rem; color:var(--sim-muted); font-size:.78rem; line-height:1.65; }
+.sim-metrics { grid-column:1/-1; display:flex; gap:clamp(1.5rem,5vw,4rem); padding-top:1rem; }
+.sim-metric { display:flex; gap:.45rem; align-items:baseline; }
+.sim-metric-val { font-family:'Crimson Pro',serif; font-size:2rem; }
+.sim-metric-label { color:var(--sim-muted); font-size:.66rem; letter-spacing:.09em; text-transform:uppercase; }
+.chapter { display:grid; grid-template-columns:9rem 1fr; gap:2rem; padding:3.5rem 0; border-bottom:1px solid var(--sim-line); }
+.chapter-title { font-size:clamp(2.2rem,5vw,3.4rem); line-height:1; margin:.25rem 0 1.4rem; }
+.chapter-lead { font-family:'Crimson Pro',serif; font-size:1.3rem; color:var(--sim-muted); margin:0 0 1.5rem; }
+.editorial-list { border-top:1px solid var(--sim-line); }
+.radar-item,.circulo-item,.interaccion-item { display:flex; gap:1rem; align-items:center; padding:1rem 0; border-bottom:1px solid var(--sim-line); color:inherit; text-decoration:none; }
+.radar-name,.circulo-name,.interaccion-titulo { color:var(--sim-ink); font-family:'Crimson Pro',serif; font-size:1.25rem; font-weight:600; text-decoration:none; }
+.interaccion-titulo { min-height:44px; display:inline-flex; align-items:center; }
+.radar-meta,.circulo-tipo,.interaccion-meta,.interaccion-desc,.sombra-evidencia { color:var(--sim-muted); font-size:.74rem; line-height:1.55; }
+.radar-actions { display:flex; gap:.4rem; margin-left:auto; flex-wrap:wrap; }
+.radar-btn,.sim-cta,summary { min-height: 44px; }
+.radar-btn { border:1px solid var(--sim-line); background:transparent; color:var(--sim-ink); padding:.55rem .8rem; font:600 .68rem Manrope,sans-serif; cursor:pointer; }
+.radar-btn.add { border-color:var(--sim-gold); color:var(--sim-gold); }
+.radar-btn.ignore { color:var(--sim-muted); }
+.radar-btn:disabled { opacity:.5; cursor:wait; }
+.radar-dot { width:6px; height:6px; border-radius:50%; background:var(--sim-violet); flex:none; }
+.radar-feedback { min-height:1.4rem; color:var(--sim-muted); font-size:.76rem; }
+.radar-feedback.is-success { color:#426d50; }.radar-feedback.is-error { color:var(--sim-danger); }
+.circle-grid { display:grid; grid-template-columns:1fr 1fr; column-gap:2rem; }
+.circulo-item { min-height:4.5rem; }.circulo-name { flex:1; }.circulo-tipo { text-transform:uppercase; letter-spacing:.06em; }
+.salud-bar { width:36px; height:2px; background:var(--sim-line); }.salud-fill { height:100%; background:var(--sim-gold); }
+.interaccion-item { align-items:flex-start; }.interaccion-item>div:last-child { flex:1; }
+.interaccion-origen { color:var(--sim-violet); margin-left:.4rem; }
+.sim-cta { display:inline-flex; align-items:center; margin-top:1.25rem; color:var(--sim-gold); font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
+.sim-empty { color:var(--sim-muted); font-family:'Crimson Pro',serif; font-size:1.1rem; font-style:italic; }
+.archive-details { margin-top:1rem; border-top:1px solid var(--sim-line); }
+.archive-details summary { display:flex; align-items:center; cursor:pointer; color:var(--sim-muted); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
+.archive-details[open] summary { color:var(--sim-gold); }
+.secondary-block { margin-top:2rem; }
+.radar-btn:focus-visible,.sim-cta:focus-visible,.circulo-item:focus-visible,.interaccion-titulo:focus-visible,summary:focus-visible { outline:2px solid var(--sim-violet); outline-offset:3px; }
+@media (max-width: 600px) {
+ .sim-header,.chapter { grid-template-columns:1fr; gap:1.25rem; }.sim-title{font-size:4.2rem}.sim-metrics{gap:1rem;justify-content:space-between}.sim-metric{display:block}.circle-grid{grid-template-columns:1fr}.radar-item{align-items:flex-start;flex-wrap:wrap}.radar-actions{width:100%;margin-left:0}.radar-btn{flex:1}
 }
-.sim-subtitle {
-    font-size: 0.9rem;
-    color: var(--muted);
-    line-height: 1.5;
-    margin-bottom: 1rem;
-}
-.sim-boundary {
-    font-size: 0.78rem;
-    color: rgba(167,139,250,0.6);
-    font-style: italic;
-    padding: 0.6rem 0.85rem;
-    border-left: 2px solid rgba(167,139,250,0.3);
-    margin-bottom: 1.25rem;
-}
-.sim-metrics {
-    display: flex;
-    gap: 1rem;
-    flex-wrap: wrap;
-}
-.sim-metric {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-.sim-metric-val {
-    font-size: 1.4rem;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1;
-}
-.sim-metric-label {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.1em;
-    text-transform: uppercase;
-    color: var(--muted);
-}
-
-/* ── Section card ── */
-.sim-section {
-    background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: var(--shadow);
-}
-.sim-section-label {
-    font-size: 0.68rem;
-    font-weight: 700;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    color: var(--muted);
-    margin-bottom: 0.35rem;
-}
-.sim-section-hint {
-    font-size: 0.78rem;
-    color: var(--muted);
-    line-height: 1.5;
-    margin-bottom: 1.25rem;
-}
-
-/* ── Radar personas ── */
-.radar-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-}
-.radar-item:last-child { border-bottom: none; padding-bottom: 0; }
-.radar-item:first-child { padding-top: 0; }
-.radar-dot {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-    background: var(--accent);
-    box-shadow: 0 0 6px var(--accent);
-}
-.radar-dot.sombra { background: var(--muted); box-shadow: none; }
-.radar-name { font-weight: 600; font-size: 0.95rem; color: var(--text); flex: 1; }
-.radar-meta { font-size: 0.75rem; color: var(--muted); }
-.radar-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
-.radar-btn {
-    min-height: 44px;
-    padding: 0.3rem 0.75rem;
-    border-radius: 100px;
-    border: 1.5px solid var(--border);
-    font-size: 0.75rem;
-    font-weight: 600;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-    cursor: pointer;
-    transition: all 0.15s;
-    background: transparent;
-}
-.radar-btn.add {
-    color: var(--green);
-    border-color: rgba(52,211,153,0.3);
-}
-.radar-btn.add:hover {
-    background: var(--green-light);
-    border-color: var(--green);
-}
-.radar-btn.ignore {
-    color: var(--muted);
-    border-color: var(--border);
-}
-.radar-btn.ignore:hover {
-    border-color: var(--muted);
-    color: var(--text);
-}
-.radar-btn:focus-visible,
-.sim-cta:focus-visible,
-.circulo-item:focus-visible,
-.interaccion-titulo:focus-visible {
-    outline: 2px solid var(--accent);
-    outline-offset: 3px;
-}
-.radar-btn:disabled { cursor: wait; opacity: 0.62; }
-.radar-feedback {
-    min-height: 1.35rem;
-    margin: 0 0 0.75rem;
-    color: var(--muted);
-    font-size: 0.78rem;
-}
-.radar-feedback.is-success { color: var(--green); }
-.radar-feedback.is-error { color: #FCA5A5; }
-
-/* ── Círculo ── */
-.circulo-item {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--border);
-    text-decoration: none;
-    color: inherit;
-    transition: background 0.1s;
-}
-.circulo-item:last-child { border-bottom: none; }
-.circulo-item:hover { color: var(--accent); }
-.circulo-name { font-weight: 600; font-size: 0.9rem; flex: 1; }
-.circulo-tipo {
-    font-size: 0.72rem;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-}
-.salud-bar {
-    width: 40px; height: 3px; border-radius: 2px;
-    background: var(--border); overflow: hidden; flex-shrink: 0;
-}
-.salud-fill { height: 100%; background: var(--accent); border-radius: 2px; }
-
-/* ── Interacciones ── */
-.interaccion-item {
-    display: flex;
-    gap: 0.75rem;
-    padding: 0.75rem 0;
-    border-bottom: 1px solid var(--border);
-}
-.interaccion-item:last-child { border-bottom: none; }
-.interaccion-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); flex-shrink: 0; margin-top: 0.45rem; }
-.interaccion-titulo {
-    min-height: 44px;
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: var(--text);
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    margin-bottom: 2px;
-}
-.interaccion-titulo:hover { color: var(--accent); }
-.interaccion-desc { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
-.interaccion-meta { font-size: 0.7rem; color: rgba(124,117,144,0.6); margin-top: 3px; }
-.interaccion-origen {
-    display: inline-flex; margin-left: 0.35rem; padding: 0.1rem 0.4rem;
-    border-radius: 3px; background: var(--accent-light); color: var(--accent);
-    font-size: 0.58rem; font-weight: 700; letter-spacing: 0.06em;
-    text-transform: uppercase;
-}
-.sombra-evidencia {
-    margin-top: 0.25rem; color: rgba(237,233,227,0.62); font-size: 0.72rem;
-    font-style: italic; line-height: 1.45;
-}
-
-/* ── Empty states ── */
-.sim-empty { font-size: 0.85rem; color: var(--muted); font-style: italic; text-align: center; padding: 1rem 0; }
-
-/* ── CTA link ── */
-.sim-cta {
-    min-height: 44px;
-    display: inline-flex; align-items: center; gap: 0.4rem;
-    font-size: 0.75rem; font-weight: 600;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    color: var(--accent);
-    text-decoration: none;
-    margin-top: 1rem;
-    padding: 0.5rem 0;
-    border-top: 1px solid var(--border);
-    width: 100%;
-    justify-content: center;
-}
-.sim-cta:hover { color: var(--text); }
-
-@media (max-width: 560px) {
-    .sim-wrap { padding: 1rem 0.75rem 3rem; }
-    .sim-section { padding: 1.1rem; border-radius: 13px; }
-    .sim-metrics { justify-content: space-between; gap: 0.65rem; }
-    .radar-item { align-items: flex-start; flex-wrap: wrap; }
-    .radar-actions {
-        width: 100%;
-        padding-left: 1.25rem;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-    }
-    .radar-btn { min-height: 44px; padding: 0.55rem 0.75rem; }
-    .circulo-item { flex-wrap: wrap; }
-}
+@media (max-width: 560px) { .radar-actions { width:100%; } }
+@media (prefers-reduced-motion: reduce) { *,*::before,*::after { scroll-behavior:auto !important; transition:none !important; animation:none !important; } }
 </style>
 {% endblock %}
-
 {% block content %}
 {% csrf_token %}
-<div class="sim-wrap">
+<main class="sim-wrap">
+ <header class="sim-header">
+  <div><div class="sim-kicker">Diario · Cartografía relacional</div><h1 class="sim-title">Simbiosis</h1><p class="sim-subtitle">Señales detectadas en tus cierres y memoria de los vínculos que sostienen, rozan y transforman tu vida.</p></div>
+  <p class="sim-boundary">Tú decides quién entra en tu círculo. El Diario observa menciones; nunca convierte una señal en vínculo sin tu decisión.</p>
+  <div class="sim-metrics"><div class="sim-metric"><span class="sim-metric-val">{{ n_confirmadas }}</span><span class="sim-metric-label">Círculo</span></div><div class="sim-metric"><span class="sim-metric-val">{{ n_por_decidir }}</span><span class="sim-metric-label">Por decidir</span></div><div class="sim-metric"><span class="sim-metric-val">{{ n_interacciones }}</span><span class="sim-metric-label">Memorias</span></div></div>
+ </header>
 
-    <!-- ── Header ── -->
-    <div class="sim-header">
-        <h1 class="sim-title">Simbiosis</h1>
-        <p class="sim-subtitle">Señales detectadas en tus cierres y memoria de tus vínculos.</p>
-        <div class="sim-boundary">
-            Tú decides qué personas forman parte de tu círculo. Las detecciones son solo contexto para ayudarte a reconocer patrones.
-        </div>
-        <div class="sim-metrics">
-            <div class="sim-metric">
-                <span class="sim-metric-val">{{ n_senales }}</span>
-                <span class="sim-metric-label">Señales observadas</span>
-            </div>
-            <div class="sim-metric">
-                <span class="sim-metric-val">{{ n_por_decidir }}</span>
-                <span class="sim-metric-label">Por decidir</span>
-            </div>
-            <div class="sim-metric">
-                <span class="sim-metric-val">{{ n_interacciones }}</span>
-                <span class="sim-metric-label">Historial</span>
-            </div>
-        </div>
-    </div>
+ <section class="chapter" data-section="ahora">
+  <div><div class="chapter-index">01 · Ahora</div></div>
+  <div><h2 class="chapter-title">Lo que pide atención</h2>
+   {% if n_por_decidir %}<p class="chapter-lead">{{ n_por_decidir }} vínculo{% if n_por_decidir != 1 %}s{% endif %} requiere{% if n_por_decidir == 1 %}{% else %}n{% endif %} tu decisión</p>
+   {% elif n_senales %}<p class="chapter-lead">{{ n_senales }} {% if n_senales == 1 %}mención observada{% else %}menciones observadas{% endif %}, ninguna requiere decidir</p>
+   {% else %}<p class="chapter-lead">No hay decisiones relacionales pendientes</p>{% endif %}
+   <p id="radar-feedback" class="radar-feedback" role="status" aria-live="polite"></p>
+   {% if personas_radar %}<div id="radar-list" class="editorial-list">{% for p in personas_radar %}<div class="radar-item" id="radar-{{ p.id }}" data-id="{{ p.id }}"><span class="radar-dot"></span><div><div class="radar-name">{{ p.nombre }}</div><div class="radar-meta">{{ p.veces_mencionada }} mención{% if p.veces_mencionada != 1 %}es{% endif %} · señal repetida</div></div><div class="radar-actions"><button class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Añadir</button><button class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Ignorar</button><button class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">No es una persona</button></div></div>{% endfor %}</div>{% endif %}
+  </div>
+ </section>
 
-    <!-- ── Radar: señales repetidas que requieren decisión ── -->
-    {% if personas_radar %}
-    <div class="sim-section" style="border-color: rgba(167,139,250,0.25);">
-        <div class="sim-section-label">Requieren tu decisión</div>
-        <div class="sim-section-hint">
-            Estas personas se han repetido en varios cierres. Confirma si forman parte de tu círculo o descarta la señal por ahora.
-        </div>
-        <p id="radar-feedback" class="radar-feedback" role="status" aria-live="polite" aria-atomic="true"></p>
-        <div id="radar-list">
-        {% for p in personas_radar %}
-        {% with ultima_sombra=p.interacciones.all|first %}
-        <div class="radar-item" id="radar-{{ p.id }}">
-            <div class="radar-dot"></div>
-            <div style="flex:1;min-width:0;">
-                <div class="radar-name">{{ p.nombre }}</div>
-                <div class="radar-meta">
-                    {{ p.veces_mencionada }} mención{% if p.veces_mencionada != 1 %}es{% endif %} &middot;
-                    última {{ p.ultima_deteccion|date:"j M" }}
-                    &middot; <span style="color:var(--accent);">señal repetida</span>
-                </div>
-                {% if ultima_sombra and ultima_sombra.descripcion %}
-                <div style="font-size:0.72rem;color:rgba(124,117,144,0.55);margin-top:3px;font-style:italic;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-                    "{{ ultima_sombra.descripcion|truncatechars:70 }}"
-                </div>
-                {% endif %}
-            </div>
-            <div class="radar-actions">
-                <button type="button" class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Añadir a {{ p.nombre }} al círculo">Añadir</button>
-                <button type="button" class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" title="Se ocultará. Puede reaparecer si sigue mencionándose." aria-label="Descartar por ahora la señal de {{ p.nombre }}">Ignorar</button>
-                <button type="button" class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Indicar que {{ p.nombre }} no es una persona">No es una persona</button>
-            </div>
-        </div>
-        {% endwith %}
-        {% endfor %}
-        </div>
-        <div style="font-size:0.68rem;color:rgba(124,117,144,0.5);font-style:italic;margin-top:0.75rem;">
-            Ignorar oculta la persona. Si sigue apareciendo en tus cierres, puede reaparecer aquí.
-        </div>
-    </div>
-    {% endif %}
+ <section class="chapter" data-section="circulo">
+  <div><div class="chapter-index">02 · Círculo</div></div>
+  <div><h2 class="chapter-title">Las presencias estables</h2><p class="chapter-lead">Personas que has confirmado como contexto duradero de tu historia.</p>
+   {% if personas %}<div class="circle-grid">{% for persona in personas|slice:":4" %}<a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-item"><span class="circulo-name">{{ persona.nombre }}</span><span class="circulo-tipo">{% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}</span>{% if persona.salud_relacion is not None %}<span class="salud-bar" id="salud-bar-{{ persona.id }}" aria-label="Salud del vínculo: {{ persona.salud_relacion }} de 5"><span class="salud-fill" style="width:{{ persona.salud_relacion|mul:20 }}%"></span></span>{% else %}<span class="circulo-tipo">Sin valorar</span>{% endif %}</a>{% endfor %}</div><a class="sim-cta" href="{% url 'diario:simbiosis_dashboard' %}#circulo-completo">Ver los {{ n_confirmadas }} perfiles</a>{% else %}<p class="sim-empty">Tu círculo aún no tiene perfiles confirmados.</p>{% endif %}
+   <a href="{% url 'diario:persona_crear' %}" class="sim-cta">+ Añadir persona</a>
+  </div>
+ </section>
 
-    <!-- ── Sombra: detecciones aisladas, solo informativas ── -->
-    {% if personas_sombra %}
-    <div class="sim-section">
-        <div class="sim-section-label">Señales recientes</div>
-        <div class="sim-section-hint">
-            Menciones aisladas detectadas en tus cierres. No necesitas decidir nada; solo pasarán al radar si se repiten.
-        </div>
-        {% for p in personas_sombra %}
-        {% with ultima_sombra=p.interacciones.all|first %}
-        <div class="radar-item" id="sombra-{{ p.id }}">
-            <div class="radar-dot sombra" aria-hidden="true"></div>
-            <div style="flex:1;min-width:0;">
-                <div class="radar-name">{{ p.nombre }}</div>
-                <div class="radar-meta">Mención detectada &middot; {{ p.ultima_deteccion|date:"j M" }}</div>
-                {% if ultima_sombra and ultima_sombra.descripcion %}
-                <div class="sombra-evidencia">“{{ ultima_sombra.descripcion|truncatechars:90 }}”</div>
-                {% endif %}
-            </div>
-            <div class="radar-actions">
-                <button type="button" class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Indicar que {{ p.nombre }} no es una persona">No es una persona</button>
-            </div>
-        </div>
-        {% endwith %}
-        {% endfor %}
-    </div>
-    {% endif %}
+ <section class="chapter" data-section="memoria">
+  <div><div class="chapter-index">03 · Memoria</div></div>
+  <div><h2 class="chapter-title">Lo vivido juntos</h2><p class="chapter-lead">Las ocho escenas más recientes de tu archivo relacional.</p>
+   {% if ultimas_interacciones %}<div class="editorial-list">{% for interaccion in ultimas_interacciones %}<article class="interaccion-item"><span class="radar-dot"></span><div>{% if interaccion.origen_sombra_id %}<span class="interaccion-titulo">{{ interaccion.titulo }}</span>{% else %}<a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="interaccion-titulo">{{ interaccion.titulo }}</a>{% endif %}{% if interaccion.descripcion %}<div class="interaccion-desc">{{ interaccion.descripcion|truncatewords:18 }}</div>{% endif %}<div class="interaccion-meta">{{ interaccion.fecha|date:"j M Y" }} <span class="interaccion-origen">{% if interaccion.origen_sombra_id %}Detectada en cierre{% else %}Registrada manualmente{% endif %}</span></div></div></article>{% endfor %}</div>{% else %}<p class="sim-empty">Sin interacciones registradas todavía.</p>{% endif %}
+   <a href="{% url 'diario:interaccion_crear' %}" class="sim-cta">+ Registrar interacción</a>
+  </div>
+ </section>
 
-    {% if personas_excluidas %}
-    <details class="sim-section">
-        <summary class="sim-section-label" style="cursor:pointer;">Detecciones excluidas ({{ personas_excluidas|length }})</summary>
-        <div class="sim-section-hint">
-            El sistema no volverá a tratar estos términos como personas. Restaurar solo devuelve la señal a observación; no reactiva su historial.
-        </div>
-        {% for p in personas_excluidas %}
-        <div class="radar-item" id="excluida-{{ p.id }}">
-            <div class="radar-name">{{ p.nombre }}</div>
-            <button type="button" class="radar-btn add restaurar-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Restaurar</button>
-        </div>
-        {% endfor %}
-    </details>
-    {% endif %}
-
-    <!-- ── Círculo confirmado ── -->
-    <div class="sim-section">
-        <div class="sim-section-label">Círculo confirmado</div>
-        <div class="sim-section-hint" style="margin-bottom:{% if personas %}1rem{% else %}0{% endif %};">
-            Personas que has confirmado y cuyo historial quieres conservar como contexto estable.
-        </div>
-        {% if personas %}
-        {% for persona in personas %}
-        <a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-item">
-            <div class="circulo-name">{{ persona.nombre }}</div>
-            <div class="circulo-tipo">
-                {% if persona.tipo_relacion == 'otro' %}Sin clasificar{% else %}{{ persona.get_tipo_relacion_display }}{% endif %}
-            </div>
-            {% if persona.salud_relacion is not None %}
-            <div class="salud-bar" id="salud-bar-{{ persona.id }}" aria-label="Salud del vínculo: {{ persona.salud_relacion }} de 5">
-                <div class="salud-fill" style="width:{{ persona.salud_relacion|mul:20 }}%;"></div>
-            </div>
-            {% else %}
-            <div class="circulo-tipo">Sin valorar</div>
-            {% endif %}
-        </a>
-        {% endfor %}
-        {% else %}
-        <p class="sim-empty">Ninguna persona confirmada todavía.</p>
-        {% endif %}
-        <a href="{% url 'diario:persona_crear' %}" class="sim-cta">+ Añadir persona manualmente</a>
-    </div>
-
-    {% if personas_archivadas %}
-    <div class="sim-section">
-        <div class="sim-section-label">Vínculos archivados</div>
-        <div class="sim-section-hint">
-            Su historial sigue guardado, pero estas personas no forman parte del círculo activo ni se usan como contexto relacional.
-        </div>
-        {% for persona in personas_archivadas %}
-        <div class="circulo-item">
-            <a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-name" style="color:inherit;text-decoration:none;">
-                {{ persona.nombre }}
-            </a>
-            <form method="post" action="{% url 'diario:restaurar_persona' persona.id %}" style="margin:0;">
-                {% csrf_token %}
-                <button type="submit" class="radar-btn add" aria-label="Restaurar a {{ persona.nombre }} en el círculo">Restaurar</button>
-            </form>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    {% if identidades_absorbidas %}
-    <details class="sim-section">
-        <summary class="sim-section-label" style="cursor:pointer;min-height:44px;display:flex;align-items:center;">Identidades absorbidas ({{ identidades_absorbidas|length }})</summary>
-        <div class="sim-section-hint">Auditoría de nombres unificados. Sus interacciones permanecen enlazadas al registro original.</div>
-        {% for identidad in identidades_absorbidas %}
-        <div class="circulo-item">
-            <span class="circulo-name">{{ identidad.nombre }}</span>
-            <span class="circulo-tipo">integrada en {{ identidad.fusionada_en.nombre }}</span>
-        </div>
-        {% endfor %}
-    </details>
-    {% endif %}
-
-    <!-- ── Interacciones recientes ── -->
-    <div class="sim-section">
-        <div class="sim-section-label">Interacciones recientes</div>
-        {% if ultimas_interacciones %}
-        {% for interaccion in ultimas_interacciones %}
-        <div class="interaccion-item">
-            <div class="interaccion-dot{% if interaccion.origen_sombra_id %} detectada{% endif %}"></div>
-            <div>
-                {% if interaccion.origen_sombra_id %}
-                <span class="interaccion-titulo">{{ interaccion.titulo }}</span>
-                {% else %}
-                <a href="{% url 'diario:interaccion_editar' interaccion.id %}" class="interaccion-titulo">{{ interaccion.titulo }}</a>
-                {% endif %}
-                {% if interaccion.descripcion %}
-                <div class="interaccion-desc">{{ interaccion.descripcion|truncatewords:18 }}</div>
-                {% endif %}
-                <div class="interaccion-meta">
-                    {{ interaccion.fecha|date:"j M Y" }}
-                    {% if interaccion.origen_sombra_id %}
-                    <span class="interaccion-origen">Detectada en cierre</span>
-                    {% else %}
-                    <span class="interaccion-origen">Registrada manualmente</span>
-                    {% endif %}
-                    {% with personas_list=interaccion.personas.all %}
-                    {% if personas_list %}
-                    &middot; {{ personas_list|join:", " }}
-                    {% endif %}
-                    {% endwith %}
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-        {% else %}
-        <p class="sim-empty">Sin interacciones registradas todavía.</p>
-        {% endif %}
-        <a href="{% url 'diario:interaccion_crear' %}" class="sim-cta">+ Registrar interacción</a>
-    </div>
-
-</div>
-
+ <section class="chapter" data-section="archivo">
+  <div><div class="chapter-index">04 · Archivo</div></div>
+  <div><h2 class="chapter-title">Lo que queda detrás</h2><p class="chapter-lead">Señales, vínculos retirados y decisiones de identidad conservadas sin ocupar el presente.</p>
+   <details class="archive-details"><summary>Señales aisladas ({{ n_senales }})</summary>{% if personas_sombra %}<div class="editorial-list">{% for p in personas_sombra %}{% with evidencia=p.interacciones.all|first %}<div class="radar-item" id="sombra-{{ p.id }}"><div><div class="radar-name">{{ p.nombre }}</div><div class="radar-meta">Mención observada, todavía sin decisión</div>{% if evidencia.descripcion %}<div class="sombra-evidencia">“{{ evidencia.descripcion|truncatechars:90 }}”</div>{% endif %}</div><button class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">No es una persona</button></div>{% endwith %}{% endfor %}</div>{% else %}<p class="sim-empty">No hay señales aisladas.</p>{% endif %}</details>
+   {% if personas_excluidas %}<details class="archive-details"><summary>Detecciones excluidas ({{ personas_excluidas|length }})</summary>{% for p in personas_excluidas %}<div class="radar-item" id="excluida-{{ p.id }}"><span class="radar-name">{{ p.nombre }}</span><button class="radar-btn add restaurar-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Restaurar</button></div>{% endfor %}</details>{% endif %}
+   {% if personas_archivadas %}<details class="archive-details"><summary>Vínculos archivados ({{ personas_archivadas|length }})</summary>{% for persona in personas_archivadas %}<div class="circulo-item"><a href="{% url 'diario:persona_detalle' persona.id %}" class="circulo-name">{{ persona.nombre }}</a><form method="post" action="{% url 'diario:restaurar_persona' persona.id %}">{% csrf_token %}<button class="radar-btn add" type="submit">Restaurar</button></form></div>{% endfor %}</details>{% endif %}
+   {% if identidades_absorbidas %}<details class="archive-details"><summary>Identidades absorbidas · auditoría ({{ identidades_absorbidas|length }})</summary><p class="radar-meta">Auditoría de nombres unificados. Sus interacciones permanecen enlazadas al registro original.</p>{% for identidad in identidades_absorbidas %}<div class="circulo-item"><span class="circulo-name">{{ identidad.nombre }}</span><span class="circulo-tipo">integrada en {{ identidad.fusionada_en.nombre }}</span></div>{% endfor %}</details>{% endif %}
+  </div>
+ </section>
+</main>
 <script>
-const CSRF = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
-const feedback = document.getElementById('radar-feedback');
-
-function mostrarFeedback(mensaje, tipo) {
-    if (!feedback) return;
-    feedback.textContent = mensaje;
-    feedback.className = `radar-feedback is-${tipo}`;
-}
-
+const CSRF=document.querySelector('[name=csrfmiddlewaretoken]')?.value||'{{ csrf_token }}';const feedback=document.getElementById('radar-feedback');
+function mostrarFeedback(m,t){if(feedback){feedback.textContent=m;feedback.className=`radar-feedback is-${t}`}}
 async function resolverPersona(button, accion) {
-    const id = button.dataset.id;
-    const nombre = button.dataset.nombre || 'La persona';
-    const row = document.getElementById('radar-' + id)
-        || document.getElementById('sombra-' + id)
-        || document.getElementById('excluida-' + id);
-    const buttons = row ? row.querySelectorAll('button') : [button];
-    buttons.forEach(control => { control.disabled = true; });
-    mostrarFeedback('Guardando tu decisión…', 'pending');
-
-    try {
-        const response = await fetch("{% url 'diario:promover_persona_interina' %}", {
-            method: 'POST',
-            headers: {'X-CSRFToken': CSRF, 'Content-Type': 'application/json'},
-            body: JSON.stringify({id, accion})
-        });
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok || !data.ok) {
-            throw new Error(data.error || 'No se pudo guardar la decisión.');
-        }
-
-        if (row) row.remove();
-        mostrarFeedback(
-            accion === 'promover' ? `${nombre} se ha añadido a tu círculo.`
-                : accion === 'no_persona' ? `${nombre} queda excluido como persona.`
-                : accion === 'restaurar' ? `${nombre} vuelve a observación.`
-                : `${nombre} se ha ocultado por ahora.`,
-            'success'
-        );
-    } catch (error) {
-        buttons.forEach(control => { control.disabled = false; });
-        mostrarFeedback(error.message || 'No se pudo guardar la decisión. Inténtalo de nuevo.', 'error');
-    }
+ const id=button.dataset.id,nombre=button.dataset.nombre||'La persona',row=document.getElementById('radar-'+id)||document.getElementById('sombra-'+id)||document.getElementById('excluida-'+id),buttons=row?row.querySelectorAll('button'):[button];
+ buttons.forEach(control=>control.disabled=true);mostrarFeedback('Guardando tu decisión…','pending');
+ try { const response=await fetch("{% url 'diario:promover_persona_interina' %}",{method:'POST',headers:{'X-CSRFToken':CSRF,'Content-Type':'application/json'},body:JSON.stringify({id,accion})}); const data=await response.json().catch(()=>({}));
+  if (!response.ok || !data.ok) { throw new Error(data.error||'No se pudo guardar la decisión.'); }
+  if(row)row.remove();mostrarFeedback(accion==='promover'?`${nombre} se ha añadido a tu círculo.`:accion==='no_persona'?`${nombre} queda excluido como persona.`:accion==='restaurar'?`${nombre} vuelve a observación.`:`${nombre} se ha ocultado por ahora.`,'success');
+ } catch(error) { buttons.forEach(control=>control.disabled=false);mostrarFeedback(error.message,'error'); }
 }
-
-document.querySelectorAll('.promover-btn').forEach(button => {
-    button.addEventListener('click', () => resolverPersona(button, 'promover'));
-});
-
-document.querySelectorAll('.descartar-btn').forEach(button => {
-    button.addEventListener('click', () => resolverPersona(button, 'descartar'));
-});
-document.querySelectorAll('.no-persona-btn').forEach(button => {
-    button.addEventListener('click', () => resolverPersona(button, 'no_persona'));
-});
-document.querySelectorAll('.restaurar-btn').forEach(button => {
-    button.addEventListener('click', () => resolverPersona(button, 'restaurar'));
-});
+document.querySelectorAll('.promover-btn').forEach(b=>b.addEventListener('click',()=>resolverPersona(b,'promover')));document.querySelectorAll('.descartar-btn').forEach(b=>b.addEventListener('click',()=>resolverPersona(b,'descartar')));document.querySelectorAll('.no-persona-btn').forEach(b=>b.addEventListener('click',()=>resolverPersona(b,'no_persona')));document.querySelectorAll('.restaurar-btn').forEach(b=>b.addEventListener('click',()=>resolverPersona(b,'restaurar')));
 </script>
 {% endblock %}
