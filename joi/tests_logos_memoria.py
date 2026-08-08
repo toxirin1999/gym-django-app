@@ -9,6 +9,7 @@ from django.utils import timezone
 from clientes.models import Cliente
 from diario.models import ReflexionLibre
 from joi.models import MensajeJOI
+from joi.context_processors import _get_mensaje_gym, TRIGGERS_SOLO_HABITACION
 from joi.services import _hay_contexto_para_revision, _leer_diario_reciente, extraer_entidades_simbiosis
 
 
@@ -94,3 +95,45 @@ class ReflexionLibreSignalTest(TestCase):
         self.assertEqual(cache.get(other_key), 'other')
         self.assertEqual(MensajeJOI.objects.count(), 0)
         generar_mock.assert_not_called()
+
+    @patch('joi.services.generar_mensaje_joi')
+    def test_delete_invalida_solo_cache_del_usuario_sin_voz(self, generar_mock):
+        with self.captureOnCommitCallbacks(execute=True):
+            reflexion = ReflexionLibre.objects.create(
+                usuario=self.user,
+                contenido='Texto que después se elimina',
+            )
+
+        own_key = f'joi_ctx_{self.user.pk}'
+        other_key = f'joi_ctx_{self.other.pk}'
+        unrelated_key = f'joi_apertura_lock_{self.user.pk}_prueba'
+        cache.set(own_key, 'own')
+        cache.set(other_key, 'other')
+        cache.set(unrelated_key, 'unrelated')
+
+        with self.captureOnCommitCallbacks(execute=True):
+            reflexion.delete()
+
+        self.assertIsNone(cache.get(own_key))
+        self.assertEqual(cache.get(other_key), 'other')
+        self.assertEqual(cache.get(unrelated_key), 'unrelated')
+        self.assertEqual(MensajeJOI.objects.count(), 0)
+        generar_mock.assert_not_called()
+
+
+class SintesisJOIPresenciaGlobalTest(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user('sintesis-room-only', password='x')
+
+    @patch('joi.context_processors._apertura_on_demand', return_value=None)
+    def test_sintesis_joi_es_solo_habitacion_y_no_sale_en_contexto_global(self, apertura_mock):
+        MensajeJOI.objects.create(
+            user=self.user,
+            trigger='sintesis_joi',
+            mensaje='Una síntesis que pertenece a la habitación.',
+            leido=False,
+        )
+
+        self.assertIn('sintesis_joi', TRIGGERS_SOLO_HABITACION)
+        self.assertIsNone(_get_mensaje_gym(self.user))
+        apertura_mock.assert_called_once_with(self.user)

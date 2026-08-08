@@ -11,6 +11,7 @@ TRIGGERS_SOLO_HABITACION = frozenset({
     'ausencia_detectada',
     'hyrox_ausencia',
     'dialogo_respondido',
+    'sintesis_joi',
 })
 
 
