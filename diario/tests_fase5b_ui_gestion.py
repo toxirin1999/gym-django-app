@@ -180,9 +180,7 @@ class AdvertenciaReinicioTestCase(TestCase):
 
 
 class TransicionesVisiblesEnDashboardTestCase(TestCase):
-    """Pausar/reactivar/cerrar deben reflejarse con claridad en el
-    dashboard, y el grid de días no debe ser interactivo si el hábito
-    no está activo."""
+    """La portada separa práctica activa y archivo sin marcado diario."""
 
     def setUp(self):
         self.user = User.objects.create_user(username='david', password='x')
@@ -192,19 +190,19 @@ class TransicionesVisiblesEnDashboardTestCase(TestCase):
     def test_pausar_aparece_en_dashboard_como_pausado_sin_grid_interactivo(self):
         self.client.post(f'/diario/habitos/{self.gesto.id}/pausar/')
         resp = self.client.get('/diario/habitos/')
-        item = next(i for i in resp.context['habitos_positivos'] if i['habito'].id == self.gesto.id)
-        self.assertEqual(item['habito'].estado, 'pausado')
+        ids_archivados = [g.id for g in resp.context['gestos_archivados']]
+        self.assertIn(self.gesto.id, ids_archivados)
         self.assertContains(resp, 'Pausado')
         self.assertContains(resp, 'Reactivar')
-        self.assertNotContains(resp, 'dia-toggle" data-habito-id="%d"' % self.gesto.id)
+        self.assertNotContains(resp, 'dia-toggle')
 
-    def test_reactivar_vuelve_a_aparecer_como_activo_con_grid_interactivo(self):
+    def test_reactivar_vuelve_a_aparecer_como_activo_sin_marcado_en_portada(self):
         self.client.post(f'/diario/habitos/{self.gesto.id}/pausar/')
         self.client.post(f'/diario/habitos/{self.gesto.id}/reactivar/')
         resp = self.client.get('/diario/habitos/')
         item = next(i for i in resp.context['habitos_positivos'] if i['habito'].id == self.gesto.id)
         self.assertEqual(item['habito'].estado, 'activo')
-        self.assertContains(resp, 'dia-toggle" data-habito-id="%d"' % self.gesto.id)
+        self.assertNotContains(resp, 'dia-toggle')
 
     def test_cerrar_desaparece_de_activos_y_aparece_en_cerrados(self):
         self.client.post(f'/diario/habitos/{self.gesto.id}/cerrar/')
@@ -213,8 +211,10 @@ class TransicionesVisiblesEnDashboardTestCase(TestCase):
         self.assertNotIn(self.gesto.id, ids_positivos)
         ids_cerrados = [g.id for g in resp.context['habitos_cerrados_cultivo']]
         self.assertIn(self.gesto.id, ids_cerrados)
-        self.assertContains(resp, 'Cerrado el')
+        self.assertContains(resp, 'Retirado')
+        self.assertContains(resp, 'Restaurar')
 
-    def test_gesto_activo_normal_conserva_grid_interactivo(self):
+    def test_gesto_activo_normal_no_tiene_grid_interactivo(self):
         resp = self.client.get('/diario/habitos/')
-        self.assertContains(resp, 'dia-toggle" data-habito-id="%d"' % self.gesto.id)
+        self.assertNotContains(resp, 'dia-toggle')
+        self.assertContains(resp, 'Se registra al cerrar el día')

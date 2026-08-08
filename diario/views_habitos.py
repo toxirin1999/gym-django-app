@@ -70,7 +70,8 @@ def habitos_dashboard(request):
     habitos_negativos = []
 
     for gesto in gestos_por_tipo['cultivo'] + gestos_por_tipo['suelto']:
-        dias_mes = HabitosService.proyeccion_mensual(gesto, hoy.year, hoy.month)
+        if gesto.estado != 'activo':
+            continue
         insights = HabitosService.generar_insights_basicos(gesto)
 
         # Fase 5A: la racha (actual y mejor) solo es una lectura honesta
@@ -86,13 +87,14 @@ def habitos_dashboard(request):
 
         item = {
             'habito': gesto,
-            'dias_mes': dias_mes,
             'progreso': {'racha': racha},
+            'progreso_semana': HabitosService.progreso_semana(gesto, hoy),
             'mejor_racha_visible': mejor_racha_visible,
             'insights': insights,
             'cadencia_label': _cadencia_label(gesto),
             'lectura_cultivo': lectura_cultivo,
             'prosoche_habito_legacy_id': _legacy_prosoche_habito_id(request.user, gesto.nombre),
+            'ultimo_impulso': gesto.triggers.order_by('-fecha', '-hora').first() if gesto.tipo == 'suelto' else None,
         }
 
         if gesto.tipo == 'suelto':
@@ -107,6 +109,7 @@ def habitos_dashboard(request):
         'total_positivos': len(habitos_positivos),
         'total_negativos': len(habitos_negativos),
         'habitos_cerrados_cultivo': HabitosService.obtener_gestos_cerrados_cultivo(request.user),
+        'gestos_archivados': HabitosService.obtener_gestos_archivados(request.user),
     }
 
     return render(request, 'diario/habitos_dashboard.html', context)
@@ -244,6 +247,8 @@ def habito_toggle_dia(request):
             return JsonResponse({'success': False, 'error': 'Día fuera de rango para el mes actual.'}, status=400)
 
         fecha = date(hoy.year, hoy.month, dia_num)
+        if fecha > hoy:
+            return JsonResponse({'success': False, 'error': 'No se pueden registrar fechas futuras.'}, status=400)
         completado = HabitosService.toggle_dia(gesto, fecha)
 
         insignias_data = []
@@ -310,7 +315,7 @@ def habito_wizard_4leyes(request, habito_id):
 def habito_pausar(request, habito_id):
     """Pausa un Gesto (Phase 2.0D). Conserva todo el historial de registros.
     Fase 3: además abre una PausaGesto (ver HabitosService.pausar_gesto)."""
-    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
+    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user, estado__in=('activo', 'pausado'))
     HabitosService.pausar_gesto(gesto)
     messages.success(request, f'Gesto "{gesto.nombre}" pausado.')
     return redirect('diario:habitos_dashboard')
@@ -319,9 +324,7 @@ def habito_pausar(request, habito_id):
 @login_required
 @require_http_methods(["POST"])
 def habito_reactivar(request, habito_id):
-    """Reactiva un Gesto pausado (Fase 3). Cierra la PausaGesto abierta
-    y vuelve a estado='activo'. No existe transición inversa para
-    hábitos 'cerrado' — cerrar es definitivo."""
+    """Reactiva un Gesto pausado y cierra su PausaGesto abierta."""
     gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user, estado='pausado')
     HabitosService.reactivar_gesto(gesto)
     messages.success(request, f'Gesto "{gesto.nombre}" reactivado.')
@@ -331,17 +334,28 @@ def habito_reactivar(request, habito_id):
 @login_required
 @require_http_methods(["POST"])
 def habito_cerrar(request, habito_id):
-    """Cierra un Gesto (Phase 2.0D). Conserva todo el historial de registros.
-    Fase 3: si había una pausa abierta, se cierra en el mismo movimiento
-    (misma regla de colapso que reactivar) para no dejar un intervalo
-    huérfano tras el cierre definitivo."""
+    """Alias legacy de retirada recuperable; conserva todo el historial."""
     gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
-    fecha_cierre = timezone.localdate()
-    HabitosService._cerrar_pausa_abierta(gesto, fecha_cierre)
-    gesto.estado = 'cerrado'
-    gesto.fecha_cierre = fecha_cierre
-    gesto.save(update_fields=['estado', 'fecha_cierre'])
-    messages.success(request, f'Gesto "{gesto.nombre}" cerrado.')
+    HabitosService.retirar_gesto(gesto)
+    messages.success(request, f'Gesto "{gesto.nombre}" retirado. Puedes restaurarlo desde el archivo.')
+    return redirect('diario:habitos_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
+def retirar_gesto(request, habito_id):
+    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
+    HabitosService.retirar_gesto(gesto)
+    messages.success(request, f'Gesto "{gesto.nombre}" retirado. Su historia sigue intacta.')
+    return redirect('diario:habitos_dashboard')
+
+
+@login_required
+@require_http_methods(["POST"])
+def restaurar_gesto(request, habito_id):
+    gesto = get_object_or_404(Gesto, id=habito_id, usuario=request.user)
+    HabitosService.restaurar_gesto(gesto)
+    messages.success(request, f'Gesto "{gesto.nombre}" restaurado a la práctica activa.')
     return redirect('diario:habitos_dashboard')
 
 

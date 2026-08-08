@@ -6,6 +6,7 @@
 # pero ya no es la fuente de datos del dashboard de gestos).
 
 import calendar
+from datetime import timedelta
 
 from django.db.models import Q
 from django.utils import timezone
@@ -45,6 +46,13 @@ class HabitosService:
         return Gesto.objects.filter(usuario=usuario, tipo='cultivo', estado='cerrado').order_by('-fecha_cierre')
 
     @staticmethod
+    def obtener_gestos_archivados(usuario):
+        """Gestos fuera de la práctica cotidiana, sin perder su historial."""
+        return Gesto.objects.filter(
+            usuario=usuario, estado__in=('pausado', 'cerrado')
+        ).order_by('estado', 'tipo', 'nombre')
+
+    @staticmethod
     def proyeccion_mensual(gesto, año, mes):
         """
         Devuelve la proyección de un Gesto para un mes/año dados como
@@ -79,6 +87,9 @@ class HabitosService:
         elimina (toggle off) y devuelve False. Si no existe, lo crea
         (toggle on), recalcula mejor_racha y devuelve True.
         """
+        if fecha > timezone.localdate():
+            raise ValueError('No se pueden registrar fechas futuras.')
+
         registro = RegistroGesto.objects.filter(
             gesto=gesto, fecha=fecha, estado='cumplido'
         ).first()
@@ -99,6 +110,14 @@ class HabitosService:
         return True
 
     @staticmethod
+    def progreso_semana(gesto, hoy=None):
+        hoy = hoy or timezone.localdate()
+        inicio = hoy - timedelta(days=hoy.weekday())
+        return gesto.registros.filter(
+            fecha__range=(inicio, hoy), estado='cumplido'
+        ).count()
+
+    @staticmethod
     def pausar_gesto(gesto, fecha=None):
         """
         Pausa un Gesto (Fase 3): pone estado='pausado' y abre una
@@ -106,6 +125,8 @@ class HabitosService:
         ya hay una pausa abierta, no crea una segunda (la restricción de
         unicidad de PausaGesto lo impediría de todas formas).
         """
+        if gesto.estado == 'cerrado':
+            raise ValueError('Un gesto retirado no se puede pausar.')
         fecha = fecha or timezone.localdate()
         if not gesto.pausas.filter(fecha_fin__isnull=True).exists():
             PausaGesto.objects.create(gesto=gesto, fecha_inicio=fecha, fecha_fin=None)
@@ -127,6 +148,26 @@ class HabitosService:
         if gesto.estado != 'activo':
             gesto.estado = 'activo'
             gesto.save(update_fields=['estado'])
+
+    @staticmethod
+    def retirar_gesto(gesto, fecha=None):
+        """Retira de la práctica un gesto, conservando gesto y registros."""
+        if gesto.estado == 'cerrado':
+            return
+        fecha = fecha or timezone.localdate()
+        HabitosService._cerrar_pausa_abierta(gesto, fecha)
+        gesto.estado = 'cerrado'
+        gesto.fecha_cierre = fecha
+        gesto.save(update_fields=['estado', 'fecha_cierre'])
+
+    @staticmethod
+    def restaurar_gesto(gesto):
+        """Devuelve al cultivo activo un gesto retirado, de forma idempotente."""
+        if gesto.estado != 'cerrado':
+            return
+        gesto.estado = 'activo'
+        gesto.fecha_cierre = None
+        gesto.save(update_fields=['estado', 'fecha_cierre'])
 
     @staticmethod
     def _cerrar_pausa_abierta(gesto, fecha):

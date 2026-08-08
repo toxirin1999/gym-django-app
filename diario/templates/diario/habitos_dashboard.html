@@ -1,536 +1,94 @@
 {% extends 'diario/base_stoic.html' %}
-{% load static %}
 
 {% block title %}Gestos — Diario{% endblock %}
-{% block body_class %}diario-dark{% endblock %}
+{% block body_class %}diario-dark gestos-page{% endblock %}
 
 {% block extra_css %}
 <style>
-    :root {
-        --bg-primary: var(--jds-bg);
-        --bg-secondary: var(--jds-bg-soft);
-        --bg-card: var(--jds-surface-strong);
-        --bg-accent: var(--jds-joi-soft);
-        --text-primary: var(--jds-text);
-        --text-secondary: var(--jds-text-muted);
-        --text-muted: var(--jds-text-soft);
-        --accent-orange: var(--jds-joi);
-        --accent-orange-dark: #7C3AED;
-        --accent-green: var(--jds-good);
-        --accent-green-light: var(--jds-good-soft);
-        --accent-blue: var(--jds-accent);
-        --accent-purple: var(--jds-joi);
-        --accent-red: var(--jds-danger);
-        --accent-yellow: var(--jds-warning);
-        --border-color: var(--jds-border);
-        --shadow-soft: var(--jds-shadow-soft);
-        --shadow-medium: var(--jds-shadow-soft);
-        --radius-sm: var(--jds-radius-sm);
-        --radius-md: var(--jds-radius-md);
-        --radius-lg: var(--jds-radius-lg);
-        --radius-xl: var(--jds-radius-xl);
-    }
-
-    body {
-        font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
-        background: var(--bg-primary) !important;
-        color: var(--text-primary);
-    }
-
-    .dashboard-container {
-        max-width: 640px;
-        margin: 0 auto;
-        padding: 1.25rem 1rem 3rem;
-    }
-
-    /* Header */
-    .dashboard-header {
-        padding: 0;
-        margin-bottom: 1.1rem;
-    }
-
-    .page-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        letter-spacing: -0.01em;
-        color: var(--text-primary);
-        margin-bottom: 0.2rem;
-    }
-
-    .page-subtitle {
-        font-size: 0.78rem;
-        color: var(--text-secondary);
-        font-weight: 500;
-    }
-
-    /* Cards */
-    .habit-card {
-        background: var(--bg-card);
-        border-radius: var(--radius-lg);
-        padding: 1.1rem 1.25rem;
-        margin-bottom: 0.75rem;
-        box-shadow: var(--shadow-soft);
-        border: 1px solid var(--border-color);
-    }
-
-    .habit-card.positivo {
-        border-left: 4px solid var(--accent-green);
-    }
-
-    .habit-card.negativo {
-        border-left: 4px solid var(--accent-purple);
-    }
-
-    .habit-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 1rem;
-    }
-
-    .habit-name {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.25rem;
-    }
-
-    /* Buttons */
-    .btn-primary-custom {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        background: var(--bg-accent);
-        color: var(--accent-orange);
-        border: 1.5px solid rgba(167,139,250,0.5);
-        padding: 0.7rem 1.5rem;
-        border-radius: 100px;
-        font-weight: 700;
-        font-size: 0.85rem;
-        transition: all 0.15s;
-    }
-
-    .btn-primary-custom:hover {
-        background: rgba(167,139,250,0.2);
-        border-color: var(--accent-orange);
-        color: var(--text-primary);
-    }
-
-    .btn-outline-custom {
-        background: transparent;
-        color: var(--text-primary);
-        border: 1px solid var(--border-color);
-        padding: 0.5rem 1rem;
-        border-radius: var(--radius-md);
-        font-weight: 600;
-        font-size: 0.85rem;
-        transition: all 0.3s ease;
-    }
-
-    .btn-outline-custom:hover {
-        background: var(--bg-accent);
-        border-color: var(--accent-orange);
-        color: var(--accent-orange);
-    }
-
-    .habit-action-text {
-        background: transparent;
-        border: none;
-        padding: 0.2rem 0.3rem;
-        font-size: 0.78rem;
-        font-weight: 600;
-        color: var(--text-secondary);
-        cursor: pointer;
-        transition: color 0.2s ease;
-    }
-
-    .habit-action-text:hover {
-        color: var(--accent-orange);
-    }
-
-    .habit-action-cerrar:hover {
-        color: var(--accent-red);
-    }
-
-    /* Empty State */
-    .empty-state {
-        text-align: center;
-        padding: 2.5rem 1.25rem;
-        background: var(--bg-card);
-        border: 1px solid var(--border-color);
-        border-radius: var(--radius-lg);
-        box-shadow: var(--shadow-soft);
-    }
-
-    .empty-icon {
-        font-size: 2rem;
-        margin-bottom: 0.75rem;
-        opacity: 0.3;
-    }
-
-    .empty-title {
-        font-size: 1.05rem;
-        font-weight: 700;
-        color: var(--text-primary);
-        margin-bottom: 0.4rem;
-    }
-
-    .empty-text {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-bottom: 1.25rem;
-    }
-
-    /* Animations */
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .fade-in {
-        animation: fadeInUp 0.5s ease forwards;
-    }
-
-    .delay-1 {
-        animation-delay: 0.1s;
-        opacity: 0;
-    }
-
-    .delay-2 {
-        animation-delay: 0.2s;
-        opacity: 0;
-    }
-
-    .delay-3 {
-        animation-delay: 0.3s;
-        opacity: 0;
-    }
+  :root { --gesto-oro:#d4b56f; --gesto-tinta:#f0eadf; --gesto-muted:#999187; --gesto-line:rgba(221,202,161,.16); --gesto-panel:#121116; }
+  .gestos-page { background:#0c0b0f !important; color:var(--gesto-tinta); font-family:'Manrope', sans-serif; }
+  .gestos-shell { max-width: 980px; margin:0 auto; padding:clamp(2rem,6vw,5rem) 1.25rem 6rem; }
+  .gestos-hero { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(240px,.5fr); gap:3rem; padding-bottom:3rem; border-bottom:1px solid var(--gesto-line); }
+  .eyebrow,.section-no { color:var(--gesto-oro); font:700 .68rem/1 'Manrope',sans-serif; letter-spacing:.18em; text-transform:uppercase; }
+  .gestos-hero h1 { margin:.65rem 0 1rem; font:500 clamp(3.5rem,10vw,7.5rem)/.8 'Crimson Pro',serif; letter-spacing:-.055em; }
+  .gestos-intro { max-width:590px; color:#bbb3a8; font:400 clamp(1.15rem,2.4vw,1.5rem)/1.45 'Crimson Pro',serif; }
+  .hero-note { align-self:end; padding:1.25rem 0 0 1.25rem; border-left:1px solid var(--gesto-oro); color:var(--gesto-muted); font-size:.78rem; line-height:1.7; }
+  .gestos-section { display:grid; grid-template-columns:150px 1fr; gap:2rem; padding:3rem 0; border-bottom:1px solid var(--gesto-line); }
+  .section-label h2 { margin:.65rem 0 0; font:500 1.9rem/1 'Crimson Pro',serif; }
+  .today-reading { display:flex; align-items:center; justify-content:space-between; gap:2rem; padding:1.4rem 0; }
+  .today-reading strong { display:block; font:500 1.45rem/1.2 'Crimson Pro',serif; }
+  .today-reading p { margin:.4rem 0 0; color:var(--gesto-muted); font-size:.82rem; }
+  .gesture-list { border-top:1px solid var(--gesto-line); }
+  .gesture-row { display:grid; grid-template-columns:minmax(160px,1.15fr) minmax(150px,.75fr) minmax(220px,1.35fr) auto; gap:1.25rem; align-items:center; padding:1.3rem 0; border-bottom:1px solid var(--gesto-line); }
+  .gesture-name { font:500 1.35rem/1.1 'Crimson Pro',serif; }
+  .gesture-description,.gesture-reading,.gesture-meta { color:var(--gesto-muted); font-size:.76rem; line-height:1.55; }
+  .gesture-meta strong { color:#d7cfc3; font-weight:600; }
+  .button,.text-action,summary { min-height: 44px; display:inline-flex; align-items:center; justify-content:center; }
+  .button { padding:.7rem 1rem; border:1px solid var(--gesto-oro); color:#17130c; background:var(--gesto-oro); text-decoration:none; font-size:.72rem; font-weight:700; letter-spacing:.04em; }
+  .button:hover { color:#17130c; background:#e2c986; }
+  .button.secondary { color:var(--gesto-oro); background:transparent; }
+  .button.secondary:hover { color:#0c0b0f; background:var(--gesto-oro); }
+  .management { grid-column:1/-1; margin-top:-.4rem; }
+  .management summary { width:max-content; color:#817a71; cursor:pointer; font-size:.7rem; }
+  .management-actions { display:flex; flex-wrap:wrap; gap:.4rem 1rem; padding:.6rem 0; }
+  .text-action { padding:0; border:0; color:#aaa197; background:none; text-decoration:underline; text-underline-offset:.3em; font-size:.72rem; cursor:pointer; }
+  .text-action.danger { color:#c69084; }
+  .archive { background:var(--gesto-panel); border:1px solid var(--gesto-line); padding:0 1.25rem; }
+  .archive > summary { justify-content:flex-start; gap:.75rem; color:#d4ccc0; font-size:.78rem; cursor:pointer; }
+  .archive-row { display:grid; grid-template-columns:1fr auto auto; gap:1rem; align-items:center; min-height:64px; border-top:1px solid var(--gesto-line); }
+  .archive-state { color:var(--gesto-muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; }
+  .empty { padding:1.25rem 0; color:var(--gesto-muted); font:italic 1rem 'Crimson Pro',serif; }
+  a:focus-visible,button:focus-visible,summary:focus-visible { outline:2px solid #f2d997; outline-offset:4px; }
+  @media (max-width: 760px) { .gestos-hero,.gestos-section { grid-template-columns:1fr; gap:1.5rem; } .gesture-row { grid-template-columns:1fr auto; } .gesture-meta,.gesture-reading { grid-column:1/-1; } }
+  @media (max-width: 600px) { .gestos-shell { padding-inline:1rem; } .gestos-hero h1{font-size:4rem}.today-reading{align-items:flex-start;flex-direction:column}.gesture-row{grid-template-columns:1fr}.gesture-row>.button{width:100%}.archive-row{grid-template-columns:1fr}.archive-row form{width:100%}.archive-row button{width:100%} }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { animation:none !important; transition:none !important; scroll-behavior:auto !important; } }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <!-- Header -->
-    <div class="dashboard-header fade-in">
-        <h1 class="page-title">Gestos</h1>
-        <p class="page-subtitle">Señales pequeñas que merecen ser observadas.</p>
+<div class="gestos-shell">
+  <header class="gestos-hero">
+    <div><span class="eyebrow">Diario · práctica cotidiana</span><h1>Gestos</h1><p class="gestos-intro">Lo pequeño no necesita ruido para dejar huella. Aquí se lee y se cuida la práctica; el registro pertenece al ritual nocturno.</p></div>
+    <p class="hero-note"><strong>Se registra al cerrar el día.</strong><br>Esta portada no es un calendario de casillas, sino una lectura de lo que estás cultivando y soltando.</p>
+  </header>
+
+  <section class="gestos-section" aria-labelledby="hoy-title">
+    <div class="section-label"><span class="section-no">01 Hoy</span><h2 id="hoy-title">Presencia</h2></div>
+    <div class="today-reading"><div><strong>{{ total_positivos }} en cultivo · {{ total_negativos }} en distancia</strong><p>La observación de hoy quedará asentada durante el cierre.</p></div><a class="button" href="{% url 'diario:presencia_cierre' %}">Cerrar el día</a></div>
+  </section>
+
+  <section class="gestos-section" aria-labelledby="cultivo-title">
+    <div class="section-label"><span class="section-no">02 Cultivo</span><h2 id="cultivo-title">Lo que crece</h2></div>
+    <div class="gesture-list">
+      {% for item in habitos_positivos %}
+      <article class="gesture-row">
+        <div><div class="gesture-name">{{ item.habito.nombre }}</div>{% if item.habito.descripcion %}<div class="gesture-description">{{ item.habito.descripcion }}</div>{% endif %}</div>
+        <div class="gesture-meta"><strong>{{ item.cadencia_label }}</strong><br>{{ item.progreso_semana }} registros esta semana</div>
+        <div class="gesture-reading">{% if item.lectura_cultivo %}{{ item.lectura_cultivo.texto }}{% else %}Todavía no hay una lectura estable.{% endif %}</div>
+        <details class="management"><summary>Gestionar</summary><div class="management-actions"><a class="text-action" href="{% url 'diario:habito_editar' item.habito.id %}">Editar</a><a class="text-action" href="{% url 'diario:habito_configurar_cadencia' item.habito.id %}">Cadencia</a><form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}">{% csrf_token %}<button class="text-action" type="submit">Pausar</button></form><form method="post" action="{% url 'diario:retirar_gesto' item.habito.id %}">{% csrf_token %}<button class="text-action danger" type="submit">Retirar</button></form></div></details>
+      </article>
+      {% empty %}<p class="empty">No hay gestos activos en cultivo.</p>{% endfor %}
     </div>
+  </section>
 
-    <!-- Gestos que cultivo -->
-    {% if habitos_positivos %}
-    <div class="fade-in delay-1">
-        <div style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem;">
-            Gestos que cultivo
-        </div>
-        {% for item in habitos_positivos %}
-        <div class="habit-card positivo{% if item.habito.estado == 'pausado' %} pausado{% endif %}">
-            <div class="habit-header">
-                <div>
-                    <div class="habit-name">
-                        {{ item.habito.nombre }}
-                        {% if item.habito.estado == 'pausado' %}
-                        <span style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); background: var(--bg-secondary); border-radius: var(--radius-sm); padding: 0.15rem 0.5rem; margin-left: 0.4rem;">Pausado</span>
-                        {% endif %}
-                    </div>
-                    {% if item.habito.descripcion %}
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        {{ item.habito.descripcion }}
-                    </div>
-                    {% endif %}
-                    <div style="font-size: 0.72rem; color: var(--text-secondary); margin-top: 0.3rem;">
-                        Cadencia: {{ item.cadencia_label }}
-                    </div>
-                </div>
-            </div>
-
-            <!-- Lectura principal del analizador (Fase 5C) -->
-            {% if item.lectura_cultivo %}
-            <div class="lectura-cultivo lectura-{{ item.lectura_cultivo.tipo_lectura }}"
-                style="margin-top: 0.6rem; padding: 0.6rem 0.8rem; border-radius: var(--radius-md); font-size: 0.82rem; border: 1px solid var(--border-color); {% if item.lectura_cultivo.estado == 'insuficiente' %}color: var(--text-secondary); font-style: italic;{% endif %}">
-                <span style="font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 0.2rem;">
-                    {{ item.lectura_cultivo.etiqueta }}
-                </span>
-                {{ item.lectura_cultivo.texto }}
-
-                {% if item.lectura_cultivo.nota_secundaria %}
-                <div style="margin-top: 0.4rem; padding-top: 0.4rem; border-top: 1px solid var(--border-color); font-size: 0.75rem;">
-                    <span style="font-size: 0.6rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 0.15rem;">
-                        {{ item.lectura_cultivo.nota_secundaria.etiqueta }}
-                    </span>
-                    {{ item.lectura_cultivo.nota_secundaria.texto }}
-                </div>
-                {% endif %}
-
-                {% if item.lectura_cultivo.trazabilidad %}
-                <details style="margin-top: 0.4rem; font-size: 0.7rem; color: var(--text-secondary);">
-                    <summary style="cursor: pointer;">Trazabilidad</summary>
-                    <div style="margin-top: 0.25rem;">
-                        Periodo: {{ item.lectura_cultivo.trazabilidad.periodo_desde }} – {{ item.lectura_cultivo.trazabilidad.periodo_hasta }}.
-                        {{ item.lectura_cultivo.trazabilidad.total_dias_excluidos }} día{{ item.lectura_cultivo.trazabilidad.total_dias_excluidos|pluralize }} excluido{{ item.lectura_cultivo.trazabilidad.total_dias_excluidos|pluralize }} del cómputo (pausado o no observado).
-                    </div>
-                </details>
-                {% endif %}
-            </div>
-            {% endif %}
-
-            <!-- Grid de Días del Mes -->
-            <div style="margin-top: 0.5rem;">
-                <div
-                    style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    Días del mes
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
-                    {% for dia in item.dias_mes %}
-                    {% if item.habito.estado == 'activo' %}
-                    <div class="dia-toggle" data-habito-id="{{ item.habito.id }}" data-dia="{{ dia.numero }}"
-                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
-                        {{ dia.numero }}
-                    </div>
-                    {% else %}
-                    <div style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; opacity: 0.45; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
-                        {{ dia.numero }}
-                    </div>
-                    {% endif %}
-                    {% endfor %}
-                </div>
-            </div>
-
-            {% if item.progreso.racha > 0 %}
-            <div
-                style="margin-top: 1rem; padding: 0.75rem; background: var(--accent-green-light); border-radius: var(--radius-md); text-align: center;">
-                <span style="font-weight: 700; color: var(--accent-green);">
-                    {{ item.progreso.racha }} días presente
-                </span>
-            </div>
-            {% endif %}
-
-            {% if item.mejor_racha_visible > 0 %}
-            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
-                Mejor continuidad: {{ item.mejor_racha_visible }} días
-            </div>
-            {% endif %}
-
-            <div class="habit-actions-primary" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                {% if item.prosoche_habito_legacy_id %}
-                <a href="{% url 'diario:habito_wizard_4leyes' item.prosoche_habito_legacy_id %}" class="btn-outline-custom">
-                    <i class="fas fa-magic"></i> Diseñar
-                </a>
-                {% endif %}
-                <a href="{% url 'diario:habito_configurar_cadencia' item.habito.id %}" class="btn-outline-custom">
-                    <i class="fas fa-calendar"></i> Cadencia
-                </a>
-                <a href="{% url 'diario:habito_editar' item.habito.id %}" class="btn-outline-custom">
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-            </div>
-            <div class="habit-actions-secondary" style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
-                <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);">Más opciones:</span>
-                {% if item.habito.estado == 'pausado' %}
-                <form method="post" action="{% url 'diario:habito_reactivar' item.habito.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="habit-action-text">Reactivar</button>
-                </form>
-                {% else %}
-                <form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="habit-action-text">Pausar</button>
-                </form>
-                {% endif %}
-                <span style="color: var(--text-secondary); font-size: 0.78rem;">·</span>
-                <form method="post" action="{% url 'diario:habito_cerrar' item.habito.id %}" style="display: inline;" onsubmit="return confirm('¿Cerrar este gesto? Se conservará el historial.');">
-                    {% csrf_token %}
-                    <button type="submit" class="habit-action-text habit-action-cerrar">Cerrar</button>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
+  <section class="gestos-section" aria-labelledby="suelto-title">
+    <div class="section-label"><span class="section-no">03 Suelto</span><h2 id="suelto-title">Lo que pierde fuerza</h2></div>
+    <div class="gesture-list">
+      {% for item in habitos_negativos %}
+      <article class="gesture-row">
+        <div><div class="gesture-name">{{ item.habito.nombre }}</div>{% if item.habito.descripcion %}<div class="gesture-description">{{ item.habito.descripcion }}</div>{% endif %}</div>
+        <div class="gesture-meta"><strong>{{ item.progreso.racha|default:0 }} días de distancia</strong><br>{% if item.ultimo_impulso %}Último impulso: {{ item.ultimo_impulso.fecha }}{% else %}Sin impulsos registrados{% endif %}</div>
+        <div class="gesture-reading">Registrar un impulso no rompe la distancia: la vuelve comprensible.</div>
+        <a class="button secondary" href="{% url 'diario:habito_registrar_trigger' item.habito.id %}">Registrar impulso</a>
+        <details class="management"><summary>Gestionar</summary><div class="management-actions"><a class="text-action" href="{% url 'diario:habito_editar' item.habito.id %}">Editar</a><a class="text-action" href="{% url 'diario:habito_analisis_patrones' item.habito.id %}">Ver lectura</a><form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}">{% csrf_token %}<button class="text-action" type="submit">Pausar</button></form><form method="post" action="{% url 'diario:retirar_gesto' item.habito.id %}">{% csrf_token %}<button class="text-action danger" type="submit">Retirar</button></form></div></details>
+      </article>
+      {% empty %}<p class="empty">No hay gestos activos en distancia.</p>{% endfor %}
     </div>
-    {% endif %}
+  </section>
 
-    <!-- Gestos cultivo cerrados -->
-    {% if habitos_cerrados_cultivo %}
-    <div class="fade-in delay-1" style="margin-top: 1.5rem;">
-        <div style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem;">
-            Cerrados
-        </div>
-        {% for cerrado in habitos_cerrados_cultivo %}
-        <div style="padding: 0.65rem 0.9rem; border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; opacity: 0.7;">
-            <span style="font-size: 0.85rem;">{{ cerrado.nombre }}</span>
-            <span style="font-size: 0.72rem; color: var(--text-secondary);">Cerrado el {{ cerrado.fecha_cierre }}</span>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Gestos que suelto -->
-    {% if habitos_negativos %}
-    <div class="fade-in delay-2">
-        <div
-            style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 0.6rem; margin-top: 1.5rem;">
-            Gestos que suelto
-        </div>
-        {% for item in habitos_negativos %}
-        <div class="habit-card negativo">
-            <div class="habit-header">
-                <div>
-                    <div class="habit-name">{{ item.habito.nombre }}</div>
-                    {% if item.habito.descripcion %}
-                    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
-                        {{ item.habito.descripcion }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Grid de Días del Mes -->
-            <div style="margin-top: 0.5rem;">
-                <div
-                    style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.75rem;">
-                    Días de distancia
-                </div>
-                <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 0.5rem;">
-                    {% for dia in item.dias_mes %}
-                    <div class="dia-toggle" data-habito-id="{{ item.habito.id }}" data-dia="{{ dia.numero }}"
-                        style="aspect-ratio: 1; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all 0.2s ease; {% if dia.completado %}background: var(--accent-green); color: white; border-color: var(--accent-green);{% else %}background: var(--bg-secondary); color: var(--text-secondary);{% endif %}">
-                        {{ dia.numero }}
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-
-            {% if item.progreso.racha > 0 %}
-            <div
-                style="margin-top: 1rem; padding: 0.75rem; background: var(--accent-green-light); border-radius: var(--radius-md); text-align: center;">
-                <span style="font-weight: 700; color: var(--accent-green);">
-                    {{ item.progreso.racha }} días de distancia
-                </span>
-            </div>
-            {% endif %}
-
-            {% if item.habito.mejor_racha > 0 %}
-            <div style="font-size: 0.75rem; color: var(--text-secondary); margin-top: 0.4rem;">
-                Mejor continuidad: {{ item.habito.mejor_racha }} días
-            </div>
-            {% endif %}
-
-            <div class="habit-actions-primary" style="margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
-                {% if item.prosoche_habito_legacy_id %}
-                <a href="{% url 'diario:habito_wizard_4leyes' item.prosoche_habito_legacy_id %}" class="btn-outline-custom">
-                    <i class="fas fa-magic"></i> Diseñar
-                </a>
-                {% endif %}
-                <a href="{% url 'diario:habito_registrar_trigger' item.habito.id %}" class="btn-outline-custom"
-                    style="border-color: var(--accent-purple); color: var(--accent-purple);">
-                    <i class="fas fa-circle"></i> Registrar impulso
-                </a>
-                <a href="{% url 'diario:habito_analisis_patrones' item.habito.id %}" class="btn-outline-custom">
-                    <i class="fas fa-chart-line"></i> Análisis
-                </a>
-                <a href="{% url 'diario:habito_editar' item.habito.id %}" class="btn-outline-custom">
-                    <i class="fas fa-edit"></i> Editar
-                </a>
-            </div>
-            <div class="habit-actions-secondary" style="margin-top: 0.6rem; display: flex; align-items: center; gap: 0.4rem;">
-                <span style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary);">Más opciones:</span>
-                <form method="post" action="{% url 'diario:habito_pausar' item.habito.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="habit-action-text">Pausar</button>
-                </form>
-                <span style="color: var(--text-secondary); font-size: 0.78rem;">·</span>
-                <form method="post" action="{% url 'diario:habito_cerrar' item.habito.id %}" style="display: inline;" onsubmit="return confirm('¿Cerrar este gesto? Se conservará el historial.');">
-                    {% csrf_token %}
-                    <button type="submit" class="habit-action-text habit-action-cerrar">Cerrar</button>
-                </form>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-    {% endif %}
-
-    <!-- Empty State -->
-    {% if not habitos_positivos and not habitos_negativos %}
-    <div class="empty-state fade-in">
-        <div class="empty-icon">○</div>
-        <h3 class="empty-title">Aún no hay gestos observados</h3>
-        <p class="empty-text">Empieza con algo pequeño. No para cumplir. Para verlo repetirse.</p>
-        <a href="{% url 'diario:habito_crear' %}" class="btn-primary-custom">
-            <i class="fas fa-plus me-2"></i>Registrar primer gesto
-        </a>
-    </div>
-    {% endif %}
-
-    <!-- Botón Crear -->
-    {% if habitos_positivos or habitos_negativos %}
-    <div class="text-center fade-in delay-3" style="margin-top: 2rem;">
-        <a href="{% url 'diario:habito_crear' %}" class="btn-primary-custom">
-            <i class="fas fa-plus me-2"></i>Nuevo gesto
-        </a>
-    </div>
-    {% endif %}
+  <section class="gestos-section" aria-labelledby="archivo-title">
+    <div class="section-label"><span class="section-no">04 Archivo</span><h2 id="archivo-title">Configuración</h2></div>
+    <div><details class="archive"><summary>Gestos pausados y retirados · {{ gestos_archivados|length }}</summary>{% for gesto in gestos_archivados %}<div class="archive-row"><div><span class="gesture-name">{{ gesto.nombre }}</span><br><span class="gesture-description">{{ gesto.get_tipo_display }}</span></div><span class="archive-state">{% if gesto.estado == 'cerrado' %}Retirado{% else %}Pausado{% endif %}</span>{% if gesto.estado == 'cerrado' %}<form method="post" action="{% url 'diario:restaurar_gesto' gesto.id %}">{% csrf_token %}<button class="text-action" type="submit">Restaurar</button></form>{% else %}<form method="post" action="{% url 'diario:habito_reactivar' gesto.id %}">{% csrf_token %}<button class="text-action" type="submit">Reactivar</button></form>{% endif %}</div>{% empty %}<p class="empty">El archivo está vacío.</p>{% endfor %}</details><div style="margin-top:1rem"><a class="button secondary" href="{% url 'diario:habito_crear' %}">Nuevo gesto</a></div></div>
+  </section>
 </div>
-
-<script>
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-
-    const csrftoken = getCookie('csrftoken');
-
-    document.querySelectorAll('.dia-toggle').forEach(dia => {
-        dia.addEventListener('click', function () {
-            const habitoId = this.dataset.habitoId;
-            const diaNumero = this.dataset.dia;
-
-            fetch('{% url "diario:habito_toggle_dia" %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': csrftoken
-                },
-                body: JSON.stringify({
-                    habito_id: habitoId,
-                    dia: diaNumero
-                })
-            })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        if (data.completado) {
-                            this.style.background = 'var(--accent-green)';
-                            this.style.color = 'white';
-                            this.style.borderColor = 'var(--accent-green)';
-                        } else {
-                            this.style.background = 'var(--bg-secondary)';
-                            this.style.color = 'var(--text-secondary)';
-                            this.style.borderColor = 'var(--border-color)';
-                        }
-
-                        this.style.transform = 'scale(1.1)';
-                        setTimeout(() => {
-                            this.style.transform = 'scale(1)';
-                        }, 200);
-                    }
-                })
-                .catch(() => {});
-        });
-    });
-</script>
 {% endblock %}
