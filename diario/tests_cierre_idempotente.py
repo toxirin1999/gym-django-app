@@ -166,7 +166,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
         ):
             return ejecutar_enriquecimiento_cierre(operacion.pk)
 
-    def test_persona_interina_case_insensitive_incrementa_y_nota_inicial_es_unica(self):
+    def test_persona_interina_incrementa_sin_contaminar_manual_con_metadata(self):
         from joi.models import ManualDavid
 
         primera = self._operacion('Primera mención')
@@ -183,7 +183,7 @@ class ProyeccionesCierreSimbiosisTests(TestCase):
             ManualDavid.objects.filter(
                 user=self.user, entrada__icontains="Entidad nueva detectada: 'Ana'",
             ).count(),
-            1,
+            0,
         )
 
     def test_descartada_reaparece_tras_dos_nuevas_sin_saltar_a_radar(self):

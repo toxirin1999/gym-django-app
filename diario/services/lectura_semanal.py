@@ -82,7 +82,9 @@ def agregar_semana(usuario, dias=7, inicio=None, fin=None):
     }
 
     sombras = list(InteraccionSombra.objects.filter(
-        persona_interina__usuario=usuario, fecha__range=(inicio, fin),
+        persona_interina__usuario=usuario,
+        persona_interina__estado__in=('sombra', 'radar', 'promovida', 'descartada'),
+        fecha__range=(inicio, fin),
     ).select_related('persona_interina').order_by('fecha')[:30])
     interacciones = list(Interaccion.objects.filter(
         usuario=usuario, fecha__range=(inicio, fin),

@@ -174,6 +174,23 @@ def _desactivar_manual_si_seguro(usuario, item, *, legacy=False):
         manual.save(update_fields=['activa', 'estado'])
 
 
+def desactivar_manuales_tecnicos_de_interina(usuario, persona_interina_id):
+    """Retira solo metadata técnica atribuida inequívocamente por un ledger v2."""
+    operaciones = CierreNocturnoOperacion.objects.select_for_update().filter(
+        entrada__prosoche_mes__usuario=usuario,
+        estado__in=('completed', 'superseded'),
+        resultado__schema_version=2,
+    )
+    for operacion in operaciones:
+        ledger = (operacion.resultado or {}).get('ledger') or {}
+        for item in ledger.get('manual', []):
+            if (
+                isinstance(item, dict)
+                and item.get('persona_interina_id') == persona_interina_id
+            ):
+                _desactivar_manual_si_seguro(usuario, item)
+
+
 def _retraer_resultado(usuario, resultado):
     """Retira solo las proyecciones atribuibles a un resultado completado."""
     resultado = resultado or {}
@@ -370,6 +387,11 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 interina = PersonaInterina.objects.select_for_update().filter(
                     usuario=usuario, nombre__iexact=nombre,
                 ).first()
+                # Una exclusión explícita es estable: el parser no puede
+                # incrementar, proyectar ni reactivar este marcador.
+                if interina is not None and interina.estado == 'no_persona':
+                    personas_contadas.add(identidad)
+                    continue
                 creada = interina is None
                 if creada:
                     interina = PersonaInterina.objects.create(usuario=usuario, nombre=nombre)
@@ -393,21 +415,6 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
                 personas_contadas.add(identidad)
                 ids['sombras'].append(sombra.pk)
                 ledger['sombras'].append({'id': sombra.pk, 'persona_interina_id': interina.pk})
-                if creada:
-                    nota = (
-                        f"Entidad nueva detectada: '{nombre}'. "
-                        'Pendiente de validación si se repite.'
-                    )
-                    if not _manual_activo_equivalente(usuario, nota):
-                        manual = ManualDavid.objects.create(
-                            user=usuario, entrada=nota, origen='patron_detectado',
-                        )
-                        ids['manual'].append(manual.pk)
-                        ledger['manual'].append({
-                            'id': manual.pk, 'created': True,
-                            'after': _snapshot(manual, _MANUAL_SNAPSHOT_FIELDS),
-                            'persona_interina_id': interina.pk,
-                        })
                 if (
                     interina.estado == 'descartada'
                     and interina.menciones_desde_descarte >= 2

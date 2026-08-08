@@ -1457,6 +1457,7 @@ class PersonaInterina(models.Model):
         ('radar',      'En el Radar de JOI'),
         ('promovida',  'Promovida a Simbiosis'),
         ('descartada', 'Descartada'),
+        ('no_persona', 'No es una persona'),
     ]
 
     usuario             = models.ForeignKey(User, on_delete=models.CASCADE, related_name='personas_interinas')

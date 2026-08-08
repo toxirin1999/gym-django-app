@@ -305,6 +305,7 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
             <div class="radar-actions">
                 <button type="button" class="radar-btn add promover-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Añadir a {{ p.nombre }} al círculo">Añadir</button>
                 <button type="button" class="radar-btn ignore descartar-btn" data-id="{{ p.id }}" title="Se ocultará. Puede reaparecer si sigue mencionándose." aria-label="Descartar por ahora la señal de {{ p.nombre }}">Ignorar</button>
+                <button type="button" class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Indicar que {{ p.nombre }} no es una persona">No es una persona</button>
             </div>
         </div>
         {% endwith %}
@@ -334,10 +335,28 @@ body { background: var(--bg) !important; font-family: -apple-system, BlinkMacSys
                 <div class="sombra-evidencia">“{{ ultima_sombra.descripcion|truncatechars:90 }}”</div>
                 {% endif %}
             </div>
+            <div class="radar-actions">
+                <button type="button" class="radar-btn ignore no-persona-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" aria-label="Indicar que {{ p.nombre }} no es una persona">No es una persona</button>
+            </div>
         </div>
         {% endwith %}
         {% endfor %}
     </div>
+    {% endif %}
+
+    {% if personas_excluidas %}
+    <details class="sim-section">
+        <summary class="sim-section-label" style="cursor:pointer;">Detecciones excluidas ({{ personas_excluidas|length }})</summary>
+        <div class="sim-section-hint">
+            El sistema no volverá a tratar estos términos como personas. Restaurar solo devuelve la señal a observación; no reactiva su historial.
+        </div>
+        {% for p in personas_excluidas %}
+        <div class="radar-item" id="excluida-{{ p.id }}">
+            <div class="radar-name">{{ p.nombre }}</div>
+            <button type="button" class="radar-btn add restaurar-btn" data-id="{{ p.id }}" data-nombre="{{ p.nombre }}">Restaurar</button>
+        </div>
+        {% endfor %}
+    </details>
     {% endif %}
 
     <!-- ── Círculo confirmado ── -->
@@ -441,7 +460,9 @@ function mostrarFeedback(mensaje, tipo) {
 async function resolverPersona(button, accion) {
     const id = button.dataset.id;
     const nombre = button.dataset.nombre || 'La persona';
-    const row = document.getElementById('radar-' + id);
+    const row = document.getElementById('radar-' + id)
+        || document.getElementById('sombra-' + id)
+        || document.getElementById('excluida-' + id);
     const buttons = row ? row.querySelectorAll('button') : [button];
     buttons.forEach(control => { control.disabled = true; });
     mostrarFeedback('Guardando tu decisión…', 'pending');
@@ -459,8 +480,9 @@ async function resolverPersona(button, accion) {
 
         if (row) row.remove();
         mostrarFeedback(
-            accion === 'promover'
-                ? `${nombre} se ha añadido a tu círculo.`
+            accion === 'promover' ? `${nombre} se ha añadido a tu círculo.`
+                : accion === 'no_persona' ? `${nombre} queda excluido como persona.`
+                : accion === 'restaurar' ? `${nombre} vuelve a observación.`
                 : `${nombre} se ha ocultado por ahora.`,
             'success'
         );
@@ -476,6 +498,12 @@ document.querySelectorAll('.promover-btn').forEach(button => {
 
 document.querySelectorAll('.descartar-btn').forEach(button => {
     button.addEventListener('click', () => resolverPersona(button, 'descartar'));
+});
+document.querySelectorAll('.no-persona-btn').forEach(button => {
+    button.addEventListener('click', () => resolverPersona(button, 'no_persona'));
+});
+document.querySelectorAll('.restaurar-btn').forEach(button => {
+    button.addEventListener('click', () => resolverPersona(button, 'restaurar'));
 });
 </script>
 {% endblock %}

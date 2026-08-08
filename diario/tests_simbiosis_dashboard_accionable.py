@@ -59,7 +59,8 @@ class SimbiosisDashboardAccionableTests(TestCase):
         self.assertEqual(response.context["n_senales"], 2)
         self.assertEqual(response.context["n_por_decidir"], 1)
         self.assertContains(response, 'id="sombra-%s"' % sombra.pk)
-        self.assertNotIn('data-id="%s"' % sombra.pk, html)
+        self.assertNotIn('class="radar-btn add promover-btn" data-id="%s"' % sombra.pk, html)
+        self.assertIn('class="radar-btn ignore no-persona-btn" data-id="%s"' % sombra.pk, html)
         self.assertContains(response, 'id="radar-%s"' % radar.pk)
         self.assertIn('data-id="%s"' % radar.pk, html)
 
@@ -87,7 +88,7 @@ class SimbiosisDashboardAccionableTests(TestCase):
         self.assertContains(response, "Evidencia reciente")
         self.assertNotIn("Evidencia anterior", html)
         self.assertNotIn(texto_reciente, html)
-        self.assertNotIn('data-id="%s"' % sombra.pk, html)
+        self.assertNotIn('class="radar-btn add promover-btn" data-id="%s"' % sombra.pk, html)
 
     def test_dashboard_distingue_interaccion_detectada_y_no_permite_editarla(self):
         persona = PersonaImportante.objects.create(usuario=self.user, nombre="Leo")

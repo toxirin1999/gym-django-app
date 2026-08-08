@@ -1545,6 +1545,9 @@ def simbiosis_dashboard(request):
     ).prefetch_related('interacciones').order_by('-veces_mencionada', '-ultima_deteccion')
     personas_sombra = personas_interinas.filter(estado='sombra')
     personas_radar = personas_interinas.filter(estado='radar')
+    personas_excluidas = PersonaInterina.objects.filter(
+        usuario=request.user, estado='no_persona',
+    ).order_by('nombre')
     n_sombra = personas_sombra.count()
     n_por_decidir = personas_radar.count()
 
@@ -1554,6 +1557,7 @@ def simbiosis_dashboard(request):
         'ultimas_interacciones': ultimas_interacciones,
         'personas_sombra': personas_sombra,
         'personas_radar': personas_radar,
+        'personas_excluidas': personas_excluidas,
         'n_confirmadas': personas.count(),
         'n_radar': n_por_decidir,
         'n_senales': n_sombra + n_por_decidir,
@@ -1578,6 +1582,12 @@ def persona_crear_editar(request, persona_id=None):
             persona = form.save(commit=False)
             persona.usuario = request.user
             persona.save()
+            # La afirmación manual del usuario prevalece sobre una antigua
+            # exclusión del parser, sin materializar el historial sombra.
+            from diario.models import PersonaInterina
+            PersonaInterina.objects.filter(
+                usuario=request.user, nombre__iexact=persona.nombre,
+            ).update(estado='promovida', persona_importante=persona)
             messages.success(request, f'Se ha guardado a "{persona.nombre}" correctamente.')
             return redirect('diario:simbiosis_dashboard')
         else:
@@ -3706,6 +3716,8 @@ def presencia_cierre(request):
         interinas_validas = set(PersonaInterina.objects.filter(
             usuario=request.user,
             pk__in=_ids_proyectados(ledger.get('personas_interinas', [])),
+        ).exclude(
+            estado='no_persona',
         ).values_list('pk', flat=True))
         sombra_ids = [
             item.get('id') for item in fuente_sombras
@@ -3715,6 +3727,8 @@ def presencia_cierre(request):
     sombras_guardadas = list(InteraccionSombra.objects.filter(
         persona_interina__usuario=request.user,
         pk__in=sombra_ids,
+    ).exclude(
+        persona_interina__estado='no_persona',
     ).select_related('persona_interina').order_by('pk'))
     relaciones_incorporadas = len(interacciones_guardadas) + len(sombras_guardadas)
     propuesta_habito = resultado.get('propuesta_habito')
@@ -3784,7 +3798,7 @@ def promover_persona_interina(request):
     try:
         data = json.loads(request.body)
         accion = data.get('accion')
-        if accion not in ('promover', 'descartar'):
+        if accion not in ('promover', 'descartar', 'no_persona', 'restaurar'):
             return JsonResponse({'ok': False, 'error': 'Acción no válida'}, status=400)
         with transaction.atomic():
             interina = PersonaInterina.objects.select_for_update().get(
@@ -3821,12 +3835,29 @@ def promover_persona_interina(request):
                 interina.estado = 'promovida'
                 interina.persona_importante = persona_real
                 interina.save(update_fields=['estado', 'persona_importante'])
-            else:
+            elif accion == 'descartar':
                 if interina.estado == 'promovida':
                     return JsonResponse({'ok': False, 'error': 'Estado no válido'}, status=400)
                 interina.estado = 'descartada'
                 interina.menciones_desde_descarte = 0
                 interina.save(update_fields=['estado', 'menciones_desde_descarte'])
+            elif accion == 'no_persona':
+                if interina.estado == 'promovida':
+                    return JsonResponse({'ok': False, 'error': 'Estado no válido'}, status=400)
+                interina.estado = 'no_persona'
+                interina.menciones_desde_descarte = 0
+                interina.save(update_fields=['estado', 'menciones_desde_descarte'])
+                from diario.services.cierre_service import desactivar_manuales_tecnicos_de_interina
+                desactivar_manuales_tecnicos_de_interina(request.user, interina.pk)
+            else:
+                if interina.estado != 'no_persona':
+                    return JsonResponse({'ok': False, 'error': 'Estado no válido'}, status=400)
+                interina.estado = 'sombra'
+                interina.veces_mencionada = 0
+                interina.menciones_desde_descarte = 0
+                interina.save(update_fields=[
+                    'estado', 'veces_mencionada', 'menciones_desde_descarte',
+                ])
 
         return JsonResponse({'ok': True, 'accion': accion, 'estado': interina.estado})
     except Exception as e:
@@ -3990,6 +4021,8 @@ def reprocesar_cierres(request):
                         nombre__iexact=nombre,
                         defaults={'nombre': nombre},
                     )
+                    if interina.estado == 'no_persona':
+                        continue
                     if not creada:
                         update_kw = {'veces_mencionada': interina.veces_mencionada + 1}
                         if interina.estado == 'descartada':
