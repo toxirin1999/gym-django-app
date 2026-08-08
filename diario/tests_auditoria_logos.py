@@ -1,4 +1,5 @@
 import json
+import uuid
 from datetime import datetime, time, timedelta
 from io import StringIO
 
@@ -9,6 +10,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from diario.models import (
+    CierreNocturnoOperacion,
     ProsocheDiario,
     ProsocheMes,
     RachaEscritura,
@@ -41,7 +43,7 @@ class AuditoriaLogosReadOnlyTests(TestCase):
         return obj
 
     def _entrada(self, fecha, texto=""):
-        mes = ProsocheMes.objects.create(
+        mes, _ = ProsocheMes.objects.get_or_create(
             usuario=self.user, mes=f"mes-{fecha.month}", año=fecha.year,
         )
         return ProsocheDiario.objects.create(
@@ -76,7 +78,7 @@ class AuditoriaLogosReadOnlyTests(TestCase):
             por_codigo["proyeccion_cierre_sin_fuente"]["reflexion_id"], huerfana.pk
         )
         self.assertEqual(
-            por_codigo["fuente_cierre_sin_proyeccion"]["prosoche_diario_id"], entrada.pk
+            por_codigo["fuente_sin_operacion_inconsistente"]["prosoche_diario_id"], entrada.pk
         )
         self.assertEqual(resultado["tema_del_dia_id"], self.tema.pk)
         self.assertNotIn("titulo secreto", json.dumps(resultado))
@@ -130,3 +132,49 @@ class AuditoriaLogosReadOnlyTests(TestCase):
         self.assertEqual(filtrado["hallazgos"], [])
         self.assertEqual(global_resultado["hallazgos"], [])
         self.assertFalse(RachaEscritura.objects.filter(usuario=self.user).exists())
+
+    def test_clasifica_fuentes_sin_proyeccion_por_evidencia_operativa(self):
+        from diario.services.auditoria_logos_service import auditar_logos
+
+        hoy = timezone.localdate()
+        legacy_explicito = self._entrada(hoy - timedelta(days=4), texto="legacy secreto")
+        ProsocheDiario.objects.filter(pk=legacy_explicito.pk).update(
+            cierre_confirmado_en=None, cierre_version=0, cierre_payload_hash=None,
+        )
+        legacy_operaciones = self._entrada(hoy - timedelta(days=3), texto="backfill secreto")
+        ProsocheDiario.objects.filter(pk=legacy_operaciones.pk).update(
+            cierre_version=1, cierre_payload_hash=None,
+        )
+        fallida = self._entrada(hoy - timedelta(days=2), texto="fallo secreto")
+        ProsocheDiario.objects.filter(pk=fallida.pk).update(
+            cierre_version=1, cierre_payload_hash="a" * 64,
+        )
+        CierreNocturnoOperacion.objects.create(
+            entrada=fallida, idempotency_key=uuid.uuid4(), expected_version=0,
+            result_version=1, payload_hash="a" * 64, estado="failed",
+            error="error altamente secreto",
+        )
+        ledger_vacio = self._entrada(hoy - timedelta(days=1), texto="ledger secreto")
+        ProsocheDiario.objects.filter(pk=ledger_vacio.pk).update(
+            cierre_version=1, cierre_payload_hash="b" * 64,
+        )
+        CierreNocturnoOperacion.objects.create(
+            entrada=ledger_vacio, idempotency_key=uuid.uuid4(), expected_version=0,
+            result_version=1, payload_hash="b" * 64, estado="completed",
+            resultado={"schema_version": 2, "ledger": {"reflexiones": []}},
+        )
+
+        antes = list(CierreNocturnoOperacion.objects.values().order_by("pk"))
+        resultado = auditar_logos(usuario_id=self.user.pk, limit=100)
+        despues = list(CierreNocturnoOperacion.objects.values().order_by("pk"))
+        codigos = {item["codigo"] for item in resultado["hallazgos"]}
+
+        self.assertEqual(antes, despues)
+        self.assertIn("fuente_legacy_pre_cierre_explicito", codigos)
+        self.assertIn("fuente_legacy_pre_operaciones", codigos)
+        self.assertIn("fuente_operacion_failed", codigos)
+        self.assertIn("fuente_completada_sin_reflexion_declarada", codigos)
+        serializado = json.dumps(resultado).casefold()
+        self.assertNotIn("legacy secreto", serializado)
+        self.assertNotIn("error altamente secreto", serializado)
+        self.assertNotIn("fecha", serializado)

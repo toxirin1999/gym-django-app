@@ -60,6 +60,88 @@ def construir_snapshot_racha(usuario_id):
     }
 
 
+def _clasificar_fuente_sin_proyeccion(entrada, usuario_id):
+    """Clasifica un cierre sin inferir que los datos históricos estén corruptos."""
+    base = {
+        "usuario_id": usuario_id,
+        "prosoche_diario_id": entrada.pk,
+        "cierre_version": entrada.cierre_version,
+        "hash_presente": bool(entrada.cierre_payload_hash),
+    }
+    operaciones = list(entrada.operaciones_cierre.all().order_by("id"))
+    if not operaciones:
+        if (
+            entrada.cierre_confirmado_en is None
+            and entrada.cierre_version == 0
+            and not entrada.cierre_payload_hash
+        ):
+            return {
+                **base,
+                "codigo": "fuente_legacy_pre_cierre_explicito",
+                "confidence_codigo": "alta",
+            }
+        if (
+            entrada.cierre_confirmado_en is not None
+            and entrada.cierre_version == 1
+            and not entrada.cierre_payload_hash
+        ):
+            return {
+                **base,
+                "codigo": "fuente_legacy_pre_operaciones",
+                "confidence_codigo": "alta",
+            }
+        return {
+            **base,
+            "codigo": "fuente_sin_operacion_inconsistente",
+            "confidence_codigo": "alta",
+        }
+
+    coincidentes = [
+        operacion for operacion in operaciones
+        if operacion.result_version == entrada.cierre_version
+        and (
+            not entrada.cierre_payload_hash
+            or operacion.payload_hash == entrada.cierre_payload_hash
+        )
+    ]
+    operacion = coincidentes[-1] if coincidentes else operaciones[-1]
+    datos_operacion = {
+        **base,
+        "operacion_id": operacion.pk,
+        "operacion_estado": operacion.estado,
+    }
+    if operacion.estado in {"pending", "processing", "failed"}:
+        return {
+            **datos_operacion,
+            "codigo": f"fuente_operacion_{operacion.estado}",
+            "confidence_codigo": "alta",
+            "error_presente": bool(operacion.error),
+        }
+    if operacion.estado != "completed":
+        return {
+            **datos_operacion,
+            "codigo": "fuente_sin_operacion_inconsistente",
+            "confidence_codigo": "alta",
+        }
+
+    resultado = operacion.resultado if isinstance(operacion.resultado, dict) else {}
+    ledger = resultado.get("ledger") if isinstance(resultado.get("ledger"), dict) else {}
+    reflexiones = ledger.get("reflexiones") if isinstance(ledger.get("reflexiones"), list) else []
+    if resultado.get("schema_version") == 2 and not reflexiones:
+        return {
+            **datos_operacion,
+            "codigo": "fuente_completada_sin_reflexion_declarada",
+            "confidence_codigo": "alta",
+            "reflexiones_declaradas": 0,
+        }
+    return {
+        **datos_operacion,
+        "codigo": "fuente_completada_sin_proyeccion_inconsistente",
+        "confidence_codigo": "alta",
+        "reflexiones_declaradas": len(reflexiones),
+    }
+
+
 def _hallazgos_usuario(usuario_id):
     from diario.models import ProsocheDiario, ProsocheMes, RachaEscritura, ReflexionLibre
 
@@ -127,15 +209,15 @@ def _hallazgos_usuario(usuario_id):
 
     entradas = list(
         ProsocheDiario.objects.filter(prosoche_mes__usuario_id=usuario_id)
-        .values_list("id", "fecha", "reflexiones_dia")
+        .prefetch_related("operaciones_cierre")
         .order_by("id")
     )
     prosoche_por_fecha = {}
     fuente_por_fecha = {}
-    for entrada_id, fecha, texto in entradas:
-        prosoche_por_fecha.setdefault(fecha, []).append(entrada_id)
-        if texto:
-            fuente_por_fecha.setdefault(fecha, []).append(entrada_id)
+    for entrada in entradas:
+        prosoche_por_fecha.setdefault(entrada.fecha, []).append(entrada.pk)
+        if entrada.reflexiones_dia:
+            fuente_por_fecha.setdefault(entrada.fecha, []).append(entrada)
 
     proyeccion_por_fecha = {}
     for reflexion in reflexiones:
@@ -153,13 +235,10 @@ def _hallazgos_usuario(usuario_id):
                 })
     for fecha in sorted(fuente_por_fecha):
         if fecha not in proyeccion_por_fecha:
-            for entrada_id in fuente_por_fecha[fecha]:
-                hallazgos.append({
-                    "codigo": "fuente_cierre_sin_proyeccion",
-                    "usuario_id": usuario_id,
-                    "prosoche_diario_id": entrada_id,
-                    "confidence_codigo": "alta",
-                })
+            for entrada in fuente_por_fecha[fecha]:
+                hallazgos.append(
+                    _clasificar_fuente_sin_proyeccion(entrada, usuario_id)
+                )
     return hallazgos
 
 
