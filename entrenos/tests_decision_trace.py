@@ -18,15 +18,21 @@ Checklist:
 12. Si una capa se oculta por Preferencia > Distribución, queda en capas_suprimidas.
 """
 
-from datetime import date
-from unittest.mock import patch
+from datetime import date, timedelta
+from unittest.mock import MagicMock, patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
 
 from clientes.models import Cliente
-from entrenos.models import GymDecisionTrace, IntervencionPlan, PreferenciaPlanAprendida
+from entrenos.models import (
+    GymDecisionTrace,
+    IntervencionPlan,
+    PreferenciaPlanAprendida,
+    SesionProgramada,
+)
 from entrenos.services.decision_trace_service import registrar_decision_trace
+from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
 
 
 ABSOLUTOS = ['siempre', 'nunca', 'debes', 'tienes que']
@@ -284,3 +290,96 @@ class TestCase12_CapaSuprimidaRegistrada(TraceBase):
         self.assertIn('distribucion_aviso', t.capas_suprimidas)
         # Should NOT be in visible layers
         self.assertNotIn('distribucion_aviso', t.capas_visibles)
+
+
+class TestContratoFase1_TodaSalidaDeSesionQuedaTrazada(TraceBase):
+    """El punto canónico de recomendación recuerda también sus retornos tempranos."""
+
+    def _planificador(self, entrenamiento):
+        planificador = MagicMock()
+        planificador.generar_entrenamiento_para_fecha.return_value = entrenamiento
+        return planificador
+
+    def _consultar_dos_veces(self, entrenamiento):
+        planificador = self._planificador(entrenamiento)
+        with (
+            patch(
+                'entrenos.services.sesion_recomendada.sincronizar_pendientes_recientes'
+            ),
+            patch(
+                'entrenos.services.sesion_recomendada._build_planificador',
+                return_value=planificador,
+            ),
+        ):
+            primera = obtener_sesion_recomendada_hoy(self.cliente, self.hoy)
+            segunda = obtener_sesion_recomendada_hoy(self.cliente, self.hoy)
+        return primera, segunda
+
+    def test_sesion_pendiente_crea_una_traza_idempotente(self):
+        pendiente = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy - timedelta(days=1),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Torso pendiente',
+        )
+        entrenamiento = {
+            'rutina_nombre': 'Torso pendiente',
+            'ejercicios': [{'nombre': 'Press banca', 'series': 3}],
+        }
+
+        primera, segunda = self._consultar_dos_veces(entrenamiento)
+
+        self.assertEqual(primera['tipo'], 'pendiente')
+        self.assertEqual(segunda['tipo'], 'pendiente')
+        trazas = GymDecisionTrace.objects.filter(cliente=self.cliente, fecha=self.hoy)
+        self.assertEqual(trazas.count(), 1)
+        self.assertEqual(trazas.get().sesion_programada_id, pendiente.id)
+        self.assertEqual(trazas.get().decision_estado, 'entrenar')
+
+    def test_descanso_planificado_crea_una_traza_idempotente(self):
+        descanso = {
+            'rutina_nombre': 'Día de descanso',
+            'ejercicios': [],
+            'objetivo': 'Descanso',
+        }
+
+        primera, segunda = self._consultar_dos_veces(descanso)
+
+        self.assertEqual(primera['causa_principal'], 'descanso_planificado')
+        self.assertEqual(segunda['causa_principal'], 'descanso_planificado')
+        trazas = GymDecisionTrace.objects.filter(cliente=self.cliente, fecha=self.hoy)
+        self.assertEqual(trazas.count(), 1)
+        self.assertEqual(trazas.get().decision_estado, 'descanso')
+        self.assertEqual(trazas.get().causa_principal, 'descanso_planificado')
+
+    def test_posposicion_crea_una_traza_idempotente(self):
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Pierna pospuesta',
+            pospuesta_hasta=self.hoy + timedelta(days=1),
+        )
+
+        primera, segunda = self._consultar_dos_veces(None)
+
+        self.assertEqual(primera['causa_principal'], 'pospuesto_usuario')
+        self.assertEqual(segunda['causa_principal'], 'pospuesto_usuario')
+        trazas = GymDecisionTrace.objects.filter(cliente=self.cliente, fecha=self.hoy)
+        self.assertEqual(trazas.count(), 1)
+        self.assertEqual(trazas.get().decision_estado, 'descanso')
+        self.assertEqual(trazas.get().causa_principal, 'pospuesto_usuario')
+
+    def test_sesion_normal_conserva_traza_idempotente(self):
+        entrenamiento = {
+            'rutina_nombre': 'Torso de hoy',
+            'ejercicios': [{'nombre': 'Remo', 'series': 3}],
+        }
+
+        primera, segunda = self._consultar_dos_veces(entrenamiento)
+
+        self.assertEqual(primera['tipo'], 'programada_hoy')
+        self.assertEqual(segunda['tipo'], 'programada_hoy')
+        trazas = GymDecisionTrace.objects.filter(cliente=self.cliente, fecha=self.hoy)
+        self.assertEqual(trazas.count(), 1)
+        self.assertEqual(trazas.get().decision_estado, 'entrenar')

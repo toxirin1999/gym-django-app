@@ -232,8 +232,15 @@ def registrar_decision_trace(cliente, decision: dict, fecha=None) -> None:
         # Build the explanation (already narrative-audited by Phase 31)
         explicacion = construir_explicacion_decision(decision)
 
-        # Skip descanso days with no active signals (nothing relevant to record)
-        if estado == 'descanso' and not explicacion.get('senales_activas'):
+        # Históricamente los descansos limpios invocados de forma aislada no se
+        # guardaban. El punto canónico de recomendación puede marcar su salida
+        # como significativa para que también quede memoria del descanso/posposición.
+        salida_significativa = decision.get('_traza_salida_significativa', False)
+        if (
+            estado == 'descanso'
+            and not explicacion.get('senales_activas')
+            and not salida_significativa
+        ):
             return
 
         sp = decision.get('sesion_programada')

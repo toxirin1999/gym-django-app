@@ -1072,6 +1072,22 @@ def sincronizar_pendientes_recientes(cliente, fecha_hoy):
         cache.set(cache_key, True, _SYNC_CACHE_TTL)
 
 
+def _devolver_con_traza(cliente, decision, fecha):
+    """Registra de forma idempotente toda salida canónica y devuelve la decisión."""
+    try:
+        from entrenos.services.decision_trace_service import registrar_decision_trace
+
+        decision_para_traza = dict(decision)
+        decision_para_traza['_traza_salida_significativa'] = True
+        registrar_decision_trace(cliente, decision_para_traza, fecha)
+    except Exception:
+        logger.warning(
+            'obtener_sesion_recomendada_hoy: no se pudo registrar la traza',
+            exc_info=True,
+        )
+    return decision
+
+
 def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
     """
     Returns the recommended session for today as a dict:
@@ -1153,7 +1169,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
         decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
         decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
-        return _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
+        decision = _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
+        return _devolver_con_traza(cliente, decision, fecha_hoy)
 
     # Phase 52 — Si el usuario pospuso explícitamente hoy, no generar nueva sesión
     from django.db.models import Q as _Q52
@@ -1164,7 +1181,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         pospuesta_hasta__gt=fecha_hoy,
     ).exists()
     if hoy_pospuesto:
-        return {
+        decision = {
             'tipo': 'descanso',
             'estado': 'descanso',
             'sesion_programada': None,
@@ -1174,6 +1191,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             'modo_reducido': False,
             'distribucion_aviso': None,
         }
+        return _devolver_con_traza(cliente, decision, fecha_hoy)
 
     try:
         planificador = _build_planificador(cliente)
@@ -1202,7 +1220,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         entrenamiento_hoy = None
 
     if _es_descanso(entrenamiento_hoy):
-        return {
+        decision = {
             'tipo': 'descanso',
             'estado': 'descanso',
             'sesion_programada': None,
@@ -1211,6 +1229,7 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             'causa_principal': 'descanso_planificado',
             'modo_reducido': False,
         }
+        return _devolver_con_traza(cliente, decision, fecha_hoy)
 
     decision_base = {
         'tipo': 'programada_hoy',
@@ -1228,10 +1247,4 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
     decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
     decision = _aplicar_preferencia_activa(cliente, decision, fecha_hoy)
     decision = _aplicar_aviso_lesion(cliente, decision, fecha_hoy)
-    # Phase 32 — trace decision (non-blocking, degrades silently)
-    try:
-        from entrenos.services.decision_trace_service import registrar_decision_trace
-        registrar_decision_trace(cliente, decision, fecha_hoy)
-    except Exception:
-        pass
-    return decision
+    return _devolver_con_traza(cliente, decision, fecha_hoy)
