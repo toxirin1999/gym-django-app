@@ -64,6 +64,17 @@ class PortadaHoyServiceTests(SimpleTestCase):
 
 
 class PortadaSintesisTemplateTests(SimpleTestCase):
+    def _render(self, **context):
+        base = {
+            "cliente": SimpleNamespace(id=7),
+            "portada_hoy": {"aprendizajes": []},
+            "analisis_semanal": {},
+            "portada_diario_url": "/diario/",
+            "portada_diario_label": "Abrir diario",
+        }
+        base.update(context)
+        return get_template("clientes/mockup_demo.html").render(base)
+
     def test_jerarquia_editorial_y_ausencias(self):
         source = get_template("clientes/mockup_demo.html").template.source
         for marker in ("data-daily-header", "data-today-card", "data-diary-card", "data-plan-learning", "data-week-summary", "data-secondary-tools"):
@@ -141,6 +152,75 @@ class PortadaSintesisTemplateTests(SimpleTestCase):
         memory = source[source.index("data-plan-memory"):source.index("data-secondary-tools")]
         self.assertIn("data-plan-memory-empty", memory)
         self.assertIn("Aún no hay observaciones adicionales", memory)
+
+    def test_candidata_preferencia_renderiza_evidencia_y_contrato_operativo(self):
+        html = self._render(candidata_preferencia={
+            "evidencia_count": 4,
+            "descripcion": "rindes mejor separando tren inferior",
+            "tipo_preferencia": "distribucion",
+            "tipo_intervencion": "separar_inferior",
+        })
+        self.assertIn("En 4 pruebas", html)
+        self.assertIn("rindes mejor separando tren inferior", html)
+        self.assertIn(reverse("clientes:convertir_preferencia"), html)
+        self.assertIn('name="tipo_preferencia" value="distribucion"', html)
+        self.assertIn('name="tipo_intervencion" value="separar_inferior"', html)
+        self.assertIn("Seguir probando", html)
+
+    def test_continuidad_intervencion_renderiza_repetir_e_ignorar_con_campos(self):
+        html = self._render(
+            evaluacion_intervencion={"lectura": "El ajuste redujo el RPE."},
+            recomendacion_continuidad={
+                "accion": "repetir", "texto": "Conviene otra semana.",
+                "tipo_intervencion": "reducir_volumen",
+            },
+        )
+        self.assertIn("Conviene otra semana.", html)
+        self.assertIn(reverse("clientes:repetir_intervencion"), html)
+        self.assertIn(reverse("clientes:ignorar_recomendacion"), html)
+        self.assertEqual(html.count('name="tipo_intervencion" value="reducir_volumen"'), 2)
+        self.assertIn("Repetir esta semana", html)
+
+    def test_continuidad_intervencion_profundizar_no_inventa_endpoint_de_repeticion(self):
+        html = self._render(
+            evaluacion_intervencion={"lectura": "Hay señal parcial."},
+            recomendacion_continuidad={
+                "accion": "profundizar", "texto": "Hace falta más evidencia.",
+                "tipo_intervencion": "ajuste_parcial",
+            },
+        )
+        self.assertIn("Profundizar", html)
+        self.assertNotIn(reverse("clientes:repetir_intervencion"), html)
+        self.assertIn(reverse("clientes:ignorar_recomendacion"), html)
+
+    def test_continuidad_distribucion_renderiza_acciones_y_tipo_exacto(self):
+        html = self._render(
+            evaluacion_distribucion={"lectura": "La distribución fue favorable."},
+            continuidad_distribucion={"texto": "Repite para confirmar.", "tipo_intervencion": "espaciar_inferior"},
+        )
+        self.assertIn("Repite para confirmar.", html)
+        self.assertIn(reverse("clientes:repetir_prueba_distribucion"), html)
+        self.assertIn(reverse("clientes:ignorar_continuidad_distribucion"), html)
+        self.assertEqual(html.count('name="tipo_intervencion" value="espaciar_inferior"'), 2)
+        self.assertIn("Repetir 2 semanas", html)
+
+    def test_sugerencia_diario_pendiente_vive_en_diario_y_usa_endpoints_reales(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        diary = source[source.index("data-diary-card"):source.index("data-plan-learning")]
+        self.assertIn("sugerencia_diario", diary)
+        html = self._render(sugerencia_diario=SimpleNamespace(id=31, estado="pendiente", texto="Vigila la tensión lumbar."))
+        self.assertIn("Vigila la tensión lumbar.", html)
+        self.assertIn(reverse("clientes:aceptar_sugerencia", args=[31]), html)
+        self.assertIn(reverse("clientes:ignorar_sugerencia", args=[31]), html)
+        self.assertIn("Vigilar 14 días", html)
+
+    def test_revision_progreso_solo_renderiza_datos_reales_y_enlace_aplicable(self):
+        vacio = self._render()
+        self.assertNotIn("Revisión de progreso", vacio)
+        html = self._render(revision_progreso=[{"icono": "↗", "texto": "La cintura bajó 2 cm.", "color": "positivo"}])
+        self.assertIn("Revisión de progreso", html)
+        self.assertIn("La cintura bajó 2 cm.", html)
+        self.assertIn(reverse("clientes:mi_cuerpo", args=[7]), html)
 
     def test_ultimas_sesiones_es_plegable_y_respeta_la_jerarquia(self):
         source = get_template("clientes/mockup_demo.html").template.source

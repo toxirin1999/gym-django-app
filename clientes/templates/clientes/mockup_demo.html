@@ -78,6 +78,15 @@
       <div><div class="meta">Mañana</div><strong><i class="dot {% if manana_hecha %}done{% endif %}"></i>{% if manana_hecha %}Registrada{% else %}Pendiente{% endif %}</strong></div>
       <div><div class="meta">Noche</div><strong><i class="dot {% if noche_hecha %}done{% endif %}"></i>{% if noche_hecha %}Registrada{% else %}Pendiente{% endif %}</strong></div>
     </div>
+    {% if sugerencia_diario and sugerencia_diario.estado == 'pendiente' %}
+    <div class="memory-item" style="margin-bottom:14px;padding:11px 13px;border:1px solid var(--jds-joi-border)">
+      <strong>Diario · Tendencia corporal</strong><br>{{ sugerencia_diario.texto }}
+      <div class="memory-actions" style="margin-top:9px">
+        <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_diario.id %}">{% csrf_token %}<button type="submit">Vigilar 14 días</button></form>
+        <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_diario.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form>
+      </div>
+    </div>
+    {% endif %}
     <a class="diary-action" href="{{ portada_diario_url }}">{{ portada_diario_label }}</a>
   </section>
 
@@ -111,7 +120,14 @@
         <div class="memory-content">
           {% if patron_multisemanal %}<div class="memory-item">{{ patron_multisemanal }}</div>{% endif %}
           {% if sugerencia_activa %}<div class="memory-item"><strong>Sugerencia</strong><br>{{ sugerencia_activa.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_activa.id %}">{% csrf_token %}<button type="submit">Aplicar esta semana</button></form><form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_activa.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form></div>{% endif %}
-          {% if evaluacion_intervencion %}<div class="memory-item"><strong>Evaluación anterior</strong><br>{{ evaluacion_intervencion.lectura }}</div>{% endif %}
+          {% if evaluacion_intervencion %}<div class="memory-item"><strong>Evaluación anterior</strong><br>{{ evaluacion_intervencion.lectura }}</div>
+          {% if recomendacion_continuidad %}
+          <div class="memory-item"><strong>{% if recomendacion_continuidad.accion == 'repetir' %}Repetir ajuste{% else %}Profundizar{% endif %}</strong><br>{{ recomendacion_continuidad.texto }}</div>
+          <div class="memory-actions">
+            {% if recomendacion_continuidad.accion == 'repetir' %}<form method="post" action="{% url 'clientes:repetir_intervencion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}"><button type="submit">Repetir esta semana</button></form>{% endif %}
+            <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}"><button type="submit">No por ahora</button></form>
+          </div>
+          {% endif %}{% endif %}
         </div>
       </details>
       {% endif %}
@@ -122,6 +138,7 @@
         <div class="memory-content">
           {% if intervencion_distribucion %}<div class="memory-item"><strong>Prueba activa hasta {{ intervencion_distribucion.fecha_fin|date:"j N" }}</strong></div>
           {% elif evaluacion_distribucion %}<div class="memory-item"><strong>Resultado de la prueba</strong><br>{{ evaluacion_distribucion.lectura }}</div>
+          {% if continuidad_distribucion %}<div class="memory-item"><strong>Una vuelta más</strong><br>{{ continuidad_distribucion.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:repetir_prueba_distribucion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}"><button type="submit">Repetir 2 semanas</button></form><form method="post" action="{% url 'clientes:ignorar_continuidad_distribucion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}"><button type="submit">No por ahora</button></form></div>{% endif %}
           {% else %}{% for obs in distribucion_semanal|slice:":2" %}<div class="memory-item">{{ obs.texto }}</div>{% endfor %}{% endif %}
           {% if sugerencia_distribucion %}<div class="memory-item"><strong>Prueba propuesta</strong><br>{{ sugerencia_distribucion.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_distribucion.id %}">{% csrf_token %}<button type="submit">Probar 2 semanas</button></form><form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_distribucion.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form></div>{% endif %}
         </div>
@@ -157,7 +174,25 @@
       </details>
       {% endif %}
 
-      {% if not alertas_sistema and not patron_multisemanal and not sugerencia_activa and not evaluacion_intervencion and not intervencion_distribucion and not evaluacion_distribucion and not distribucion_semanal and not preferencias_activas and not calendario_plan and not resumen_semanal_gym and not resumen_semanal_hyrox.tiene_datos %}<div data-plan-memory-empty class="memory-empty">Aún no hay observaciones adicionales. Esta sección se llenará cuando el plan acumule evidencia suficiente.</div>{% endif %}
+      {% if candidata_preferencia %}
+      <details class="memory-panel">
+        <summary><span class="memory-code">APR</span><h3>El plan puede aprender</h3></summary>
+        <div class="memory-content">
+          <div class="memory-item">En {{ candidata_preferencia.evidencia_count }} pruebas, <em>{{ candidata_preferencia.descripcion }}</em> Puedes convertirlo en una preferencia blanda del plan.</div>
+          <div class="memory-item">La preferencia no es una regla. El plan la respetará cuando sea posible.</div>
+          <div class="memory-actions"><form method="post" action="{% url 'clientes:convertir_preferencia' %}">{% csrf_token %}<input type="hidden" name="tipo_preferencia" value="{{ candidata_preferencia.tipo_preferencia }}"><input type="hidden" name="tipo_intervencion" value="{{ candidata_preferencia.tipo_intervencion }}"><button type="submit">Convertir en preferencia</button></form><button type="button" onclick="this.closest('.memory-panel').style.display='none'">Seguir probando</button></div>
+        </div>
+      </details>
+      {% endif %}
+
+      {% if revision_progreso %}
+      <details class="memory-panel">
+        <summary><span class="memory-code">PROG</span><h3>Revisión de progreso</h3></summary>
+        <div class="memory-content">{% for item in revision_progreso %}<div class="memory-item">{{ item.icono }} <span class="{{ item.color }}">{{ item.texto }}</span></div>{% endfor %}<a class="memory-action" href="{% url 'clientes:mi_cuerpo' cliente.id %}">Actualizar medidas →</a></div>
+      </details>
+      {% endif %}
+
+      {% if not alertas_sistema and not patron_multisemanal and not sugerencia_activa and not evaluacion_intervencion and not intervencion_distribucion and not evaluacion_distribucion and not distribucion_semanal and not preferencias_activas and not calendario_plan and not resumen_semanal_gym and not resumen_semanal_hyrox.tiene_datos and not candidata_preferencia and not revision_progreso %}<div data-plan-memory-empty class="memory-empty">Aún no hay observaciones adicionales. Esta sección se llenará cuando el plan acumule evidencia suficiente.</div>{% endif %}
       <a class="memory-link" href="{% url 'clientes:memoria_entrenador' cliente.id %}"><span><strong>Lo que voy entendiendo de ti</strong><span>RMs · calibración RPE · estaciones · decisiones del plan</span></span><b>→</b></a>
     </div>
   </details>
