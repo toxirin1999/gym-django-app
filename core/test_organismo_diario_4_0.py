@@ -10,7 +10,7 @@ Valida que:
 
 from django.test import TestCase
 from django.contrib.auth.models import User
-from datetime import date
+from django.utils import timezone
 
 from clientes.models import Cliente
 from diario.models import ProsocheMes, ProsocheDiario
@@ -24,7 +24,7 @@ class TestDiarioOrganismo40(TestCase):
         """Crear usuario, cliente y mes de Prosoche"""
         self.user = User.objects.create_user('diario_test', password='x')
         self.cliente = self.user.cliente_perfil
-        self.hoy = date.today()
+        self.hoy = timezone.localdate()
 
         # Crear mes para Prosoche
         self.mes = ProsocheMes.objects.create(
@@ -47,6 +47,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente hoy',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
             # Sin cierre (que_ha_ido_bien, reflexiones_dia, etc. vacíos)
         )
 
@@ -96,6 +97,8 @@ class TestDiarioOrganismo40(TestCase):
             gratitud_1='Por el café',
             que_ha_ido_bien='Entrenamiento bien',
             reflexiones_dia='Buenos aprendizajes',
+            apertura_confirmada_en=timezone.now(),
+            cierre_confirmado_en=timezone.now(),
         )
 
         resultado = resolver_estado_sistema_hoy(self.user)
@@ -118,6 +121,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             que_ha_ido_bien='Entrenamiento bien',
             reflexiones_dia='Buenos aprendizajes',
+            cierre_confirmado_en=timezone.now(),
             # Sin apertura (persona_quiero_ser, gratitud_1-5 vacíos)
         )
 
@@ -142,6 +146,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
         resultado = resolver_estado_sistema_hoy(self.user)
@@ -169,6 +174,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
         # Simular una señal PROTEGIENDO (lesión activa)
@@ -200,6 +206,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
         # Simular sesión viable (EN_MARGEN)
@@ -247,6 +254,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
         resultado = resolver_estado_sistema_hoy(self.user)
@@ -276,6 +284,7 @@ class TestDiarioOrganismo40(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
         # Resolver para user1 debe tener posibilidad de Diario OBSERVANDO
