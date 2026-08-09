@@ -533,17 +533,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       CHECK-IN · {{ checkin_hoy.horas_sueno }}H · ENERGÍA {{ checkin_hoy.energia_subjetiva }}{% if checkin_hoy.fc_reposo %} · {{ checkin_hoy.fc_reposo }} BPM{% endif %}{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
     </button>
     {% else %}
-    {% if portada_hoy.accion_principal.tipo != 'modal_checkin' %}
-    <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
-       style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
-              letter-spacing:0.06em;color:rgba(245,158,11,.78);background:rgba(245,158,11,.06);
-              border:1px solid rgba(245,158,11,.2);border-radius:2px;padding:8px 14px;min-height:44px;
-              cursor:pointer;outline:none;">
-      Completar ahora
-    </button>
-    {% else %}
     <span data-checkin-status style="display:inline-flex;align-items:center;min-height:44px;font-size:10px;letter-spacing:.08em;color:rgba(245,158,11,.78);">CHECK-IN PENDIENTE</span>
-    {% endif %}
     {% endif %}
   </div>
 
@@ -723,6 +713,12 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
   <!-- ── GYM WORKOUT CARD ─────────────────────── -->
   <div id="rbGymContent">
+
+    {% if portada_hoy %}
+    <details data-session-detail class="rb-plan-detalle" style="margin-top:12px;">
+      <summary>Sesión Gym · detalle</summary>
+      <div style="padding-bottom:8px;">
+    {% endif %}
 
     {% if entreno_hoy_realizado or entreno_semana_realizado %}
     <!-- Estado: ya completado (anticipado o hoy) -->
@@ -1030,8 +1026,17 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
     {% endif %}
 
+    {% if portada_hoy %}
+      </div>
+    </details>
+    {% endif %}
+
     <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
     {% if alertas_sistema %}
+    {% if portada_hoy %}
+    <details data-secondary-signals class="rb-plan-detalle">
+      <summary>Señales del sistema · {{ alertas_sistema|length }}</summary>
+    {% endif %}
     <div style="margin-top:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🧠</span>
@@ -1135,6 +1140,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
       </div>
     </div>
+    {% if portada_hoy %}</details>{% endif %}
     {% endif %}
 
     {# ── BLOQUE DE APRENDIZAJE — colapsado por defecto (densidad) ── #}

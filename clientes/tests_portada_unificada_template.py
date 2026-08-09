@@ -28,4 +28,7 @@ class PortadaUnificadaTemplateTests(TestCase):
             "clientes/mockup_demo.html"
         ).template.source
         self.assertIn('data-decision-detail', template_source)
+        self.assertIn('data-session-detail', template_source)
+        self.assertIn('data-secondary-signals', template_source)
+        self.assertNotIn('Completar ahora', template_source)
         self.assertIn('Tu trayectoria', html)

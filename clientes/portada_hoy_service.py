@@ -8,8 +8,12 @@ resueltas y garantiza que exista, como máximo, una acción principal.
 _GYM_NO_EJECUTABLE = {"recuperar", "descanso", "posponer", "realizado"}
 
 
-def _sesion(modulo, datos):
-    return {"modulo": modulo, "datos": datos} if datos else None
+def _sesion(modulo, datos, *, ejecutable):
+    return {
+        "modulo": modulo,
+        "datos": datos,
+        "ejecutable": bool(ejecutable),
+    } if datos else None
 
 
 def _limitar_textos(items):
@@ -49,7 +53,9 @@ def construir_portada_hoy(
     decision_gym = decision_gym or {}
     hyrox_decision = hyrox_decision or {}
 
-    estado_gym = decision_gym.get("estado") or decision_gym.get("tipo")
+    estado_gym = str(
+        decision_gym.get("estado") or decision_gym.get("tipo") or ""
+    ).strip().lower()
     gym_viable = bool(sesion_gym) and estado_gym not in _GYM_NO_EJECUTABLE
     hyrox_viable = (
         bool(hyrox_relevante)
@@ -57,8 +63,11 @@ def construir_portada_hoy(
         and hyrox_decision.get("puede_ejecutar_plan") is True
     )
 
-    gym = _sesion("gym", sesion_gym)
-    hyrox = _sesion("hyrox", sesion_hyrox) if hyrox_relevante else None
+    gym = _sesion("gym", sesion_gym, ejecutable=gym_viable)
+    hyrox = (
+        _sesion("hyrox", sesion_hyrox, ejecutable=hyrox_viable)
+        if hyrox_relevante else None
+    )
     dominante = gym if gym_viable else hyrox if hyrox_viable else gym or hyrox
     alternativa = None
     if dominante and dominante["modulo"] == "gym" and hyrox:
@@ -111,11 +120,9 @@ def construir_portada_hoy(
             "label": hyrox_decision.get("accion_label") or "Abrir sesión Hyrox",
             "url": hyrox_url,
         }
-    elif diario_pendiente and not (gym_viable or hyrox_viable):
-        accion = {
-            "prioridad": "P4", "tipo": "diario",
-            "label": diario_label, "url": diario_url,
-        }
+    # Diario ya dispone de una acción contextual en su propio bloque. En un
+    # día de descanso promoverla aquí convertiría un estado informativo en
+    # una falsa urgencia y duplicaría el acceso inferior.
 
     return {
         "decision": {

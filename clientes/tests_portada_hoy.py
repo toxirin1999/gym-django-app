@@ -96,15 +96,29 @@ class PortadaHoyBuilderTests(SimpleTestCase):
         self.assertEqual(portada["sesion_alternativa"]["modulo"], "hyrox")
         self.assertNotIn("accion", portada["sesion_alternativa"])
 
-    def test_diario_es_p4_solo_si_no_hay_sesion_ejecutable(self):
+    def test_descanso_no_convierte_diario_en_cta_principal(self):
         portada = self.build(
-            sesion_gym=None,
+            sesion_gym={"nombre": "Día de Descanso"},
             decision_gym={"estado": "descanso"},
             diario_pendiente=True,
         )
-        self.assertEqual(portada["accion_principal"]["prioridad"], "P4")
-        self.assertEqual(portada["accion_principal"]["url"], "/diario/")
-        self.assertEqual(portada["accion_principal"]["label"], "Abrir el día")
+        self.assertIsNone(portada["accion_principal"])
+        self.assertFalse(portada["sesion_dominante"]["ejecutable"])
+
+    def test_estado_descanso_es_insensible_a_mayusculas(self):
+        portada = self.build(
+            estado_sistema={
+                "estado": "EN_MARGEN", "estado_label": "Silencio",
+                "texto": "No hay nada que forzar ahora.",
+                "accion_label": "Día de descanso", "accion_url": "/entrenos/",
+                "modulo_principal": "gym", "modulo_operativo": False,
+            },
+            decision_gym={"estado": "DESCANSO"},
+            sesion_gym={"nombre": "Día de Descanso"},
+            diario_pendiente=True,
+        )
+        self.assertIsNone(portada["accion_principal"])
+        self.assertFalse(portada["sesion_dominante"]["ejecutable"])
 
     def test_sin_sesion_ni_diario_no_inventa_accion(self):
         portada = self.build(sesion_gym=None, decision_gym={"estado": "descanso"})

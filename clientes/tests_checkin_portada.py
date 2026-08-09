@@ -27,7 +27,8 @@ class CheckinPortadaTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["checkin_pendiente"])
-        self.assertContains(response, "Completar ahora")
+        self.assertContains(response, "CHECK-IN PENDIENTE")
+        self.assertNotContains(response, "Completar ahora")
         self.assertContains(response, "Más tarde")
         self.assertContains(response, "Sueño y energía son obligatorios")
         self.assertContains(response, "Datos biométricos opcionales")
