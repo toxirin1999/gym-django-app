@@ -358,6 +358,56 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 .rb-bottom-btn:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); text-decoration: none; }
 .rb-bottom-btn:hover i { color: var(--bg); }
 
+/* ── HERRAMIENTAS SECUNDARIAS ────────────────── */
+.rb-tools {
+  margin-top: 18px; border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.rb-tools > summary {
+  min-height: 44px; padding: 10px 2px; list-style: none; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; user-select: none;
+}
+.rb-tools > summary::-webkit-details-marker { display: none; }
+.rb-tools > summary::before {
+  content: '▸'; flex: 0 0 auto; font-size: 9px; color: var(--fg-mute);
+}
+.rb-tools[open] > summary::before { content: '▾'; }
+.rb-tools-title {
+  font-family: var(--font-disp); font-size: 13px; letter-spacing: .06em;
+  color: var(--fg); text-transform: uppercase;
+}
+.rb-tools-meta {
+  margin-left: auto; min-width: 0; font-family: var(--font-mono);
+  font-size: 9px; font-weight: 700; color: var(--ink-4);
+  white-space: nowrap;
+}
+.rb-tools-body { padding: 4px 0 12px; }
+.rb-tools-acwr {
+  padding: 12px; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 2px;
+}
+.rb-tools-acwr-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+}
+.rb-tools-acwr-head .rb-btn { min-width: 44px; min-height: 44px; }
+.rb-tools-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px; margin-top: 8px;
+}
+.rb-tools-grid .rb-bottom-btn {
+  min-width: 0; min-height: 44px; padding: 9px 8px; flex-direction: row;
+  justify-content: flex-start; gap: 7px; font-size: 9px;
+}
+.rb-tools-grid .rb-bottom-btn svg { flex: 0 0 auto; width: 15px; height: 15px; }
+.rb-tools-grid .rb-bottom-btn i { flex: 0 0 auto; width: 15px; text-align: center; }
+@media (max-width: 380px) {
+  .rb-tools-title { font-size: 12px; }
+  .rb-tools-meta { font-size: 8px; }
+  .rb-tools-acwr-head { flex-wrap: wrap; }
+  .rb-tools-acwr-head .rb-section-line { display: none; }
+  .rb-tools-acwr-head .rb-btn { margin-left: auto; }
+}
+
 /* ── ACWR WIDGET ─────────────────────────────── */
 .acwr-card { width:100%; }
 .acwr-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
@@ -1885,88 +1935,61 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
   </div>
 
-  <!-- ── ACWR WIDGET (colapsado por defecto) ──── -->
-  <details class="rb-section" style="margin-top:20px;">
-    <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
-      <div class="rb-section-num">CARGA</div>
-      <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
-      <div class="rb-section-line"></div>
-      <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);white-space:nowrap;">
-        {% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}
-        · ver gráfica
-      </span>
+  <!-- Diario conserva la prioridad humana; el resto vive en un solo plano secundario. -->
+  <details data-secondary-tools class="rb-tools">
+    <summary aria-label="Abrir herramientas y evolución">
+      <span class="rb-tools-title">Herramientas y evolución</span>
+      <span class="rb-tools-meta">ACWR {% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}</span>
     </summary>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
-      <button onclick="document.getElementById('rbAcwrModal').classList.add('open')"
-              class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;">
-        <i class="fas fa-circle-info"></i> ¿Qué es?
-      </button>
-    </div>
-    <div class="rb-acwr-container"
-         id="acwr-widget-container"
-         hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
-         hx-trigger="revealed"
-         hx-swap="innerHTML">
-      <div class="rb-skeleton"></div>
-    </div>
-  </details>
+    <div class="rb-tools-body">
+      <div class="rb-tools-acwr">
+        <div class="rb-tools-acwr-head">
+          <span class="rb-section-num">CARGA</span>
+          <h3 class="rb-section-title">Ratio Carga ACWR</h3>
+          <span class="rb-section-line"></span>
+          <button type="button" onclick="document.getElementById('rbAcwrModal').classList.add('open')"
+                  class="rb-btn rb-btn-ghost rb-btn-sm" aria-label="Qué es el ratio de carga ACWR">
+            <i class="fas fa-circle-info" aria-hidden="true"></i> ¿Qué es?
+          </button>
+        </div>
+        <div class="rb-acwr-container" id="acwr-widget-container"
+             hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
+             hx-trigger="revealed" hx-swap="innerHTML">
+          <div class="rb-skeleton"></div>
+        </div>
+      </div>
 
-  {# STATS BAR eliminada — duplicaba los 4 stats del BIB HERO de arriba #}
-
-  <!-- ── ACCIONES PRIMARIAS (rutina + timeline) ── -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/></svg>
-      Rutina
-    </a>
-    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Timeline
-    </a>
-  </div>
-
-  <!-- ── MÁS (colapsado) ───────────────────────── -->
-  <details class="rb-plan-detalle" style="margin-top:6px;">
-    <summary>Más</summary>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;background:var(--accent);border-color:var(--accent);color:var(--bg);">
-        <i class="fas fa-plus"></i> Añadir
-      </a>
-      <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-book"></i> Diario
-      </a>
-      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-chart-area"></i> Evolución
-      </a>
-      <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-map"></i> Plan
-      </a>
-      <a href="{% url 'clientes:blade_runner_dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-bolt"></i> Blade
-      </a>
-      <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-fire-flame-curved"></i> Estoico
-      </a>
-      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-trophy"></i> Logros
-      </a>
+      <nav class="rb-tools-grid" aria-label="Herramientas del atleta">
+        <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">
+          <i class="fas fa-dumbbell" aria-hidden="true"></i> Rutina
+        </a>
+        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
+          <i class="fas fa-clock-rotate-left" aria-hidden="true"></i> Timeline
+        </a>
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn">
+          <i class="fas fa-plus" aria-hidden="true"></i> Añadir actividad
+        </a>
+        <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn">
+          <i class="fas fa-chart-area" aria-hidden="true"></i> Evolución
+        </a>
+        <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn">
+          <i class="fas fa-map" aria-hidden="true"></i> Plan
+        </a>
+        <a href="{% url 'clientes:plan_decisiones' %}" class="rb-bottom-btn">
+          <i class="fas fa-route" aria-hidden="true"></i> Decisiones
+        </a>
+        <a href="{% url 'clientes:blade_runner_dashboard' %}" class="rb-bottom-btn">
+          <i class="fas fa-bolt" aria-hidden="true"></i> Blade
+        </a>
+        <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn">
+          <i class="fas fa-fire-flame-curved" aria-hidden="true"></i> Estoico
+        </a>
+        <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bottom-btn">
+          <i class="fas fa-trophy" aria-hidden="true"></i> Logros
+        </a>
+      </nav>
     </div>
   </details>
-
-  <!-- Phase 26 — Centro de decisiones del plan -->
-  <a href="{% url 'clientes:plan_decisiones' %}"
-     style="display:flex;align-items:center;gap:10px;margin-top:6px;padding:11px 14px;
-            background:var(--paper);border:1px solid var(--line-2);border-radius:12px;
-            text-decoration:none;color:var(--ink-3);transition:border-color .2s,color .2s;"
-     onmouseover="this.style.borderColor='rgba(20,184,166,0.4)';this.style.color='var(--ink)'"
-     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(20,184,166,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 0 20A10 10 0 0 1 12 2"/>
-      <path d="M12 6a6 6 0 0 1 0 12 6 6 0 0 1 0-12"/>
-    </svg>
-    <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;">Por qué el plan decide así</span>
-    <span style="margin-left:auto;font-size:9px;font-family:var(--font-mono);color:rgba(20,184,166,0.55);font-weight:700;letter-spacing:0.1em;">→</span>
-  </a>
 
 </div><!-- .rb-container -->
 

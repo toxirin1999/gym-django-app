@@ -68,3 +68,43 @@ class PortadaUnificadaTemplateTests(TestCase):
                 html = self._render_con_accion_principal(accion)
                 self.assertEqual(html.count("data-primary-action"), 1)
                 self.assertIn(accion["label"], html)
+
+    def test_herramientas_secundarias_forman_un_unico_bloque_cerrado(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+
+        self.assertEqual(source.count("data-secondary-tools"), 1)
+        start = source.index('<details data-secondary-tools')
+        end = source.index('</details>', start)
+        tools = source[start:end]
+
+        self.assertNotIn(" open", source[start:source.index(">", start)])
+        self.assertIn("Herramientas y evolución", tools)
+        self.assertIn("Ratio Carga ACWR", tools)
+        self.assertIn("'entrenos:vista_plan_anual'", tools)
+        self.assertIn("'entrenos:timeline_atleta'", tools)
+        self.assertIn("'entrenos:dashboard_evolucion'", tools)
+        self.assertNotIn("<details", tools[len('<details data-secondary-tools'):])
+
+    def test_herramientas_compactas_conservan_funciones_y_tactilidad(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        start = source.index('<details data-secondary-tools')
+        end = source.index('</details>', start)
+        tools = source[start:end]
+
+        for url_name in (
+            "clientes:widget_acwr",
+            "entrenos:vista_plan_anual",
+            "entrenos:timeline_atleta",
+            "entrenos:registrar_actividad_libre",
+            "entrenos:dashboard_evolucion",
+            "analytics:explicacion_plan_helms",
+            "clientes:blade_runner_dashboard",
+            "estoico:dashboard",
+            "logros:ver_codice_completo",
+            "clientes:plan_decisiones",
+        ):
+            with self.subTest(url_name=url_name):
+                self.assertIn("'" + url_name + "'", tools)
+
+        self.assertIn("min-height: 44px", source)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr))", source)
