@@ -3423,6 +3423,7 @@ def check_simbiosis_api(request):
     from diario.services.analisis_cierre_service import (
         AnalisisNoDisponible, analizar_texto, crear_artefacto, firmar_artefacto,
     )
+    from diario.models import Interaccion, InteraccionSombra
     try:
         data = json.loads(request.body)
         if not isinstance(data, dict):
@@ -3461,14 +3462,24 @@ def check_simbiosis_api(request):
 
         hoy = timezone.localdate()
         for persona_nombre in personas_detectadas:
+            persona_nombre = ' '.join(str(persona_nombre or '').split())[:100].rstrip()
+            if not persona_nombre:
+                continue
             dias_con_mencion = 0
             for delta in range(1, 3):
                 dia_pasado = hoy - timedelta(days=delta)
-                mencionado = ReflexionLibre.objects.filter(
-                    usuario=request.user,
-                    fecha__date=dia_pasado,
-                    etiquetas__icontains=persona_nombre.lower()[:10],
-                ).exists()
+                mencionado = (
+                    InteraccionSombra.objects.filter(
+                        persona_interina__usuario=request.user,
+                        persona_interina__nombre__iexact=persona_nombre,
+                        fecha=dia_pasado,
+                    ).exists()
+                    or Interaccion.objects.filter(
+                        usuario=request.user,
+                        personas__nombre__iexact=persona_nombre,
+                        fecha=dia_pasado,
+                    ).exists()
+                )
                 if mencionado:
                     dias_con_mencion += 1
             if dias_con_mencion >= 2:
@@ -3678,6 +3689,7 @@ def presencia_cierre(request):
                 )
         # Pregunta/persona nunca se aceptan desde JSON plano del cliente.
         payload['simbiosis_pregunta'] = artefacto.get('pregunta_simbiosis', '')
+        payload['simbiosis_persona'] = artefacto.get('persona_simbiosis', '')
         payload['analisis_cierre'] = artefacto
         if entrada and cierre_service._hash_payload(payload)[1] == entrada.cierre_payload_hash:
             canonica = CierreNocturnoOperacion.objects.filter(
@@ -4008,7 +4020,17 @@ def aceptar_habito_invitacion(request):
                 'tipo': tipo,
             },
         )
-        return JsonResponse({'ok': True, 'creado': creado, 'id': gesto.id})
+        reactivado = False
+        if not creado and gesto.estado != 'activo':
+            from diario.services.habitos_service import HabitosService
+            if gesto.estado == 'cerrado':
+                HabitosService.restaurar_gesto(gesto)
+            else:
+                HabitosService.reactivar_gesto(gesto)
+            reactivado = True
+        return JsonResponse({
+            'ok': True, 'creado': creado, 'reactivado': reactivado, 'id': gesto.id,
+        })
     except Exception as e:
         return JsonResponse({'ok': False, 'error': str(e)}, status=400)
 

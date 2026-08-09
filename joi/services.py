@@ -3559,7 +3559,8 @@ def _historial_simbiosis(user, persona_nombre: str) -> str:
         for entrada in cierres
     ]
     lineas.extend(
-        f"- Respuesta previa [{respuesta.fecha.date()}]: {respuesta.contenido[:200]}"
+        f"- Pregunta y respuesta previas [{respuesta.fecha.date()}]: "
+        f"{respuesta.titulo[:200]} | {respuesta.contenido[:200]}"
         for respuesta in respuestas
     )
     return '\n'.join(lineas)

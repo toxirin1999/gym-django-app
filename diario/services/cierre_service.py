@@ -38,6 +38,7 @@ def _hash_payload(payload):
         'habitos_completados': sorted(set(payload.get('habitos_completados') or [])),
         'simbiosis_respuesta': payload.get('simbiosis_respuesta', '').strip(),
         'simbiosis_pregunta': payload.get('simbiosis_pregunta', '').strip(),
+        'simbiosis_persona': payload.get('simbiosis_persona', '').strip(),
     }
     serializado = json.dumps(normalizado, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     if isinstance(payload.get('analisis_cierre'), dict):
@@ -123,6 +124,11 @@ def _texto_comparable(texto):
     """Normaliza diferencias triviales para no aprender dos veces lo mismo."""
     texto = unicodedata.normalize('NFKC', texto or '').casefold()
     return ' '.join(re.findall(r'\w+', texto, flags=re.UNICODE))
+
+
+def _normalizar_nombre_persona(nombre):
+    """Acota cualquier identidad sugerida por IA al contrato del modelo."""
+    return ' '.join(str(nombre or '').split())[:100].rstrip()
 
 
 def _manual_activo_equivalente(usuario, texto):
@@ -338,9 +344,17 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             ledger['reflexiones'].append({'id': reflexion.pk})
         simbiosis_respuesta = payload.get('simbiosis_respuesta')
         if simbiosis_respuesta:
+            persona_simbiosis = _normalizar_nombre_persona(
+                payload.get('simbiosis_persona')
+                or (payload.get('analisis_cierre') or {}).get('persona_simbiosis')
+            )
+            pregunta_simbiosis = str(payload.get('simbiosis_pregunta') or '').strip()
+            titulo_simbiosis = f'Simbiosis: {persona_simbiosis}' if persona_simbiosis else 'Simbiosis'
+            if pregunta_simbiosis:
+                titulo_simbiosis = f'{titulo_simbiosis} — {pregunta_simbiosis}'
             reflexion = ReflexionLibre.objects.create(
                 usuario=usuario, contenido=simbiosis_respuesta, tipo='crisis',
-                titulo='Reflexión Simbiosis', etiquetas='simbiosis_respuesta',
+                titulo=titulo_simbiosis[:200], etiquetas='simbiosis_respuesta',
             )
             _asignar_fecha_cierre(reflexion, entrada.fecha)
             ids['reflexiones'].append(reflexion.pk)
@@ -357,11 +371,12 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             })
         tipos = {choice[0] for choice in Interaccion.TIPO_INTERACCION_CHOICES}
         personas_permitidas = {
-            (persona or '').strip().casefold() for persona in personas if (persona or '').strip()
+            _normalizar_nombre_persona(persona).casefold()
+            for persona in personas if _normalizar_nombre_persona(persona)
         }
         personas_contadas = set()
         for item in enriquecido.get('interacciones') or []:
-            nombre = (item.get('persona') or '').strip()
+            nombre = _normalizar_nombre_persona(item.get('persona'))
             identidad = nombre.casefold()
             if not nombre or identidad not in personas_permitidas:
                 continue
@@ -434,7 +449,8 @@ def ejecutar_enriquecimiento_cierre(operacion_id):
             'respuesta_joi': respuesta or '',
             'propuesta_habito': enriquecido.get('propuesta_habito'),
             'simbiosis': {
-                'personas': personas,
+                'personas': [_normalizar_nombre_persona(p) for p in personas if _normalizar_nombre_persona(p)],
+                'persona': _normalizar_nombre_persona(payload.get('simbiosis_persona')),
                 'pregunta': payload.get('simbiosis_pregunta') or '',
                 'respuesta': simbiosis_respuesta or '',
             },

@@ -8,7 +8,10 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from diario.models import CierreNocturnoOperacion, Gesto, PersonaInterina, ReflexionLibre
+from diario.models import (
+    CierreNocturnoOperacion, Gesto, InteraccionSombra, PersonaInterina,
+    ReflexionLibre,
+)
 
 
 class AnalisisCierreUnicoTests(TestCase):
@@ -137,12 +140,11 @@ class AnalisisCierreUnicoTests(TestCase):
             'enriquecido': {},
         }
         hoy = timezone.localdate()
+        interina = PersonaInterina.objects.create(usuario=self.user, nombre='Ana')
         for dias in (1, 2):
-            reflexion = ReflexionLibre.objects.create(
-                usuario=self.user, contenido='Ana', etiquetas='ana',
-            )
-            ReflexionLibre.objects.filter(pk=reflexion.pk).update(
-                fecha=timezone.now() - timedelta(days=dias)
+            InteraccionSombra.objects.create(
+                persona_interina=interina, descripcion='Ana apareció',
+                fecha=hoy - timedelta(days=dias),
             )
 
         datos = self.client.post(
@@ -167,12 +169,12 @@ class AnalisisCierreUnicoTests(TestCase):
             'parseo': {'personas': ['Ana'], 'impulsos': [], 'etiquetas': []},
             'enriquecido': {},
         }
+        hoy = timezone.localdate()
+        interina = PersonaInterina.objects.create(usuario=self.user, nombre='Ana')
         for dias in (1, 2):
-            reflexion = ReflexionLibre.objects.create(
-                usuario=self.user, contenido='Ana', etiquetas='ana',
-            )
-            ReflexionLibre.objects.filter(pk=reflexion.pk).update(
-                fecha=timezone.now() - timedelta(days=dias)
+            InteraccionSombra.objects.create(
+                persona_interina=interina, descripcion='Ana apareció',
+                fecha=hoy - timedelta(days=dias),
             )
 
         datos = self.client.post(
