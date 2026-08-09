@@ -383,6 +383,13 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         'hyrox_reciente': False,
         'energia_baja': False,
         'energia_valor': None,
+        'horas_sueno': None,
+        'frecuencia_cardiaca_reposo': None,
+        'hrv_ms': None,
+        'calidad_sueno': None,
+        'dolor': None,
+        'evidencia_fecha': None,
+        'evidencia_presente': False,
         'readiness_bajo': False,
         'readiness_valor': None,
         'preferencias_activas': [],
@@ -433,16 +440,38 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         bitacora = BitacoraDiaria.objects.filter(
             cliente=cliente, fecha=fecha_hoy
         ).first()
-        if bitacora and bitacora.energia_subjetiva is not None:
-            ctx['energia_valor'] = int(bitacora.energia_subjetiva)
-            ctx['energia_baja'] = ctx['energia_valor'] <= 3
+        if bitacora:
+            ctx.update({
+                'evidencia_fecha': bitacora.fecha,
+                'evidencia_presente': True,
+                'horas_sueno': (
+                    float(bitacora.horas_sueno)
+                    if bitacora.horas_sueno is not None else None
+                ),
+                'frecuencia_cardiaca_reposo': bitacora.fc_reposo,
+                'hrv_ms': bitacora.hrv_ms,
+                'calidad_sueno': bitacora.calidad_sueno,
+                'dolor': bitacora.dolor_articular,
+            })
+            if bitacora.energia_subjetiva is not None:
+                ctx['energia_valor'] = int(bitacora.energia_subjetiva)
+                ctx['energia_baja'] = ctx['energia_valor'] <= 3
     except Exception:
         pass
 
     # 4. Readiness Hyrox — solo para usuarios con objetivo activo (< 45 = bajo)
     try:
         from hyrox.models import HyroxObjective, HyroxReadinessLog
-        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        objetivo = (
+            HyroxObjective.objects
+            .filter(
+                cliente=cliente,
+                estado='activo',
+                fecha_evento__gte=fecha_hoy,
+            )
+            .order_by('fecha_evento', 'pk')
+            .first()
+        )
         if objetivo:
             rl = HyroxReadinessLog.objects.filter(
                 objective=objetivo, fecha=fecha_hoy

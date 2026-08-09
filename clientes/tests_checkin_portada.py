@@ -4,6 +4,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from clientes.models import BitacoraDiaria, Cliente
+from hyrox.models import HyroxObjective, HyroxReadinessLog
 
 
 class CheckinPortadaTests(TestCase):
@@ -121,6 +122,76 @@ class CheckinPortadaTests(TestCase):
         bitacora = BitacoraDiaria.objects.get(cliente=self.cliente, fecha=timezone.localdate())
         self.assertEqual(bitacora.fc_reposo, 55)
         self.assertEqual(bitacora.hrv_ms, 70)
+
+    def test_sincroniza_hrv_con_campana_hyrox_vigente(self):
+        objetivo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=timezone.localdate() + timezone.timedelta(days=30),
+            estado="activo",
+        )
+
+        response = self.client.post(
+            self.url,
+            {
+                "horas_sueno": "7.5",
+                "energia_subjetiva": "7",
+                "fc_reposo": "53",
+                "hrv_ms": "72",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        log = HyroxReadinessLog.objects.get(objective=objetivo)
+        self.assertEqual(log.hrv_ms, 72)
+        self.assertEqual(log.fc_reposo, 53)
+        self.assertEqual(log.horas_sueno, 7.5)
+
+    def test_no_sincroniza_objetivo_hyrox_activo_vencido(self):
+        objetivo_vencido = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=timezone.localdate() - timezone.timedelta(days=1),
+            estado="activo",
+        )
+
+        response = self.client.post(
+            self.url,
+            {"horas_sueno": "8", "energia_subjetiva": "6", "hrv_ms": "65"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            BitacoraDiaria.objects.filter(
+                cliente=self.cliente, fecha=timezone.localdate(), hrv_ms=65
+            ).exists()
+        )
+        self.assertFalse(
+            HyroxReadinessLog.objects.filter(objective=objetivo_vencido).exists()
+        )
+
+    def test_si_hay_varias_campanas_vigentes_sincroniza_la_mas_proxima(self):
+        objetivo_lejano = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=timezone.localdate() + timezone.timedelta(days=90),
+            estado="activo",
+        )
+        objetivo_proximo = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=timezone.localdate() + timezone.timedelta(days=14),
+            estado="activo",
+        )
+
+        response = self.client.post(
+            self.url,
+            {"horas_sueno": "7", "energia_subjetiva": "8", "hrv_ms": "69"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        log = HyroxReadinessLog.objects.get()
+        self.assertEqual(log.objective, objetivo_proximo)
+        self.assertEqual(log.hrv_ms, 69)
+        self.assertFalse(
+            HyroxReadinessLog.objects.filter(objective=objetivo_lejano).exists()
+        )
 
     def test_endpoint_preserva_auth_y_csrf(self):
         self.client.logout()

@@ -505,12 +505,21 @@ def checkin_matutino(request):
     # Sync to HyroxReadinessLog
     try:
         from hyrox.models import HyroxObjective, HyroxReadinessLog
-        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        objetivo = (
+            HyroxObjective.objects.filter(
+                cliente=cliente,
+                estado='activo',
+                fecha_evento__gte=hoy,
+            )
+            .order_by('fecha_evento', 'pk')
+            .first()
+        )
         if objetivo:
             defaults = {}
             if fc_reposo   is not None: defaults['fc_reposo']    = fc_reposo
             if horas_sueno is not None: defaults['horas_sueno']  = horas_sueno
             if calidad     is not None: defaults['calidad_sueno'] = calidad
+            if hrv_ms      is not None: defaults['hrv_ms']        = hrv_ms
             if defaults:
                 log, created = HyroxReadinessLog.objects.get_or_create(
                     objective=objetivo, fecha=hoy,
