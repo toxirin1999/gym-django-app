@@ -533,6 +533,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       CHECK-IN · {{ checkin_hoy.horas_sueno }}H · ENERGÍA {{ checkin_hoy.energia_subjetiva }}{% if checkin_hoy.fc_reposo %} · {{ checkin_hoy.fc_reposo }} BPM{% endif %}{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
     </button>
     {% else %}
+    {% if portada_hoy.accion_principal.tipo != 'modal_checkin' %}
     <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
        style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
               letter-spacing:0.06em;color:rgba(245,158,11,.78);background:rgba(245,158,11,.06);
@@ -540,6 +541,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
               cursor:pointer;outline:none;">
       Completar ahora
     </button>
+    {% else %}
+    <span data-checkin-status style="display:inline-flex;align-items:center;min-height:44px;font-size:10px;letter-spacing:.08em;color:rgba(245,158,11,.78);">CHECK-IN PENDIENTE</span>
+    {% endif %}
     {% endif %}
   </div>
 
@@ -567,8 +571,10 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
     {% endif %}
 
-    <!-- Stats divider -->
-    <div class="rb-bib-divider">
+    <!-- Trayectoria: contexto secundario, nunca compite con la decisión -->
+    <details style="margin-top:12px;">
+    <summary class="rb-collapse-summary" style="min-height:44px;">Tu trayectoria</summary>
+    <div class="rb-bib-divider" style="margin-top:4px;">
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">Sesiones</div>
         <div class="rb-bib-stat-val">{{ entrenos_count|default:"0" }}</div>
@@ -588,6 +594,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </div>
       </div>
     </div>
+    </details>
 
     <!-- Bio readiness — solo visible con lesión activa -->
     {% if bio_readiness and bio_banner.has_restrictions %}
@@ -615,7 +622,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   </div>
 
   {% if joi_narrativa_hoy %}
-  <div style="margin:10px 0 6px;padding:8px 14px;
+  <a data-joi-voice href="/joi/habitacion/" style="display:block;margin:10px 0 6px;padding:8px 14px;
               border-left:1px solid var(--jds-joi-border);">
     <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
                 letter-spacing:0.14em;text-transform:uppercase;
@@ -624,24 +631,36 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
                 font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
       {{ joi_narrativa_hoy }}
     </div>
-  </div>
+  </a>
   {% endif %}
 
-  <!-- ── SISTEMA HOY (Phase Organismo 2) ──────── -->
-  {% if estado_sistema %}
+  <!-- ── DECISIÓN ÚNICA HOY ─────────────────── -->
+  {% if portada_hoy %}
   <div class="rb-organismo-card">
-    <div class="rb-organismo-label">Sistema hoy</div>
+    <div class="rb-organismo-label">Decisión hoy</div>
     <div class="rb-organismo-body">
       <span class="rb-organismo-estado rb-org-{{ estado_sistema.estado|lower }}">
-        {{ estado_sistema.estado_label }}
+        {{ portada_hoy.decision.estado }}
       </span>
-      <span class="rb-organismo-texto">{{ estado_sistema.texto }}</span>
+      <span class="rb-organismo-texto">{{ portada_hoy.decision.frase }}</span>
     </div>
-    {% if estado_sistema.accion_label %}
-    <a href="{{ estado_sistema.accion_url }}"
-       class="rb-btn rb-btn-ghost rb-organismo-btn">
-      {{ estado_sistema.accion_label }} →
-    </a>
+    {% if portada_hoy.accion_principal %}
+      {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}
+      <button data-primary-action type="button" onclick="rbOpenCheckin(this)"
+              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
+        {{ portada_hoy.accion_principal.label }}
+      </button>
+      {% elif portada_hoy.accion_principal.tipo == 'diario' %}
+      <button data-primary-action type="button"
+              onclick="window.location.href='{{ portada_hoy.accion_principal.url }}'"
+              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
+        {{ portada_hoy.accion_principal.label }} →
+      </button>
+      {% else %}
+      <a href="{{ portada_hoy.accion_principal.url }}" data-primary-action class="rb-cta">
+        {{ portada_hoy.accion_principal.label }} →
+      </a>
+      {% endif %}
     {% endif %}
     {% comment %}
     Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
@@ -649,9 +668,41 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     de hoy es gym/hyrox — con diario/joi sería ruido.
     {% endcomment %}
     {% if estado_sistema.modulo_operativo %}
-    <div class="rb-organismo-porque">
+    <details data-decision-detail style="margin-top:10px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Por qué hoy</summary>
+    <div class="rb-organismo-porque" style="margin-top:6px;">
       {% include "includes/_semaforo_intencion.html" %}
     </div>
+    </details>
+    {% endif %}
+    {% if portada_hoy.sesion_dominante %}
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);">
+      <div class="rb-workout-eyebrow">Sesión dominante · {{ portada_hoy.sesion_dominante.modulo|upper }}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:3px;">
+        {% if portada_hoy.sesion_dominante.modulo == 'gym' %}
+          {{ portada_hoy.sesion_dominante.datos.nombre|default:portada_hoy.sesion_dominante.datos.rutina_nombre|default:"Sesión Gym" }}
+        {% else %}
+          {{ portada_hoy.sesion_dominante.datos.titulo|default:"Sesión Hyrox" }}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if portada_hoy.sesion_alternativa %}
+    <details style="margin-top:8px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Alternativa · {{ portada_hoy.sesion_alternativa.modulo|upper }}</summary>
+      <div style="font-size:11px;color:var(--ink-3);padding:4px 0 8px;">Disponible como referencia secundaria.</div>
+    </details>
+    {% endif %}
+    {% if portada_hoy.senales %}
+    <div style="margin-top:10px;">
+      {% for senal in portada_hoy.senales %}<div data-causal-signal class="rb-aprendio-item">{{ senal }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if portada_hoy.aprendizajes %}
+    <details style="margin-top:8px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Lo que aprendió el plan</summary>
+      {% for item in portada_hoy.aprendizajes %}<div data-learning class="rb-aprendio-item">{{ item }}</div>{% endfor %}
+    </details>
     {% endif %}
   </div>
   {% endif %}
@@ -883,6 +934,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <!-- CTA: Ejecutar -->
     {# ── Señales: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
 
+    {# Las acciones operativas se componen una sola vez en portada_hoy. #}
+    {% if not portada_hoy %}
+
     {% if entreno_hoy_realizado or entreno_semana_realizado %}
     <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
       <i class="fas fa-plus"></i> Hacer otro entreno
@@ -973,6 +1027,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td-strong);line-height:1.5;font-style:italic;">
       <strong>Sin sesión programada.</strong> Sin datos suficientes para concluir que hoy sea descanso o recuperación.
     </div>
+    {% endif %}
     {% endif %}
 
     <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
@@ -1147,20 +1202,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <div class="rb-section-line"></div>
       </div>
       <div style="font-size:12px;color:var(--td);opacity:0.78;line-height:1.5;">{{ recomendacion_carga }}</div>
-    </div>
-    {% endif %}
-
-    {% if joi_narrativa_plan %}
-    <div style="margin-bottom:10px;padding:10px 14px;
-                border-left:1px solid rgba(100,148,220,0.20);
-                opacity:0.72;">
-      <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
-                  letter-spacing:0.14em;text-transform:uppercase;
-                  color:rgba(100,148,220,0.55);margin-bottom:4px;">JOI · esta fase</div>
-      <div style="font-size:11px;color:var(--td);line-height:1.5;font-style:italic;
-                  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:300;">
-        {{ joi_narrativa_plan }}
-      </div>
     </div>
     {% endif %}
 
@@ -1643,6 +1684,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% if not hyrox_decision.puede_ejecutar_plan %}
     <div class="rb-workout-card rb-hyrox-protected" style="border-left:3px solid var(--danger);">
       <div class="rb-workout-eyebrow" style="color:var(--danger);">Hyrox · estado protegido</div>
+      <div style="font-size:10px;color:var(--danger);margin-top:5px;">Prioridad: recuperación</div>
       <div class="rb-workout-title">{{ hyrox_decision.titulo|default:"Decisión no disponible" }}</div>
       <div class="rb-bib-sub" style="margin-top:6px;">{{ hyrox_decision.subtitulo }}</div>
       {% if hyrox_decision.mensaje %}
@@ -1655,9 +1697,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <div style="margin-top:5px;font-size:10px;color:var(--danger);">Evitar · {{ hyrox_decision.evitar|join:", " }}</div>
       {% endif %}
     </div>
-    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid var(--line-2);color:var(--td);">
-      <i class="fas fa-shield-heart"></i> Revisar recuperación Hyrox
-    </a>
     {% else %}
     {% if hyrox_proxima_sesion %}
     <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
@@ -1675,11 +1714,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     {% endif %}
 
-    {% if hyrox_proxima_sesion %}
-    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=hyrox_objetivo.id %}" class="rb-cta">
-      <i class="fas fa-bolt"></i> Ejecutar Hyrox
-    </a>
-    {% endif %}
     {% endif %}
 
     {% if hyrox_decision.puede_ejecutar_plan %}
@@ -2068,22 +2102,9 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="rb-modal-handle"></div>
     <div class="rb-modal-title" id="rbCheckinTitle" style="margin-bottom:4px;">Check-in Matutino</div>
     <div class="rb-modal-sub" style="margin-bottom:6px;">¿Cómo has amanecido hoy?</div>
-    <div id="rbCheckinContract" style="font-size:11px;color:var(--ink-3);margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};line-height:1.5;">
+    <div id="rbCheckinContract" style="font-size:11px;color:var(--ink-3);margin-bottom:20px;line-height:1.5;">
       <strong>Sueño y energía son obligatorios</strong><br>Datos biométricos opcionales
     </div>
-
-    {% if joi_mensaje_pendiente %}
-    <a href="/joi/habitacion/" style="display:block;margin-bottom:18px;padding:8px 12px;
-       border-left:1px solid var(--jds-joi-border);text-decoration:none;">
-      <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
-                  letter-spacing:0.14em;text-transform:uppercase;
-                  color:var(--jds-joi);opacity:0.7;margin-bottom:4px;">JOI</div>
-      <div style="font-size:11px;color:var(--joi-text);line-height:1.55;font-style:italic;
-                  font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
-        {{ joi_mensaje_pendiente.mensaje|truncatewords:24 }}
-      </div>
-    </a>
-    {% endif %}
 
     <form id="rbCheckinForm">
       {% csrf_token %}
@@ -2362,8 +2383,6 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
   panel.style.display = 'block';
 }
 </script>
-
-{% include 'includes/_joi_fab.html' %}
 
 <div id="entreno-recovery-banner" style="display:none;position:fixed;bottom:80px;left:0;right:0;z-index:8000;padding:0 16px;">
   <div style="background:var(--bg-2);border:1px solid rgba(255,160,40,0.4);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">

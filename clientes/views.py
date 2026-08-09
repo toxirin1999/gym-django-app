@@ -1736,6 +1736,66 @@ def mockup_demo(request):
             'modulo_operativo': False,
         }
 
+    # Portada "Hoy": compositor de presentación, sin recalcular autoridades.
+    from clientes.portada_hoy_service import construir_portada_hoy
+
+    _senales_portada = list(
+        (context.get('explicacion_decision') or {}).get('senales_activas') or []
+    )
+    if context.get('hyrox_objetivo') and not context['hyrox_decision'].get(
+        'puede_ejecutar_plan', False
+    ):
+        _senales_portada.append(
+            context['hyrox_decision'].get('subtitulo')
+            or context['hyrox_decision'].get('causa')
+        )
+    _aprendizajes_portada = []
+    for _item in context.get('resumen_semanal_gym') or []:
+        _aprendizajes_portada.append(
+            _item.get('texto') if isinstance(_item, dict) else str(_item)
+        )
+    for _item in (context.get('resumen_semanal_hyrox') or {}).get('aprendizajes', []):
+        _aprendizajes_portada.append(
+            _item.get('texto') if isinstance(_item, dict) else str(_item)
+        )
+
+    _hyrox_objetivo = context.get('hyrox_objetivo')
+    _hyrox_ejecucion_url = None
+    if _hyrox_objetivo:
+        _hyrox_ejecucion_url = reverse(
+            'hyrox:registrar_entrenamiento',
+            kwargs={'objective_id': _hyrox_objetivo.id},
+        )
+    if not context.get('manana_hecha'):
+        _diario_pendiente = True
+        _diario_label = 'Abrir el día'
+        _diario_url = reverse('diario:presencia_apertura')
+    elif not context.get('noche_hecha'):
+        _diario_pendiente = True
+        _diario_label = 'Cerrar el día'
+        _diario_url = reverse('diario:presencia_cierre')
+    else:
+        _diario_pendiente = False
+        _diario_label = 'Abrir Diario'
+        _diario_url = reverse('diario:dashboard_diario')
+
+    context['portada_hoy'] = construir_portada_hoy(
+        estado_sistema=context['estado_sistema'],
+        decision_gym=context.get('_decision_gym_raw'),
+        sesion_gym=context.get('proximo_entrenamiento'),
+        hyrox_decision=context['hyrox_decision'],
+        sesion_hyrox=context.get('hyrox_proxima_sesion'),
+        hyrox_relevante=bool(_hyrox_objetivo),
+        hyrox_url=_hyrox_ejecucion_url,
+        recuperacion_url=reverse('hyrox:dashboard'),
+        checkin_pendiente=context['checkin_pendiente'],
+        diario_pendiente=_diario_pendiente,
+        diario_url=_diario_url,
+        diario_label=_diario_label,
+        senales=_senales_portada,
+        aprendizajes=_aprendizajes_portada,
+    )
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
