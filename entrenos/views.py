@@ -4163,12 +4163,15 @@ def guardar_entrenamiento_activo(request, cliente_id):
         _duracion_raw = request.POST.get('duracion_minutos_real')
         _calorias_raw = request.POST.get('calorias_quemadas')
 
-        entreno = EntrenoRealizado.objects.create(
+        entreno = EntrenoRealizado(
             cliente=cliente, fecha=fecha, fecha_ejecucion=timezone.localdate(), rutina=rutina_obj, fuente_datos='manual',
             duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip()
         )
+        # Los post_save intermedios no deben observar una sesión a medio construir.
+        entreno._defer_cierre_aprendizaje_gym = True
+        entreno.save()
 
         # --- PASO 2: Procesar ejercicios, calcular 1RM y VOLUMEN ---
         nuevos_rms_sesion = {}
@@ -4585,6 +4588,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
             logger.warning("Error en sistema de gamificación: %s", e)
             # No bloqueamos el flujo principal si falla algo de gamificación
         # ============================================================================
+
+        # Cierre causal único: aquí ya existen hijos, métricas y modo reducido.
+        from entrenos.services.decision_log_service import cerrar_aprendizaje_gym
+        cerrar_aprendizaje_gym(entreno)
 
         # El productor contractual se registra únicamente cuando la sesión ya
         # está completa. Nunca vive en post_save ni en un GET.

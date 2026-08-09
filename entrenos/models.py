@@ -1180,6 +1180,13 @@ class GymDecisionLog(models.Model):
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='gym_decision_logs')
     ejercicio = models.CharField(max_length=120)
+    # Causalidad explícita: una decisión pertenece al entreno que aportó la
+    # evidencia. Los registros históricos conservan NULL deliberadamente.
+    entreno_origen = models.ForeignKey(
+        'EntrenoRealizado', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='decisiones_generadas',
+    )
+    ejercicio_normalizado = models.CharField(max_length=120, default='', blank=True)
 
     peso_anterior = models.FloatField(null=True, blank=True)
     reps_anteriores = models.PositiveIntegerField(null=True, blank=True)
@@ -1217,6 +1224,12 @@ class GymDecisionLog(models.Model):
         verbose_name_plural = "Decisiones de Progresión"
         indexes = [
             models.Index(fields=['cliente', 'ejercicio'], name='decision_cliente_ejercicio_idx'),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cliente', 'entreno_origen', 'ejercicio_normalizado'],
+                name='uniq_decision_origen_ejercicio_norm',
+            ),
         ]
 
     def __str__(self):

@@ -296,15 +296,15 @@ def detectar_estancamiento(sender, instance, created, raw=False, **kwargs):
 @receiver(post_save, sender=EntrenoRealizado)
 def actualizar_decision_log(sender, instance, created, raw=False, **kwargs):
     """Evalúa decisiones previas y genera nuevas al guardar un EntrenoRealizado."""
-    if raw:
+    if raw or getattr(instance, '_defer_cierre_aprendizaje_gym', False):
         return
     try:
-        from entrenos.services.decision_log_service import (
-            evaluar_decisiones_para_entreno,
-            generar_decisiones_para_entreno,
-        )
-        evaluar_decisiones_para_entreno(instance)
-        generar_decisiones_para_entreno(instance)
+        # En create aún no existen hijos: otras rutas reciben compatibilidad
+        # al guardar de nuevo la sesión ya completa, sin fabricar decisiones vacías.
+        if created and not instance.ejercicios_realizados.filter(completado=True).exists():
+            return
+        from entrenos.services.decision_log_service import cerrar_aprendizaje_gym
+        cerrar_aprendizaje_gym(instance)
     except Exception as e:
         print(f"⚠️ Decision log error (entreno {instance.id}): {e}")
 

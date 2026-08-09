@@ -8,7 +8,24 @@ Flujo:
 """
 
 from datetime import timedelta
+from django.db import transaction
 from django.utils import timezone
+
+
+def normalizar_ejercicio(valor):
+    """Clave portable entre SQLite/MySQL: trim, colapso de espacios y casefold."""
+    return ' '.join((valor or '').split()).casefold()[:120]
+
+
+@transaction.atomic
+def cerrar_aprendizaje_gym(entreno):
+    """Cierra causalmente una sesión: evalúa pasado y después crea futuro.
+
+    El orden evita que una decisión recién creada se evalúe con la misma
+    evidencia que la originó. La restricción única hace seguro cualquier retry.
+    """
+    evaluar_decisiones_para_entreno(entreno)
+    generar_decisiones_para_entreno(entreno)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -28,7 +45,7 @@ def generar_decisiones_para_entreno(entreno):
     ).order_by('nombre_ejercicio')
 
     for ej in ejercicios:
-        nombre = ej.nombre_ejercicio.strip().lower()
+        nombre = normalizar_ejercicio(ej.nombre_ejercicio)
         if not nombre:
             continue
 
@@ -43,14 +60,12 @@ def generar_decisiones_para_entreno(entreno):
             .select_related('entreno')[:5]
         )
 
-        # No generar decisión si ya hay una para este ejercicio hoy
-        # (evita duplicados cuando entreno.save() dispara el signal más de una vez)
-        existe = GymDecisionLog.objects.filter(
-            cliente=cliente,
-            ejercicio__iexact=nombre,
-            fecha_creacion__date=timezone.localdate(),
-        ).exists()
-        if existe:
+        # Un origen solo puede producir una decisión por ejercicio normalizado.
+        # Esto permite dos entrenos legítimos el mismo día y hace seguro el retry.
+        if GymDecisionLog.objects.filter(
+            cliente=cliente, entreno_origen=entreno,
+            ejercicio_normalizado=nombre,
+        ).exists():
             continue
 
         perfil, _ = GymAdaptationProfile.objects.get_or_create(
@@ -83,16 +98,20 @@ def generar_decisiones_para_entreno(entreno):
             ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
         )
 
-        GymDecisionLog.objects.create(
+        GymDecisionLog.objects.get_or_create(
             cliente=cliente,
-            ejercicio=nombre,
-            peso_anterior=peso,
-            reps_anteriores=reps,
-            rpe_anterior=rpe,
-            accion=accion,
-            valor_cambio=valor_cambio,
-            motivo=motivo,
-            confianza=confianza,
+            entreno_origen=entreno,
+            ejercicio_normalizado=nombre,
+            defaults={
+                'ejercicio': nombre,
+                'peso_anterior': peso,
+                'reps_anteriores': reps,
+                'rpe_anterior': rpe,
+                'accion': accion,
+                'valor_cambio': valor_cambio,
+                'motivo': motivo,
+                'confianza': confianza,
+            },
         )
 
 
@@ -203,15 +222,23 @@ def evaluar_decisiones_para_entreno(entreno):
     )
 
     for ej in ejercicios:
-        nombre = ej.nombre_ejercicio.strip().lower()
+        nombre = normalizar_ejercicio(ej.nombre_ejercicio)
         if not nombre:
             continue
 
         log = GymDecisionLog.objects.filter(
             cliente=cliente,
-            ejercicio__iexact=nombre,
             resultado__isnull=True,
+        ).exclude(entreno_origen=entreno).filter(
+            ejercicio_normalizado=nombre,
         ).order_by('-fecha_creacion').first()
+
+        # Compatibilidad temporal: históricos sin clave causal.
+        if not log:
+            log = GymDecisionLog.objects.filter(
+                cliente=cliente, ejercicio__iexact=nombre,
+                resultado__isnull=True, entreno_origen__isnull=True,
+            ).order_by('-fecha_creacion').first()
 
         if not log:
             continue
