@@ -745,13 +745,68 @@ def _ctx_bio(cliente):
     """Bio readiness y restricciones activas."""
     try:
         from core.bio_context import BioContextProvider
-        return (
-            BioContextProvider.get_readiness_score(cliente),
-            BioContextProvider.get_current_restrictions(cliente),
-        )
+        readiness = BioContextProvider.get_readiness_score(cliente)
+        if not isinstance(readiness, dict):
+            raise ValueError('Payload de bio-readiness inválido')
+        score = readiness.get('score')
+        volume_modifier = readiness.get('volume_modifier')
+        if not isinstance(score, (int, float)) or not isinstance(volume_modifier, (int, float)):
+            raise ValueError('Payload de bio-readiness incompleto')
+        readiness = {**readiness, 'available': True}
+        return readiness, BioContextProvider.get_current_restrictions(cliente)
     except Exception as e:
         logger.warning("_ctx_bio error para cliente %s: %s", cliente.id, e)
-        return {'score': 1.0, 'volume_modifier': 1.0, 'max_rpe': 10, 'is_in_transition': False}, {}
+        return {
+            'available': False,
+            'score': None,
+            'volume_modifier': None,
+            'max_rpe': None,
+            'is_in_transition': None,
+            'sources': {},
+        }, {}
+
+
+def _consistencia_semanal_programada(cliente, hoy):
+    """Calcula consistencia solo desde SesionProgramada persistida hasta hoy."""
+    from entrenos.models import SesionProgramada
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    sesiones = SesionProgramada.objects.filter(
+        cliente=cliente,
+        fecha_prevista__range=(inicio_semana, hoy),
+    ).exclude(estado__in=(
+        SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+        SesionProgramada.ESTADO_CANCELADA_LESION,
+    ))
+    planificadas = sesiones.count()
+    if planificadas == 0:
+        return None
+    completadas = sesiones.filter(estado=SesionProgramada.ESTADO_COMPLETADA).count()
+    return round(completadas / planificadas * 100)
+
+
+def _lesion_sliders_desde_evidencia(lesion):
+    """Prepara el formulario sin persistir; los neutros no se presentan como medición."""
+    ultimo = None
+    if lesion is not None:
+        from hyrox.models import DailyRecoveryEntry
+        ultimo = DailyRecoveryEntry.objects.filter(lesion=lesion).order_by('-fecha', '-id').first()
+    valores = {
+        'dolor_reposo': ultimo.dolor_reposo if ultimo else 5,
+        'dolor_movimiento': ultimo.dolor_movimiento if ultimo else 5,
+        'inflamacion': ultimo.inflamacion_percibida if ultimo else 5,
+        'rango': ultimo.rango_movimiento if ultimo else 5,
+    }
+    specs = [
+        ('dolor_reposo', 'Dolor en reposo (0=ninguno)', 0, 10),
+        ('dolor_movimiento', 'Dolor al mover (0=ninguno)', 0, 10),
+        ('inflamacion', 'Inflamación (1=ninguna)', 1, 10),
+        ('rango', 'Rango de movimiento (10=completo)', 1, 10),
+    ]
+    return ([
+        {'name': name, 'label': label, 'min': minimo, 'max': maximo,
+         'val': valores[name], 'is_neutral_default': ultimo is None}
+        for name, label, minimo, maximo in specs
+    ], ultimo is not None)
 
 
 _CTX_CACHE_MISSING = object.__new__(object)
@@ -1127,6 +1182,7 @@ def _get_dashboard_context_data(request, cliente):
         _stats_cached = (estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia)
         cache.set(_stats_cache_key, _stats_cached, 3600)
     estadisticas_plan, historial_adherencia, prediccion, reporte_adherencia = _stats_cached
+    consistencia_pct = _consistencia_semanal_programada(cliente, hoy)
     notificaciones = generar_notificaciones_contextuales(cliente, entrenos)
 
     (estoico_disponible, contenido_hoy, reflexion_hoy, reflexion_pendiente,
@@ -1253,7 +1309,7 @@ def _get_dashboard_context_data(request, cliente):
         'sesiones_anticipadas': sesiones_anticipadas,
         'actividades_recientes_focus': actividades_recientes_focus,
         'carga_total_acumulada': carga_total_acumulada,
-        'consistencia_pct': 80,
+        'consistencia_pct': consistencia_pct,
         'acwr_actual': float(analis_acwr.get('acwr_actual', 0.0)) if analis_acwr else 0.0,
         'metricas_radar': metricas_radar,
         'emociones': emociones,
@@ -1270,7 +1326,7 @@ def _get_dashboard_context_data(request, cliente):
         'frase_recaida': frase_recaida,
         'entrenamientos_recientes': entrenamientos_recientes,
         'carga_total': round(carga_total),
-        'consistencia': 80,
+        'consistencia': consistencia_pct,
         'recomendacion_carga': sug_carga,
         'peso_actual': peso_actual,
         'datos_peso': datos_peso,
@@ -1471,9 +1527,11 @@ def mockup_demo(request):
 
     # Label legible para el bio_readiness (basado en lesiones/dolor)
     _br = context.get('bio_readiness') or {}
-    _vm = _br.get('volume_modifier', 1.0)
+    _vm = _br.get('volume_modifier')
     _src = _br.get('sources', {})
-    if _src.get('has_active_injuries'):
+    if not _br.get('available', True) or _vm is None:
+        context['bio_readiness_label'] = 'No disponible'
+    elif _src.get('has_active_injuries'):
         context['bio_readiness_label'] = 'Lesión activa'
     elif _br.get('needs_deload'):
         context['bio_readiness_label'] = 'Deload sugerido'
@@ -1608,12 +1666,9 @@ def mockup_demo(request):
             logger.exception("Autoridad Hyrox no disponible en portada: %s", e)
 
     # ── Sliders lesión para el panel inline ──────────────────────────
-    context['lesion_sliders'] = [
-        {'name': 'dolor_reposo',     'label': 'Dolor en reposo (0=ninguno)', 'min': 0, 'max': 10, 'val': 0},
-        {'name': 'dolor_movimiento', 'label': 'Dolor al mover (0=ninguno)',  'min': 0, 'max': 10, 'val': 0},
-        {'name': 'inflamacion',      'label': 'Inflamación (1=ninguna)',      'min': 1, 'max': 10, 'val': 1},
-        {'name': 'rango',            'label': 'Rango de movimiento (10=completo)', 'min': 1, 'max': 10, 'val': 5},
-    ]
+    context['lesion_sliders'], context['lesion_sliders_tienen_registro'] = (
+        _lesion_sliders_desde_evidencia(context.get('lesion_activa'))
+    )
 
     # ── Semáforo de Intención ─────────────────────────────────────
     # es_descanso_plan: True si el plan gym no tiene sesión hoy (próximo día > hoy)
@@ -1622,7 +1677,6 @@ def mockup_demo(request):
         _prox = context.get('proximo_entrenamiento') or {}
         _es_descanso_plan = (
             bool(_prox.get('es_descanso'))
-            or _prox.get('dias_hasta', 0) > 0
             or context.get('estado_entreno') == 'descanso'
         )
         semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)

@@ -564,7 +564,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
     </div>
     {% else %}
-    <div class="rb-bib-sub" style="margin-top:6px;">Día de descanso · Recuperación activa</div>
+    <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
     {% endif %}
 
     <!-- Stats divider -->
@@ -579,7 +579,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </div>
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">Consist.</div>
-        <div class="rb-bib-stat-val">{{ consistencia_pct|default:"0" }}<span style="font-size:10px;color:var(--ink-4)">%</span></div>
+        <div class="rb-bib-stat-val">{% if consistencia_pct is not None %}{{ consistencia_pct }}<span style="font-size:10px;color:var(--ink-4)">%</span>{% else %}<span style="font-size:10px;">Sin datos</span>{% endif %}</div>
       </div>
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">ACWR</div>
@@ -603,8 +603,12 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <div class="rb-rd-bar-fill" style="width:{% widthratio bio_readiness.score|default:0 1 100 %}%"></div>
       </div>
       <div class="rb-rd-trend">
-        <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}%</span>
-        <span>{{ bio_readiness.label|default:"Listo" }}</span>
+        {% if bio_readiness.available %}
+        <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier 1 100 %}%</span>
+        <span>{{ bio_readiness.label|default:bio_readiness_label }}</span>
+        {% else %}
+        <span>Volumen: No disponible</span><span>No disponible</span>
+        {% endif %}
       </div>
     </div>
     {% endif %}
@@ -808,13 +812,18 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </div>
       {% endif %}
 
-      <div class="rb-workout-badge">Vol. {% widthratio bio_readiness.volume_modifier|default:1 1 100 %}% · {{ bio_readiness_label|default:"Óptimo" }}</div>
+      <div class="rb-workout-badge">{% if bio_readiness.available %}Vol. {% widthratio bio_readiness.volume_modifier 1 100 %}% · {{ bio_readiness_label }}{% else %}Bio readiness · No disponible{% endif %}</div>
       {% if proximo_entrenamiento.ejercicios %}
       <div class="rb-ex-list">
         {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
         <div class="rb-ex-row">
           <span class="rb-ex-name">{{ ej.nombre }}</span>
-          <span class="rb-ex-sets">{{ ej.series|default:"4" }} × {{ ej.repeticiones|default:"4–6" }}</span>
+          <span class="rb-ex-sets">
+            {% if ej.series and ej.repeticiones %}{{ ej.series }} × {{ ej.repeticiones }}
+            {% elif ej.series %}{{ ej.series }} series
+            {% elif ej.repeticiones %}{{ ej.repeticiones }} reps
+            {% else %}Sin prescripción{% endif %}
+          </span>
         </div>
         {% endfor %}
         {% if proximo_entrenamiento.ejercicios|length > 4 %}
@@ -961,14 +970,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
 
     {% else %}
-    {% if mensaje_entreno %}
     <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td-strong);line-height:1.5;font-style:italic;">
-      {{ mensaje_entreno }}
+      <strong>Sin sesión programada.</strong> Sin datos suficientes para concluir que hoy sea descanso o recuperación.
     </div>
-    {% endif %}
-    <a href="{% url 'estoico:dashboard' %}" class="rb-cta rb-cta-rest">
-      <i class="fas fa-sun"></i> Ver Estoico
-    </a>
     {% endif %}
 
     <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
@@ -1002,6 +1006,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
                           letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">
                 Registro diario · {{ lesion.zona_afectada|title }} · {{ lesion.fase }}
               </div>
+              {% if not lesion_sliders_tienen_registro %}
+              <div style="font-size:10px;color:var(--warn);margin-bottom:10px;line-height:1.4;">
+                Sin registro previo. Los controles parten de valores neutrales para introducir datos nuevos; no son una medición.
+              </div>
+              {% endif %}
 
 <div style="display:grid;gap:10px;">
                 {% for campo in lesion_sliders %}
@@ -1662,13 +1671,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <div class="rb-workout-card">
       <div class="rb-workout-eyebrow">Hyrox</div>
       <div class="rb-workout-title">Sin sesión programada</div>
-      <div class="rb-bib-sub" style="margin-top:6px;">Recuperación activa</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">Sin datos suficientes</div>
     </div>
     {% endif %}
 
+    {% if hyrox_proxima_sesion %}
     <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=hyrox_objetivo.id %}" class="rb-cta">
       <i class="fas fa-bolt"></i> Ejecutar Hyrox
     </a>
+    {% endif %}
     {% endif %}
 
     {% if hyrox_decision.puede_ejecutar_plan %}

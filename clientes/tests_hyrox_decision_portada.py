@@ -26,7 +26,7 @@ class HyroxDecisionPortadaAcceptanceTests(TestCase):
             response = self.client.get(reverse('clientes:mockup_demo'))
         return response, autoridad
 
-    def test_portada_inyecta_la_decision_soberana_existente(self):
+    def test_portada_inyecta_decision_pero_sin_sesion_no_inventa_ejecucion(self):
         decision = {
             'estado': 'empujar', 'causa': 'normal', 'titulo': 'Empujar',
             'subtitulo': 'Señales favorables', 'mensaje': 'Ejecuta con intención.',
@@ -39,7 +39,9 @@ class HyroxDecisionPortadaAcceptanceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context['hyrox_decision'], decision)
         autoridad.assert_called_once()
-        self.assertContains(response, 'Ejecutar Hyrox')
+        self.assertContains(response, 'Sin sesión programada')
+        self.assertContains(response, 'Sin datos suficientes')
+        self.assertNotContains(response, 'Ejecutar Hyrox')
 
     def test_bloqueo_soberano_muestra_proteccion_y_no_cta_de_ejecucion(self):
         decision = {
