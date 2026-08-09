@@ -108,6 +108,40 @@ class PortadaSintesisTemplateTests(SimpleTestCase):
         self.assertIn("localStorage.removeItem", source)
         self.assertIn("86400000", source)
 
+    def test_recupera_memoria_del_plan_en_seccion_propia_y_colapsada(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        self.assertEqual(source.count("data-plan-memory class="), 1)
+        memory = source[source.index("data-plan-memory"):source.index("data-secondary-tools")]
+        self.assertIn("Lo que el plan está aprendiendo", memory)
+        self.assertNotIn(" open", memory.split(">", 1)[0])
+        self.assertNotIn("Herramientas y evolución", memory)
+
+    def test_memoria_recupera_contextos_reales_sin_duplicar_aprendizaje_principal(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        memory = source[source.index("data-plan-memory"):source.index("data-secondary-tools")]
+        for context_name in (
+            "alertas_sistema",
+            "patron_multisemanal",
+            "sugerencia_activa",
+            "evaluacion_intervencion",
+            "intervencion_distribucion",
+            "evaluacion_distribucion",
+            "distribucion_semanal",
+            "preferencias_activas",
+            "calendario_plan",
+            "resumen_semanal_gym",
+            "resumen_semanal_hyrox",
+        ):
+            self.assertIn(context_name, memory)
+        self.assertIn("clientes:memoria_entrenador", memory)
+        self.assertNotIn("portada_hoy.aprendizajes", memory)
+
+    def test_memoria_degrada_con_estado_vacio_honesto(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        memory = source[source.index("data-plan-memory"):source.index("data-secondary-tools")]
+        self.assertIn("data-plan-memory-empty", memory)
+        self.assertIn("Aún no hay observaciones adicionales", memory)
+
 
 class PortadaJoiSelectionTests(SimpleTestCase):
     class Mensaje:
