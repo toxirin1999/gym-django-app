@@ -33,16 +33,7 @@ def _sesion(modulo, datos, *, ejecutable):
     } if datos else None
 
 
-def _dato(datos, *claves):
-    """Lee el contrato tanto de diccionarios Gym como de modelos Hyrox."""
-    for clave in claves:
-        valor = datos.get(clave) if isinstance(datos, dict) else getattr(datos, clave, None)
-        if valor:
-            return valor
-    return None
-
-
-def _limitar_textos(items, limite=3):
+def _limitar_textos(items):
     textos = []
     for item in items or ():
         if isinstance(item, dict):
@@ -52,25 +43,9 @@ def _limitar_textos(items, limite=3):
         texto = str(item or "").strip()
         if texto:
             textos.append(texto)
-        if len(textos) == limite:
+        if len(textos) == 3:
             break
     return textos
-
-
-def _un_aprendizaje(items):
-    for item in items or ():
-        if isinstance(item, dict):
-            observacion = str(next((item.get(key) for key in (
-                "texto", "observacion", "label", "titulo", "mensaje", "descripcion"
-            ) if item.get(key)), "")).strip()
-            consecuencia = str(item.get("consecuencia") or item.get("accion") or "").strip()
-            if observacion and consecuencia:
-                return [f"{observacion}. {consecuencia}."]
-            if observacion:
-                return [observacion]
-        elif str(item or "").strip():
-            return [str(item).strip()]
-    return []
 
 
 def construir_portada_hoy(
@@ -125,6 +100,7 @@ def construir_portada_hoy(
     protegiendo = estado_sistema.get("estado") == "PROTEGIENDO"
     hyrox_bloqueado = (
         bool(hyrox_relevante)
+        and bool(sesion_hyrox)
         and hyrox_decision.get("puede_ejecutar_plan") is False
         and (
             not gym_viable
@@ -170,44 +146,14 @@ def construir_portada_hoy(
     # día de descanso promoverla aquí convertiría un estado informativo en
     # una falsa urgencia y duplicaría el acceso inferior.
 
-    descanso = estado_gym == "descanso" or _es_descanso_gym(estado_sistema, sesion_gym)
-    protegido = protegiendo or hyrox_bloqueado
-    datos_dominantes = dominante.get("datos") if dominante else {}
-    if protegido:
-        titulo = "Sesión protegida"
-        tipo = "proteccion"
-    elif descanso:
-        titulo = "Descanso programado"
-        tipo = "descanso"
-    elif dominante:
-        titulo = (
-            _dato(datos_dominantes, "nombre", "rutina_nombre", "titulo")
-            or "Sesión de hoy"
-        )
-        tipo = "sesion"
-    else:
-        titulo = "Sin sesión programada"
-        tipo = "sin_plan"
-
-    frase = estado_sistema.get("texto") or "Aún no hay datos suficientes para decidir el día."
-    if tipo == "sin_plan":
-        frase = "Sin datos suficientes para prescribir una sesión hoy."
-    if descanso and _texto_normalizado(frase) in {
-        "sistema en reposo.",
-        "no hay nada que forzar ahora.",
-        "",
-    }:
-        frase = "El descanso forma parte de la distribución del plan de hoy."
-
     return {
         "decision": {
-            "tipo": tipo,
-            "titulo": titulo,
-            "frase": frase,
+            "estado": estado_sistema.get("estado_label") or estado_sistema.get("estado") or "Hoy",
+            "frase": estado_sistema.get("texto") or "El sistema no necesita forzar nada ahora.",
         },
         "accion_principal": accion,
         "sesion_dominante": dominante,
         "sesion_alternativa": alternativa,
         "senales": _limitar_textos(senales),
-        "aprendizajes": _un_aprendizaje(aprendizajes),
+        "aprendizajes": _limitar_textos(aprendizajes),
     }

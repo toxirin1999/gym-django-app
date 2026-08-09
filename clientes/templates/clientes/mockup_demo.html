@@ -1,283 +1,2445 @@
-{% load static humanize %}
-<!doctype html>
+{% load static %}
+{% load clientes_filters %}
+{% load i18n %}
+{% load humanize %}
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Hoy · GYM/OS</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel · {{ cliente.user.get_full_name|default:cliente.user.username }}</title>
+  {# Phase UI 3 (JDS): tipografía del sistema, sin Google Fonts. #}
   <link rel="stylesheet" href="{% static 'css/jds.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
-    *,*::before,*::after{box-sizing:border-box}
-    :root{--bg:var(--jds-bg);--surface:var(--jds-surface);--subtle:var(--jds-surface-subtle);--line:var(--jds-border);--strong:var(--jds-border-strong);--text:var(--jds-text);--soft:var(--jds-text-soft);--faint:var(--jds-text-faint);--accent:var(--jds-accent);--good:var(--jds-good);--warn:var(--jds-warning);--joi:var(--jds-joi)}
-    html,body{min-height:100%;background:var(--bg);overflow-x: hidden}
-    body{margin:0;color:var(--text);font-family:var(--jds-font);-webkit-font-smoothing:antialiased}
-    a{color:inherit}.shell{width:min(100%,480px);min-width: 0;margin:auto;padding:0 16px 72px}
-    .topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;margin:0 -16px;padding:10px 16px;background:rgba(5,7,10,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(12px)}
-    .brand,.joi-link,.status,.eyebrow,.meta,.section-title,.tool{font-family:var(--jds-mono);text-transform:uppercase;letter-spacing:.12em}
-    .brand{display:flex;align-items:center;gap:8px;min-height:44px;font-weight:800;font-size:13px;text-decoration:none;white-space:nowrap}.brand::before{content:"";width:3px;height:20px;background:var(--accent)}
-    .joi-link{display:grid;place-items:center;min-width:44px;min-height:44px;border:1px solid var(--strong);text-decoration:none;font-size:9px;color:var(--joi)}
-    .daily-head{display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0;padding:18px 2px 12px}.date{font-size:14px;font-weight:700}.status{border:0;background:none;color:var(--warn);font-size:9px;min-height:44px;padding:0;cursor:pointer;text-align:right}.status.done{color:var(--good)}
-    .joi-voice{display:block;margin:2px 0 16px;padding:8px 12px;border-left:1px solid var(--jds-joi-border);color:var(--joi);font-size:12px;font-style:italic;line-height:1.55;text-decoration:none}
-    .card{min-width:0;margin-bottom:12px;padding:18px;background:var(--surface);border:1px solid var(--strong);border-radius:var(--jds-radius-md)}
-    .today{position:relative;overflow:hidden}.today::before{content:"";position:absolute;left:0;top:0;width:3px;height:100%;background:var(--accent)}
-    .eyebrow{font-size:9px;color:var(--faint);font-weight:800;margin-bottom:10px}.today h1{margin:0;font-size:clamp(25px,8vw,36px);line-height:.95;letter-spacing:-.035em;text-transform:uppercase}.decision-copy{margin:12px 0 0;color:var(--soft);font-size:14px;line-height:1.55}
-    .session-meta{margin-top:12px;color:var(--faint);font-size:10px}.signals{display:grid;gap:7px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}.signal{display:flex;gap:8px;color:var(--soft);font-size:11px;line-height:1.4}.signal::before{content:"\00b7";color:var(--accent)}
-    .primary,.diary-action{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:16px;padding:10px 14px;background:var(--accent);border:1px solid var(--accent);color:#031018;font-family:var(--jds-mono);font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;text-decoration:none;cursor:pointer}
-    .section-title{margin:20px 2px 9px;font-size:10px;color:var(--faint);font-weight:800}.section-title span{color:var(--text);font-family:var(--jds-font);font-size:15px;letter-spacing:.03em}
-    .diary-state{display:grid;grid-template-columns:1fr 1fr;margin-bottom:14px}.diary-state>div{min-width:0;padding:2px 12px}.diary-state>div:first-child{padding-left:0;border-right:1px solid var(--line)}.diary-state .meta{font-size:8px;color:var(--faint);margin-bottom:6px}.diary-state strong{font-size:12px}.dot{display:inline-block;width:7px;height:7px;margin-right:7px;border:1px solid var(--soft);border-radius:50%}.dot.done{background:var(--good);border-color:var(--good)}
-    .diary-action{margin-top:0;background:transparent;border-color:var(--strong);color:var(--text)}
-    .learning p{margin:0;color:var(--soft);font-size:13px;line-height:1.55}.learning p::first-line{color:var(--text)}
-    .week-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--line)}.week-stat{min-width:0;padding:12px 8px;background:var(--surface);text-align:center}.week-stat b{display:block;font-size:16px}.week-stat small{display:block;margin-top:4px;color:var(--faint);font:8px var(--jds-mono);text-transform:uppercase;letter-spacing:.08em}
-    .memory{margin-top:20px;border-block:1px solid var(--line)}.memory>summary{display:flex;align-items:center;gap:10px;min-height:62px;list-style:none;cursor:pointer}.memory>summary::-webkit-details-marker{display:none}.memory>summary::before{content:"\25b8";color:var(--accent);font-size:9px}.memory[open]>summary::before{content:"\25be"}.memory-heading{flex:1;min-width:0}.memory-title{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.06em}.memory-subtitle{display:block;margin-top:4px;color:var(--faint);font:9px var(--jds-mono);letter-spacing:.04em}.memory-body{display:grid;gap:8px;padding:0 0 18px}.memory-panel{min-width:0;padding:14px;background:var(--surface);border:1px solid var(--line)}.memory-panel>summary{display:flex;align-items:center;gap:8px;min-height:24px;list-style:none;cursor:pointer}.memory-panel>summary::-webkit-details-marker{display:none}.memory-code{color:var(--accent);font:8px var(--jds-mono);letter-spacing:.1em}.memory-panel h3{flex:1;margin:0;font-size:12px}.memory-count{color:var(--faint);font:8px var(--jds-mono)}.memory-content{display:grid;gap:9px;margin-top:12px;padding-top:11px;border-top:1px solid var(--line)}.memory-item{color:var(--soft);font-size:11px;line-height:1.5}.memory-item strong{color:var(--text)}.memory-action{display:inline-flex;min-height:36px;align-items:center;color:var(--accent);font:9px var(--jds-mono);letter-spacing:.08em;text-transform:uppercase;text-decoration:none}.memory-actions{display:flex;gap:7px;flex-wrap:wrap}.memory-actions form{flex:1;min-width:120px}.memory-actions button{width:100%;min-height:40px;padding:8px;background:transparent;border:1px solid var(--strong);color:var(--text);font:9px var(--jds-mono);text-transform:uppercase;cursor:pointer}.memory-dots{display:grid;grid-template-columns:repeat(7,1fr);gap:5px}.memory-day{min-height:24px;display:grid;place-items:center;border:1px solid var(--line);color:var(--faint);font:8px var(--jds-mono)}.memory-day.done{border-color:var(--good);color:var(--good)}.memory-day.essential{border-color:var(--warn);color:var(--warn)}.memory-empty{padding:14px;border:1px dashed var(--line);color:var(--faint);font-size:11px;line-height:1.5}.memory-link{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:58px;padding:12px 14px;border:1px solid var(--strong);text-decoration:none}.memory-link strong{font-size:12px}.memory-link span{display:block;margin-top:3px;color:var(--faint);font-size:9px}
-    .recent{margin-top:20px;border-block:1px solid var(--line)}.recent>summary{display:flex;align-items:center;gap:10px;min-width:0;min-height:62px;list-style:none;cursor:pointer}.recent>summary::-webkit-details-marker{display:none}.recent>summary::before{content:"\25b8";color:var(--accent);font-size:9px}.recent[open]>summary::before{content:"\25be"}.recent-heading{flex:1;min-width:0}.recent-title{display:block;font-size:13px;text-transform:uppercase;letter-spacing:.06em}.recent-subtitle{display:block;margin-top:4px;color:var(--faint);font:9px var(--jds-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.recent-count{flex:none;color:var(--faint);font:9px var(--jds-mono)}.recent-list{display:grid;gap:8px;padding:0 0 18px}.recent-session{min-width:0;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:13px 14px;background:var(--surface);border:1px solid var(--line)}.recent-session-main{min-width:0}.recent-session-name{font-size:12px;font-weight:700;line-height:1.35;overflow-wrap:anywhere}.recent-session-dates{display:flex;flex-wrap:wrap;gap:5px 10px;margin-top:6px;color:var(--faint);font:8px var(--jds-mono);text-transform:uppercase;letter-spacing:.04em}.recent-session-stats{display:grid;gap:5px;justify-items:end;color:var(--soft);font:9px var(--jds-mono);white-space:nowrap}.recent-session-badge{padding:3px 5px;border:1px solid var(--warn);color:var(--warn);font:8px var(--jds-mono);text-transform:uppercase}
-    details.tools{margin-top:20px;border-block:1px solid var(--line)}.tools>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:56px;list-style:none;cursor:pointer}.tools>summary::-webkit-details-marker{display:none}.tools>summary::before{content:"\25b8";color:var(--faint);font-size:9px}.tools[open]>summary::before{content:"\25be"}.tools-title{flex:1;font-size:13px;text-transform:uppercase;letter-spacing:.06em}.tools-meta{color:var(--faint);font:9px var(--jds-mono)}
-    .tools-body{padding:0 0 16px}.tools-grid{display:grid;grid-template-columns: repeat(2, minmax(0, 1fr));gap:8px}.tool{display:flex;align-items:center;gap:9px;min-width:0;min-height: 44px;padding:10px;border:1px solid var(--line);color:var(--soft);font-size:9px;text-decoration:none;overflow-wrap:anywhere}.tool i{width:14px;color:var(--accent);text-align:center}.acwr-slot{margin-bottom:10px;padding:10px;border:1px solid var(--line)}
-    .modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.76);align-items:flex-end;justify-content:center}.modal.open{display:flex}.modal-box{width:min(100%,480px);max-height:92vh;overflow:auto;padding:22px 18px calc(22px + env(safe-area-inset-bottom));background:var(--surface);border-top:1px solid var(--strong)}.modal h2{margin:0 0 4px;font-size:22px;text-transform:uppercase}.modal p{margin:0 0 18px;color:var(--soft);font-size:12px}.field{display:block;margin:14px 0;color:var(--faint);font:9px var(--jds-mono);letter-spacing:.1em;text-transform:uppercase}.field input{display:block;width:100%;min-height:44px;margin-top:7px;padding:10px;background:var(--bg);border:1px solid var(--strong);color:var(--text);font:16px var(--jds-mono)}.energy{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin:8px 0 16px}.energy button,.close{min-width:0;min-height:44px;background:var(--bg);border:1px solid var(--strong);color:var(--text);cursor:pointer}.modal-actions{display:grid;gap:8px}.close{width:100%;font-family:var(--jds-mono);text-transform:uppercase}
-    @media(min-width:600px){.shell{padding-inline:20px}.topbar{margin-inline:-20px;padding-inline:20px}}
+/* ═══════════════════════════════════════════════
+   GYM/OS · PANEL · EDITORIAL DESIGN SYSTEM
+   ═══════════════════════════════════════════════ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* JDS — dashboard flipeado a dark vía aliasing (era el único claro).
+     Esto además resuelve la incoherencia claro-dashboard / oscuro-semáforo. */
+  --bg: var(--jds-bg);
+  --bg-2: var(--jds-surface);
+  --bg-3: var(--jds-surface-subtle);
+  --line: var(--jds-border);
+  --line-2: var(--jds-border-strong);
+  --fg: var(--jds-text);
+  --fg-dim: var(--jds-text-soft);
+  --fg-mute: var(--jds-text-faint);
+  --accent: var(--jds-accent);
+  --accent-rgb: 56,189,248;
+  --accent-2: var(--jds-accent);
+  --ok: var(--jds-good);
+  --warn: var(--jds-warning);
+  --danger: var(--jds-danger);
+  --deload: var(--jds-joi);
+}
+
+html, body { background: var(--bg); min-height: 100vh; }
+
+body {
+  /* Legacy aliases so inline styles don't break */
+  --ink: var(--fg);
+  --ink-2: var(--jds-text);          /* era #1a1a1a (oscuro) → invisible en dark */
+  --ink-3: var(--fg-dim);
+  --ink-4: var(--fg-mute);
+  --paper: var(--bg-2);
+  --paper-2: var(--bg-3);
+  --td: var(--fg-dim);
+  /* Phase UI 3.3 — jerarquía de contraste: texto humano/interpretativo
+     necesita más presencia que metadata técnica. No usar --td-strong
+     para labels/hints; eso sigue siendo --td o --fg-mute. */
+  --td-strong: rgba(244, 247, 251, 0.84);
+  --joi-text: rgba(167, 139, 250, 0.82);
+
+  --font-disp: var(--jds-font);
+  --font-body: var(--jds-font);
+  --font-mono: var(--jds-mono);
+
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  padding-bottom: 80px;
+  /* Phase UI 3.1: columna de app móvil — no estirar en desktop/tablet.
+     A 390px no afecta (mobile-first intacto); solo evita el sprawl. */
+  max-width: 480px;
+  margin-inline: auto;
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+@keyframes rb-blink { 0%,100%{opacity:1} 50%{opacity:.25} }
+@keyframes rb-shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+@keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+/* ── NAV ─────────────────────────────────────── */
+.rb-nav {
+  position: sticky; top: 0; z-index: 100; background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px;
+}
+.rb-brand {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--fg); text-transform: uppercase; text-decoration: none;
+}
+.rb-brand-bar { width: 3px; height: 20px; background: var(--accent); flex-shrink: 0; }
+.rb-live {
+  display: flex; align-items: center; gap: 6px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.15em; color: var(--fg-mute); text-transform: uppercase;
+}
+.rb-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+  animation: rb-blink 1.3s ease-in-out infinite; }
+
+/* ── BUTTONS ─────────────────────────────────── */
+.rb-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  min-height: 44px; padding: 7px 13px; border: 1.5px solid var(--fg);
+  background: transparent; color: var(--fg);
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  cursor: pointer; text-decoration: none; transition: all .15s; border-radius: 2px;
+}
+.rb-btn:hover { background: var(--fg); color: var(--bg); text-decoration: none; }
+.rb-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.rb-btn-primary:hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.rb-btn-ghost { border-color: var(--line-2); color: var(--fg-dim); }
+.rb-btn-ghost:hover { background: var(--bg-3); color: var(--fg); border-color: var(--fg-dim); }
+.rb-btn-sm { padding: 4px 9px; font-size: 9px; min-height: 32px; }
+
+/* ── CTA ─────────────────────────────────────── */
+.rb-cta {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  width: 100%; padding: 18px 24px;
+  background: var(--accent); border: 2px solid var(--fg);
+  color: #fff; font-family: var(--font-disp); font-size: 16px;
+  letter-spacing: 0.08em; text-transform: uppercase; text-decoration: none;
+  border-radius: 2px; cursor: pointer; transition: all .15s; margin-top: 6px;
+}
+.rb-cta:hover { background: var(--fg); color: var(--bg); text-decoration: none; }
+.rb-cta-rest { background: var(--bg-2); border-color: var(--line-2); color: var(--fg-dim); }
+.rb-cta-rest:hover { background: var(--bg-3); color: var(--fg); border-color: var(--fg-dim); }
+
+/* ── LAYOUT ──────────────────────────────────── */
+.rb-container { padding: 0 40px; }
+
+/* Editorial full-width section (hero areas) */
+.rb-section-ed {
+  padding: 60px 40px; border-bottom: 1px solid var(--line);
+}
+.rb-ed-header {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 24px; margin-bottom: 32px;
+  display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; flex-wrap: wrap;
+}
+.rb-ed-header-left { display: flex; align-items: flex-end; gap: 24px; }
+.rb-ed-num { font-family: var(--font-mono); font-size: 11px; color: var(--fg-mute); padding-bottom: 6px; white-space: nowrap; }
+.rb-ed-eyebrow { font-family: var(--font-mono); font-size: 11px; color: var(--fg-mute); letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px; }
+.rb-ed-title { font-family: var(--jds-font); font-size: clamp(32px,5vw,64px); letter-spacing: -0.04em; line-height: 0.85; text-transform: uppercase; color: var(--fg); }
+
+/* ── SECTION HEAD ────────────────────────────── */
+.rb-section { padding: 24px 0 0; margin-top: 0; }
+.rb-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+.rb-section-num { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  color: var(--fg-mute); letter-spacing: 0.15em; }
+.rb-section-title { margin: 0; font-family: var(--font-disp);
+  font-size: 14px; letter-spacing: 0.06em; color: var(--fg); text-transform: uppercase; }
+.rb-section-line { flex: 1; height: 1px; background: var(--line); }
+
+/* Phase UI 4 — summary reutilizable para sub-paneles colapsables (patrón ACWR) */
+.rb-collapse-summary {
+  display: flex; align-items: center; gap: 8px; cursor: pointer;
+  list-style: none; user-select: none;
+}
+.rb-collapse-summary::-webkit-details-marker { display: none; }
+.rb-collapse-summary::before { content: '▸'; font-size: 9px; opacity: 0.55; flex-shrink: 0; }
+details[open] > .rb-collapse-summary::before { content: '▾'; }
+.rb-collapse-hint {
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  color: var(--ink-4); white-space: nowrap; overflow: hidden;
+  text-overflow: ellipsis; max-width: 48%;
+}
+
+/* ── BIB HERO ────────────────────────────────── */
+.rb-bib {
+  /* Phase UI 3.1: superficie elevada con hairline sutil, no marco blanco. */
+  background: var(--bg-2); border: 1px solid var(--jds-border-strong); border-radius: var(--jds-radius-md);
+  padding: 12px 20px 14px; margin-top: 14px; position: relative;
+}
+.rb-bib-meta { display: flex; justify-content: space-between; align-items: center;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
+.rb-bib-name { font-family: var(--jds-font); font-size: clamp(22px,5.5vw,34px);
+  line-height: 0.9; letter-spacing: -0.04em; color: var(--fg); text-transform: uppercase; }
+.rb-bib-workout { font-family: var(--jds-font); font-size: clamp(18px,4vw,28px);
+  color: var(--accent); letter-spacing: -0.01em; text-transform: uppercase; line-height: 1.02; margin-top: 10px; }
+.rb-bib-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.18em; color: var(--fg-mute); text-transform: uppercase; margin-top: 4px; }
+.rb-bib-divider {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  margin-top: 10px; border-top: 1px dashed var(--jds-border-strong); padding-top: 8px; gap: 0;
+}
+.rb-bib-stat { text-align: center; border-right: 1px solid var(--line); padding: 0 4px; }
+.rb-bib-stat:last-child { border-right: none; }
+.rb-bib-stat-label { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 2px; }
+.rb-bib-stat-val { font-family: var(--font-mono); font-size: 15px; font-weight: 700;
+  color: var(--fg); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; line-height: 1; }
+.rb-bib-stat-val.ok { color: var(--ok); }
+.rb-bib-stat-val.warn { color: var(--warn); }
+.rb-bib-stat-val.danger { color: var(--danger); }
+
+/* ── PLAN EN DETALLE (colapsable, densidad) ──── */
+.rb-plan-detalle { margin-top: 6px; border-top: 1px solid var(--line); }
+.rb-plan-detalle > summary {
+  list-style: none; cursor: pointer; user-select: none;
+  padding: 15px 2px; display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--td); opacity: 0.5; transition: opacity 0.2s;
+}
+.rb-plan-detalle > summary:hover { opacity: 0.8; }
+.rb-plan-detalle > summary::-webkit-details-marker { display: none; }
+.rb-plan-detalle > summary::before { content: '▸'; font-size: 9px; opacity: 0.7; }
+.rb-plan-detalle[open] > summary::before { content: '▾'; }
+.rb-plan-detalle[open] > summary { margin-bottom: 8px; }
+
+/* ── READINESS ───────────────────────────────── */
+.rb-readiness {
+  margin-top: 14px; padding: 14px; border: 1.5px solid var(--fg);
+  background: var(--accent); color: #fff; border-radius: 2px;
+}
+.rb-rd-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.rb-rd-lbl { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; opacity: 0.85; text-transform: uppercase; }
+.rb-rd-num { font-family: var(--jds-font); font-size: 44px; line-height: 1;
+  letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rb-rd-unit { font-family: var(--font-mono); font-size: 10px; opacity: 0.7; margin-left: 4px; }
+.rb-rd-bar { height: 4px; background: rgba(0,0,0,0.25); border-radius: 2px; overflow: hidden; }
+.rb-rd-bar-fill { height: 100%; background: #fff; transition: width 1.2s cubic-bezier(.4,0,.2,1); }
+.rb-rd-trend { display: flex; align-items: center; justify-content: space-between;
+  margin-top: 8px; font-family: var(--font-mono); font-size: 9px; opacity: 0.7;
+  letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── TOGGLE ──────────────────────────────────── */
+.rb-toggle { display: flex; border: 1px solid var(--jds-border); border-radius: var(--jds-radius-sm); overflow: hidden; margin-top: 16px; width: 100%; }
+.rb-toggle-btn { flex: 1; padding: 10px 8px; background: transparent; border: none;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--fg-dim); cursor: pointer; transition: all .15s;
+  border-right: 1px solid var(--line); }
+.rb-toggle-btn:last-child { border-right: none; }
+.rb-toggle-btn.active { background: var(--jds-accent-soft); color: var(--jds-accent); }
+.rb-toggle-btn.active-hyrox { background: var(--jds-accent-soft); color: var(--jds-accent); }
+
+/* ── WORKOUT CARD ────────────────────────────── */
+.rb-workout-card {
+  background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 2px; padding: 14px 16px; margin-top: 12px;
+}
+.rb-workout-eyebrow { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.2em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 4px; }
+.rb-workout-title { font-family: var(--jds-font); font-size: clamp(18px,4.5vw,28px);
+  color: var(--fg); letter-spacing: -0.02em; text-transform: uppercase; line-height: 0.95; }
+.rb-workout-badge {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px;
+  border: 1px solid var(--line-2); background: var(--bg-3); border-radius: 2px; margin-top: 8px;
+  font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--ok);
+}
+.rb-workout-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.rb-ex-list { margin-top: 12px; display: flex; flex-direction: column; gap: 2px; }
+.rb-ex-row { display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 12px; border-left: 2px solid var(--line-2); background: var(--bg-3); }
+.rb-ex-row:first-child { border-left-color: var(--accent); }
+.rb-ex-name { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.rb-ex-sets { font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  color: var(--accent); letter-spacing: 0.05em; }
+.rb-ex-more { font-family: var(--font-mono); font-size: 9px; color: var(--fg-mute);
+  letter-spacing: 0.1em; text-align: center; margin-top: 6px; }
+
+/* ── NUTRITION ───────────────────────────────── */
+.rb-nut-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px 16px; margin-top: 12px; }
+.rb-nut-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+.rb-nut-block { text-align: center; }
+.rb-nut-val { font-family: var(--font-mono); font-size: 22px; font-weight: 700;
+  color: var(--fg); letter-spacing: -0.02em; line-height: 1; }
+.rb-nut-lbl { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-top: 3px; }
+.rb-nut-bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 4px; overflow: hidden; }
+.rb-nut-bar-fill { height: 100%; border-radius: 2px; }
+.rb-nut-p .rb-nut-bar-fill { background: var(--accent); }
+.rb-nut-c .rb-nut-bar-fill { background: var(--accent-2); }
+.rb-nut-g .rb-nut-bar-fill { background: var(--ok); }
+.rb-nut-v .rb-nut-bar-fill { background: #818cf8; }
+.rb-nut-footer { display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.rb-nut-hint { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.12em; text-transform: uppercase; color: var(--fg-dim); }
+.rb-nut-tipo { font-family: var(--font-mono); font-size: 9px; color: var(--fg-mute);
+  letter-spacing: 0.1em; text-transform: uppercase; }
+
+/* ── SESSIONS ────────────────────────────────── */
+.rb-sessions { margin-top: 12px; display: flex; flex-direction: column; }
+.rb-session-row { display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 0; border-bottom: 1px solid var(--line); }
+.rb-session-row:last-child { border-bottom: none; }
+.rb-session-date { font-family: var(--font-mono); font-size: 9px; font-weight: 700;
+  letter-spacing: 0.12em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 2px; }
+.rb-session-name { font-family: var(--font-body); font-size: 14px; font-weight: 600; color: var(--ink-2); }
+.rb-session-badge { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase;
+  padding: 2px 6px; border: 1px solid rgba(var(--accent-rgb),0.3); border-radius: 2px; margin-left: 4px; }
+.rb-session-right { display: flex; align-items: center; gap: 8px;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--fg-dim); }
+.rb-session-check { color: var(--ok); font-size: 14px; }
+
+/* ── APRENDIZAJE / RESUMEN ───────────────────── */
+.rb-aprendio-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px 16px; margin-top: 12px; }
+.rb-aprendio-item { display: flex; align-items: flex-start; gap: 10px;
+  padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 12px;
+  font-family: var(--font-body); color: var(--ink-2); line-height: 1.4; }
+.rb-aprendio-item:last-child { border-bottom: none; padding-bottom: 0; }
+.rb-aprendio-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+.rb-aprendio-text.ok { color: var(--ok); }
+.rb-aprendio-text.warn { color: var(--warn); }
+.rb-aprendio-text.info { color: var(--ink-2); }
+
+/* ── BIENESTAR ───────────────────────────────── */
+.rb-bio-card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px; padding: 14px 16px; margin-top: 12px; }
+.rb-bio-grid { display: flex; gap: 0; margin-top: 10px; }
+.rb-bio-item { flex: 1; text-align: center; border-right: 1px solid var(--line); padding: 0 6px; }
+.rb-bio-item:last-child { border-right: none; }
+.rb-bio-val { font-family: var(--font-mono); font-size: 20px; font-weight: 700;
+  color: var(--fg); line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-bio-lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--fg-mute); text-transform: uppercase; margin-top: 3px; }
+.rb-bio-actions { display: flex; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+/* ── ACWR ────────────────────────────────────── */
+.rb-acwr-container { margin-top: 12px; }
+.rb-skeleton { min-height: 200px; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: 2px; position: relative; overflow: hidden; }
+.rb-skeleton::after { content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent 25%, rgba(15,15,14,0.04) 50%, transparent 75%);
+  animation: rb-shimmer 1.6s infinite; }
+
+/* ── STATS BAR ───────────────────────────────── */
+.rb-stats-bar {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  border-top: 2px solid var(--fg); border-bottom: 2px solid var(--fg); margin: 20px 0;
+}
+.rb-stat-cell { text-align: center; padding: 14px 4px; border-right: 1px solid var(--line); }
+.rb-stat-cell:last-child { border-right: none; }
+.rb-stat-val { font-family: var(--font-mono); font-size: clamp(16px,4vw,22px); font-weight: 700;
+  color: var(--fg); letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.rb-stat-val.ok { color: var(--ok); }
+.rb-stat-val.warn { color: var(--warn); }
+.rb-stat-val.danger { color: var(--danger); }
+.rb-stat-lbl { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.14em; color: var(--fg-mute); text-transform: uppercase; margin-top: 3px; }
+
+/* ── BOTTOM ACTIONS ──────────────────────────── */
+.rb-bottom-actions { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 20px; }
+.rb-bottom-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 10px 4px;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px;
+  font-family: var(--font-mono); font-size: 8px; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-dim);
+  text-decoration: none; cursor: pointer; transition: all .15s; min-height: 44px;
+}
+.rb-bottom-btn i { font-size: 14px; color: var(--fg-dim); }
+.rb-bottom-btn:hover { background: var(--fg); color: var(--bg); border-color: var(--fg); text-decoration: none; }
+.rb-bottom-btn:hover i { color: var(--bg); }
+
+/* ── ACWR WIDGET ─────────────────────────────── */
+.acwr-card { width:100%; }
+.acwr-hdr { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+.acwr-hdr-dot { width:7px; height:7px; border-radius:50%; background:var(--accent); animation:rb-blink 1.3s infinite; }
+.acwr-hdr-label { font-family:var(--font-mono); font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; color:var(--fg-dim); flex:1; }
+.acwr-info-btn { width:22px; height:22px; border-radius:50%; background:var(--bg-3); border:1px solid var(--line-2); color:var(--fg-dim); font-size:11px; font-weight:700; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .15s; }
+.acwr-info-btn:hover { background:var(--fg); color:var(--bg); }
+.acwr-big-num { font-family:var(--font-disp); font-size:36px; line-height:1; letter-spacing:-.03em; font-variant-numeric:tabular-nums; }
+.acwr-num-green  { color:var(--ok); }
+.acwr-num-yellow { color:var(--warn); }
+.acwr-num-red    { color:var(--accent); }
+.acwr-num-gray   { color:var(--fg-mute); }
+.acwr-track-wrap { position:relative; width:100%; padding-top:18px; }
+.acwr-track-bar  { display:flex; height:8px; border-radius:99px; overflow:hidden; gap:2px; margin-bottom:4px; }
+.acwr-track-seg  { height:100%; border-radius:2px; }
+.acwr-track-marker { position:absolute; top:2px; font-size:11px; transform:translateX(-50%); color:var(--fg); transition:left .8s cubic-bezier(.34,1.2,.64,1); }
+.acwr-track-labels { display:flex; justify-content:space-between; font-size:9px; font-weight:700; color:var(--fg-mute); margin-top:2px; font-family:var(--font-mono); }
+.acwr-zone-badge { font-weight:700; font-size:11px; font-family:var(--font-mono); letter-spacing:.05em; padding: 2px 8px; border-radius: 2px; }
+.acwr-zone-optima      { background:rgba(0,168,90,.12);  color:var(--ok); }
+.acwr-zone-cuidado     { background:rgba(255,184,0,.12);  color:var(--warn); }
+.acwr-zone-riesgo_alto { background:rgba(255,107,0,.12);  color:var(--accent); }
+.acwr-zone-baja_carga  { background:rgba(163,163,163,.12); color:var(--fg-mute); }
+
+/* ── ORGANISMO (Sistema hoy) ────────────────── */
+.rb-organismo-card {
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: 2px;
+  padding: 14px 16px; margin-top: 12px;
+}
+.rb-organismo-label {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--fg-mute); margin-bottom: 8px;
+}
+.rb-organismo-body {
+  display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+}
+.rb-organismo-estado {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  min-width: 80px; color: var(--fg-dim);
+}
+.rb-organismo-estado.rb-org-silencio { color: var(--fg-mute); }
+.rb-organismo-estado.rb-org-observando { color: var(--warn); }
+.rb-organismo-estado.rb-org-en_margen { color: var(--ok); }
+.rb-organismo-estado.rb-org-protegiendo { color: var(--danger); }
+.rb-organismo-texto {
+  font-family: var(--font-body); font-size: 12px; color: var(--fg);
+  line-height: 1.4;
+}
+.rb-organismo-btn {
+  display: block; width: 100%; margin-top: 8px; padding: 8px 12px;
+  text-align: center; font-size: 11px;
+}
+.rb-organismo-porque {
+  margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
+}
+.rb-organismo-porque .rb-sema { margin-bottom: 0; }
+@media (max-width: 640px) {
+  .rb-organismo-body { flex-direction: column; align-items: flex-start; }
+  .rb-organismo-estado { min-width: auto; }
+}
+
+/* ── MODAL ───────────────────────────────────── */
+.rb-modal-ov { display: none; position: fixed; inset: 0; z-index: 500;
+  background: rgba(10,10,10,0.65); backdrop-filter: blur(4px);
+  align-items: flex-end; justify-content: center; }
+.rb-modal-ov.open { display: flex; }
+.rb-modal-box { background: var(--bg-2); border: 2px solid var(--fg); border-radius: 8px 8px 0 0;
+  width: 100%; max-width: 560px; max-height: 82vh; overflow-y: auto; padding: 20px 20px 32px; }
+.rb-modal-box input[type="number"], .rb-modal-box input[type="range"] { min-height: 44px; }
+.rb-modal-handle { width: 40px; height: 4px; background: var(--line-2); border-radius: 2px; margin: 0 auto 16px; }
+.rb-modal-title { font-family: var(--jds-font); font-size: 20px; color: var(--fg);
+  text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 4px; }
+.rb-modal-sub { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; color: var(--fg-dim); text-transform: uppercase; margin-bottom: 16px; }
+.rb-modal-section { margin-bottom: 16px; }
+.rb-modal-section-title { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.rb-modal-row { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 8px;
+  padding: 8px 10px; background: var(--bg-3); border-radius: 2px; border: 1px solid var(--line); }
+.rb-modal-row-icon { font-size: 14px; flex-shrink: 0; }
+.rb-modal-row-label { font-family: var(--font-body); font-size: 13px; font-weight: 700; color: var(--fg); margin-bottom: 2px; }
+.rb-modal-row-desc { font-family: var(--font-body); font-size: 12px; color: var(--fg-dim); line-height: 1.5; }
+.rb-modal-formula { background: var(--fg); color: var(--bg); padding: 12px 14px; border-radius: 2px; margin-bottom: 10px; font-family: var(--font-mono); }
+.rb-modal-formula-eq { font-size: 15px; font-weight: 700; letter-spacing: 0.05em; margin-bottom: 4px; }
+.rb-modal-formula-desc { font-size: 10px; opacity: 0.7; letter-spacing: 0.08em; }
+.rb-modal-zone-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+  border-radius: 2px; border: 1px solid var(--line); margin-bottom: 4px; background: var(--bg-3); }
+.rb-modal-zone-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rb-modal-zone-range { font-family: var(--font-mono); font-size: 11px; font-weight: 700; min-width: 64px; letter-spacing: 0.05em; }
+.rb-modal-zone-text { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
+
+/* ── RESPONSIVE ──────────────────────────────── */
+@media (max-width: 640px) {
+  .rb-nav { padding: 12px 16px; gap: 10px; }
+  .rb-container { padding: 0 16px; }
+  .rb-bib { padding: 16px 16px 20px; }
+  .rb-bottom-actions { grid-template-columns: repeat(3, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
   </style>
 </head>
 <body>
-<main class="shell">
-  <nav class="topbar" aria-label="Navegación principal">
-    <a class="brand" href="{% url 'clientes:panel_cliente' %}">GYM <span style="color:var(--accent)">/</span> OS</a>
-    <a class="joi-link" href="/joi/habitacion/" aria-label="Abrir habitación de JOI">JOI</a>
-  </nav>
-  {% if messages %}<div role="status" aria-live="polite">{% for message in messages %}<div data-django-message class="card">{{ message }}</div>{% endfor %}</div>{% endif %}
 
-  <header data-daily-header class="daily-head">
-    <div class="date">{{ hoy|date:"l, j \d\e F"|capfirst }}</div>
-    {% if checkin_hoy %}
-      <button data-checkin-badge class="status done" type="button" onclick="rbOpenCheckin(this)">Check-in · {{ checkin_hoy.horas_sueno }}h · energía {{ checkin_hoy.energia_subjetiva }}</button>
-    {% else %}
-      <button data-checkin-status class="status" type="button" onclick="rbOpenCheckin(this)">CHECK-IN PENDIENTE</button>
-    {% endif %}
-  </header>
 
-  {% if portada_joi_texto %}
-    <a data-joi-voice class="joi-voice" href="/joi/habitacion/">{{ portada_joi_texto|truncatechars:180 }}</a>
-  {% endif %}
+{% if messages %}
+{% for msg in messages %}
+<div style="position:fixed;top:{% if joi_mensaje_pendiente %}52px{% else %}0{% endif %};left:0;right:0;z-index:9997;background:{% if msg.tags == 'error' %}rgba(220,38,38,0.95){% else %}rgba(22,163,74,0.95){% endif %};color:#fff;padding:10px 20px;font-size:12px;text-align:center;backdrop-filter:blur(4px);">
+  {{ msg }}
+</div>
+{% endfor %}
+{% endif %}
 
-  <section data-today-card class="card today" aria-labelledby="today-title">
-    <div class="eyebrow">Hoy · {{ portada_hoy.decision.tipo|default:"lectura" }}</div>
-    <h1 id="today-title">{{ portada_hoy.decision.titulo }}</h1>
-    <p class="decision-copy">{{ portada_hoy.decision.frase }}</p>
-    {% if portada_hoy.sesion_dominante.datos.duracion_estimada %}<div class="session-meta">{{ portada_hoy.sesion_dominante.datos.duracion_estimada }} min estimados</div>{% endif %}
-    {% if portada_hoy.senales %}<div class="signals" data-decision-detail>{% for senal in portada_hoy.senales %}<div data-causal-signal class="signal">{{ senal }}</div>{% endfor %}</div>{% endif %}
-    {% if portada_hoy.accion_principal %}{% with action_lower=portada_hoy.accion_principal.label|lower %}{% if 'descanso' not in action_lower %}
-      {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}<button data-primary-action class="primary" type="button" onclick="rbOpenCheckin(this)">{{ portada_hoy.accion_principal.label }}</button>
-      {% else %}<a data-primary-action class="primary" href="{{ portada_hoy.accion_principal.url }}">{{ portada_hoy.accion_principal.label }} →</a>{% endif %}
-    {% endif %}{% endwith %}{% endif %}
-    <span data-session-detail hidden></span><span data-secondary-signals hidden></span>
-  </section>
-
-  <h2 class="section-title">02 / <span>Diario</span></h2>
-  <section data-diary-card class="card">
-    <div class="diary-state">
-      <div><div class="meta">Mañana</div><strong><i class="dot {% if manana_hecha %}done{% endif %}"></i>{% if manana_hecha %}Registrada{% else %}Pendiente{% endif %}</strong></div>
-      <div><div class="meta">Noche</div><strong><i class="dot {% if noche_hecha %}done{% endif %}"></i>{% if noche_hecha %}Registrada{% else %}Pendiente{% endif %}</strong></div>
+<!-- ── NAV ─────────────────────────────────────── -->
+<nav class="rb-nav">
+  <a class="rb-brand" href="{% url 'clientes:panel_cliente' %}">
+    <div class="rb-brand-bar"></div>
+    GYM<span style="color:var(--accent);">/</span>OS
+  </a>
+  <a href="/joi/habitacion/"
+     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
+            font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
+            color:var(--ink-3);border:1.5px solid var(--line-2);border-radius:2px;
+            padding:4px 10px;text-decoration:none;transition:all .15s;"
+     onmouseover="this.style.borderColor='var(--ink)';this.style.color='var(--ink)'"
+     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
+    <span style="width:5px;height:5px;border-radius:50%;background:{% if joi_mensaje_pendiente %}#6494dc{% else %}rgba(100,148,220,.35){% endif %};{% if joi_mensaje_pendiente %}box-shadow:0 0 6px rgba(100,148,220,.6);{% endif %}display:inline-block;"></span>
+    JOI
+  </a>
+  <div style="display:flex;align-items:center;gap:10px;">
+    <a href="{% url 'clientes:mi_cuerpo' cliente.id %}"
+       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+              color:rgba(120,180,255,.65);border:1px solid rgba(120,180,255,.22);border-radius:2px;
+              padding:4px 9px;text-decoration:none;white-space:nowrap;">
+      <i class="fa-solid fa-ruler"></i> Mi cuerpo
+    </a>
+    <a href="{% url 'hyrox:strava_reconciliacion' %}"
+       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+              color:rgba(252,76,2,.55);border:1px solid rgba(252,76,2,.22);border-radius:2px;
+              padding:4px 9px;text-decoration:none;white-space:nowrap;">
+      <i class="fab fa-strava"></i> Strava
+    </a>
+    <a href="{% url 'rehab:hoy' %}"
+       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
+              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+              color:rgba(45,190,150,.6);border:1px solid rgba(45,190,150,.22);border-radius:2px;
+              padding:4px 9px;text-decoration:none;white-space:nowrap;">
+      <i class="fa-solid fa-bone"></i> Rehab
+    </a>
+    <div class="rb-live">
+      <div class="rb-live-dot"></div>
+      {{ hoy|date:"D d/M"|upper }}
     </div>
-    {% if sugerencia_diario and sugerencia_diario.estado == 'pendiente' %}
-    <div class="memory-item" style="margin-bottom:14px;padding:11px 13px;border:1px solid var(--jds-joi-border)">
-      <strong>Diario · Tendencia corporal</strong><br>{{ sugerencia_diario.texto }}
-      <div class="memory-actions" style="margin-top:9px">
-        <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_diario.id %}">{% csrf_token %}<button type="submit">Vigilar 14 días</button></form>
-        <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_diario.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form>
+  </div>
+</nav>
+
+<!-- ── MAIN ─────────────────────────────────────── -->
+<div class="rb-container">
+
+  <!-- ── CHECK-IN BADGE ────────────────────────── -->
+  <div style="display:flex;justify-content:flex-end;padding:8px 0 0;">
+    {% if checkin_hoy %}
+    <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
+       style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
+              letter-spacing:0.06em;color:#22c55e;background:rgba(34,197,94,.1);
+              border:1px solid rgba(34,197,94,.3);border-radius:9999px;padding:4px 10px;min-height:44px;
+              cursor:pointer;outline:none;">
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      CHECK-IN · {{ checkin_hoy.horas_sueno }}H · ENERGÍA {{ checkin_hoy.energia_subjetiva }}{% if checkin_hoy.fc_reposo %} · {{ checkin_hoy.fc_reposo }} BPM{% endif %}{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
+    </button>
+    {% else %}
+    <span data-checkin-status style="display:inline-flex;align-items:center;min-height:44px;font-size:10px;letter-spacing:.08em;color:rgba(245,158,11,.78);">CHECK-IN PENDIENTE</span>
+    {% endif %}
+  </div>
+
+  <!-- ── BIB HERO ─────────────────────────────── -->
+  <div class="rb-bib">
+    <div class="rb-bib-meta">
+      <span>Atleta</span>
+      <span>{{ hoy|date:"Y" }}</span>
+    </div>
+    <div class="rb-bib-name">{{ cliente.user.get_full_name|default:cliente.user.username }}</div>
+
+    {% comment %}
+    Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase.
+    Fase E (autoridad Organismo, jul-2026): se quitó el rótulo de estado
+    (RECUPERAR/VERSIÓN ESENCIAL/POSPONER) que duplicaba estado_sistema.estado_label
+    de la card "Sistema hoy". estado_entreno sigue gobernando el routing de
+    CTA/forms más abajo — solo se limpió este subtítulo.
+    {% endcomment %}
+    {% if proximo_entrenamiento %}
+    <div class="rb-bib-sub" style="margin-top:6px;">
+      {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}
+      · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
+    </div>
+    {% else %}
+    <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
+    {% endif %}
+
+    <!-- Trayectoria: contexto secundario, nunca compite con la decisión -->
+    <details style="margin-top:12px;">
+    <summary class="rb-collapse-summary" style="min-height:44px;">Tu trayectoria</summary>
+    <div class="rb-bib-divider" style="margin-top:4px;">
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Sesiones</div>
+        <div class="rb-bib-stat-val">{{ entrenos_count|default:"0" }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Carga</div>
+        <div class="rb-bib-stat-val">{{ carga_total_acumulada|default:0|intcomma }}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">Consist.</div>
+        <div class="rb-bib-stat-val">{% if consistencia_pct is not None %}{{ consistencia_pct }}<span style="font-size:10px;color:var(--ink-4)">%</span>{% else %}<span style="font-size:10px;">Sin datos</span>{% endif %}</div>
+      </div>
+      <div class="rb-bib-stat">
+        <div class="rb-bib-stat-label">ACWR</div>
+        <div class="rb-bib-stat-val {% if acwr_actual and acwr_actual >= 1.3 %}danger{% elif acwr_actual and acwr_actual >= 0.8 %}ok{% elif acwr_actual %}warn{% endif %}">
+          {{ acwr_actual|floatformat:2|default:"—" }}
+        </div>
+      </div>
+    </div>
+    </details>
+
+    <!-- Bio readiness — solo visible con lesión activa -->
+    {% if bio_readiness and bio_banner.has_restrictions %}
+    <div class="rb-readiness">
+      <div class="rb-rd-top">
+        <div class="rb-rd-lbl">Bio Readiness</div>
+        <div>
+          <span class="rb-rd-num">{% widthratio bio_readiness.score|default:0 1 100 %}</span>
+          <span class="rb-rd-unit">/ 100</span>
+        </div>
+      </div>
+      <div class="rb-rd-bar">
+        <div class="rb-rd-bar-fill" style="width:{% widthratio bio_readiness.score|default:0 1 100 %}%"></div>
+      </div>
+      <div class="rb-rd-trend">
+        {% if bio_readiness.available %}
+        <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier 1 100 %}%</span>
+        <span>{{ bio_readiness.label|default:bio_readiness_label }}</span>
+        {% else %}
+        <span>Volumen: No disponible</span><span>No disponible</span>
+        {% endif %}
       </div>
     </div>
     {% endif %}
-    <a class="diary-action" href="{{ portada_diario_url }}">{{ portada_diario_label }}</a>
-  </section>
+  </div>
 
-  <h2 class="section-title">03 / <span>Lo que aprendió el plan</span></h2>
-  <section data-plan-learning class="card learning">
-    {% if portada_hoy.aprendizajes %}{% for aprendizaje in portada_hoy.aprendizajes %}<p data-learning>{{ aprendizaje }}</p>{% endfor %}{% else %}<p>Todavía no hay una conclusión nueva. El plan seguirá observando tus próximas sesiones.</p>{% endif %}
-  </section>
-
-  <h2 class="section-title">04 / <span>Esta semana</span></h2>
-  <section data-week-summary class="week-grid" aria-label="Resumen semanal">
-    <div class="week-stat"><b>{{ analisis_semanal.sesiones_completadas|default:0 }}</b><small>Sesiones</small></div>
-    <div class="week-stat"><b>{% if consistencia_pct is not None %}{{ consistencia_pct }}%{% else %}—{% endif %}</b><small>Consistencia</small></div>
-    <div class="week-stat"><b>{% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}</b><small>Carga</small></div>
-  </section>
-
-  <details data-plan-memory class="memory">
-    <summary>
-      <span class="memory-heading"><span class="memory-title">Lo que el plan está aprendiendo</span><span class="memory-subtitle">Señales, pruebas y memoria acumulada</span></span>
-    </summary>
-    <div class="memory-body">
-      {% if alertas_sistema %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">SIG</span><h3>Señales del sistema</h3><span class="memory-count">{{ alertas_sistema|length }}</span></summary>
-        <div class="memory-content">{% for alerta in alertas_sistema %}<div class="memory-item"><strong>{{ alerta.titulo }}</strong><br>{{ alerta.texto }}{% if alerta.url %}<br><a class="memory-action" href="{{ alerta.url }}">{{ alerta.url_label|default:"Ver detalle" }} →</a>{% endif %}</div>{% endfor %}</div>
-      </details>
-      {% endif %}
-
-      {% if patron_multisemanal or sugerencia_activa or evaluacion_intervencion %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">OBS</span><h3>Lo que el plan observa</h3></summary>
-        <div class="memory-content">
-          {% if patron_multisemanal %}<div class="memory-item">{{ patron_multisemanal }}</div>{% endif %}
-          {% if sugerencia_activa %}<div class="memory-item"><strong>Sugerencia</strong><br>{{ sugerencia_activa.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_activa.id %}">{% csrf_token %}<button type="submit">Aplicar esta semana</button></form><form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_activa.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form></div>{% endif %}
-          {% if evaluacion_intervencion %}<div class="memory-item"><strong>Evaluación anterior</strong><br>{{ evaluacion_intervencion.lectura }}</div>
-          {% if recomendacion_continuidad %}
-          <div class="memory-item"><strong>{% if recomendacion_continuidad.accion == 'repetir' %}Repetir ajuste{% else %}Profundizar{% endif %}</strong><br>{{ recomendacion_continuidad.texto }}</div>
-          <div class="memory-actions">
-            {% if recomendacion_continuidad.accion == 'repetir' %}<form method="post" action="{% url 'clientes:repetir_intervencion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}"><button type="submit">Repetir esta semana</button></form>{% endif %}
-            <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}"><button type="submit">No por ahora</button></form>
-          </div>
-          {% endif %}{% endif %}
-        </div>
-      </details>
-      {% endif %}
-
-      {% if intervencion_distribucion or evaluacion_distribucion or distribucion_semanal %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">DST</span><h3>Distribución del plan</h3></summary>
-        <div class="memory-content">
-          {% if intervencion_distribucion %}<div class="memory-item"><strong>Prueba activa hasta {{ intervencion_distribucion.fecha_fin|date:"j N" }}</strong></div>
-          {% elif evaluacion_distribucion %}<div class="memory-item"><strong>Resultado de la prueba</strong><br>{{ evaluacion_distribucion.lectura }}</div>
-          {% if continuidad_distribucion %}<div class="memory-item"><strong>Una vuelta más</strong><br>{{ continuidad_distribucion.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:repetir_prueba_distribucion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}"><button type="submit">Repetir 2 semanas</button></form><form method="post" action="{% url 'clientes:ignorar_continuidad_distribucion' %}">{% csrf_token %}<input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}"><button type="submit">No por ahora</button></form></div>{% endif %}
-          {% else %}{% for obs in distribucion_semanal|slice:":2" %}<div class="memory-item">{{ obs.texto }}</div>{% endfor %}{% endif %}
-          {% if sugerencia_distribucion %}<div class="memory-item"><strong>Prueba propuesta</strong><br>{{ sugerencia_distribucion.texto }}</div><div class="memory-actions"><form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_distribucion.id %}">{% csrf_token %}<button type="submit">Probar 2 semanas</button></form><form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_distribucion.id %}">{% csrf_token %}<button type="submit">No por ahora</button></form></div>{% endif %}
-        </div>
-      </details>
-      {% endif %}
-
-      {% if preferencias_activas %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">PRF</span><h3>Preferencias activas</h3><span class="memory-count">{{ preferencias_activas|length }}</span></summary>
-        <div class="memory-content">{% for pref in preferencias_activas %}<div class="memory-item"><strong>{{ pref.descripcion }}</strong><form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}">{% csrf_token %}<button class="memory-action" type="submit" style="background:none;border:0;padding:0;cursor:pointer">Revocar</button></form></div>{% endfor %}<a class="memory-action" href="{% url 'clientes:plan_decisiones' %}">Ver decisiones del plan →</a></div>
-      </details>
-      {% endif %}
-
-      {% if calendario_plan %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">MEM</span><h3>Memoria del plan</h3><span class="memory-count">{{ calendario_plan|length }} semanas</span></summary>
-        <div class="memory-content">{% for semana in calendario_plan %}<div class="memory-dots" aria-label="Semana registrada">{% for dia in semana.dias %}<span class="memory-day {% if dia.estado == 'completada_normal' %}done{% elif dia.estado == 'completada_esencial' %}essential{% endif %}" title="{{ dia.fecha|date:'d N' }} · {{ dia.estado }}">{{ dia.fecha|date:"j" }}</span>{% endfor %}</div>{% endfor %}</div>
-      </details>
-      {% endif %}
-
-      {% if resumen_semanal_gym %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">GYM</span><h3>Resumen semanal Gym</h3><span class="memory-count">{{ resumen_semanal_gym|length }}</span></summary>
-        {# El primer aprendizaje ya ocupa la tarjeta principal; aquí continúa el resumen sin repetirlo. #}
-        <div class="memory-content">{% for item in resumen_semanal_gym|slice:"1:" %}<div class="memory-item">{% if item.icono %}{{ item.icono }} {% endif %}{{ item.texto }}</div>{% endfor %}</div>
-      </details>
-      {% endif %}
-
-      {% if resumen_semanal_hyrox and resumen_semanal_hyrox.tiene_datos %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">HYX</span><h3>Resumen semanal Hyrox</h3><span class="memory-count">{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }}</span></summary>
-        <div class="memory-content"><div class="memory-item">Sesiones <strong>{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }}</strong> · RPE medio <strong>{{ resumen_semanal_hyrox.rpe_medio|default:"—" }}</strong> · TSB <strong>{% if resumen_semanal_hyrox.tsb is not None %}{{ resumen_semanal_hyrox.tsb }}{% else %}—{% endif %}</strong></div>{% if resumen_semanal_gym %}{% for ap in resumen_semanal_hyrox.aprendizajes|slice:":3" %}<div class="memory-item">{{ ap.texto }}</div>{% endfor %}{% else %}{% for ap in resumen_semanal_hyrox.aprendizajes|slice:"1:3" %}<div class="memory-item">{{ ap.texto }}</div>{% endfor %}{% endif %}</div>
-      </details>
-      {% endif %}
-
-      {% if candidata_preferencia %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">APR</span><h3>El plan puede aprender</h3></summary>
-        <div class="memory-content">
-          <div class="memory-item">En {{ candidata_preferencia.evidencia_count }} pruebas, <em>{{ candidata_preferencia.descripcion }}</em> Puedes convertirlo en una preferencia blanda del plan.</div>
-          <div class="memory-item">La preferencia no es una regla. El plan la respetará cuando sea posible.</div>
-          <div class="memory-actions"><form method="post" action="{% url 'clientes:convertir_preferencia' %}">{% csrf_token %}<input type="hidden" name="tipo_preferencia" value="{{ candidata_preferencia.tipo_preferencia }}"><input type="hidden" name="tipo_intervencion" value="{{ candidata_preferencia.tipo_intervencion }}"><button type="submit">Convertir en preferencia</button></form><button type="button" onclick="this.closest('.memory-panel').style.display='none'">Seguir probando</button></div>
-        </div>
-      </details>
-      {% endif %}
-
-      {% if revision_progreso %}
-      <details class="memory-panel">
-        <summary><span class="memory-code">PROG</span><h3>Revisión de progreso</h3></summary>
-        <div class="memory-content">{% for item in revision_progreso %}<div class="memory-item">{{ item.icono }} <span class="{{ item.color }}">{{ item.texto }}</span></div>{% endfor %}<a class="memory-action" href="{% url 'clientes:mi_cuerpo' cliente.id %}">Actualizar medidas →</a></div>
-      </details>
-      {% endif %}
-
-      {% if not alertas_sistema and not patron_multisemanal and not sugerencia_activa and not evaluacion_intervencion and not intervencion_distribucion and not evaluacion_distribucion and not distribucion_semanal and not preferencias_activas and not calendario_plan and not resumen_semanal_gym and not resumen_semanal_hyrox.tiene_datos and not candidata_preferencia and not revision_progreso %}<div data-plan-memory-empty class="memory-empty">Aún no hay observaciones adicionales. Esta sección se llenará cuando el plan acumule evidencia suficiente.</div>{% endif %}
-      <a class="memory-link" href="{% url 'clientes:memoria_entrenador' cliente.id %}"><span><strong>Lo que voy entendiendo de ti</strong><span>RMs · calibración RPE · estaciones · decisiones del plan</span></span><b>→</b></a>
+  {% if joi_narrativa_hoy %}
+  <a data-joi-voice href="/joi/habitacion/" style="display:block;margin:10px 0 6px;padding:8px 14px;
+              border-left:1px solid var(--jds-joi-border);">
+    <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
+                letter-spacing:0.14em;text-transform:uppercase;
+                color:var(--jds-joi);opacity:0.7;margin-bottom:4px;">JOI</div>
+    <div style="font-size:11px;color:var(--joi-text);line-height:1.55;font-style:italic;
+                font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
+      {{ joi_narrativa_hoy }}
     </div>
-  </details>
-
-  {% if actividades_recientes_focus %}
-  <details data-recent-sessions class="recent">
-    <summary>
-      <span class="recent-heading">
-        <span class="recent-title">Últimas sesiones</span>
-        <span class="recent-subtitle">{% with primera=actividades_recientes_focus.0 %}{% if primera.titulo %}{{ primera.titulo }}{% elif primera.entreno_gym %}{{ primera.entreno_gym.rutina.nombre|default:"Entreno" }}{% else %}{{ primera.get_tipo_display }}{% endif %}{% endwith %}</span>
-      </span>
-      <span class="recent-count">{{ actividades_recientes_focus|length }}</span>
-    </summary>
-    <div class="recent-list">
-      {% for act in actividades_recientes_focus %}
-      <article class="recent-session">
-        <div class="recent-session-main">
-          <div class="recent-session-name">{% if act.titulo %}{{ act.titulo }}{% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}{% else %}{{ act.get_tipo_display }}{% endif %}</div>
-          <div class="recent-session-dates">
-            <span>Fecha real · {{ act.fecha_efectiva|date:"D d/m" }}</span>
-            <span>Planificada · {{ act.fecha|date:"D d/m" }}</span>
-            {% if act.es_anticipada %}<span class="recent-session-badge">Anticipado</span>{% endif %}
-          </div>
-        </div>
-        <div class="recent-session-stats">
-          {% if act.rpe_medio is not None %}<span>RPE {{ act.rpe_medio|floatformat:"0" }}</span>{% endif %}
-          {% if act.duracion_minutos %}<span>{{ act.duracion_minutos }} min</span>{% endif %}
-        </div>
-      </article>
-      {% endfor %}
-    </div>
-  </details>
+  </a>
   {% endif %}
 
-  <details data-secondary-tools class="tools">
-    <summary><span class="tools-title">Herramientas y evolución</span><span class="tools-meta">Tu trayectoria</span></summary>
-    <div class="tools-body">
-      <div class="acwr-slot" id="acwr-widget-container" hx-get="{% url 'clientes:widget_acwr' cliente.id %}" hx-trigger="revealed" hx-swap="innerHTML">Ratio Carga ACWR</div>
-      <nav class="tools-grid" aria-label="Herramientas del atleta">
-        <a class="tool" href="{% url 'entrenos:dashboard_liftin' cliente.id %}"><i class="fas fa-dumbbell"></i>Gym</a>
-        <a class="tool" href="{% url 'hyrox:dashboard' %}"><i class="fas fa-person-running"></i>Hyrox</a>
-        <a class="tool" href="{% url 'clientes:mi_cuerpo' cliente.id %}"><i class="fas fa-ruler"></i>Mi cuerpo</a>
-        <a class="tool" href="{% url 'hyrox:strava_reconciliacion' %}"><i class="fab fa-strava"></i>Strava</a>
-        <a class="tool" href="{% url 'rehab:hoy' %}"><i class="fas fa-bone"></i>Rehab</a>
-        <a class="tool" href="{% url 'entrenos:vista_plan_anual' cliente.id %}"><i class="fas fa-calendar"></i>Rutina</a>
-        <a class="tool" href="{% url 'entrenos:timeline_atleta' cliente.id %}"><i class="fas fa-clock-rotate-left"></i>Timeline</a>
-        <a class="tool" href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}"><i class="fas fa-plus"></i>Añadir actividad</a>
-        <a class="tool" href="{% url 'entrenos:dashboard_evolucion' cliente.id %}"><i class="fas fa-chart-area"></i>Evolución</a>
-        <a class="tool" href="{% url 'analytics:explicacion_plan_helms' %}"><i class="fas fa-map"></i>Plan</a>
-        <a class="tool" href="{% url 'clientes:plan_decisiones' %}"><i class="fas fa-route"></i>Decisiones</a>
-        <a class="tool" href="{% url 'clientes:blade_runner_dashboard' %}"><i class="fas fa-bolt"></i>Blade</a>
-        <a class="tool" href="{% url 'estoico:dashboard' %}"><i class="fas fa-fire"></i>Estoico</a>
-        <a class="tool" href="{% url 'logros:ver_codice_completo' cliente.id %}"><i class="fas fa-trophy"></i>Logros</a>
-      </nav>
+  <!-- ── DECISIÓN ÚNICA HOY ─────────────────── -->
+  {% if portada_hoy %}
+  <div class="rb-organismo-card">
+    <div class="rb-organismo-label">Decisión hoy</div>
+    <div class="rb-organismo-body">
+      <span class="rb-organismo-estado rb-org-{{ estado_sistema.estado|lower }}">
+        {{ portada_hoy.decision.estado }}
+      </span>
+      <span class="rb-organismo-texto">{{ portada_hoy.decision.frase }}</span>
+    </div>
+    {% if portada_hoy.accion_principal %}
+      {% with accion_label_normalizada=portada_hoy.accion_principal.label|lower %}
+      {# Defensa ante workers antiguos: el descanso nunca es una acción ejecutable. #}
+      {% if 'descanso' not in accion_label_normalizada %}
+      {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}
+      <button data-primary-action type="button" onclick="rbOpenCheckin(this)"
+              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
+        {{ portada_hoy.accion_principal.label }}
+      </button>
+      {% elif portada_hoy.accion_principal.tipo == 'diario' %}
+      <button data-primary-action type="button"
+              onclick="window.location.href='{{ portada_hoy.accion_principal.url }}'"
+              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
+        {{ portada_hoy.accion_principal.label }} →
+      </button>
+      {% else %}
+      <a href="{{ portada_hoy.accion_principal.url }}" data-primary-action class="rb-cta">
+        {{ portada_hoy.accion_principal.label }} →
+      </a>
+      {% endif %}
+      {% endif %}
+      {% endwith %}
+    {% endif %}
+    {% comment %}
+    Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
+    operativo, subordinado aquí. Solo relevante si el módulo dominante
+    de hoy es gym/hyrox — con diario/joi sería ruido.
+    {% endcomment %}
+    {% if estado_sistema.modulo_operativo %}
+    <details data-decision-detail style="margin-top:10px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Por qué hoy</summary>
+    <div class="rb-organismo-porque" style="margin-top:6px;">
+      {% include "includes/_semaforo_intencion.html" %}
+    </div>
+    </details>
+    {% endif %}
+    {% if portada_hoy.sesion_dominante %}
+    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);">
+      <div class="rb-workout-eyebrow">Sesión dominante · {{ portada_hoy.sesion_dominante.modulo|upper }}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:3px;">
+        {% if portada_hoy.sesion_dominante.modulo == 'gym' %}
+          {{ portada_hoy.sesion_dominante.datos.nombre|default:portada_hoy.sesion_dominante.datos.rutina_nombre|default:"Sesión Gym" }}
+        {% else %}
+          {{ portada_hoy.sesion_dominante.datos.titulo|default:"Sesión Hyrox" }}
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+    {% if portada_hoy.sesion_alternativa %}
+    <details style="margin-top:8px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Alternativa · {{ portada_hoy.sesion_alternativa.modulo|upper }}</summary>
+      <div style="font-size:11px;color:var(--ink-3);padding:4px 0 8px;">Disponible como referencia secundaria.</div>
+    </details>
+    {% endif %}
+    {% if portada_hoy.senales %}
+    <div style="margin-top:10px;">
+      {% for senal in portada_hoy.senales %}<div data-causal-signal class="rb-aprendio-item">{{ senal }}</div>{% endfor %}
+    </div>
+    {% endif %}
+    {% if portada_hoy.aprendizajes %}
+    <details style="margin-top:8px;">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Lo que aprendió el plan</summary>
+      {% for item in portada_hoy.aprendizajes %}<div data-learning class="rb-aprendio-item">{{ item }}</div>{% endfor %}
+    </details>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <!-- ── TOGGLE GYM / HYROX ──────────────────── -->
+  {% if hyrox_objetivo %}
+  <div class="rb-toggle" id="modeSwitcherRb">
+    <button class="rb-toggle-btn active" data-mode="gym" id="rbBtnGym">
+      <i class="fas fa-dumbbell"></i> GYM
+    </button>
+    <button class="rb-toggle-btn" data-mode="hyrox" id="rbBtnHyrox">
+      <i class="fas fa-person-running"></i> HYROX
+    </button>
+  </div>
+  {% endif %}
+
+  {# Phase 45 (JOI · esta semana) consolidado en JOI · esta fase (capa_media de NarrativaActiva) #}
+
+  <!-- ── GYM WORKOUT CARD ─────────────────────── -->
+  <div id="rbGymContent">
+
+    {% if portada_hoy %}
+    <details data-session-detail class="rb-plan-detalle" style="margin-top:12px;">
+      <summary>Sesión Gym · detalle</summary>
+      <div style="padding-bottom:8px;">
+    {% endif %}
+
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <!-- Estado: ya completado (anticipado o hoy) -->
+    <div class="rb-workout-card" style="border-left:3px solid var(--ok);">
+      <div class="rb-workout-eyebrow" style="color:var(--ok);">
+        {% if entreno_hoy_realizado %}&#10003; COMPLETADO HOY
+        {% else %}&#8629; YA REALIZADO{% endif %}
+        {% if entreno_realizado_obj and entreno_realizado_obj.sesion_detalle.rpe_medio >= 8 %}
+        &nbsp;·&nbsp;<span style="font-size:9px;font-weight:700;letter-spacing:0.1em;background:rgba(255,152,0,0.15);color:rgba(255,152,0,0.85);border-radius:5px;padding:2px 6px;">RPE {{ entreno_realizado_obj.sesion_detalle.rpe_medio|floatformat:1 }} - ALTO</span>
+        {% endif %}
+        {% if entreno_realizado_obj and entreno_realizado_obj.modo_reducido %}
+        &nbsp;·&nbsp;<span style="font-size:9px;font-weight:700;letter-spacing:0.1em;background:rgba(255,200,100,0.12);color:rgba(255,200,100,0.85);border-radius:5px;padding:2px 6px;">ESENCIAL</span>
+        {% endif %}
+        {% if entreno_realizado_fecha %}&nbsp;·&nbsp;{{ entreno_realizado_fecha|date:"l j N" }}{% endif %}
+      </div>
+      <div class="rb-workout-title">
+        {% if entreno_realizado_obj and entreno_realizado_obj.rutina %}
+          {{ entreno_realizado_obj.rutina.nombre }}
+        {% elif entreno_hoy_realizado %}
+          Sesión completada
+        {% else %}
+          {{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}
+        {% endif %}
+      </div>
+      {% if estado_entreno == 'recuperar' and entreno_hoy_realizado %}
+      <div style="margin-top:8px;font-size:11px;color:var(--td-strong);line-height:1.5;">
+        El plan marcaba recuperación. Has completado una sesión de baja exigencia — el día sigue contando como descarga.
+      </div>
+      {% endif %}
+      {% if bloque_esencial_resumen %}
+      <div style="margin-top:10px;padding:10px 12px;background:rgba(255,200,100,0.06);border:1px solid rgba(255,200,100,0.18);border-radius:10px;">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.8);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Versión esencial</div>
+        <div style="display:flex;gap:16px;font-size:12px;color:var(--td);">
+          <span>
+            Principal
+            <strong style="color:{% if bloque_esencial_resumen.bloque_principal_completo %}var(--ok){% else %}rgba(255,200,100,0.9){% endif %};">
+              {{ bloque_esencial_resumen.principales_completados }}/{{ bloque_esencial_resumen.principales_planificados }}
+            </strong>
+          </span>
+          {% if bloque_esencial_resumen.opcionales_planificados > 0 %}
+          <span>
+            Opcional
+            <strong>{{ bloque_esencial_resumen.opcionales_completados }}/{{ bloque_esencial_resumen.opcionales_planificados }}</strong>
+          </span>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+      {% if ejercicios_realizados_resumen %}
+      <div class="rb-ex-list" style="margin-top:10px;">
+        {% for ej in ejercicios_realizados_resumen %}
+        <div class="rb-ex-row">
+          <span class="rb-ex-name">{{ ej.nombre }}</span>
+          <span class="rb-ex-sets">
+            {{ ej.series }} ×
+            {% if ej.peso_kg > 0 %}{{ ej.peso_kg|floatformat:"-1" }} kg{% else %}P.C.{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="rb-workout-badge" style="color:var(--ok);border-color:var(--ok);margin-top:8px;">
+        <span style="width:6px;height:6px;border-radius:50%;background:var(--ok);display:inline-block;"></span>
+        Sesión registrada
+      </div>
+      {% endif %}
+    </div>
+    {% elif proximo_entrenamiento %}
+    <div class="rb-workout-card">
+      <div class="rb-workout-eyebrow" style="display:flex;align-items:center;gap:8px;">
+        <span>
+          {% if estado_entreno == 'recuperar' %}Recuperación recomendada
+          {% elif estado_entreno == 'descanso' %}Día de descanso
+          {% elif estado_entreno == 'version_reducida' %}Versión esencial
+          {% elif estado_entreno == 'posponer' %}Sesión en pausa
+          {% elif tipo_entreno == 'pendiente' %}Sesión Pendiente
+          {% else %}Próximo Entrenamiento{% endif %}
+        </span>
+        <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.1em;color:var(--ink-4);text-transform:uppercase;background:rgba(255,255,255,0.06);padding:2px 5px;border-radius:3px;">GYM</span>
+      </div>
+      <div class="rb-workout-title">{{ proximo_entrenamiento.nombre|default:proximo_entrenamiento.rutina_nombre|default:"Sesión" }}</div>
+      {% if mensaje_entreno and causa_entreno != 'sesion_hoy' %}
+      <div style="font-size:11px;color:var(--td-strong);margin-top:4px;margin-bottom:2px;font-style:italic;line-height:1.45;">{{ mensaje_entreno }}</div>
+      {% endif %}
+      {% if distribucion_aviso and not explicacion_decision.distribucion_aviso_suprimido %}
+      <div style="margin-top:6px;padding:7px 10px;background:rgba(255,160,80,0.07);border-left:2px solid rgba(255,160,80,0.4);border-radius:0 7px 7px 0;font-size:11px;color:rgba(255,160,80,0.85);line-height:1.4;">
+        {{ distribucion_aviso.texto }}
+      </div>
+      {% endif %}
+
+      {# Phase 28 — Aviso de lesión activa con ejercicios en riesgo #}
+      {% if lesion_aviso %}
+      <div style="margin-top:8px;padding:9px 12px;
+                  background:{% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.07){% else %}rgba(245,158,11,0.07){% endif %};
+                  border-left:2px solid {% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.45){% else %}rgba(245,158,11,0.40){% endif %};
+                  border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="font-size:11px;">{% if lesion_aviso.es_bloqueante %}🛑{% else %}⚠️{% endif %}</span>
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
+                       color:{% if lesion_aviso.es_bloqueante %}rgba(239,68,68,0.75){% else %}rgba(245,158,11,0.75){% endif %};">
+            Revisar · {{ lesion_aviso.zona }}
+          </span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.82;line-height:1.45;">
+          {{ lesion_aviso.mensaje }}
+        </div>
+        {% if lesion_aviso.ejercicios_en_riesgo %}
+        <div style="margin-top:5px;font-size:9px;color:var(--td);opacity:0.55;font-style:italic;">
+          Ejercicios a revisar: {{ lesion_aviso.ejercicios_en_riesgo|join:", " }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Phase 25 — Preferencia activa como referencia secundaria #}
+      {% if preferencia_aplicada and estado_entreno != 'recuperar' %}
+      <div style="margin-top:8px;padding:8px 11px;background:rgba(20,184,166,0.06);border-left:2px solid rgba(20,184,166,0.35);border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;color:rgba(20,184,166,0.7);letter-spacing:0.12em;text-transform:uppercase;">PRF</span>
+          <span style="font-size:10px;color:rgba(20,184,166,0.65);font-weight:600;">Preferencia del plan</span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.82;line-height:1.45;">
+          {{ preferencia_aplicada.mensaje }}
+        </div>
+        {% if preferencia_aplicada.accion_sugerida == 'posponer_recomendado' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          El plan lo toma como referencia. Puedes entrenar o posponer igualmente.
+        </div>
+        {% elif preferencia_aplicada.accion_sugerida == 'accesorios_opcionales' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          Los accesorios de hoy son opcionales como referencia, no como regla.
+        </div>
+        {% elif preferencia_aplicada.accion_sugerida == 'version_esencial_sugerida' %}
+        <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
+          Puedes hacer la versión esencial si tienes menos margen hoy.
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      <div class="rb-workout-badge">{% if bio_readiness.available %}Vol. {% widthratio bio_readiness.volume_modifier 1 100 %}% · {{ bio_readiness_label }}{% else %}Bio readiness · No disponible{% endif %}</div>
+      {% if proximo_entrenamiento.ejercicios %}
+      <div class="rb-ex-list">
+        {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
+        <div class="rb-ex-row">
+          <span class="rb-ex-name">{{ ej.nombre }}</span>
+          <span class="rb-ex-sets">
+            {% if ej.series and ej.repeticiones %}{{ ej.series }} × {{ ej.repeticiones }}
+            {% elif ej.series %}{{ ej.series }} series
+            {% elif ej.repeticiones %}{{ ej.repeticiones }} reps
+            {% else %}Sin prescripción{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+        {% if proximo_entrenamiento.ejercicios|length > 4 %}
+        <div class="rb-ex-more">+ {{ proximo_entrenamiento.ejercicios|length|add:"-4" }} ejercicio{{ proximo_entrenamiento.ejercicios|length|add:"-4"|pluralize:"s" }} más</div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {# Phase 30 — ¿Por qué hoy? — explicación unificada colapsable #}
+      {% if explicacion_decision and not explicacion_decision.todo_limpio %}
+      <div style="margin-top:10px;border-top:1px solid var(--line);padding-top:8px;">
+        <button type="button"
+          onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';this.querySelector('.pq-arrow').textContent=this.nextElementSibling.style.display==='none'?'↓':'↑'"
+          style="display:flex;align-items:center;gap:6px;background:none;border:none;cursor:pointer;padding:0;width:100%;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-3);">¿Por qué hoy?</span>
+          <span class="pq-arrow" style="font-size:9px;color:var(--ink-3);margin-left:auto;">↓</span>
+        </button>
+        <div style="display:none;margin-top:7px;">
+          <div style="font-size:9px;color:var(--ink-3);font-family:var(--font-mono);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:5px;">
+            {{ explicacion_decision.causa_label }}
+          </div>
+          {% for senal in explicacion_decision.senales_activas %}
+          <div style="display:flex;gap:6px;padding:4px 0;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
+            <span style="color:var(--ink-3);font-size:9px;flex-shrink:0;margin-top:1px;">·</span>
+            <span style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.45;">{{ senal }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      {# Phase 3.0 — Señal corporal del diario: badge informativo, nunca bloquea #}
+      {% if senal_corporal_diario.hay_senal %}
+      <div style="margin-top:10px;padding:8px 11px;
+                  background:rgba(167,139,250,0.06);
+                  border-left:2px solid rgba(167,139,250,0.35);
+                  border-radius:0 8px 8px 0;">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:3px;">
+          <span style="font-family:var(--font-mono);font-size:8px;font-weight:700;
+                       letter-spacing:0.12em;text-transform:uppercase;
+                       color:rgba(167,139,250,0.6);">DIARIO · Cuerpo</span>
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.80;line-height:1.45;">
+          {{ senal_corporal_diario.texto }}
+        </div>
+        {% if senal_corporal_diario.sugerencia %}
+        <div style="margin-top:5px;font-size:10px;color:rgba(167,139,250,0.65);font-style:italic;line-height:1.4;">
+          {{ senal_corporal_diario.sugerencia }}
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+    <!-- CTA: Ejecutar -->
+    {# ── Señales: movido tras EMPEZAR ENTRENO (Phase 62) ── #}
+
+    {# Las acciones operativas se componen una sola vez en portada_hoy. #}
+    {% if not portada_hoy %}
+
+    {% if entreno_hoy_realizado or entreno_semana_realizado %}
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(var(--accent-rgb),0.08);border:1.5px solid var(--accent);color:var(--accent);">
+      <i class="fas fa-plus"></i> Hacer otro entreno
+    </a>
+    {% elif proximo_entrenamiento %}
+
+    {% if estado_entreno == 'descanso' %}
+    {# Día de descanso real — solo información, sin invitar a saltarse el plan #}
+    <div style="padding:14px 0 8px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
+      Hoy es día de descanso. El plan no tiene sesión programada.
+    </div>
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;opacity:0.7;">
+      <i class="fas fa-calendar-alt"></i> Ver plan de la semana
+    </a>
+
+    {% elif estado_entreno == 'recuperar' %}
+    {# Motor recomienda descanso — es recomendación, no bloqueo #}
+    <div style="padding:14px 0 4px;font-size:11px;color:var(--td);opacity:0.65;text-align:center;line-height:1.5;">
+      El plan recomienda descanso hoy para proteger el progreso. Puedes entrenar si te encuentras bien.
+    </div>
+    {% if sesion_programada %}
+    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-moon"></i> Posponer hasta mañana
+      </button>
+    </form>
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
+      <i class="fas fa-play"></i> Entrenar igualmente
+    </a>
+    {% else %}
+    {# Sin SesionProgramada en estado recuperar: ofrecer guardar para mañana #}
+    <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-moon"></i> Guardar sesión para mañana
+      </button>
+    </form>
+    {% endif %}
+
+    {% elif estado_entreno == 'posponer' %}
+    {# Motor recomienda posponer — CTA secundario con opción de empezar #}
+    {% if sesion_programada %}
+    <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="margin-bottom:8px;">
+      {% csrf_token %}
+      <button type="submit" class="rb-cta" style="width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.18);color:var(--td);">
+        <i class="fas fa-clock"></i> Posponer hasta mañana
+      </button>
+    </form>
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
+      Empezar igualmente →
+    </a>
+    {% endif %}
+
+    {% else %}
+    {# Estado normal (entrenar / version_reducida): CTA principal activo #}
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
+      {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
+      {% else %}<i class="fas fa-play"></i> Empezar entreno{% endif %}
+    </a>
+    <div style="display:flex;gap:8px;margin-top:8px;">
+      {% if sesion_programada %}
+      <form method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Posponer sesión
+        </button>
+      </form>
+      <form method="post" action="{% url 'clientes:saltar_sesion' sesion_programada.id %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Saltar sesión
+        </button>
+      </form>
+      {% else %}
+      {# Sin SesionProgramada: sesión de hoy generada on-the-fly — usar endpoint genérico #}
+      <form method="post" action="{% url 'clientes:posponer_sesion_hoy' %}" style="flex:1;">
+        {% csrf_token %}
+        <button type="submit" style="width:100%;padding:10px;border-radius:12px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.12);color:var(--td);font-size:12px;cursor:pointer;">
+          Posponer sesión
+        </button>
+      </form>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);border-radius:12px;margin-bottom:10px;font-size:12px;color:var(--td-strong);line-height:1.5;font-style:italic;">
+      <strong>Sin sesión programada.</strong> Sin datos suficientes para concluir que hoy sea descanso o recuperación.
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% if portada_hoy %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
+    {% if alertas_sistema %}
+    {% if portada_hoy %}
+    <details data-secondary-signals class="rb-plan-detalle">
+      <summary>Señales del sistema · {{ alertas_sistema|length }}</summary>
+    {% endif %}
+    <div style="margin-top:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
+        <span style="font-size:14px;">🧠</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Señales · hoy</span>
+      </div>
+      {% for alerta in alertas_sistema|slice:":3" %}
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;{% if not forloop.last %}border-bottom:1px solid var(--line);{% endif %}">
+        <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
+          <div style="font-size:11px;color:var(--td-strong);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+          {% if alerta.url and alerta.url_label == 'Gestionar lesión' %}
+          {# ── Panel inline de gestión de lesión ── #}
+          {% with lesion=lesion_activa %}
+          <div style="margin-top:8px;">
+            <button onclick="toggleLesionPanel()"
+                    style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;
+                           text-transform:uppercase;padding:4px 10px;border:1.5px solid var(--danger);
+                           background:transparent;color:var(--danger);cursor:pointer;">
+              GESTIONAR LESIÓN ▾
+            </button>
+            <div id="lesion-panel" style="display:none;margin-top:10px;padding:12px;
+                                          background:var(--paper-2);border:1px solid var(--line);
+                                          border-left:2px solid var(--danger);">
+
+              <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);
+                          letter-spacing:.1em;text-transform:uppercase;margin-bottom:10px;">
+                Registro diario · {{ lesion.zona_afectada|title }} · {{ lesion.fase }}
+              </div>
+              {% if not lesion_sliders_tienen_registro %}
+              <div style="font-size:10px;color:var(--warn);margin-bottom:10px;line-height:1.4;">
+                Sin registro previo. Los controles parten de valores neutrales para introducir datos nuevos; no son una medición.
+              </div>
+              {% endif %}
+
+<div style="display:grid;gap:10px;">
+                {% for campo in lesion_sliders %}
+                <label style="display:grid;grid-template-columns:140px 1fr 24px;gap:8px;align-items:center;">
+                  <span style="font-size:10px;color:var(--ink-3);">{{ campo.label }}</span>
+                  <input type="range" id="les-{{ campo.name }}"
+                         min="{{ campo.min }}" max="{{ campo.max }}" value="{{ campo.val }}"
+                         oninput="document.getElementById('val-{{ campo.name }}').textContent=this.value"
+                         style="accent-color:var(--danger);width:100%;">
+                  <span id="val-{{ campo.name }}" style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:var(--ink);text-align:right;">{{ campo.val }}</span>
+                </label>
+                {% endfor %}
+              </div>
+
+              <div style="margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <button onclick="guardarRegistroLesion({{ lesion.id }})"
+                        style="font-family:var(--font-mono);font-size:9px;font-weight:700;
+                               letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;
+                               background:var(--ink);color:var(--bg);border:none;cursor:pointer;">
+                  GUARDAR HOY
+                </button>
+                <div id="lesion-msg" style="font-size:10px;color:var(--ok);display:none;"></div>
+              </div>
+
+              <div id="lesion-alta-btn" style="display:none;margin-top:8px;padding-top:8px;
+                                                border-top:1px solid var(--line);">
+                <button onclick="marcarRecuperada({{ lesion.id }})"
+                        style="font-family:var(--font-mono);font-size:9px;font-weight:700;
+                               letter-spacing:.1em;text-transform:uppercase;padding:5px 12px;
+                               background:transparent;color:var(--ok);border:1.5px solid var(--ok);
+                               cursor:pointer;">
+                  ✓ MARCAR COMO RECUPERADO
+                </button>
+              </div>
+            </div>
+          </div>
+          {% endwith %}
+          {% elif alerta.url %}
+          <a href="{{ alerta.url }}"
+             style="display:inline-block;margin-top:6px;font-family:var(--font-mono);font-size:9px;
+                    font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+                    padding:4px 10px;border:1.5px solid currentColor;text-decoration:none;
+                    color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% else %}var(--ink-3){% endif %};">
+            {{ alerta.url_label|default:"Ver detalle" }} →
+          </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+      {% if alertas_sistema|length > 3 %}
+      <details style="border-top:1px solid var(--line);">
+        <summary style="padding:8px 14px;font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);letter-spacing:.1em;text-transform:uppercase;cursor:pointer;list-style:none;">
+          {{ alertas_sistema|length|add:"-3" }} señal{{ alertas_sistema|length|add:"-3"|pluralize:"es" }} más
+        </summary>
+        {% for alerta in alertas_sistema|slice:"3:" %}
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border-top:1px solid var(--line);">
+          <span style="font-size:15px;flex-shrink:0;margin-top:1px;">{{ alerta.icono }}</span>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:700;color:{% if alerta.nivel == 'critico' %}var(--danger){% elif alerta.nivel == 'alerta' %}var(--warn){% elif alerta.nivel == 'positivo' %}var(--ok){% else %}var(--ink){% endif %};">{{ alerta.titulo }}</div>
+            <div style="font-size:11px;color:var(--td-strong);line-height:1.4;margin-top:2px;">{{ alerta.texto }}</div>
+          </div>
+        </div>
+        {% endfor %}
+      </details>
+      {% endif %}
+      <div style="padding:8px 14px;">
+        <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
+      </div>
+    </div>
+    {% if portada_hoy %}</details>{% endif %}
+    {% endif %}
+
+    {# ── BLOQUE DE APRENDIZAJE — colapsado por defecto (densidad) ── #}
+    <details class="rb-plan-detalle">
+      <summary>
+        El plan en detalle
+        <span style="margin-left:auto;font-weight:400;letter-spacing:0;text-transform:none;opacity:0.65;">
+          {% if sugerencia_activa %}· 1 sugerencia activa
+          {% elif intervencion_distribucion %}· prueba en curso
+          {% elif evaluacion_distribucion %}· prueba evaluada
+          {% elif candidata_preferencia %}· preferencia detectada
+          {% elif distribucion_semanal %}· una observación de distribución
+          {% elif patron_multisemanal %}· nueva observación
+          {% else %}· sin novedades esta semana{% endif %}
+        </span>
+      </summary>
+
+    {# Tarjeta 1: "Esta semana" — datos + lectura del momento actual #}
+    {% if analisis_semanal and analisis_semanal.hay_datos %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(150,180,255,0.3);">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num">SEM</div>
+        <h3 class="rb-section-title">Esta semana</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">
+        {% if analisis_semanal.sesiones_completadas %}
+        <div style="font-size:11px;color:var(--td);opacity:0.8;">
+          <span style="font-weight:700;font-size:15px;color:var(--ok);">{{ analisis_semanal.sesiones_completadas }}</span>
+          sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }}
+        </div>
+        {% endif %}
+        {% if analisis_semanal.sesiones_esenciales %}
+        <div style="font-size:11px;color:rgba(255,200,100,0.8);">
+          <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_esenciales }}</span>
+          versión esencial{{ analisis_semanal.sesiones_esenciales|pluralize:"es" }}
+        </div>
+        {% endif %}
+        {% if analisis_semanal.sesiones_saltadas %}
+        <div style="font-size:11px;color:var(--td);opacity:0.5;">
+          <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_saltadas }}</span>
+          saltada{{ analisis_semanal.sesiones_saltadas|pluralize:"s" }}
+        </div>
+        {% endif %}
+        {% if analisis_semanal.bloques_principales_completos and analisis_semanal.sesiones_esenciales %}
+        <div style="font-size:11px;color:var(--td);opacity:0.7;">
+          Principal <strong style="color:var(--ok);">{{ analisis_semanal.bloques_principales_completos }}/{{ analisis_semanal.sesiones_esenciales }}</strong>
+        </div>
+        {% endif %}
+      </div>
+      {% if analisis_semanal.lectura_textual %}
+      <div style="font-size:12px;color:var(--td-strong);line-height:1.55;font-style:italic;">
+        {{ analisis_semanal.lectura_textual }}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {# Señal de carga semanal — solo cuando el sistema detecta patrón de fatiga u oportunidad #}
+    {% if recomendacion_carga %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(100,200,150,0.4);">
+      <div class="rb-section-head" style="margin-bottom:6px;">
+        <div class="rb-section-num" style="color:rgba(100,200,150,0.7);">CARGA</div>
+        <h3 class="rb-section-title">Señal de carga</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="font-size:12px;color:var(--td);opacity:0.78;line-height:1.5;">{{ recomendacion_carga }}</div>
+    </div>
+    {% endif %}
+
+    {# Tarjeta 2: "Lo que el plan observa" — patrón + sugerencia + evaluación pasada (solo si hay patrón) #}
+    {% if patron_multisemanal %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(180,140,255,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(180,140,255,0.7);">OBS</div>
+        <h3 class="rb-section-title">Lo que el plan observa</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ patron_multisemanal|truncatewords:5 }}{% if sugerencia_activa %} · sugerencia{% endif %}</span>
+      </summary>
+      <div style="margin-top:12px;">
+
+      {# Observación de patrón multisemanal #}
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;">
+        {{ patron_multisemanal }}
+      </div>
+
+      {# Sugerencia accionable (si existe) #}
+      {% if sugerencia_activa %}
+      <div style="padding:10px 12px;background:rgba(180,140,255,0.06);border:1px solid rgba(180,140,255,0.18);border-radius:10px;margin-top:12px;">
+        <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.7);letter-spacing:0.14em;text-transform:uppercase;margin-bottom:6px;">Sugerencia</div>
+        <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.5;margin-bottom:10px;">{{ sugerencia_activa.texto }}</div>
+        <div style="display:flex;gap:8px;">
+          <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_activa.id %}" style="flex:1;">
+            {% csrf_token %}
+            <button type="submit" style="width:100%;padding:8px 10px;border-radius:10px;background:rgba(180,140,255,0.15);border:1px solid rgba(180,140,255,0.35);color:rgba(180,140,255,0.9);font-size:11px;font-weight:600;cursor:pointer;letter-spacing:0.05em;">
+              Aplicar esta semana
+            </button>
+          </form>
+          <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_activa.id %}" style="flex:1;">
+            {% csrf_token %}
+            <button type="submit" style="width:100%;padding:8px 10px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--td);font-size:11px;cursor:pointer;opacity:0.65;">
+              Ignorar por ahora
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      {# Evaluación de la intervención anterior + recomendación de continuidad #}
+      {% if evaluacion_intervencion %}
+      <div style="margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.07);">
+        <div style="font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px;
+                    color:{% if evaluacion_intervencion.resultado == 'favorable' %}rgba(46,204,113,0.75){% else %}rgba(180,140,255,0.6){% endif %};">
+          Semana anterior
+        </div>
+        <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;{% if recomendacion_continuidad %}margin-bottom:10px;{% endif %}">
+          {{ evaluacion_intervencion.lectura }}
+        </div>
+        {% if recomendacion_continuidad %}
+        <div style="padding:9px 11px;background:rgba(180,140,255,0.05);border:1px solid rgba(180,140,255,0.13);border-radius:9px;margin-bottom:8px;">
+          <div style="font-size:9px;font-weight:700;color:rgba(180,140,255,0.65);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">
+            {% if recomendacion_continuidad.accion == 'repetir' %}Repetir ajuste{% else %}Profundizar{% endif %}
+          </div>
+          <div style="font-size:11px;color:var(--td);opacity:0.7;line-height:1.4;">{{ recomendacion_continuidad.texto }}</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          {% if recomendacion_continuidad.accion == 'repetir' %}
+          <form method="post" action="{% url 'clientes:repetir_intervencion' %}" style="flex:1;">
+            {% csrf_token %}
+            <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
+            <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(180,140,255,0.12);border:1px solid rgba(180,140,255,0.30);color:rgba(180,140,255,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+              Repetir esta semana
+            </button>
+          </form>
+          {% endif %}
+          <form method="post" action="{% url 'clientes:ignorar_recomendacion' %}" style="flex:1;">
+            {% csrf_token %}
+            <input type="hidden" name="tipo_intervencion" value="{{ recomendacion_continuidad.tipo_intervencion }}">
+            <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+              No por ahora
+            </button>
+          </form>
+        </div>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Phase 18B/20 — Prueba de distribución activa o evaluación reciente -->
+    {% if intervencion_distribucion %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.5);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">PRU</div>
+        <h3 class="rb-section-title">Prueba de distribución activa</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">hasta {{ intervencion_distribucion.fecha_fin|date:"j N" }}</span>
+      </summary>
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;margin-top:12px;">
+        El plan está en una prueba de distribución hasta el <strong>{{ intervencion_distribucion.fecha_fin|date:"j N" }}</strong>.
+        Observa si la semana fluye mejor.
+      </div>
+    </details>
+    {% elif evaluacion_distribucion %}
+    {# Phase 20/21 — Prueba terminada → evaluación + posible continuidad #}
+    <details class="rb-aprendio-card" style="border-left:3px solid {% if evaluacion_distribucion.resultado == 'favorable' %}rgba(46,204,113,0.4){% else %}rgba(255,160,80,0.35){% endif %};">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">EVA</div>
+        <h3 class="rb-section-title">Prueba de distribución — resultado</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ evaluacion_distribucion.lectura|truncatewords:5 }}</span>
+      </summary>
+      <div style="font-size:12px;color:var(--td-strong);line-height:1.55;margin-top:12px;{% if continuidad_distribucion %}margin-bottom:10px;{% endif %}">
+        {{ evaluacion_distribucion.lectura }}
+      </div>
+      {% if continuidad_distribucion %}
+      <div style="padding:8px 11px;background:rgba(46,204,113,0.05);border:1px solid rgba(46,204,113,0.15);border-radius:9px;margin-bottom:8px;">
+        <div style="font-size:9px;font-weight:700;color:rgba(46,204,113,0.7);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Una vuelta más</div>
+        <div style="font-size:11px;color:var(--td-strong);line-height:1.4;">{{ continuidad_distribucion.texto }}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:repetir_prueba_distribucion' %}" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}">
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(46,204,113,0.12);border:1px solid rgba(46,204,113,0.30);color:rgba(46,204,113,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+            Repetir 2 semanas
+          </button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_continuidad_distribucion' %}" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_intervencion" value="{{ continuidad_distribucion.tipo_intervencion }}">
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+            No por ahora
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </details>
+    {% endif %}
+
+    <!-- Phase 16 — Distribución semanal: dónde el plan no encaja con la vida real -->
+    {% if distribucion_semanal and not intervencion_distribucion %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(255,160,80,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(255,160,80,0.7);">DIS</div>
+        <h3 class="rb-section-title">Distribución del plan</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ distribucion_semanal.0.texto|truncatewords:5 }}{% if sugerencia_distribucion %} · prueba sugerida{% endif %}</span>
+      </summary>
+      <div style="margin-top:12px;">
+      {% for obs in distribucion_semanal|slice:":2" %}
+      <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.55;font-style:italic;margin-bottom:8px;">
+        {{ obs.texto }}
+      </div>
+      {% endfor %}
+      {% if sugerencia_distribucion %}
+      <div style="margin-top:4px;padding:9px 11px;background:rgba(255,160,80,0.06);border:1px solid rgba(255,160,80,0.18);border-radius:9px;margin-bottom:8px;">
+        <div style="font-size:9px;font-weight:700;color:rgba(255,160,80,0.7);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Prueba de 2 semanas</div>
+        <div style="font-size:11px;color:var(--td);opacity:0.75;line-height:1.4;">{{ sugerencia_distribucion.texto }}</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_distribucion.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,160,80,0.12);border:1px solid rgba(255,160,80,0.30);color:rgba(255,160,80,0.85);font-size:10px;font-weight:600;cursor:pointer;">
+            Probar 2 semanas
+          </button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_distribucion.id %}" style="flex:1;">
+          {% csrf_token %}
+          <button type="submit" style="width:100%;padding:7px;border-radius:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);color:var(--td);font-size:10px;cursor:pointer;opacity:0.55;">
+            No por ahora
+          </button>
+        </form>
+      </div>
+      {% endif %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Phase 22D — Preferencias activas del plan -->
+    {% if preferencias_activas %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(46,204,113,0.4);">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num" style="color:rgba(46,204,113,0.7);">PRF</div>
+        <h3 class="rb-section-title">Preferencias del plan</h3>
+        <div class="rb-section-line"></div>
+        <a href="{% url 'clientes:plan_decisiones' %}" style="flex-shrink:0;font-size:9px;color:rgba(46,204,113,0.55);text-decoration:none;font-weight:600;letter-spacing:0.06em;">Ver todo →</a>
+      </div>
+      {% for pref in preferencias_activas %}
+      <div style="display:flex;align-items:flex-start;gap:10px;{% if not forloop.last %}margin-bottom:10px;{% endif %}">
+        <div style="flex:1;font-size:12px;color:var(--td);opacity:0.8;line-height:1.45;">{{ pref.descripcion }}</div>
+        <form method="post" action="{% url 'clientes:revocar_preferencia' pref.id %}" style="flex-shrink:0;">
+          {% csrf_token %}
+          <button type="submit" style="padding:4px 8px;border-radius:7px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);color:var(--td);font-size:9px;cursor:pointer;opacity:0.5;">
+            Revocar
+          </button>
+        </form>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Phase 22D — Candidata a preferencia (si existe y no hay activa de ese tipo) -->
+    {% if candidata_preferencia %}
+    <div class="rb-aprendio-card" style="border-left:3px solid rgba(46,204,113,0.5);">
+      <div class="rb-section-head" style="margin-bottom:8px;">
+        <div class="rb-section-num" style="color:rgba(46,204,113,0.7);">APR</div>
+        <h3 class="rb-section-title">El plan puede aprender</h3>
+        <div class="rb-section-line"></div>
+      </div>
+      <div style="font-size:12px;color:var(--td);opacity:0.8;line-height:1.55;margin-bottom:10px;">
+        En {{ candidata_preferencia.evidencia_count }} pruebas,
+        <em>{{ candidata_preferencia.descripcion }}</em>
+        Puedes convertirlo en una preferencia blanda del plan.
+      </div>
+      <div style="font-size:10px;color:var(--td);opacity:0.5;font-style:italic;margin-bottom:10px;">
+        La preferencia no es una regla. El plan la respetará cuando sea posible.
+      </div>
+      <div style="display:flex;gap:8px;">
+        <form method="post" action="{% url 'clientes:convertir_preferencia' %}" style="flex:1;">
+          {% csrf_token %}
+          <input type="hidden" name="tipo_preferencia" value="{{ candidata_preferencia.tipo_preferencia }}">
+          <input type="hidden" name="tipo_intervencion" value="{{ candidata_preferencia.tipo_intervencion }}">
+          <button type="submit" style="width:100%;padding:8px;border-radius:10px;background:rgba(46,204,113,0.15);border:1px solid rgba(46,204,113,0.35);color:rgba(46,204,113,0.85);font-size:11px;font-weight:600;cursor:pointer;">
+            Convertir en preferencia
+          </button>
+        </form>
+        <button type="button" style="flex:1;padding:8px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.10);color:var(--td);font-size:11px;cursor:pointer;opacity:0.55;" onclick="this.closest('.rb-aprendio-card').style.display='none'">
+          Seguir probando
+        </button>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Phase 15 — Calendario / memoria visual del plan -->
+    {% if calendario_plan %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(120,120,120,0.25);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(200,200,200,0.5);">MEM</div>
+        <h3 class="rb-section-title">Memoria del plan</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ calendario_plan|length }} semana{{ calendario_plan|length|pluralize }} registradas · ver calendario</span>
+      </summary>
+      <div style="margin-top:10px;">
+
+      {# Leyenda compacta #}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--td);opacity:0.55;">
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(46,204,113,0.8);margin-right:3px;vertical-align:middle;"></span>Completada</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(255,200,100,0.8);margin-right:3px;vertical-align:middle;"></span>Esencial</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(100,160,255,0.7);margin-right:3px;vertical-align:middle;"></span>Pendiente</span>
+        <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.4);margin-right:3px;vertical-align:middle;"></span>Saltada / Sistema</span>
+      </div>
+
+      {# Días de la semana header #}
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+        {% for d in "LMXJVSD" %}<div style="text-align:center;font-size:9px;color:var(--td);opacity:0.4;font-weight:600;">{{ d }}</div>{% endfor %}
+      </div>
+
+      {# Dot grid — 4 semanas #}
+      {% for semana in calendario_plan %}
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
+        {% for dia in semana.dias %}
+        <div style="display:flex;align-items:center;justify-content:center;height:28px;position:relative;"
+             title="{% if dia.detalle.nombre_sesion %}{{ dia.detalle.nombre_sesion }} — {% endif %}{{ dia.fecha|date:'d N' }}{% if dia.estado == 'completada_esencial' %} (esencial){% elif dia.estado == 'saltada' %} (saltada){% elif dia.estado == 'omitida_sistema' %} (omitida){% elif dia.estado == 'pendiente' %} (pendiente){% endif %}"
+             onclick="mostrarDetalleDia(this, '{{ dia.fecha|date:'d N' }}', '{{ dia.detalle.nombre_sesion|default:'' }}', '{{ dia.estado }}', '{{ dia.detalle.fecha_realizada|date:'d N'|default:'' }}', {{ dia.detalle.modo_reducido|yesno:'true,false' }}, {{ dia.carga_mantenida|yesno:'true,false' }})">
+          {% if dia.estado == 'completada_normal' %}
+          <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(46,204,113,0.85);{% if dia.es_hoy %}box-shadow:0 0 0 2px rgba(46,204,113,0.3);{% endif %}cursor:pointer;"></span>
+          {% elif dia.estado == 'completada_esencial' %}
+          <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(255,200,100,0.85);cursor:pointer;"></span>
+          {% elif dia.estado == 'saltada' %}
+          <span style="display:block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.45);cursor:pointer;"></span>
+          {% elif dia.estado == 'omitida_sistema' %}
+          <span style="display:block;width:6px;height:6px;border-radius:50%;background:rgba(140,140,140,0.25);cursor:pointer;"></span>
+          {% elif dia.estado == 'pendiente' %}
+          <span style="display:block;width:9px;height:9px;border-radius:50%;background:rgba(100,160,255,0.6);cursor:pointer;"></span>
+          {% elif dia.estado == 'pospuesta' %}
+          <span style="display:block;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(100,160,255,0.5);cursor:pointer;"></span>
+          {% elif dia.es_hoy %}
+          <span style="display:block;width:6px;height:6px;border-radius:50%;border:1.5px solid rgba(255,255,255,0.2);"></span>
+          {% else %}
+          <span style="display:block;width:3px;height:3px;border-radius:50%;background:rgba(255,255,255,0.07);"></span>
+          {% endif %}
+          {% if dia.intervencion_activa %}
+          <span style="position:absolute;top:3px;right:3px;width:4px;height:4px;border-radius:50%;background:rgba(180,140,255,0.7);" title="Intervención activa"></span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+
+      {# Panel de detalle del día (inicialmente oculto) #}
+      <div id="cal-detalle" style="display:none;margin-top:10px;padding:10px 12px;background:rgba(255,255,255,0.04);border-radius:10px;font-size:12px;color:var(--td);">
+        <div id="cal-detalle-fecha" style="font-weight:700;margin-bottom:4px;opacity:0.9;"></div>
+        <div id="cal-detalle-cuerpo" style="opacity:0.7;line-height:1.5;"></div>
+      </div>
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Resumen semanal: qué aprendió el plan -->
+    {% if resumen_semanal_gym %}
+    <details class="rb-aprendio-card">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num">SEM</div>
+        <h3 class="rb-section-title">Lo que aprendió el plan</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ resumen_semanal_gym.0.texto|truncatewords:7 }}</span>
+      </summary>
+      <div style="margin-top:8px;">
+      {% with meta=resumen_semanal_gym.0.meta %}
+      {% if meta %}
+      <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);white-space:nowrap;margin-bottom:8px;">
+        {{ meta.lunes|date:"d/m" }} – {{ meta.domingo|date:"d/m" }}
+      </div>
+      {% endif %}
+      {% endwith %}
+      <!-- Primeros 3 items quedan visibles por defecto (datos clave y primera sección) -->
+      {% for item in resumen_semanal_gym|slice:":3" %}
+      {% if item.tipo == 'seccion' %}
+      <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
+        <span style="font-size:12px;">{{ item.icono }}</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;">{{ item.texto }}</span>
+      </div>
+      {% else %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon">{{ item.icono }}</span>
+        <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+      </div>
+      {% endif %}
+      {% endfor %}
+      <!-- Resto colapsado -->
+      {% if resumen_semanal_gym|length > 3 %}
+      <details style="margin-top:4px;">
+        <summary style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-4);cursor:pointer;list-style:none;padding:6px 0;">
+          ver detalle · {{ resumen_semanal_gym|length|add:"-3" }} más
+        </summary>
+        {% for item in resumen_semanal_gym|slice:"3:" %}
+        {% if item.tipo == 'seccion' %}
+        <div style="margin:8px 0 2px;padding:4px 0;border-top:1px solid var(--line-2);display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;">{{ item.icono }}</span>
+          <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);text-transform:uppercase;letter-spacing:.08em;">{{ item.texto }}</span>
+        </div>
+        {% else %}
+        <div class="rb-aprendio-item">
+          <span class="rb-aprendio-icon">{{ item.icono }}</span>
+          <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+      </details>
+      {% endif %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Revisión de progreso: peso/cintura/rendimiento (Phase 63) -->
+    {% if revision_progreso %}
+    <details class="rb-aprendio-card" style="border-left:3px solid rgba(120,180,255,0.35);">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num" style="color:rgba(120,180,255,0.7);">PROG</div>
+        <h3 class="rb-section-title">Revisión de progreso</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ revision_progreso.0.texto|truncatewords:7 }}</span>
+      </summary>
+      <div style="margin-top:8px;">
+      {% for item in revision_progreso %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon">{{ item.icono }}</span>
+        <span class="rb-aprendio-text {{ item.color }}">{{ item.texto }}</span>
+      </div>
+      {% endfor %}
+      <a href="{% url 'clientes:mi_cuerpo' cliente.id %}" style="display:block;margin-top:8px;font-size:10px;font-weight:700;letter-spacing:0.06em;color:rgba(120,180,255,0.7);text-decoration:none;">Actualizar medidas →</a>
+      </div>
+    </details>
+    {% endif %}
+
+    {# JOI · el plan consolidado: el FAB ya cubre el indicador "hay una lectura pendiente" #}
+
+    <!-- Daily push Hyrox → orientación operativa (Phase 60E) -->
+    {% if daily_push_hyrox and hyrox_decision.puede_ejecutar_plan %}
+    <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
+        <span style="font-size:14px;">🏁</span>
+        <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-3);letter-spacing:.12em;text-transform:uppercase;">Hyrox · orientación</span>
+      </div>
+      <div style="padding:10px 14px;font-size:12px;color:var(--ink-2);line-height:1.5;">
+        {{ daily_push_hyrox }}
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Resumen semanal Hyrox -->
+    {% if resumen_semanal_hyrox and resumen_semanal_hyrox.tiene_datos %}
+    <details class="rb-aprendio-card" style="margin-bottom:12px;">
+      <summary class="rb-collapse-summary" style="margin-bottom:0;">
+        <div class="rb-section-num">HYX</div>
+        <h3 class="rb-section-title">Hyrox · esta semana</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }} sesiones · TSB {% if resumen_semanal_hyrox.tsb is not None %}{{ resumen_semanal_hyrox.tsb }}{% else %}—{% endif %}</span>
+      </summary>
+      <div style="margin-top:10px;">
+      <!-- Métricas rápidas -->
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ink);">{{ resumen_semanal_hyrox.n_completadas }}/{{ resumen_semanal_hyrox.n_planificadas }}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">Sesiones</div>
+        </div>
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:var(--ink);">{% if resumen_semanal_hyrox.rpe_medio %}{{ resumen_semanal_hyrox.rpe_medio }}{% else %}—{% endif %}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">RPE medio</div>
+        </div>
+        <div style="background:var(--paper-2);border:1px solid var(--line-2);border-radius:10px;padding:10px;text-align:center;">
+          <div style="font-family:var(--font-mono);font-size:18px;font-weight:700;color:{% if resumen_semanal_hyrox.tsb is not None and resumen_semanal_hyrox.tsb > 0 %}var(--ok){% elif resumen_semanal_hyrox.tsb is not None and resumen_semanal_hyrox.tsb < -10 %}var(--danger){% else %}var(--ink){% endif %};">{% if resumen_semanal_hyrox.tsb is not None %}{{ resumen_semanal_hyrox.tsb }}{% else %}—{% endif %}</div>
+          <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">TSB</div>
+        </div>
+      </div>
+      <!-- Aprendizajes -->
+      {% if resumen_semanal_hyrox.aprendizajes %}
+      {% for ap in resumen_semanal_hyrox.aprendizajes|slice:":3" %}
+      <div class="rb-aprendio-item">
+        <span class="rb-aprendio-icon"><i class="fas {{ ap.icono }}" style="color:{{ ap.color }};font-size:13px;"></i></span>
+        <span class="rb-aprendio-text">{{ ap.texto }}</span>
+      </div>
+      {% endfor %}
+      {% endif %}
+      </div>
+    </details>
+    {% endif %}
+
+    <!-- Lo que sé de ti -->
+    <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="display:block;text-decoration:none;">
+      <div style="margin-bottom:12px;padding:14px 16px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;display:flex;align-items:center;gap:14px;">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--paper-2);border:1px solid var(--line-2);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🧠</div>
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--ink);">Lo que voy entendiendo de ti</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--ink-3);margin-top:2px;">RMs · calibración RPE · estaciones · decisiones del plan</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-3)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+    </a>
+
+    <!-- Recent sessions -->
+    {% if actividades_recientes_focus %}
+    <details class="rb-section">
+      <summary class="rb-collapse-summary" style="margin-bottom:12px;">
+        <div class="rb-section-num">LOG</div>
+        <h3 class="rb-section-title">Últimas Sesiones</h3>
+        <div class="rb-section-line"></div>
+        <span class="rb-collapse-hint">{% with primero=actividades_recientes_focus.0 %}{% if primero.titulo %}{{ primero.titulo }}{% elif primero.entreno_gym %}{{ primero.entreno_gym.rutina.nombre|default:"Entreno" }}{% else %}{{ primero.get_tipo_display }}{% endif %}{% endwith %} · {{ actividades_recientes_focus|length }} reciente{{ actividades_recientes_focus|length|pluralize }}</span>
+      </summary>
+      <div class="rb-sessions">
+        {% for act in actividades_recientes_focus %}
+        <div class="rb-session-row">
+          <div>
+            <div class="rb-session-date">{{ act.fecha_efectiva|date:"D d/m"|upper }}</div>
+            <div class="rb-session-name">
+              {% if act.titulo %}{{ act.titulo }}
+              {% elif act.entreno_gym %}{{ act.entreno_gym.rutina.nombre|default:"Entreno" }}
+              {% else %}{{ act.get_tipo_display }}{% endif %}
+            </div>
+            <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);margin-top:2px;display:flex;align-items:center;gap:6px;">
+              <i class="fas fa-calendar" style="font-size:8px;"></i>
+              Plan {{ act.fecha|date:"D d/m"|upper }}
+              {% if act.es_anticipada %}<span class="rb-session-badge">⚡ anticipado</span>{% endif %}
+            </div>
+          </div>
+          <div class="rb-session-right">
+            {% if act.rpe_medio %}<span style="font-family:var(--font-mono);font-size:9px;color:{% if act.rpe_medio >= 9 %}var(--danger){% elif act.rpe_medio >= 7 %}var(--warn){% else %}var(--ok){% endif %};">RPE {{ act.rpe_medio|floatformat:"0" }}</span>{% endif %}
+            {% if act.duracion_minutos %}<span>{{ act.duracion_minutos }}m</span>{% endif %}
+            <i class="fas fa-circle-check rb-session-check"></i>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+
+    </details>
+  </div><!-- #rbGymContent -->
+
+  <!-- ── HYROX CONTENT ────────────────────────── -->
+  {% if hyrox_objetivo %}
+  <div id="rbHyroxContent" style="display:none;">
+
+    {% if not hyrox_decision.puede_ejecutar_plan %}
+    <div class="rb-workout-card rb-hyrox-protected" style="border-left:3px solid var(--danger);">
+      <div class="rb-workout-eyebrow" style="color:var(--danger);">Hyrox · estado protegido</div>
+      <div style="font-size:10px;color:var(--danger);margin-top:5px;">Prioridad: recuperación</div>
+      <div class="rb-workout-title">{{ hyrox_decision.titulo|default:"Decisión no disponible" }}</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">{{ hyrox_decision.subtitulo }}</div>
+      {% if hyrox_decision.mensaje %}
+      <div style="font-size:11px;color:var(--td);margin-top:8px;line-height:1.5;">{{ hyrox_decision.mensaje }}</div>
+      {% endif %}
+      {% if hyrox_decision.permitido %}
+      <div style="margin-top:10px;font-size:10px;color:var(--ok);">Permitido · {{ hyrox_decision.permitido|join:", " }}</div>
+      {% endif %}
+      {% if hyrox_decision.evitar %}
+      <div style="margin-top:5px;font-size:10px;color:var(--danger);">Evitar · {{ hyrox_decision.evitar|join:", " }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    {% if hyrox_proxima_sesion %}
+    <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
+      <div class="rb-workout-eyebrow">{{ hyrox_decision.titulo|default:"Próxima Sesión Hyrox" }}</div>
+      <div class="rb-workout-title">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</div>
+      {% if hyrox_proxima_sesion.tipo_fase %}
+      <div class="rb-workout-badge" style="color:var(--accent);">{{ hyrox_proxima_sesion.tipo_fase|upper }}</div>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="rb-workout-card">
+      <div class="rb-workout-eyebrow">Hyrox</div>
+      <div class="rb-workout-title">Sin sesión programada</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">Sin datos suficientes</div>
+    </div>
+    {% endif %}
+
+    {% endif %}
+
+    {% if hyrox_decision.puede_ejecutar_plan %}
+    <div style="text-align:center;margin-top:10px;">
+      <a href="{% url 'hyrox:strava_reconciliacion' %}" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(252,76,2,.55);text-decoration:none;">
+        <i class="fab fa-strava"></i> Importar actividad de Strava →
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+  <!-- ── DIARIO ─────────────────────────────────── -->
+  <div class="rb-section">
+    <div class="rb-section-head">
+      <div class="rb-section-num">BIO</div>
+      <h3 class="rb-section-title">Diario Hoy</h3>
+      <div class="rb-section-line"></div>
+    </div>
+    <div class="rb-bio-card">
+
+      <!-- Estado mañana / noche -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0;margin-bottom:14px;">
+        <div style="padding:10px 12px;border-right:1px solid var(--line);">
+          <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;">Mañana</div>
+          {% if manana_hecha %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;flex-shrink:0;box-shadow:0 0 4px var(--ok);"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ok);font-weight:700;">Registrada</span>
+            </div>
+          {% else %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-3);display:inline-block;flex-shrink:0;"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);font-weight:700;">Pendiente</span>
+            </div>
+          {% endif %}
+        </div>
+        <div style="padding:10px 12px;">
+          <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:var(--ink-4);margin-bottom:6px;">Noche</div>
+          {% if noche_hecha %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;background:var(--ok);display:inline-block;flex-shrink:0;box-shadow:0 0 4px var(--ok);"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ok);font-weight:700;">Registrada</span>
+            </div>
+          {% else %}
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="width:7px;height:7px;border-radius:50%;border:1.5px solid var(--ink-3);display:inline-block;flex-shrink:0;"></span>
+              <span style="font-family:var(--font-mono);font-size:11px;color:var(--ink-2);font-weight:700;">Pendiente</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+
+      {# Phase 3.5 — Sugerencia de vigilancia corporal #}
+      {% if sugerencia_diario and sugerencia_diario.estado == 'pendiente' %}
+      <div style="margin-bottom:14px;padding:11px 13px;
+                  background:rgba(167,139,250,0.06);
+                  border:1.5px solid rgba(167,139,250,0.25);
+                  border-radius:8px;">
+        <div style="font-family:var(--font-mono);font-size:8px;font-weight:700;
+                    letter-spacing:0.12em;text-transform:uppercase;
+                    color:rgba(167,139,250,0.65);margin-bottom:5px;">
+          DIARIO · Tendencia corporal
+        </div>
+        <div style="font-size:11px;color:var(--td);opacity:0.82;line-height:1.5;margin-bottom:9px;">
+          {{ sugerencia_diario.texto }}
+        </div>
+        <div style="display:flex;gap:6px;">
+          <form method="post" action="{% url 'clientes:aceptar_sugerencia' sugerencia_diario.id %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit"
+              style="padding:5px 12px;font-family:var(--font-mono);font-size:8px;font-weight:700;
+                     letter-spacing:0.1em;text-transform:uppercase;
+                     background:rgba(167,139,250,0.12);border:1.5px solid rgba(167,139,250,0.4);
+                     color:rgba(167,139,250,0.9);border-radius:4px;cursor:pointer;">
+              Vigilar 14 días
+            </button>
+          </form>
+          <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_diario.id %}" style="margin:0;">
+            {% csrf_token %}
+            <button type="submit"
+              style="padding:5px 12px;font-family:var(--font-mono);font-size:8px;font-weight:700;
+                     letter-spacing:0.1em;text-transform:uppercase;
+                     background:transparent;border:1.5px solid var(--line);
+                     color:var(--ink-3);border-radius:4px;cursor:pointer;">
+              No por ahora
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Separador + mensaje + botones -->
+      <div style="border-top:1px solid var(--line);padding-top:14px;">
+        {% if estado == 'dia_completo' %}
+          {% if tiene_lectura_joi %}
+            <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">El día quedó registrado. Hay una lectura de JOI disponible.</p>
+            <div style="display:flex;gap:6px;">
+              <a href="{% url 'diario:presencia_cierre' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+                <i class="fas fa-eye" style="font-size:10px;"></i> Ver lectura
+              </a>
+              <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+                Diario
+              </a>
+            </div>
+          {% else %}
+            <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">El día quedó registrado.</p>
+            <div style="display:flex;gap:6px;">
+              <a href="{% url 'diario:dashboard_diario' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;background:var(--paper);">
+                <i class="fas fa-book" style="font-size:10px;"></i> Diario
+              </a>
+            </div>
+          {% endif %}
+
+        {% elif estado == 'manana_hecha' %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">La mañana ya dejó una señal. Esta noche podrás cerrar el día sin reconstruirlo todo.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:presencia_cierre' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-moon" style="font-size:10px;"></i> Cerrar el día
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
+          </div>
+
+        {% elif estado == 'solo_noche' %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">Hoy no se abrió por la mañana, pero el cierre dejó una señal.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:prosoche_editar_entrada' prosoche_hoy.id %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-eye" style="font-size:10px;"></i> Ver cierre
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
+          </div>
+
+        {% else %}
+          <p style="font-family:var(--font-body);font-size:12px;color:var(--ink-2);line-height:1.6;margin-bottom:14px;">La mañana abre el día. Empieza antes de que coja forma.</p>
+          <div style="display:flex;gap:6px;">
+            <a href="{% url 'diario:presencia_apertura' %}" style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink);border:1.5px solid var(--ink-3);border-radius:3px;text-decoration:none;background:var(--paper);">
+              <i class="fas fa-sun" style="font-size:10px;"></i> Abrir el día
+            </a>
+            <a href="{% url 'diario:dashboard_diario' %}" style="display:flex;align-items:center;justify-content:center;padding:9px 12px;font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-3);border:1.5px solid var(--line);border-radius:3px;text-decoration:none;">
+              Diario
+            </a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Lectura semanal — accesible de forma discreta -->
+      <div style="padding-top:10px;text-align:center;">
+        <a href="{% url 'diario:lectura_semanal' %}" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:var(--ink-4);text-decoration:none;">
+          lectura de la semana →
+        </a>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── ACWR WIDGET (colapsado por defecto) ──── -->
+  <details class="rb-section" style="margin-top:20px;">
+    <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
+      <div class="rb-section-num">CARGA</div>
+      <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
+      <div class="rb-section-line"></div>
+      <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);white-space:nowrap;">
+        {% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}
+        · ver gráfica
+      </span>
+    </summary>
+    <div style="margin-top:12px;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+      <button onclick="document.getElementById('rbAcwrModal').classList.add('open')"
+              class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;">
+        <i class="fas fa-circle-info"></i> ¿Qué es?
+      </button>
+    </div>
+    <div class="rb-acwr-container"
+         id="acwr-widget-container"
+         hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
+         hx-trigger="revealed"
+         hx-swap="innerHTML">
+      <div class="rb-skeleton"></div>
     </div>
   </details>
-</main>
 
-<aside data-workout-recovery id="workoutRecovery" hidden style="position:fixed;left:16px;right:16px;bottom:16px;z-index:50;margin:auto;max-width:448px;padding:12px;background:var(--surface);border:1px solid var(--warn)">
-  <strong style="font-size:12px">Entreno sin guardar</strong>
-  <div style="display:flex;gap:8px;margin-top:8px"><a id="workoutRecoveryLink" class="tool" href="#">Retomar</a><button id="workoutRecoveryDiscard" class="tool" type="button">Descartar</button></div>
-</aside>
+  {# STATS BAR eliminada — duplicaba los 4 stats del BIB HERO de arriba #}
 
-<div class="modal" id="rbCheckinModal" onclick="if(event.target===this)rbCloseCheckin()">
-  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="rbCheckinTitle" aria-describedby="rbCheckinContract">
-    <h2 id="rbCheckinTitle">Check-in matutino</h2>
-    <p id="rbCheckinContract"><strong>Sueño y energía son obligatorios</strong><br>Datos biométricos opcionales</p>
-    <form id="rbCheckinForm">{% csrf_token %}
-      <label class="field">Horas de sueño<input name="horas_sueno" id="ciHoras" type="number" min="1" max="14" step=".5" required></label>
-      <label class="field">Frecuencia cardiaca · opcional<input name="fc_reposo" id="ciFC" type="number" min="30" max="200"></label>
-      <label class="field">VFC / HRV · opcional<input name="hrv_ms" type="number" min="1" max="300"></label>
-      <input name="energia_subjetiva" id="ciEnergia" type="hidden" required><div class="field">Energía</div>
-      <div class="energy"><button type="button" data-energy="1">1</button><button type="button" data-energy="2">2</button><button type="button" data-energy="3">3</button><button type="button" data-energy="4">4</button><button type="button" data-energy="5">5</button><button type="button" data-energy="6">6</button><button type="button" data-energy="7">7</button><button type="button" data-energy="8">8</button><button type="button" data-energy="9">9</button><button type="button" data-energy="10">10</button></div>
-      <div id="ciError" style="display:none;color:var(--jds-danger);font-size:12px;margin-bottom:8px"></div>
-      <div class="modal-actions"><button class="primary" type="button" onclick="rbSubmitCheckin()">Registrar check-in</button><button class="close" type="button" onclick="rbCloseCheckin()">Más tarde</button></div>
+  <!-- ── ACCIONES PRIMARIAS (rutina + timeline) ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/></svg>
+      Rutina
+    </a>
+    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Timeline
+    </a>
+  </div>
+
+  <!-- ── MÁS (colapsado) ───────────────────────── -->
+  <details class="rb-plan-detalle" style="margin-top:6px;">
+    <summary>Más</summary>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
+      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;background:var(--accent);border-color:var(--accent);color:var(--bg);">
+        <i class="fas fa-plus"></i> Añadir
+      </a>
+      <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-book"></i> Diario
+      </a>
+      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-chart-area"></i> Evolución
+      </a>
+      <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-map"></i> Plan
+      </a>
+      <a href="{% url 'clientes:blade_runner_dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-bolt"></i> Blade
+      </a>
+      <a href="{% url 'estoico:dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-fire-flame-curved"></i> Estoico
+      </a>
+      <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
+        <i class="fas fa-trophy"></i> Logros
+      </a>
+    </div>
+  </details>
+
+  <!-- Phase 26 — Centro de decisiones del plan -->
+  <a href="{% url 'clientes:plan_decisiones' %}"
+     style="display:flex;align-items:center;gap:10px;margin-top:6px;padding:11px 14px;
+            background:var(--paper);border:1px solid var(--line-2);border-radius:12px;
+            text-decoration:none;color:var(--ink-3);transition:border-color .2s,color .2s;"
+     onmouseover="this.style.borderColor='rgba(20,184,166,0.4)';this.style.color='var(--ink)'"
+     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(20,184,166,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 0 20A10 10 0 0 1 12 2"/>
+      <path d="M12 6a6 6 0 0 1 0 12 6 6 0 0 1 0-12"/>
+    </svg>
+    <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;">Por qué el plan decide así</span>
+    <span style="margin-left:auto;font-size:9px;font-family:var(--font-mono);color:rgba(20,184,166,0.55);font-weight:700;letter-spacing:0.1em;">→</span>
+  </a>
+
+</div><!-- .rb-container -->
+
+<!-- ── ACWR MODAL ───────────────────────────────── -->
+<div class="rb-modal-ov" id="rbAcwrModal" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="rb-modal-box">
+    <div class="rb-modal-handle"></div>
+    <div class="rb-modal-title">¿Qué es el ACWR?</div>
+    <div class="rb-modal-sub">Acute:Chronic Workload Ratio — Ratio de Carga Aguda/Crónica</div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">¿Para qué sirve?</div>
+      <div class="rb-modal-row">
+        <div class="rb-modal-row-icon">🎯</div>
+        <div>
+          <div class="rb-modal-row-label">Predice el riesgo de lesión</div>
+          <div class="rb-modal-row-desc">Compara cuánto has entrenado esta semana versus lo que tu cuerpo está acostumbrado. Subir demasiado rápido = mayor riesgo de lesión.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">Cómo se calcula</div>
+      <div class="rb-modal-formula">
+        <div class="rb-modal-formula-eq">ACWR = Carga 7d ÷ Carga 28d</div>
+        <div class="rb-modal-formula-desc">Cada sesión: Carga UA = RPE × minutos de entreno</div>
+      </div>
+    </div>
+
+    <div class="rb-modal-section">
+      <div class="rb-modal-section-title">Zonas del indicador</div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:#64748b"></div>
+        <div class="rb-modal-zone-range" style="color:#64748b">0.0 – 0.8</div>
+        <div class="rb-modal-zone-text"><strong>Carga baja</strong> — Puedes exigirte más sin riesgo.</div>
+      </div>
+      <div class="rb-modal-zone-row" style="border-color:rgba(var(--accent-rgb),0.2);">
+        <div class="rb-modal-zone-dot" style="background:var(--ok)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--ok)">0.8 – 1.3</div>
+        <div class="rb-modal-zone-text"><strong>Zona óptima</strong> — Equilibrio perfecto entre esfuerzo y recuperación.</div>
+      </div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:var(--warn)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--warn)">1.3 – 1.5</div>
+        <div class="rb-modal-zone-text"><strong>Cuidado</strong> — Has subido rápido. Mantén pero no aumentes la carga.</div>
+      </div>
+      <div class="rb-modal-zone-row">
+        <div class="rb-modal-zone-dot" style="background:var(--danger)"></div>
+        <div class="rb-modal-zone-range" style="color:var(--danger)">1.5+</div>
+        <div class="rb-modal-zone-text"><strong>Zona de riesgo</strong> — Riesgo elevado. Descansa o reduce intensidad.</div>
+      </div>
+    </div>
+
+    <button class="rb-cta rb-cta-rest" onclick="document.getElementById('rbAcwrModal').classList.remove('open')" style="margin-top:16px;">
+      Entendido
+    </button>
+  </div>
+</div>
+
+<script>
+function initAcwrChart() {
+  const cvDash = document.getElementById('acwrChartDash');
+  if (!cvDash || typeof Chart === 'undefined') return;
+  if (cvDash._chartInstance) { cvDash._chartInstance.destroy(); cvDash._chartInstance = null; }
+  let raw = [];
+  try { raw = JSON.parse(cvDash.dataset.acwr || '[]'); } catch(e) {}
+  const labels = raw.map(r => r.fecha || '');
+  const vals   = raw.map(r => parseFloat(r.acwr) || 0);
+  const today  = new Date().toISOString().slice(0, 10);
+  const todayIdx = labels.lastIndexOf(today) >= 0 ? labels.lastIndexOf(today) : labels.length - 1;
+  const cur = vals[todayIdx] || 0;
+  cvDash._chartInstance = new Chart(cvDash, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: vals,
+          borderColor: '#ff6b00',
+          backgroundColor: 'rgba(255,107,0,0.07)',
+          fill: true, tension: 0.4,
+          pointRadius: vals.map((_, i) => i === todayIdx ? 6 : 0),
+          pointBackgroundColor: vals.map((_, i) => i === todayIdx ? (cur >= 1.3 ? '#ef4444' : cur >= 0.8 ? '#16a34a' : '#d97706') : 'transparent'),
+          pointBorderColor: '#fff', pointBorderWidth: 2,
+        },
+        { data: labels.map(() => 0.8), borderColor: 'rgba(22,163,74,.3)', borderDash: [4,4], borderWidth: 1, pointRadius: 0, fill: false },
+        { data: labels.map(() => 1.3), borderColor: 'rgba(217,119,6,.3)', borderDash: [4,4], borderWidth: 1, pointRadius: 0, fill: false },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { min: 0, max: 2, grid: { color: 'rgba(15,15,14,0.06)' }, ticks: { stepSize: 0.5, color: 'rgba(15,15,14,0.4)', font: { size: 9 } } },
+        x: { grid: { display: false }, ticks: { maxTicksLimit: 5, color: 'rgba(15,15,14,0.4)', font: { size: 9 } } },
+      }
+    }
+  });
+  const marker = document.getElementById('acwr-track-marker');
+  if (marker) setTimeout(() => { marker.style.left = Math.min(Math.max(cur/2,0),1)*100+'%'; }, 300);
+}
+
+document.body.addEventListener('htmx:afterSettle', function(evt) {
+  if (evt.detail?.target?.id === 'acwr-widget-container') initAcwrChart();
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+  {% if hyrox_objetivo %}
+  const btnGym = document.getElementById('rbBtnGym');
+  const btnHyrox = document.getElementById('rbBtnHyrox');
+  const gymContent = document.getElementById('rbGymContent');
+  const hyroxContent = document.getElementById('rbHyroxContent');
+
+  function setMode(mode) {
+    if (mode === 'hyrox') {
+      btnGym.classList.remove('active');
+      btnHyrox.classList.add('active-hyrox');
+      gymContent.style.display = 'none';
+      hyroxContent.style.display = 'block';
+    } else {
+      btnHyrox.classList.remove('active-hyrox');
+      btnGym.classList.add('active');
+      gymContent.style.display = 'block';
+      hyroxContent.style.display = 'none';
+    }
+    localStorage.setItem('rb_panel_mode', mode);
+  }
+
+  btnGym.addEventListener('click', () => setMode('gym'));
+  btnHyrox.addEventListener('click', () => setMode('hyrox'));
+
+  const saved = localStorage.getItem('rb_panel_mode');
+  if (saved === 'hyrox') setMode('hyrox');
+  {% endif %}
+});
+</script>
+
+<!-- ── CHECK-IN MODAL ──────────────────────────── -->
+<div class="rb-modal-ov" id="rbCheckinModal" onclick="if(event.target===this)rbCloseCheckin()">
+  <div class="rb-modal-box" role="dialog" aria-modal="true" aria-labelledby="rbCheckinTitle"
+       aria-describedby="rbCheckinContract" style="max-height:90vh;overflow-y:auto;position:relative;">
+    <button type="button" aria-label="Cerrar check-in" onclick="rbCloseCheckin()"
+      style="position:absolute;right:16px;top:12px;width:44px;height:44px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font-size:22px;cursor:pointer;">×</button>
+    <div class="rb-modal-handle"></div>
+    <div class="rb-modal-title" id="rbCheckinTitle" style="margin-bottom:4px;">Check-in Matutino</div>
+    <div class="rb-modal-sub" style="margin-bottom:6px;">¿Cómo has amanecido hoy?</div>
+    <div id="rbCheckinContract" style="font-size:11px;color:var(--ink-3);margin-bottom:20px;line-height:1.5;">
+      <strong>Sueño y energía son obligatorios</strong><br>Datos biométricos opcionales
+    </div>
+
+    <form id="rbCheckinForm">
+      {% csrf_token %}
+
+      <!-- FC Reposo -->
+      <div class="rb-modal-section">
+        <label class="rb-modal-section-title" for="ciFC">Frecuencia cardíaca en reposo <span>(opcional)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input type="number" name="fc_reposo" id="ciFC" min="30" max="200" placeholder="60"
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
+                   font-family:var(--font-mono);font-size:16px;font-weight:700;
+                   background:var(--paper);color:var(--ink);text-align:center;">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3);">BPM</span>
+        </div>
+      </div>
+
+      <!-- VFC -->
+      <div class="rb-modal-section">
+        <label class="rb-modal-section-title" for="ciHRV">VFC / HRV en milisegundos <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input type="number" name="hrv_ms" id="ciHRV" min="1" max="300" placeholder="Ej. 62"
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
+                   font-family:var(--font-mono);font-size:16px;font-weight:700;
+                   background:var(--paper);color:var(--ink);text-align:center;">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3);">ms</span>
+        </div>
+      </div>
+
+      <!-- Horas sueño -->
+      <div class="rb-modal-section">
+        <label class="rb-modal-section-title" for="ciHoras">Horas de sueño (obligatorio)</label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
+          <input type="number" name="horas_sueno" id="ciHoras" min="1" max="14" step="0.5" placeholder="7.5" required
+            style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
+                   font-family:var(--font-mono);font-size:16px;font-weight:700;
+                   background:var(--paper);color:var(--ink);text-align:center;">
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--ink-3);">HRS</span>
+        </div>
+      </div>
+
+      <!-- Calidad sueño -->
+      <div class="rb-modal-section">
+        <label class="rb-modal-section-title" for="ciCalidadRange">Calidad del sueño <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></label>
+        <input type="hidden" name="calidad_sueno" id="ciCalidad" value="">
+        <div style="margin-top:10px;">
+          <input type="range" min="0" max="100" value="50" id="ciCalidadRange"
+            oninput="document.getElementById('ciCalidad').value=this.value;document.getElementById('ciCalidadVal').textContent=this.value+'%'"
+            style="width:100%;accent-color:var(--accent);">
+          <div style="display:flex;justify-content:space-between;margin-top:4px;">
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);">Pésimo</span>
+            <span id="ciCalidadVal" style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink);">Sin registrar</span>
+            <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);">Perfecto</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Energía -->
+      <div class="rb-modal-section">
+        <div class="rb-modal-section-title" id="ciEnergiaLabel">Nivel de energía (obligatorio)</div>
+        <input type="hidden" name="energia_subjetiva" id="ciEnergia" value="" required>
+        <div id="ciEnergiaButtons" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"></div>
+      </div>
+
+      <div id="ciError" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;font-family:var(--font-mono);"></div>
+
+      <button type="button" onclick="rbSubmitCheckin()"
+        style="width:100%;min-height:44px;padding:13px;background:var(--ink);color:var(--bg);
+               border:none;border-radius:4px;font-family:var(--font-mono);font-size:12px;
+               font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">
+        REGISTRAR CHECK-IN
+      </button>
+      <button type="button" onclick="rbCloseCheckin()"
+        style="width:100%;min-height:44px;margin-top:8px;border:1px solid var(--line-2);background:transparent;color:var(--ink);font-family:var(--font-mono);font-weight:700;cursor:pointer;">
+        Más tarde
+      </button>
     </form>
+
+    <div id="ciResultado" style="display:none;text-align:center;padding:20px 4px;">
+      <div style="font-size:28px;margin-bottom:8px;">✓</div>
+      <div id="ciResultadoTexto" style="font-family:var(--font-mono);font-size:13px;font-weight:700;color:var(--ink);letter-spacing:0.02em;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+var rbCheckinTrigger = null;
+
+function rbOpenCheckin(trigger) {
+  var modal = document.getElementById('rbCheckinModal');
+  rbCheckinTrigger = trigger || document.activeElement;
+  modal.classList.add('open');
+  var first = modal.querySelector('button[aria-label="Cerrar check-in"]');
+  if (first) first.focus();
+}
+
+function rbCloseCheckin() {
+  var modal = document.getElementById('rbCheckinModal');
+  modal.classList.remove('open');
+  if (rbCheckinTrigger && typeof rbCheckinTrigger.focus === 'function') rbCheckinTrigger.focus();
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape' && document.getElementById('rbCheckinModal').classList.contains('open')) {
+    rbCloseCheckin();
+  }
+});
+
+// Energy buttons
+(function(){
+  var labels = ['😴 Agotado','😔 Bajo','🙂 Normal','🔥 Cargado','🚀 Máximo'];
+  var vals = [2, 4, 6, 8, 10];
+  var cont = document.getElementById('ciEnergiaButtons');
+  if (!cont) return;
+  labels.forEach(function(lbl, i){
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = lbl;
+    btn.dataset.val = vals[i];
+    btn.style.cssText = 'flex:1;min-width:60px;min-height:44px;padding:9px 4px;border:1.5px solid var(--line-2);border-radius:4px;'+
+      'background:var(--paper);color:var(--ink);font-family:var(--font-mono);font-size:11px;'+
+      'font-weight:700;cursor:pointer;transition:all .12s;';
+    btn.onclick = function(){
+      document.querySelectorAll('#ciEnergiaButtons button').forEach(function(b){
+        b.style.background = 'var(--paper)'; b.style.color = 'var(--ink)';
+        b.style.borderColor = 'var(--line-2)';
+      });
+      btn.style.background = 'var(--ink)'; btn.style.color = 'var(--bg)';
+      btn.style.borderColor = 'var(--ink)';
+      document.getElementById('ciEnergia').value = btn.dataset.val;
+    };
+    cont.appendChild(btn);
+  });
+})();
+
+function rbSubmitCheckin() {
+  var fc = document.getElementById('ciFC').value;
+  var horas = document.getElementById('ciHoras').value;
+  var energia = document.getElementById('ciEnergia').value;
+  var errEl = document.getElementById('ciError');
+  errEl.style.display = 'none';
+
+  if (!horas || !energia) {
+    errEl.textContent = 'Sueño y energía son obligatorios.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  var form = document.getElementById('rbCheckinForm');
+  var data = new FormData(form);
+
+  fetch('{% url "clientes:checkin_matutino" %}', {
+    method: 'POST',
+    headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')},
+    body: data
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    if (d.ok) {
+      if (d.reload_required) {
+        if (d.reload_url) window.location.assign(d.reload_url);
+        else window.location.reload();
+        return;
+      }
+      // Update badge to green without reload
+      var badge = document.querySelector('[data-checkin-badge]');
+      if (badge) {
+        badge.style.color = '#22c55e';
+        badge.style.background = 'rgba(34,197,94,.1)';
+        badge.style.border = '1px solid rgba(34,197,94,.3)';
+        badge.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> CHECK-IN ✓';
+      }
+
+      // Mostrar la consecuencia real (no un toast genérico) antes de cerrar
+      var vm = d.volume_modifier;
+      var score = d.readiness_score;
+      var texto;
+      if (vm === null || vm === undefined || score === null || score === undefined) {
+        texto = 'Check-in registrado';
+      } else {
+        var pct = Math.round(score * 100);
+        var volLabel;
+        if (vm >= 1) volLabel = 'sesión completa';
+        else if (vm >= 0.85) volLabel = 'volumen ajustado a 85%';
+        else if (vm >= 0.70) volLabel = 'volumen ajustado a 70%';
+        else volLabel = 'volumen reducido a 50%';
+        texto = 'Preparación hoy: ' + pct + '% · ' + volLabel;
+      }
+
+      document.getElementById('rbCheckinForm').style.display = 'none';
+      document.getElementById('ciResultadoTexto').textContent = texto;
+      document.getElementById('ciResultado').style.display = 'block';
+
+      setTimeout(function(){
+        document.getElementById('rbCheckinModal').classList.remove('open');
+        // Reset para la próxima apertura (mañana siguiente)
+        document.getElementById('rbCheckinForm').style.display = '';
+        document.getElementById('ciResultado').style.display = 'none';
+        if (!badge) location.reload();
+      }, 1800);
+    } else {
+      errEl.textContent = d.error || 'Error al guardar. Intenta de nuevo.';
+      errEl.style.display = 'block';
+    }
+  })
+  .catch(function(){
+    errEl.textContent = 'Error de conexión. Intenta de nuevo.';
+    errEl.style.display = 'block';
+  });
+}
+</script>
+
+<script>
+function toggleLesionPanel(){
+  var p=document.getElementById('lesion-panel');
+  if(p) p.style.display=p.style.display==='none'?'block':'none';
+}
+
+async function guardarRegistroLesion(lesionId){
+  var csrf='{{ csrf_token }}';
+  var data=new URLSearchParams({
+    dolor_reposo:    document.getElementById('les-dolor_reposo').value,
+    dolor_movimiento:document.getElementById('les-dolor_movimiento').value,
+    inflamacion:     document.getElementById('les-inflamacion').value,
+    rango:           document.getElementById('les-rango').value,
+  });
+  var res=await fetch('/hyrox/api/lesion/'+lesionId+'/registro/',{
+    method:'POST',headers:{'X-CSRFToken':csrf},body:data
+  });
+  var d=await res.json();
+  var msg=document.getElementById('lesion-msg');
+  msg.textContent=d.msg;
+  msg.style.display='block';
+  msg.style.color=d.ok?'var(--ok)':'var(--danger)';
+  if(d.ok && d.puede_alta){
+    document.getElementById('lesion-alta-btn').style.display='block';
+  }
+}
+
+async function marcarRecuperada(lesionId){
+  if(!confirm('¿Confirmas que estás recuperado/a?'))return;
+  var csrf='{{ csrf_token }}';
+  var res=await fetch('/hyrox/api/lesion/'+lesionId+'/marcar-recuperada/',{
+    method:'POST',headers:{'X-CSRFToken':csrf}
+  });
+  var d=await res.json();
+  if(d.ok) location.reload();
+}
+
+// Phase 15 — Calendar day detail
+function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, cargaMantenida) {
+  var panel = document.getElementById('cal-detalle');
+  var panelFecha = document.getElementById('cal-detalle-fecha');
+  var panelCuerpo = document.getElementById('cal-detalle-cuerpo');
+  if (!panel) return;
+
+  var estadoTexto = {
+    'completada_normal': 'Completada',
+    'completada_esencial': 'Versión esencial completada',
+    'saltada': 'Saltada por el usuario',
+    'omitida_sistema': 'Omitida por el sistema',
+    'pendiente': 'Pendiente',
+    'pospuesta': 'Pospuesta',
+    'sin_registro': 'Sin actividad registrada',
+    'futuro': ''
+  }[estado] || estado;
+
+  var lineas = [];
+  if (nombre) lineas.push('<strong>' + nombre + '</strong>');
+  if (estadoTexto) lineas.push(estadoTexto);
+  if (esEsencial) lineas.push('Versión esencial activa');
+  if (cargaMantenida) lineas.push('Carga mantenida (freno contextual)');
+  if (fechaReal && fechaReal !== fecha) lineas.push('Realizada el ' + fechaReal);
+
+  panelFecha.textContent = fecha;
+  panelCuerpo.innerHTML = lineas.join('<br>');
+  panel.style.display = 'block';
+}
+</script>
+
+<div id="entreno-recovery-banner" style="display:none;position:fixed;bottom:80px;left:0;right:0;z-index:8000;padding:0 16px;">
+  <div style="background:var(--bg-2);border:1px solid rgba(255,160,40,0.4);border-radius:12px;padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">
+    <span style="font-size:18px;flex-shrink:0;">⚠️</span>
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:12px;font-weight:700;color:rgba(255,160,40,0.9);margin-bottom:2px;">Entreno sin guardar</div>
+      <div style="font-size:11px;color:var(--td);opacity:0.75;">Tienes series registradas que no se guardaron.</div>
+    </div>
+    <a id="entreno-recovery-link" href="#" style="font-family:var(--font-mono);font-size:9px;font-weight:700;letter-spacing:0.1em;color:rgba(255,160,40,0.9);border:1px solid rgba(255,160,40,0.4);border-radius:4px;padding:5px 10px;text-decoration:none;white-space:nowrap;">RETOMAR →</a>
+    <button id="entreno-recovery-close" style="background:none;border:none;color:var(--td);opacity:0.4;font-size:16px;cursor:pointer;padding:0 4px;flex-shrink:0;">×</button>
   </div>
 </div>
 <script>
-let rbCheckinTrigger=null;
-function rbOpenCheckin(trigger){rbCheckinTrigger=trigger;document.getElementById('rbCheckinModal').classList.add('open')}
-function rbCloseCheckin(){document.getElementById('rbCheckinModal').classList.remove('open');if(rbCheckinTrigger)rbCheckinTrigger.focus()}
-document.querySelectorAll('[data-energy]').forEach(b=>b.addEventListener('click',()=>{document.getElementById('ciEnergia').value=b.dataset.energy;document.querySelectorAll('[data-energy]').forEach(x=>x.style.borderColor='var(--strong)');b.style.borderColor='var(--accent)'}));
-document.addEventListener('keydown',e=>{if(e.key==='Escape')rbCloseCheckin()});
-function rbSubmitCheckin(){const form=document.getElementById('rbCheckinForm'),error=document.getElementById('ciError'),data=new FormData(form);if(!data.get('horas_sueno')||!data.get('energia_subjetiva')){error.textContent='Sueño y energía son obligatorios.';error.style.display='block';return}fetch('{% url "clientes:checkin_matutino" %}',{method:'POST',headers:{'X-CSRFToken':data.get('csrfmiddlewaretoken')},body:data}).then(r=>r.json()).then(d=>{if(d.ok)window.location.assign(d.reload_url||window.location.href);else{error.textContent=d.error||'No se pudo guardar.';error.style.display='block'}}).catch(()=>{error.textContent='Error de conexión.';error.style.display='block'})}
-(function(){const prefix='entreno_activo_{{ cliente.id }}_',banner=document.getElementById('workoutRecovery');let key=null,data=null;for(let i=0;i<localStorage.length;i++){const candidate=localStorage.key(i);if(candidate&&candidate.startsWith(prefix)){try{const parsed=JSON.parse(localStorage.getItem(candidate));const recent=parsed&&parsed.ts&&(Date.now()-parsed.ts)<86400000;if(recent&&parsed.seriesCompletadas&&Object.values(parsed.seriesCompletadas).some(series=>series&&series.length)){key=candidate;data=parsed;break}}catch(e){}}}if(!key)return;banner.hidden=false;if(data.url)document.getElementById('workoutRecoveryLink').href=data.url;document.getElementById('workoutRecoveryDiscard').onclick=()=>{localStorage.removeItem(key);banner.hidden=true}})();
+(function(){
+  const clienteId = {{ cliente.id }};
+  const prefix = 'entreno_activo_' + clienteId + '_';
+  let pendiente = null;
+  let pendienteKey = null;
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith(prefix)) {
+      try {
+        const data = JSON.parse(localStorage.getItem(k));
+        const haySeries = data && data.seriesCompletadas &&
+          Object.values(data.seriesCompletadas).some(s => s && s.length > 0);
+        const reciente = data && data.ts && (Date.now() - data.ts) < 86400000;
+        if (haySeries && reciente) { pendiente = data; pendienteKey = k; break; }
+      } catch(e) {}
+    }
+  }
+  if (pendiente) {
+    const banner = document.getElementById('entreno-recovery-banner');
+    const link = document.getElementById('entreno-recovery-link');
+    if (pendiente.url) link.href = pendiente.url;
+    banner.style.display = 'block';
+
+    // Antes solo ocultaba el banner (display:none) sin borrar el checkpoint de
+    // localStorage — reaparecía en cada carga porque la condición de arriba
+    // volvía a encontrar el mismo checkpoint. Ahora "×" borra el checkpoint,
+    // que es un descarte real y explícito del entreno de prueba/incompleto.
+    document.getElementById('entreno-recovery-close').onclick = function(){
+      banner.style.display = 'none';
+      try { localStorage.removeItem(pendienteKey); } catch(e) {}
+    };
+  }
+})();
 </script>
-</body></html>
+</body>
+</html>

@@ -99,6 +99,5 @@ class PortadaEvidenciaRealTests(TestCase):
 
         response = self.client.get(self.url)
 
-        self.assertContains(response, "Sesión evidencia")
-        self.assertNotContains(response, "Sentadilla")
+        self.assertContains(response, "Sin prescripción")
         self.assertNotContains(response, "4 × 4–6")

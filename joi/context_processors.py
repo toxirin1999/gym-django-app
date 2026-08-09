@@ -81,11 +81,6 @@ def _get_mensaje_gym(user):
     return _apertura_on_demand(user)
 
 
-def get_mensaje_portada(user):
-    """Fuente pública canónica para la presencia corta de JOI fuera de su habitación."""
-    return _get_mensaje_gym(user)
-
-
 def _get_mensaje_hyrox(user):
     """
     Mensaje sin leer más reciente de triggers Hyrox.

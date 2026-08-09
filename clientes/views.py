@@ -1469,28 +1469,6 @@ def _panel_cliente_full(request):
     return render(request, 'clientes/panel_cliente.html', context)
 
 
-def _seleccionar_portada_joi_texto(mensaje_joi, capa_corta, *, tipo_dia):
-    """Elige una sola voz JOI existente; nunca redacta una alternativa."""
-    import unicodedata
-
-    if isinstance(mensaje_joi, dict):
-        mensaje = mensaje_joi.get('mensaje') or ''
-    else:
-        mensaje = getattr(mensaje_joi, 'mensaje', '') or ''
-    candidatos = (mensaje, capa_corta or '')
-    requiere_coherencia = tipo_dia in {'descanso', 'proteccion'}
-    claves = ('descanso', 'recuperacion', 'pausa', 'proteccion', 'proteg')
-    for candidato in candidatos:
-        texto = str(candidato).strip()
-        if not texto:
-            continue
-        normalizado = unicodedata.normalize('NFKD', texto.lower())
-        normalizado = ''.join(c for c in normalizado if not unicodedata.combining(c))
-        if not requiere_coherencia or any(clave in normalizado for clave in claves):
-            return texto
-    return ''
-
-
 @login_required
 def mockup_demo(request):
     usuario = request.user
@@ -1771,7 +1749,6 @@ def mockup_demo(request):
             context['hyrox_decision'].get('subtitulo')
             or context['hyrox_decision'].get('causa')
         )
-        _senales_portada.extend((context['hyrox_decision'].get('evitar') or [])[:2])
     _aprendizajes_portada = []
     for _item in context.get('resumen_semanal_gym') or []:
         _aprendizajes_portada.append(
@@ -1802,11 +1779,6 @@ def mockup_demo(request):
         _diario_label = 'Abrir Diario'
         _diario_url = reverse('diario:dashboard_diario')
 
-    # El bloque Diario conserva su CTA contextual, separado de la única
-    # acción operativa de entrenamiento de la tarjeta Hoy.
-    context['portada_diario_label'] = _diario_label
-    context['portada_diario_url'] = _diario_url
-
     context['portada_hoy'] = construir_portada_hoy(
         estado_sistema=context['estado_sistema'],
         decision_gym=context.get('_decision_gym_raw'),
@@ -1822,12 +1794,6 @@ def mockup_demo(request):
         diario_label=_diario_label,
         senales=_senales_portada,
         aprendizajes=_aprendizajes_portada,
-    )
-    from joi.context_processors import get_mensaje_portada
-    context['portada_joi_texto'] = _seleccionar_portada_joi_texto(
-        get_mensaje_portada(usuario),
-        context.get('joi_narrativa_hoy'),
-        tipo_dia=context['portada_hoy'].get('decision', {}).get('tipo', 'sesion'),
     )
 
     return render(request, 'clientes/mockup_demo.html', context)

@@ -39,8 +39,8 @@ class HyroxDecisionPortadaAcceptanceTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIs(response.context['hyrox_decision'], decision)
         autoridad.assert_called_once()
-        self.assertContains(response, 'data-today-card')
-        self.assertEqual(response.content.decode().count('data-today-card'), 1)
+        self.assertContains(response, 'Sin sesión programada')
+        self.assertContains(response, 'Sin datos suficientes')
         self.assertNotContains(response, 'Ejecutar Hyrox')
 
     def test_bloqueo_soberano_muestra_proteccion_y_no_cta_de_ejecucion(self):
@@ -55,13 +55,13 @@ class HyroxDecisionPortadaAcceptanceTests(TestCase):
 
         response, _ = self._get(decision=decision)
         html = response.content.decode()
-        inicio = html.index('data-today-card')
-        fin = html.index('</section>', inicio)
+        inicio = html.index('id="rbHyroxContent"')
+        fin = html.index('<!-- ── DIARIO', inicio)
         card_hyrox = html[inicio:fin]
 
         self.assertIn('Fatiga acumulada alta', card_hyrox)
         self.assertIn('Series duras', card_hyrox)
-        self.assertIn('Sesión protegida', card_hyrox)
+        self.assertIn('recuperación', card_hyrox.lower())
         self.assertNotIn('Ejecutar Hyrox', card_hyrox)
         self.assertNotIn('fas fa-bolt', card_hyrox)
 
@@ -73,9 +73,9 @@ class HyroxDecisionPortadaAcceptanceTests(TestCase):
         self.assertFalse(decision['puede_ejecutar_plan'])
         self.assertEqual(decision['causa'], 'autoridad_no_disponible')
         html = response.content.decode()
-        inicio = html.index('data-today-card')
-        fin = html.index('</section>', inicio)
+        inicio = html.index('id="rbHyroxContent"')
+        fin = html.index('<!-- ── DIARIO', inicio)
         card_hyrox = html[inicio:fin]
-        self.assertIn('Sesión protegida', card_hyrox)
+        self.assertIn('Decisión no disponible', card_hyrox)
         self.assertNotIn('Óptimo', card_hyrox)
         self.assertNotIn('Ejecutar Hyrox', card_hyrox)
