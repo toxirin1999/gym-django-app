@@ -140,13 +140,13 @@ class PortadaHoyBuilderTests(SimpleTestCase):
         portada = self.build(sesion_gym=None, decision_gym={"estado": "descanso"})
         self.assertIsNone(portada["accion_principal"])
 
-    def test_limita_senales_y_aprendizajes_a_tres(self):
+    def test_limita_senales_a_tres_y_aprendizaje_a_uno(self):
         portada = self.build(
             senales=["s1", "s2", "s3", "s4"],
             aprendizajes=["a1", "a2", "a3", "a4"],
         )
         self.assertEqual(portada["senales"], ["s1", "s2", "s3"])
-        self.assertEqual(portada["aprendizajes"], ["a1", "a2", "a3"])
+        self.assertEqual(portada["aprendizajes"], ["a1"])
 
     def test_normaliza_items_estructurados_y_descarta_vacios(self):
         portada = self.build(

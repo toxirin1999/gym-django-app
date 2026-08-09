@@ -56,8 +56,9 @@ class TestOrganismoCardView(TestCase):
 
         # Verificar que el HTML renderiza
         content = response.content.decode()
-        self.assertIn('Sistema hoy', content)
-        self.assertIn('Silencio', content)  # Estado título case
+        self.assertIn('data-today-card', content)
+        self.assertIn('Descanso programado', content)
+        self.assertNotIn('>SILENCIO<', content)
 
     def test_card_renderiza_estado_protegiendo(self):
         """Template renderiza PROTEGIENDO con botón de acción."""
@@ -80,7 +81,8 @@ class TestOrganismoCardView(TestCase):
 
         # Verificar HTML
         content = response.content.decode()
-        self.assertIn('Protegiendo', content)
+        self.assertIn('Sesión protegida', content)
+        self.assertIn('data-primary-action', content)
         self.assertIn(estado_sistema['accion_label'], content)
 
     def test_card_renderiza_accion_si_existe(self):
@@ -93,13 +95,10 @@ class TestOrganismoCardView(TestCase):
         self.assertIsNone(estado1['accion_label'])
 
         content1 = response1.content.decode()
-        # Buscar la sección de la card después del BIB HERO y antes del TOGGLE
-        # No debe haber botón real con enlace para SILENCIO
-        card_start = content1.find('<div class="rb-organismo-card">')
-        card_end = content1.find('<!-- ── TOGGLE GYM / HYROX', card_start)
+        card_start = content1.find('data-today-card')
+        card_end = content1.find('</section>', card_start)
         card_html1 = content1[card_start:card_end]
-        # Buscar <a con rb-organismo-btn
-        self.assertNotIn('<a href=', card_html1, "SILENCIO no debe tener botón de acción")
+        self.assertNotIn('data-primary-action', card_html1)
 
         # Caso 2: Con lesión → PROTEGIENDO con acción
         UserInjury.objects.create(
@@ -116,10 +115,10 @@ class TestOrganismoCardView(TestCase):
         self.assertIsNotNone(estado2['accion_label'])
 
         content2 = response2.content.decode()
-        card_start2 = content2.find('<div class="rb-organismo-card">')
-        card_end2 = content2.find('<!-- ── TOGGLE GYM / HYROX', card_start2)
+        card_start2 = content2.find('data-today-card')
+        card_end2 = content2.find('</section>', card_start2)
         card_html2 = content2[card_start2:card_end2]
-        self.assertIn('<a href=', card_html2, "PROTEGIENDO debe tener botón de acción")
+        self.assertIn('data-primary-action', card_html2)
 
     def test_estado_color_mapping(self):
         """Verificar que clases CSS de color se aplican correctamente."""
@@ -128,13 +127,8 @@ class TestOrganismoCardView(TestCase):
         estado = response.context['estado_sistema']['estado']
         content = response.content.decode()
 
-        # Buscar la clase CSS correspondiente
-        estado_lower = estado.lower()
-        expected_class = f'rb-org-{estado_lower}'
-
-        # Verificar que aparece en el HTML
-        if 'Sistema hoy' in content:
-            self.assertIn(expected_class, content)
+        self.assertIn('data-today-card', content)
+        self.assertNotIn(f'>{estado}<', content)
 
     def test_resolver_failure_degradation(self):
         """Si resolver falla, view debe degradar a SILENCIO seguro."""
@@ -154,12 +148,8 @@ class TestOrganismoCardView(TestCase):
         response = self.client.get(reverse('clientes:mockup_demo'))
         content = response.content.decode()
 
-        # Buscar media query CSS para organismo
-        self.assertIn('@media (max-width: 640px)', content)
-
-        # Verificar estructura HTML para flexbox mobile
-        if 'Sistema hoy' in content:
-            self.assertIn('rb-organismo-body', content)
+        self.assertIn('overflow-x: hidden', content)
+        self.assertIn('min-width: 0', content)
 
     def test_card_no_duplica_estados(self):
         """Card muestra solo 1 acción, UI es limpia."""
@@ -176,13 +166,9 @@ class TestOrganismoCardView(TestCase):
         response = self.client.get(reverse('clientes:mockup_demo'))
         content = response.content.decode()
 
-        # Contar cuántas acciones hay en la card
-        # Buscar la card específica
-        if 'Sistema hoy' in content:
-            card_section = content.split('Sistema hoy')[1].split('TOGGLE GYM')[0]
-            # No debe haber múltiples botones en la card
-            action_count = card_section.count('rb-organismo-btn')
-            self.assertLessEqual(action_count, 1, "Card no debe tener múltiples acciones")
+        start = content.index('data-today-card')
+        card_section = content[start:content.index('</section>', start)]
+        self.assertLessEqual(card_section.count('data-primary-action'), 1)
 
 
 class TestOrganismoCardTemplate(TestCase):
@@ -200,23 +186,17 @@ class TestOrganismoCardTemplate(TestCase):
         response = self.client.get(reverse('clientes:mockup_demo'))
         content = response.content.decode()
 
-        # Debe tener estructura: .rb-organismo-card → .rb-organismo-label + .rb-organismo-body
-        self.assertIn('class="rb-organismo-card"', content)
-        self.assertIn('class="rb-organismo-label"', content)
-        self.assertIn('class="rb-organismo-body"', content)
-        self.assertIn('class="rb-organismo-estado', content)
-        self.assertIn('class="rb-organismo-texto"', content)
+        self.assertEqual(content.count('data-today-card'), 1)
+        self.assertIn('id="today-title"', content)
 
     def test_template_estado_title_case(self):
         """Estado se renderiza en Title Case (ej: "Silencio", "Protegiendo")."""
         response = self.client.get(reverse('clientes:mockup_demo'))
         content = response.content.decode()
 
-        # El estado en HTML debe ser title case (filtro |title)
-        self.assertTrue(
-            any(word in content for word in ['Silencio', 'Observando', 'En Margen', 'Protegiendo']),
-            "Estado no se renderiza en Title Case"
-        )
+        self.assertTrue(any(word in content for word in (
+            'Descanso programado', 'Sesión protegida', 'Sin sesión programada'
+        )))
 
     def test_template_accion_link_format(self):
         """Si hay acción, se renderiza como link con flecha."""
@@ -232,9 +212,8 @@ class TestOrganismoCardTemplate(TestCase):
         response = self.client.get(reverse('clientes:mockup_demo'))
         content = response.content.decode()
 
-        # Debe haber link con flecha →
+        self.assertIn('data-primary-action', content)
         self.assertIn(' →', content)
-        self.assertIn('<a href=', content)
 
     def test_template_no_html_injection(self):
         """Valores de contexto se escapan correctamente."""
