@@ -415,40 +415,84 @@ def checkin_matutino(request):
     to BitacoraDiaria and syncs to HyroxReadinessLog if an active objective exists.
     Returns JSON so the panel_cliente widget can update in place.
     """
-    from datetime import date as _date
     from clientes.models import BitacoraDiaria, Cliente
+    from django.db import transaction
+    from django.utils import timezone as _timezone
 
     cliente = get_object_or_404(Cliente, user=request.user)
-    hoy = _date.today()
+    hoy = _timezone.localdate()
 
-    def _int(key, lo=None, hi=None):
+    errors = {}
+
+    def _required_number(key, label, cast, lo, hi):
+        raw = request.POST.get(key, '').strip()
+        if not raw:
+            errors[key] = f'{label} es obligatorio.'
+            return None
         try:
-            v = int(request.POST.get(key, ''))
-            if lo is not None and v < lo: return None
-            if hi is not None and v > hi: return None
+            v = cast(raw)
+            if v < lo or v > hi:
+                errors[key] = f'{label} debe estar entre {lo} y {hi}.'
+                return None
             return v
         except (ValueError, TypeError):
+            errors[key] = f'{label} debe ser un número válido.'
             return None
 
-    def _float(key):
+    def _optional_int(key, label, lo, hi):
+        raw = request.POST.get(key, '').strip()
+        if not raw:
+            return None
         try:
-            return float(request.POST.get(key, ''))
+            value = int(raw)
+            if value < lo or value > hi:
+                errors[key] = f'{label} debe estar entre {lo} y {hi}.'
+                return None
+            return value
         except (ValueError, TypeError):
+            errors[key] = f'{label} debe ser un número entero válido.'
             return None
 
-    fc_reposo    = _int('fc_reposo', 30, 200)
-    horas_sueno  = _float('horas_sueno')
-    calidad      = _int('calidad_sueno', 0, 100)
-    energia      = _int('energia_subjetiva', 1, 10)
-    hrv_ms       = _int('hrv_ms', 1, 300)
+    horas_sueno = _required_number('horas_sueno', 'Horas de sueño', float, 1, 14)
+    energia = _required_number('energia_subjetiva', 'Energía', int, 1, 10)
+    fc_reposo = _optional_int('fc_reposo', 'Frecuencia cardíaca en reposo', 30, 200)
+    hrv_ms = _optional_int('hrv_ms', 'HRV', 1, 300)
+    calidad = _optional_int('calidad_sueno', 'Calidad del sueño', 0, 100)
 
-    bitacora, _ = BitacoraDiaria.objects.get_or_create(cliente=cliente, fecha=hoy)
-    if fc_reposo   is not None: bitacora.fc_reposo         = fc_reposo
-    if horas_sueno is not None: bitacora.horas_sueno       = horas_sueno
-    if calidad     is not None: bitacora.calidad_sueno     = calidad
-    if energia     is not None: bitacora.energia_subjetiva = energia
-    if hrv_ms      is not None: bitacora.hrv_ms            = hrv_ms
-    bitacora.save()
+    if errors:
+        return JsonResponse({
+            'ok': False,
+            'error': 'Revisa sueño, energía y los datos biométricos indicados.',
+            'errors': errors,
+        }, status=400)
+
+    # Se valida el contrato completo antes de tocar la base de datos: nunca queda
+    # un check-in parcial si cualquiera de los campos enviados es inválido.
+    values = {
+        'horas_sueno': horas_sueno,
+        'energia_subjetiva': energia,
+    }
+    for field, value in (
+        ('fc_reposo', fc_reposo),
+        ('hrv_ms', hrv_ms),
+        ('calidad_sueno', calidad),
+    ):
+        if request.POST.get(field, '').strip():
+            values[field] = value
+
+    with transaction.atomic():
+        registros = list(
+            BitacoraDiaria.objects.select_for_update()
+            .filter(cliente=cliente, fecha=hoy)
+            .order_by('pk')
+        )
+        if registros:
+            bitacora = registros[0]
+            for field, value in values.items():
+                setattr(bitacora, field, value)
+            bitacora.save(update_fields=list(values))
+        else:
+            bitacora = BitacoraDiaria.objects.create(cliente=cliente, **values)
 
     # Detector de patrón de resistencia (solo cuando energía es baja)
     if energia is not None and energia <= 4:
@@ -490,12 +534,12 @@ def checkin_matutino(request):
         _readiness = {'score': None, 'volume_modifier': None}
 
     from django.urls import reverse as _rev
-    redirect_url = _rev('hyrox:dashboard') if True else _rev('clientes:panel_cliente')
+    reload_url = _rev('clientes:mockup_demo')
     return JsonResponse({'ok': True, 'fc_reposo': fc_reposo, 'horas_sueno': horas_sueno,
                          'calidad_sueno': calidad, 'energia_subjetiva': energia,
                          'readiness_score': _readiness.get('score'),
                          'volume_modifier': _readiness.get('volume_modifier'),
-                         'redirect': redirect_url})
+                         'reload_required': True, 'reload_url': reload_url})
 
 
 from django.contrib.auth.decorators import login_required
@@ -1374,13 +1418,15 @@ def mockup_demo(request):
     usuario = request.user
     cliente = get_object_or_404(Cliente, user=usuario)
     context = _get_dashboard_context_data(request, cliente)
-    from datetime import date as _date
     from diario.models import ProsocheDiario, SeguimientoVires
     from nutricion_app_django.models import TargetNutricionalDiario
-    _hoy = _date.today()
+    _hoy = timezone.localdate()
 
     checkin_hoy = BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha=_hoy, fc_reposo__isnull=False
+        cliente=cliente,
+        fecha=_hoy,
+        horas_sueno__isnull=False,
+        energia_subjetiva__isnull=False,
     ).first()
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None

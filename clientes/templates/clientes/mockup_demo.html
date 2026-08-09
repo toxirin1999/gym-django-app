@@ -427,6 +427,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 .rb-modal-ov.open { display: flex; }
 .rb-modal-box { background: var(--bg-2); border: 2px solid var(--fg); border-radius: 8px 8px 0 0;
   width: 100%; max-width: 560px; max-height: 82vh; overflow-y: auto; padding: 20px 20px 32px; }
+.rb-modal-box input[type="number"], .rb-modal-box input[type="range"] { min-height: 44px; }
 .rb-modal-handle { width: 40px; height: 4px; background: var(--line-2); border-radius: 2px; margin: 0 auto 16px; }
 .rb-modal-title { font-family: var(--jds-font); font-size: 20px; color: var(--fg);
   text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 4px; }
@@ -523,21 +524,21 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <!-- ── CHECK-IN BADGE ────────────────────────── -->
   <div style="display:flex;justify-content:flex-end;padding:8px 0 0;">
     {% if checkin_hoy %}
-    <button data-checkin-badge onclick="document.getElementById('rbCheckinModal').classList.add('open')"
+    <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
        style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
               letter-spacing:0.06em;color:#22c55e;background:rgba(34,197,94,.1);
-              border:1px solid rgba(34,197,94,.3);border-radius:9999px;padding:4px 10px;
+              border:1px solid rgba(34,197,94,.3);border-radius:9999px;padding:4px 10px;min-height:44px;
               cursor:pointer;outline:none;">
       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-      CHECK-IN · {{ checkin_hoy.fc_reposo }} BPM · {{ checkin_hoy.horas_sueno }}H{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
+      CHECK-IN · {{ checkin_hoy.horas_sueno }}H · ENERGÍA {{ checkin_hoy.energia_subjetiva }}{% if checkin_hoy.fc_reposo %} · {{ checkin_hoy.fc_reposo }} BPM{% endif %}{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
     </button>
     {% else %}
-    <button data-checkin-badge onclick="document.getElementById('rbCheckinModal').classList.add('open')"
+    <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
        style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;
               letter-spacing:0.06em;color:rgba(245,158,11,.78);background:rgba(245,158,11,.06);
-              border:1px solid rgba(245,158,11,.2);border-radius:9999px;padding:4px 10px;
+              border:1px solid rgba(245,158,11,.2);border-radius:2px;padding:8px 14px;min-height:44px;
               cursor:pointer;outline:none;">
-      ⚡ CHECK-IN PENDIENTE
+      Completar ahora
     </button>
     {% endif %}
   </div>
@@ -2045,22 +2046,19 @@ document.addEventListener('DOMContentLoaded', function () {
   if (saved === 'hyrox') setMode('hyrox');
   {% endif %}
 });
-  {% if not checkin_hoy %}
-  // Auto-open check-in modal on first visit today
-  document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('rbCheckinModal').classList.add('open');
-  });
-  {% endif %}
 </script>
 
 <!-- ── CHECK-IN MODAL ──────────────────────────── -->
-<div class="rb-modal-ov" id="rbCheckinModal" onclick="if(event.target===this)this.classList.remove('open')">
-  <div class="rb-modal-box" style="max-height:90vh;overflow-y:auto;">
+<div class="rb-modal-ov" id="rbCheckinModal" onclick="if(event.target===this)rbCloseCheckin()">
+  <div class="rb-modal-box" role="dialog" aria-modal="true" aria-labelledby="rbCheckinTitle"
+       aria-describedby="rbCheckinContract" style="max-height:90vh;overflow-y:auto;position:relative;">
+    <button type="button" aria-label="Cerrar check-in" onclick="rbCloseCheckin()"
+      style="position:absolute;right:16px;top:12px;width:44px;height:44px;border:1px solid var(--line-2);background:var(--paper);color:var(--ink);font-size:22px;cursor:pointer;">×</button>
     <div class="rb-modal-handle"></div>
-    <div class="rb-modal-title" style="margin-bottom:4px;">Check-in Matutino</div>
+    <div class="rb-modal-title" id="rbCheckinTitle" style="margin-bottom:4px;">Check-in Matutino</div>
     <div class="rb-modal-sub" style="margin-bottom:6px;">¿Cómo has amanecido hoy?</div>
-    <div style="font-size:11px;color:var(--ink-3);margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};line-height:1.4;">
-      Esto ajusta tu entreno de hoy: energía y sueño alimentan el volumen de la sesión.
+    <div id="rbCheckinContract" style="font-size:11px;color:var(--ink-3);margin-bottom:{% if joi_mensaje_pendiente %}12px{% else %}20px{% endif %};line-height:1.5;">
+      <strong>Sueño y energía son obligatorios</strong><br>Datos biométricos opcionales
     </div>
 
     {% if joi_mensaje_pendiente %}
@@ -2081,7 +2079,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- FC Reposo -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">❤️ Frecuencia Cardíaca en Reposo</div>
+        <label class="rb-modal-section-title" for="ciFC">Frecuencia cardíaca en reposo <span>(opcional)</span></label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input type="number" name="fc_reposo" id="ciFC" min="30" max="200" placeholder="60"
             style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
@@ -2093,7 +2091,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- VFC -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">💜 VFC — Variabilidad FC <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(Garmin / Apple Watch · opcional)</span></div>
+        <label class="rb-modal-section-title" for="ciHRV">VFC / HRV en milisegundos <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
           <input type="number" name="hrv_ms" id="ciHRV" min="1" max="300" placeholder="Ej. 62"
             style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
@@ -2105,9 +2103,9 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- Horas sueño -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">😴 Horas de Sueño</div>
+        <label class="rb-modal-section-title" for="ciHoras">Horas de sueño (obligatorio)</label>
         <div style="display:flex;align-items:center;gap:10px;margin-top:8px;">
-          <input type="number" name="horas_sueno" id="ciHoras" min="1" max="14" step="0.5" placeholder="7.5"
+          <input type="number" name="horas_sueno" id="ciHoras" min="1" max="14" step="0.5" placeholder="7.5" required
             style="flex:1;padding:10px 12px;border:1.5px solid var(--line-2);border-radius:4px;
                    font-family:var(--font-mono);font-size:16px;font-weight:700;
                    background:var(--paper);color:var(--ink);text-align:center;">
@@ -2117,15 +2115,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- Calidad sueño -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">🌙 Calidad del Sueño <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></div>
-        <input type="hidden" name="calidad_sueno" id="ciCalidad" value="50">
+        <label class="rb-modal-section-title" for="ciCalidadRange">Calidad del sueño <span style="font-size:10px;font-weight:400;color:var(--ink-3);">(opcional)</span></label>
+        <input type="hidden" name="calidad_sueno" id="ciCalidad" value="">
         <div style="margin-top:10px;">
           <input type="range" min="0" max="100" value="50" id="ciCalidadRange"
             oninput="document.getElementById('ciCalidad').value=this.value;document.getElementById('ciCalidadVal').textContent=this.value+'%'"
             style="width:100%;accent-color:var(--accent);">
           <div style="display:flex;justify-content:space-between;margin-top:4px;">
             <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);">Pésimo</span>
-            <span id="ciCalidadVal" style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink);">50%</span>
+            <span id="ciCalidadVal" style="font-family:var(--font-mono);font-size:12px;font-weight:700;color:var(--ink);">Sin registrar</span>
             <span style="font-family:var(--font-mono);font-size:9px;color:var(--ink-3);">Perfecto</span>
           </div>
         </div>
@@ -2133,18 +2131,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
       <!-- Energía -->
       <div class="rb-modal-section">
-        <div class="rb-modal-section-title">⚡ Nivel de Energía</div>
-        <input type="hidden" name="energia_subjetiva" id="ciEnergia" value="">
+        <div class="rb-modal-section-title" id="ciEnergiaLabel">Nivel de energía (obligatorio)</div>
+        <input type="hidden" name="energia_subjetiva" id="ciEnergia" value="" required>
         <div id="ciEnergiaButtons" style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;"></div>
       </div>
 
       <div id="ciError" style="display:none;color:var(--danger);font-size:12px;margin-bottom:10px;font-family:var(--font-mono);"></div>
 
       <button type="button" onclick="rbSubmitCheckin()"
-        style="width:100%;padding:13px;background:var(--ink);color:var(--bg);
+        style="width:100%;min-height:44px;padding:13px;background:var(--ink);color:var(--bg);
                border:none;border-radius:4px;font-family:var(--font-mono);font-size:12px;
                font-weight:700;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">
         REGISTRAR CHECK-IN
+      </button>
+      <button type="button" onclick="rbCloseCheckin()"
+        style="width:100%;min-height:44px;margin-top:8px;border:1px solid var(--line-2);background:transparent;color:var(--ink);font-family:var(--font-mono);font-weight:700;cursor:pointer;">
+        Más tarde
       </button>
     </form>
 
@@ -2156,6 +2158,28 @@ document.addEventListener('DOMContentLoaded', function () {
 </div>
 
 <script>
+var rbCheckinTrigger = null;
+
+function rbOpenCheckin(trigger) {
+  var modal = document.getElementById('rbCheckinModal');
+  rbCheckinTrigger = trigger || document.activeElement;
+  modal.classList.add('open');
+  var first = modal.querySelector('button[aria-label="Cerrar check-in"]');
+  if (first) first.focus();
+}
+
+function rbCloseCheckin() {
+  var modal = document.getElementById('rbCheckinModal');
+  modal.classList.remove('open');
+  if (rbCheckinTrigger && typeof rbCheckinTrigger.focus === 'function') rbCheckinTrigger.focus();
+}
+
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape' && document.getElementById('rbCheckinModal').classList.contains('open')) {
+    rbCloseCheckin();
+  }
+});
+
 // Energy buttons
 (function(){
   var labels = ['😴 Agotado','😔 Bajo','🙂 Normal','🔥 Cargado','🚀 Máximo'];
@@ -2167,7 +2191,7 @@ document.addEventListener('DOMContentLoaded', function () {
     btn.type = 'button';
     btn.textContent = lbl;
     btn.dataset.val = vals[i];
-    btn.style.cssText = 'flex:1;min-width:60px;padding:9px 4px;border:1.5px solid var(--line-2);border-radius:4px;'+
+    btn.style.cssText = 'flex:1;min-width:60px;min-height:44px;padding:9px 4px;border:1.5px solid var(--line-2);border-radius:4px;'+
       'background:var(--paper);color:var(--ink);font-family:var(--font-mono);font-size:11px;'+
       'font-weight:700;cursor:pointer;transition:all .12s;';
     btn.onclick = function(){
@@ -2190,8 +2214,8 @@ function rbSubmitCheckin() {
   var errEl = document.getElementById('ciError');
   errEl.style.display = 'none';
 
-  if (!fc || !horas || !energia) {
-    errEl.textContent = 'Completa todos los campos antes de continuar.';
+  if (!horas || !energia) {
+    errEl.textContent = 'Sueño y energía son obligatorios.';
     errEl.style.display = 'block';
     return;
   }
@@ -2207,6 +2231,11 @@ function rbSubmitCheckin() {
   .then(function(r){ return r.json(); })
   .then(function(d){
     if (d.ok) {
+      if (d.reload_required) {
+        if (d.reload_url) window.location.assign(d.reload_url);
+        else window.location.reload();
+        return;
+      }
       // Update badge to green without reload
       var badge = document.querySelector('[data-checkin-badge]');
       if (badge) {
