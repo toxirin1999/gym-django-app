@@ -160,37 +160,14 @@ def _build_hyrox_system_reading(hyrox_decision=None, race_goal_delta=None, race_
     return ' '.join(partes[:4])
 
 
-# ── Tags de riesgo por estación Hyrox (vocabulario real del sistema) ──────────
-_HYROX_STATION_RISK_TAGS = {
-    'Sled Push':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
-    'Sled Pull':          {'triple_extension_explosiva', 'flexion_rodilla_profunda'},
-    'Burpee Broad Jumps': {'impacto_vertical', 'triple_extension_explosiva'},
-    'Sandbag Lunges':     {'triple_extension_explosiva', 'flexion_rodilla_profunda', 'impacto_vertical', 'lumbar_carga'},
-    'Wall Balls':         {'impacto_vertical', 'triple_extension_explosiva', 'flexion_rodilla_profunda'},
-    'Rowing':             {'flexion_rodilla_profunda'},
-    'Running (1 km)':     {'impacto_vertical'},
-}
-
-
 def _normalizar_tags_restringidos(lesion_activa):
-    if not lesion_activa:
-        return []
-    raw = getattr(lesion_activa, 'tags_restringidos', None)
-    if not raw:
-        return []
-    if isinstance(raw, str):
-        return [t.strip() for t in raw.split(',') if t.strip()]
-    if isinstance(raw, (list, tuple, set)):
-        return [str(t).strip() for t in raw if str(t).strip()]
-    return []
+    from .decision_service import normalizar_tags_restringidos
+    return normalizar_tags_restringidos(lesion_activa)
 
 
 def _estaciones_bloqueadas_por_tags(tags):
-    tags = set(tags or [])
-    return [
-        estacion for estacion, risk in _HYROX_STATION_RISK_TAGS.items()
-        if tags.intersection(risk)
-    ]
+    from .decision_service import estaciones_bloqueadas_por_tags
+    return estaciones_bloqueadas_por_tags(tags)
 
 
 def _leer_senales_secundarias(cliente):
@@ -199,43 +176,8 @@ def _leer_senales_secundarias(cliente):
     Sólo modulan la decisión Hyrox si el resultado base es 'empujar'.
     No pueden sobreescribir lesión, descanso global ni fatiga fisiológica.
     """
-    resultado = {
-        'senal_corporal': {'hay_senal': False},
-        'vigilar_senal_activa': False,
-        'futbol_reciente': False,
-    }
-    try:
-        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
-        resultado['senal_corporal'] = obtener_senal_corporal_diario(cliente.usuario)
-    except Exception:
-        pass
-
-    try:
-        from entrenos.models import IntervencionPlan
-        hoy = timezone.now().date()
-        resultado['vigilar_senal_activa'] = IntervencionPlan.objects.filter(
-            cliente=cliente,
-            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
-            estado=IntervencionPlan.ESTADO_ACTIVA,
-            fecha_inicio__lte=hoy,
-            fecha_fin__gte=hoy,
-        ).exists()
-    except Exception:
-        pass
-
-    try:
-        from entrenos.models import ActividadRealizada
-        from datetime import timedelta
-        hoy = timezone.now().date()
-        resultado['futbol_reciente'] = ActividadRealizada.objects.filter(
-            cliente=cliente,
-            tipo='futbol',
-            fecha__gte=hoy - timedelta(days=2),
-        ).exists()
-    except Exception:
-        pass
-
-    return resultado
+    from .decision_service import leer_senales_secundarias
+    return leer_senales_secundarias(cliente)
 
 
 def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None,
@@ -245,171 +187,16 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
     Devuelve el objeto de decisión soberana del día para el panel Hyrox.
     Prioridad: lesión > descanso global > fatiga (TSB) > carga (ACWR) > readiness > normal.
     """
-    if lesion_activa:
-        tags = _normalizar_tags_restringidos(lesion_activa)
-        estaciones = _estaciones_bloqueadas_por_tags(tags)
-        zona = getattr(lesion_activa, 'zona_afectada', None) or 'zona lesionada'
-        return {
-            'estado': 'recuperar',
-            'causa': 'lesion',
-            'titulo': 'Recuperar',
-            'subtitulo': f'Lesión activa en {zona}',
-            'mensaje': f'El sistema ha ajustado la sesión para proteger {zona}.',
-            'accion_label': 'Sesión adaptada',
-            'puede_ejecutar_plan': False,
-            'permitido': ['Trabajo sin dolor', 'Movilidad controlada', 'Cardio de bajo impacto si no molesta'],
-            'evitar': estaciones or ['Ejercicios asociados a la lesión activa'],
-            'tags_restringidos': tags,
-            'estaciones_bloqueadas': estaciones,
-        }
+    from . import decision_service
+    return decision_service.calcular_hyrox_decision(
+        current_score=current_score,
+        resumen_semanal=resumen_semanal,
+        lesion_activa=lesion_activa,
+        es_descanso_plan=es_descanso_plan,
+        estado_entreno=estado_entreno,
+        senales_secundarias=senales_secundarias,
+    )
 
-    if es_descanso_plan or estado_entreno == 'descanso':
-        return {
-            'estado': 'recuperar',
-            'causa': 'descanso_plan',
-            'titulo': 'Descanso',
-            'subtitulo': 'El plan global marca descanso hoy',
-            'mensaje': 'Tus señales Hyrox acompañan, pero el plan de entrenamiento tiene asignado hoy como día de recuperación. Mañana con más intención.',
-            'accion_label': 'Día de descanso',
-            'puede_ejecutar_plan': False,
-            'permitido': ['Movilidad suave', 'Paseo tranquilo', 'Técnica sin carga'],
-            'evitar': ['Sesión intensa', 'Series Hyrox', 'Trabajo al límite'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    tsb = None
-    acwr = None
-    if resumen_semanal:
-        if isinstance(resumen_semanal, dict):
-            tsb  = resumen_semanal.get('tsb')
-            acwr = resumen_semanal.get('acwr')
-        else:
-            tsb  = getattr(resumen_semanal, 'tsb', None)
-            acwr = getattr(resumen_semanal, 'acwr', None)
-
-    if tsb is not None and tsb <= -20:
-        return {
-            'estado': 'recuperar',
-            'causa': 'fatiga',
-            'titulo': 'Recuperar',
-            'subtitulo': 'Fatiga acumulada alta',
-            'mensaje': 'La carga reciente pesa demasiado. Hoy conviene bajar intensidad y conservar continuidad.',
-            'accion_label': 'Recuperación activa',
-            'puede_ejecutar_plan': False,
-            'permitido': ['Zona 2 suave', 'Movilidad', 'Técnica sin fatiga'],
-            'evitar': ['Series duras', 'Simulación', 'Trabajo al fallo'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    if acwr is not None and acwr > 1.7:
-        return {
-            'estado': 'recuperar',
-            'causa': 'carga',
-            'titulo': 'Recuperar',
-            'subtitulo': 'Carga aguda muy elevada',
-            'mensaje': 'La carga acumulada supera claramente tu base crónica. Añadir sesión hoy aumenta el riesgo de lesión.',
-            'accion_label': 'Descanso activo',
-            'puede_ejecutar_plan': False,
-            'permitido': ['Cardio bajo impacto', 'Movilidad', 'Técnica sin carga'],
-            'evitar': ['Volumen extra', 'Sled pesado', 'Compromised Running intenso', 'Sesión Hyrox completa'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    if acwr is not None and acwr >= 1.5:
-        return {
-            'estado': 'sesion_protegida',
-            'causa': 'carga_elevada',
-            'titulo': 'Sesión Protegida',
-            'subtitulo': 'Carga reciente por encima de tu línea habitual',
-            'mensaje': 'La carga reciente ha cruzado una zona de prudencia. Hoy conviene mantener movimiento, pero reducir volumen e intensidad.',
-            'accion_label': 'Sesión reducida',
-            'puede_ejecutar_plan': True,
-            'permitido': ['Técnica sin carga extra', 'Cardio de baja intensidad', 'Movilidad', 'Volumen reducido (−30 %)'],
-            'evitar': ['Intensidad alta', 'Series al límite', 'Sled pesado', 'Piernas con carga alta'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    if current_score and current_score < 45:
-        return {
-            'estado': 'sostener',
-            'causa': 'readiness_bajo',
-            'titulo': 'Sostener',
-            'subtitulo': 'Readiness limitado',
-            'mensaje': 'Puedes entrenar, pero sin perseguir el límite. El objetivo es cumplir sin acumular deuda.',
-            'accion_label': 'Sesión moderada',
-            'puede_ejecutar_plan': True,
-            'permitido': ['Sesión planificada con RPE controlado', 'Recortar volumen si hace falta'],
-            'evitar': ['Competir contra el reloj', 'Añadir trabajo extra'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    if current_score and current_score < 70:
-        return {
-            'estado': 'ejecutar_con_margen',
-            'causa': 'readiness_reducido',
-            'titulo': 'Ejecutar con margen',
-            'subtitulo': 'Disponibilidad fisiológica por debajo de tu línea habitual',
-            'mensaje': 'Las señales no piden parar, pero el margen no es amplio. Ejecuta lo previsto sin buscar límite.',
-            'accion_label': 'Sesión con margen',
-            'puede_ejecutar_plan': True,
-            'permitido': ['Sesión planificada', 'RPE controlado', 'Recortar accesorios si hace falta'],
-            'evitar': ['Perseguir récords', 'Añadir series extra', 'Competir contra el reloj'],
-            'tags_restringidos': [],
-            'estaciones_bloqueadas': [],
-        }
-
-    decision_base = {
-        'estado': 'empujar',
-        'causa': 'normal',
-        'titulo': 'Empujar',
-        'subtitulo': 'Señales favorables',
-        'mensaje': 'Tus señales acompañan. Hoy puedes ejecutar la sesión con intención.',
-        'accion_label': 'Ejecutar plan',
-        'puede_ejecutar_plan': True,
-        'permitido': ['Sesión planificada', 'Intensidad prevista', 'Registrar RPE al final'],
-        'evitar': ['Improvisar volumen innecesario'],
-        'tags_restringidos': [],
-        'estaciones_bloqueadas': [],
-    }
-
-    # ── Señales secundarias (tier 3) — solo modulan si el resultado base es 'empujar' ──
-    if senales_secundarias:
-        sc = senales_secundarias.get('senal_corporal', {})
-        intensidad = sc.get('intensidad') if sc.get('hay_senal') else None
-        futbol = senales_secundarias.get('futbol_reciente', False)
-        vigilar = senales_secundarias.get('vigilar_senal_activa', False)
-
-        if intensidad in ('alta', 'moderada') or futbol:
-            causa_sec = 'senal_corporal' if intensidad in ('alta', 'moderada') else 'actividad_reciente'
-            bullets = []
-            if intensidad in ('alta', 'moderada'):
-                bullets.append(f'Diario: {sc.get("texto", "Carga corporal registrada en los últimos días.")}')
-            if futbol:
-                bullets.append('Fútbol reciente: las piernas ya recibieron carga en los últimos dos días.')
-            decision_base.update({
-                'estado': 'sostener',
-                'causa': causa_sec,
-                'titulo': 'Sostener',
-                'subtitulo': 'Señal corporal reciente',
-                'mensaje': 'Las métricas Hyrox acompañan, pero el sistema detecta carga reciente. Hoy conviene ejecutar con margen.',
-                'accion_label': 'Sesión con margen',
-                'evitar': ['Perseguir récords', 'Añadir volumen extra'],
-                'explicacion_modulacion': {
-                    'intro': 'Tus métricas Hyrox permitirían empujar, pero el sistema detecta carga reciente:',
-                    'bullets': bullets,
-                    'cierre': 'Hoy no se cancela el plan; se reduce la intención.',
-                },
-            })
-        elif intensidad == 'suave' or vigilar:
-            nota_extra = ' El plan observa una señal activa.' if vigilar else ''
-            decision_base['mensaje'] += f' El diario apunta algo de carga corporal.{nota_extra} Observa cómo responde el cuerpo.'
-
-    return decision_base
 
 
 @login_required

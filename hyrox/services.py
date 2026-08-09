@@ -3730,9 +3730,9 @@ def _calcular_hyrox_decision_payload(objetivo, readiness_score, resumen_semanal=
     el dashboard" — antes solo recibía readiness_score/lesion_activa.
     """
     try:
-        from .views import _crear_hyrox_decision
+        from .decision_service import calcular_hyrox_decision
         lesion = objetivo._lesion_activa_primera()
-        decision = _crear_hyrox_decision(
+        decision = calcular_hyrox_decision(
             readiness_score,
             resumen_semanal=resumen_semanal,
             lesion_activa=lesion,

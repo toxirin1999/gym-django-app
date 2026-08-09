@@ -1515,6 +1515,52 @@ def mockup_demo(request):
     except Exception:
         context['resumen_semanal_hyrox'] = None
 
+    # ── Autoridad soberana Hyrox ──────────────────────────────────
+    # La portada traduce la misma decisión del dashboard Hyrox; no mantiene
+    # umbrales propios. Ante cualquier fallo cerramos la ejecución (fail-safe).
+    _hyrox_fail_safe = {
+        'estado': 'recuperar',
+        'causa': 'autoridad_no_disponible',
+        'titulo': 'Decisión no disponible',
+        'subtitulo': 'Estado protegido hasta validar tus señales',
+        'mensaje': 'No iniciaremos una sesión sin confirmar primero tu disponibilidad.',
+        'accion_label': 'Revisar estado Hyrox',
+        'puede_ejecutar_plan': False,
+        'permitido': ['Revisar el dashboard Hyrox'],
+        'evitar': ['Iniciar una sesión sin una decisión válida'],
+        'tags_restringidos': [],
+        'estaciones_bloqueadas': [],
+    }
+    context['hyrox_decision'] = _hyrox_fail_safe
+    _objetivo_hyrox = context.get('hyrox_objetivo')
+    if _objetivo_hyrox:
+        try:
+            from hyrox.decision_service import (
+                calcular_hyrox_decision,
+                leer_senales_secundarias,
+            )
+
+            _readiness_hyrox = _objetivo_hyrox.get_race_readiness_score()
+            if _readiness_hyrox is None:
+                raise ValueError('Readiness Hyrox no disponible')
+            _decision_gym = context.get('_decision_gym_raw') or {}
+            _estado_gym = _decision_gym.get('estado') or context.get('estado_entreno')
+            _hyrox_decision = calcular_hyrox_decision(
+                current_score=_readiness_hyrox,
+                resumen_semanal=context.get('resumen_semanal_hyrox'),
+                lesion_activa=context.get('lesion_activa'),
+                es_descanso_plan=_estado_gym == 'descanso',
+                estado_entreno=_estado_gym,
+                senales_secundarias=leer_senales_secundarias(cliente),
+            )
+            if not isinstance(_hyrox_decision, dict) or not isinstance(
+                _hyrox_decision.get('puede_ejecutar_plan'), bool
+            ):
+                raise ValueError('Decisión Hyrox inválida')
+            context['hyrox_decision'] = _hyrox_decision
+        except Exception as e:
+            logger.exception("Autoridad Hyrox no disponible en portada: %s", e)
+
     # ── Sliders lesión para el panel inline ──────────────────────────
     context['lesion_sliders'] = [
         {'name': 'dolor_reposo',     'label': 'Dolor en reposo (0=ninguno)', 'min': 0, 'max': 10, 'val': 0},

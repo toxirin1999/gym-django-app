@@ -1525,7 +1525,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {# JOI · el plan consolidado: el FAB ya cubre el indicador "hay una lectura pendiente" #}
 
     <!-- Daily push Hyrox → orientación operativa (Phase 60E) -->
-    {% if daily_push_hyrox %}
+    {% if daily_push_hyrox and hyrox_decision.puede_ejecutar_plan %}
     <div style="margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🏁</span>
@@ -1630,9 +1630,28 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   {% if hyrox_objetivo %}
   <div id="rbHyroxContent" style="display:none;">
 
+    {% if not hyrox_decision.puede_ejecutar_plan %}
+    <div class="rb-workout-card rb-hyrox-protected" style="border-left:3px solid var(--danger);">
+      <div class="rb-workout-eyebrow" style="color:var(--danger);">Hyrox · estado protegido</div>
+      <div class="rb-workout-title">{{ hyrox_decision.titulo|default:"Decisión no disponible" }}</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">{{ hyrox_decision.subtitulo }}</div>
+      {% if hyrox_decision.mensaje %}
+      <div style="font-size:11px;color:var(--td);margin-top:8px;line-height:1.5;">{{ hyrox_decision.mensaje }}</div>
+      {% endif %}
+      {% if hyrox_decision.permitido %}
+      <div style="margin-top:10px;font-size:10px;color:var(--ok);">Permitido · {{ hyrox_decision.permitido|join:", " }}</div>
+      {% endif %}
+      {% if hyrox_decision.evitar %}
+      <div style="margin-top:5px;font-size:10px;color:var(--danger);">Evitar · {{ hyrox_decision.evitar|join:", " }}</div>
+      {% endif %}
+    </div>
+    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid var(--line-2);color:var(--td);">
+      <i class="fas fa-shield-heart"></i> Revisar recuperación Hyrox
+    </a>
+    {% else %}
     {% if hyrox_proxima_sesion %}
     <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
-      <div class="rb-workout-eyebrow">Próxima Sesión Hyrox</div>
+      <div class="rb-workout-eyebrow">{{ hyrox_decision.titulo|default:"Próxima Sesión Hyrox" }}</div>
       <div class="rb-workout-title">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</div>
       {% if hyrox_proxima_sesion.tipo_fase %}
       <div class="rb-workout-badge" style="color:var(--accent);">{{ hyrox_proxima_sesion.tipo_fase|upper }}</div>
@@ -1646,15 +1665,18 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     {% endif %}
 
-    <a href="{% url 'hyrox:dashboard' %}" class="rb-cta">
+    <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=hyrox_objetivo.id %}" class="rb-cta">
       <i class="fas fa-bolt"></i> Ejecutar Hyrox
     </a>
+    {% endif %}
 
+    {% if hyrox_decision.puede_ejecutar_plan %}
     <div style="text-align:center;margin-top:10px;">
       <a href="{% url 'hyrox:strava_reconciliacion' %}" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(252,76,2,.55);text-decoration:none;">
         <i class="fab fa-strava"></i> Importar actividad de Strava →
       </a>
     </div>
+    {% endif %}
 
   </div>
   {% endif %}
