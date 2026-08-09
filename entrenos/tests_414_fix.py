@@ -184,6 +184,85 @@ class FallbackGetEjercicios_BriefingTests(_Base):
         self.assertIn('Peso Muerto', nombres,
                        msg="El ejercicio pasado por '?ejercicios=' del dashboard no llegó al contexto del briefing")
 
+    def test_payload_explicito_del_cta_prevalece_sobre_cache_del_calendario(self):
+        """El CTA representa la decisión visible más reciente y debe ser la autoridad."""
+        cache.set(
+            f"transporte_ejercicios_dia_{self.cliente.id}_{self.fecha_str}",
+            [{'nombre': 'Plan antiguo en cache', 'series': 4, 'repeticiones': 8}],
+            900,
+        )
+        ejercicios_cta = [
+            {'nombre': 'Plan explícito del CTA', 'series': 4, 'repeticiones': 6,
+             'peso_kg': 100, 'rpe_objetivo': 8,
+             'tipo_ejercicio': 'compuesto_principal'},
+        ]
+
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+        resp = self.c.get(url, {
+            'fecha': self.fecha_str,
+            'rutina_nombre': 'Día 1 - Fuerza',
+            'ejercicios': json.dumps(ejercicios_cta),
+        })
+
+        self.assertEqual(resp.status_code, 200)
+        nombres = [e.get('nombre') for e in resp.context.get('ejercicios', [])]
+        self.assertEqual(nombres, ['Plan explícito del CTA'])
+
+
+class DeloadIdempotenteTransporteTests(_Base):
+    def test_briefing_y_sesion_activa_no_reducen_series_dos_veces(self):
+        """Continuidad contractual: el plan 4→3 en briefing debe seguir en 3 al ejecutar."""
+        ejercicios = [
+            {'nombre': 'Press Banca', 'series': 4, 'repeticiones': 6,
+             'peso_kg': 100, 'rpe_objetivo': 8,
+             'tipo_ejercicio': 'compuesto_principal'},
+        ]
+        url_briefing = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+
+        with patch(
+            'entrenos.services.briefing_service.necesita_deload_gym',
+            return_value=True,
+        ):
+            briefing = self.c.get(url_briefing, {
+                'fecha': self.fecha_str,
+                'rutina_nombre': 'Día 1 - Fuerza',
+                'ejercicios': json.dumps(ejercicios),
+            })
+            self.assertEqual(briefing.status_code, 200)
+            ejercicios_briefing = briefing.context.get('ejercicios', [])
+            self.assertEqual(ejercicios_briefing[0]['series'], 3)
+
+            url_sesion = briefing.context['url_sesion']
+            sesion = self.c.get(url_sesion)
+
+        self.assertEqual(sesion.status_code, 200)
+        ejercicios_sesion = sesion.context.get('ejercicios_planificados', [])
+        self.assertEqual(ejercicios_sesion[0]['series'], 3)
+
+    def test_sesion_activa_si_ajusta_plan_sin_marca_previa(self):
+        """Un acceso directo con plan aún crudo conserva el ajuste 4→3."""
+        url = reverse('entrenos:entrenamiento_activo', args=[self.cliente.id])
+        ejercicios_sin_ajustar = [
+            {'nombre': 'Press Banca', 'series': 4, 'repeticiones': 6,
+             'peso_kg': 100, 'rpe_objetivo': 8,
+             'tipo_ejercicio': 'compuesto_principal'},
+        ]
+
+        with patch(
+            'entrenos.services.briefing_service.necesita_deload_gym',
+            return_value=True,
+        ):
+            sesion = self.c.get(url, {
+                'fecha': self.fecha_str,
+                'rutina_nombre': 'Día 1 - Fuerza',
+                'ejercicios': json.dumps(ejercicios_sin_ajustar),
+            })
+
+        self.assertEqual(sesion.status_code, 200)
+        ejercicios_sesion = sesion.context.get('ejercicios_planificados', [])
+        self.assertEqual(ejercicios_sesion[0]['series'], 3)
+        self.assertTrue(ejercicios_sesion[0]['_deload_aplicado'])
+
 
 # ---------------------------------------------------------------------------
 # Test 4: _calcular_ejercicios_dia devuelve lista cuando hay plan en cache.

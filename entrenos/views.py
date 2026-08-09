@@ -4021,8 +4021,10 @@ def vista_entrenamiento_activo(request, cliente_id):
 
     if deload_activo:
         for ejercicio in ejercicios_planificados:
-            ejercicio['series'] = max(2, int(ejercicio.get('series', 3)) - 1)
-            ejercicio['rpe_objetivo'] = min(int(ejercicio.get('rpe_objetivo', 8)), 7)
+            if not ejercicio.get('_deload_aplicado'):
+                ejercicio['series'] = max(2, int(ejercicio.get('series', 3)) - 1)
+                ejercicio['rpe_objetivo'] = min(int(ejercicio.get('rpe_objetivo', 8)), 7)
+                ejercicio['_deload_aplicado'] = True
 
         # Registrar decisión (evitar duplicados en los últimos 7 días)
         from datetime import timedelta as _td7
@@ -8559,20 +8561,20 @@ def briefing_entrenamiento(request, cliente_id):
 
     rutina_nombre = request.GET.get('rutina_nombre', '')
 
-    # Salto 1 → 2: leer ejercicios del cache de transporte (fix 414 URI Too Large).
-    # El calendario los guardó con clave determinista al procesar el mes AJAX.
-    # Fallback 1: el dashboard enlaza aquí con '?ejercicios=' (JSON del próximo
-    #   entrenamiento) cuando el usuario nunca pasó por el calendario en esta sesión.
-    # Fallback 2: _calcular_ejercicios_dia los reconstruye sin request si todo lo anterior falla.
+    # Salto 1 → 2: un payload explícito del CTA representa la decisión visible
+    # más reciente y prevalece sobre el cache determinista del calendario.
+    # El cache sigue siendo el transporte normal cuando el enlace no incluye
+    # ejercicios; _calcular_ejercicios_dia es el último fallback.
     _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
-    ejercicios = cache.get(_cache_key_dia)
+    ejercicios = None
+    _ejercicios_get = request.GET.get('ejercicios', '')
+    if _ejercicios_get:
+        try:
+            ejercicios = json.loads(_ejercicios_get)
+        except Exception:
+            ejercicios = None
     if ejercicios is None:
-        _ejercicios_get = request.GET.get('ejercicios', '')
-        if _ejercicios_get:
-            try:
-                ejercicios = json.loads(_ejercicios_get)
-            except Exception:
-                ejercicios = None
+        ejercicios = cache.get(_cache_key_dia)
     if ejercicios is None:
         ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
@@ -8581,6 +8583,12 @@ def briefing_entrenamiento(request, cliente_id):
 
     # ── Capa 2: Plan dinámico — modificar ejercicios antes de mostrar ─────────
     ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
+
+    # Contrato de transporte briefing → sesión: si esta capa ya materializó
+    # el deload, la sesión activa no debe volver a descontar otra serie.
+    if any(cambio.get('tipo') == 'deload' for cambio in cambios_plan):
+        for ejercicio in ejercicios_mod:
+            ejercicio['_deload_aplicado'] = True
 
     briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_obj)
 
