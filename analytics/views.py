@@ -3597,12 +3597,18 @@ def api_marcar_entreno_completado(request, cliente_id):
 
         fecha_entreno = datetime.strptime(fecha_str, '%Y-%m-%d').date()
 
-        entreno = EntrenoRealizado.objects.create(
+        from rutinas.models import Rutina
+        rutina, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
+        entreno = EntrenoRealizado(
             cliente=cliente,
             fecha=fecha_entreno,
             fecha_ejecucion=timezone.localdate(),
-            nombre=rutina_nombre,
+            rutina=rutina,
+            fuente_datos='manual',
         )
+        # El signal no debe cerrar el aprendizaje mientras faltan los hijos.
+        entreno._defer_cierre_aprendizaje_gym = True
+        entreno.save()
 
         for ejercicio_data in ejercicios:
 
@@ -3627,6 +3633,10 @@ def api_marcar_entreno_completado(request, cliente_id):
                 peso_kg=float(ejercicio_data.get('peso_recomendado_kg', 0)),  # Aseguramos que sea float
                 completado=True
             )
+
+        # Punto causal único: el entrenamiento ya está completamente construido.
+        from entrenos.services.decision_log_service import cerrar_aprendizaje_gym
+        cerrar_aprendizaje_gym(entreno)
 
         return JsonResponse({
             'success': True,

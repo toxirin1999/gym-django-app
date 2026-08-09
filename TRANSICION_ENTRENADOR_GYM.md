@@ -115,6 +115,23 @@ Proteger el motor que funciona antes de cambiar su autoridad.
 
 Toda decisión Gym visible puede trazarse hasta el contenido real de la sesión.
 
+### Inventario de rutas de finalización (cierre de Fase 1)
+
+- **Núcleo:** `entrenos:guardar_entrenamiento_activo`, ruta principal del
+  entrenamiento activo. Construye la sesión completa y ejecuta el cierre causal
+  explícito una sola vez.
+- **Núcleo:** `clientes:guardar_entrenamiento_activo`, guardado del portal. Su
+  save final, ya con hijos, conserva compatibilidad con el cierre causal y la
+  actividad unificada.
+- **Compatible, UI huérfana:** `analytics:api_marcar_completado`. Mantiene el
+  contrato de guardado y aprendizaje para consumidores existentes, aunque no se
+  ha encontrado una interfaz activa que la invoque.
+- **Legacy/inactivas:** importación Liftin, API móvil y `empezar_entreno`. Se
+  inventarían garantías si se adaptaran sin confirmar uso y contrato; quedan
+  fuera del núcleo y de esta fase.
+- **Mantenimiento:** altas o ediciones desde Django Admin. Son operaciones de
+  reparación/gestión y no garantizan ejecutar el ciclo de aprendizaje Gym.
+
 ## 6. Fase 2 — Autoridad diaria Gym
 
 ### Objetivo
