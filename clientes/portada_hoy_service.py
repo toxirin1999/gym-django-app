@@ -4,8 +4,25 @@ No calcula readiness, lesiones ni decisiones: solo ordena autoridades ya
 resueltas y garantiza que exista, como máximo, una acción principal.
 """
 
+import unicodedata
+
 
 _GYM_NO_EJECUTABLE = {"recuperar", "descanso", "posponer", "realizado"}
+
+
+def _texto_normalizado(valor):
+    texto = unicodedata.normalize("NFKD", str(valor or ""))
+    return "".join(char for char in texto if not unicodedata.combining(char)).strip().lower()
+
+
+def _es_descanso_gym(estado_sistema, sesion_gym):
+    textos = [
+        estado_sistema.get("estado_label"),
+        estado_sistema.get("accion_label"),
+    ]
+    if isinstance(sesion_gym, dict):
+        textos.extend(sesion_gym.get(campo) for campo in ("nombre", "titulo", "label"))
+    return any("descanso" in _texto_normalizado(texto) for texto in textos)
 
 
 def _sesion(modulo, datos, *, ejecutable):
@@ -56,7 +73,12 @@ def construir_portada_hoy(
     estado_gym = str(
         decision_gym.get("estado") or decision_gym.get("tipo") or ""
     ).strip().lower()
-    gym_viable = bool(sesion_gym) and estado_gym not in _GYM_NO_EJECUTABLE
+    gym_viable = (
+        bool(sesion_gym)
+        and estado_gym not in _GYM_NO_EJECUTABLE
+        and estado_sistema.get("modulo_operativo") is not False
+        and not _es_descanso_gym(estado_sistema, sesion_gym)
+    )
     hyrox_viable = (
         bool(hyrox_relevante)
         and bool(sesion_hyrox)

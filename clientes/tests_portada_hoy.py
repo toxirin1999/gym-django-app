@@ -120,6 +120,22 @@ class PortadaHoyBuilderTests(SimpleTestCase):
         self.assertIsNone(portada["accion_principal"])
         self.assertFalse(portada["sesion_dominante"]["ejecutable"])
 
+    def test_silencio_no_operativo_reconoce_descanso_aunque_decision_gym_sea_desconocida(self):
+        for estado in ("EN_MARGEN", "SILENCIO"):
+            with self.subTest(estado=estado):
+                portada = self.build(
+                    estado_sistema={
+                        "estado": estado, "estado_label": "SILENCIO",
+                        "texto": "No hay nada que forzar ahora.",
+                        "accion_label": "Día de descanso", "accion_url": "/entrenos/",
+                        "modulo_principal": "gym", "modulo_operativo": False,
+                    },
+                    decision_gym={"estado": "SIN_DECISION_NORMALIZADA"},
+                    sesion_gym={"nombre": "Día de Descanso"},
+                )
+                self.assertIsNone(portada["accion_principal"])
+                self.assertFalse(portada["sesion_dominante"]["ejecutable"])
+
     def test_sin_sesion_ni_diario_no_inventa_accion(self):
         portada = self.build(sesion_gym=None, decision_gym={"estado": "descanso"})
         self.assertIsNone(portada["accion_principal"])
