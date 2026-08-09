@@ -142,6 +142,48 @@ class PortadaSintesisTemplateTests(SimpleTestCase):
         self.assertIn("data-plan-memory-empty", memory)
         self.assertIn("Aún no hay observaciones adicionales", memory)
 
+    def test_ultimas_sesiones_es_plegable_y_respeta_la_jerarquia(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        self.assertEqual(source.count("data-recent-sessions"), 1)
+        self.assertLess(source.index("data-plan-memory"), source.index("data-recent-sessions"))
+        self.assertLess(source.index("data-recent-sessions"), source.index("data-secondary-tools"))
+        recent = source[source.index("data-recent-sessions"):source.index("data-secondary-tools")]
+        self.assertIn("Últimas sesiones", recent)
+        self.assertNotIn(" open", recent.split(">", 1)[0])
+
+    def test_ultimas_sesiones_muestra_datos_reales_y_fallbacks(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        recent = source[source.index("data-recent-sessions"):source.index("data-secondary-tools")]
+        for contract in (
+            "actividades_recientes_focus",
+            "act.titulo",
+            "act.entreno_gym.rutina.nombre",
+            "act.get_tipo_display",
+            "act.fecha_efectiva",
+            "act.fecha",
+            "act.rpe_medio",
+            "act.duracion_minutos",
+            "act.es_anticipada",
+        ):
+            self.assertIn(contract, recent)
+        self.assertIn("Fecha real", recent)
+        self.assertIn("Planificada", recent)
+        self.assertIn("Anticipado", recent)
+
+    def test_ultimas_sesiones_se_oculta_si_no_hay_actividad(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        marker = source.index("data-recent-sessions")
+        opening_guard = source.rfind("{% if actividades_recientes_focus %}", 0, marker)
+        self.assertNotEqual(opening_guard, -1)
+        self.assertLess(opening_guard, source.index("<details data-recent-sessions"))
+        self.assertIn("{% endif %}", source[source.index("data-recent-sessions"):source.index("data-secondary-tools")])
+
+    def test_ultimas_sesiones_tiene_layout_movil_sin_desbordes(self):
+        source = get_template("clientes/mockup_demo.html").template.source
+        self.assertIn(".recent-session{min-width:0", source)
+        self.assertIn("overflow-wrap:anywhere", source)
+        self.assertIn("grid-template-columns:minmax(0,1fr) auto", source)
+
 
 class PortadaJoiSelectionTests(SimpleTestCase):
     class Mensaje:
