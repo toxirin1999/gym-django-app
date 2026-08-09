@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.template.loader import get_template
 from django.urls import reverse
+from unittest.mock import patch
 
 
 class PortadaUnificadaTemplateTests(TestCase):
@@ -32,3 +33,38 @@ class PortadaUnificadaTemplateTests(TestCase):
         self.assertIn('data-secondary-signals', template_source)
         self.assertNotIn('Completar ahora', template_source)
         self.assertIn('Tu trayectoria', html)
+
+    def _render_con_accion_principal(self, accion):
+        portada = {
+            "decision": {"estado": "SILENCIO", "frase": "Decisión de prueba"},
+            "accion_principal": accion,
+            "sesion_dominante": None,
+            "senales": [],
+            "aprendizajes": [],
+        }
+        with patch(
+            "clientes.portada_hoy_service.construir_portada_hoy",
+            return_value=portada,
+        ):
+            return self.client.get(reverse("clientes:mockup_demo")).content.decode()
+
+    def test_contrato_antiguo_de_descanso_no_renderiza_accion_principal(self):
+        for label in ("Día de Descanso", "Hoy: día de descanso"):
+            with self.subTest(label=label):
+                html = self._render_con_accion_principal(
+                    {"tipo": "enlace", "label": label, "url": "/entrenos/plan/"}
+                )
+                self.assertNotIn("data-primary-action", html)
+
+    def test_acciones_principales_operativas_siguen_renderizandose(self):
+        acciones = (
+            {"tipo": "modal_checkin", "label": "Completar check-in", "url": ""},
+            {"tipo": "diario", "label": "Escribir en el diario", "url": "/diario/"},
+            {"tipo": "enlace", "label": "Empezar entreno", "url": "/entrenos/"},
+        )
+
+        for accion in acciones:
+            with self.subTest(tipo=accion["tipo"]):
+                html = self._render_con_accion_principal(accion)
+                self.assertEqual(html.count("data-primary-action"), 1)
+                self.assertIn(accion["label"], html)

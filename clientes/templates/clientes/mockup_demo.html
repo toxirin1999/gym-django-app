@@ -635,6 +635,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <span class="rb-organismo-texto">{{ portada_hoy.decision.frase }}</span>
     </div>
     {% if portada_hoy.accion_principal %}
+      {% with accion_label_normalizada=portada_hoy.accion_principal.label|lower %}
+      {# Defensa ante workers antiguos: el descanso nunca es una acción ejecutable. #}
+      {% if 'descanso' not in accion_label_normalizada %}
       {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}
       <button data-primary-action type="button" onclick="rbOpenCheckin(this)"
               class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
@@ -651,6 +654,8 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {{ portada_hoy.accion_principal.label }} →
       </a>
       {% endif %}
+      {% endif %}
+      {% endwith %}
     {% endif %}
     {% comment %}
     Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
