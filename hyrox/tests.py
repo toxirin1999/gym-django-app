@@ -4,9 +4,15 @@ from io import StringIO
 from django.contrib.auth.models import User
 from django.test import TestCase
 
-from entrenos.models import ActividadRealizada, RecordPersonal
+from entrenos.models import (
+    ActividadRealizada,
+    EjercicioRealizado,
+    EntrenoRealizado,
+    RecordPersonal,
+)
 from hyrox.models import HyroxObjective, HyroxSession, HyroxActivity, StravaActivityRaw
 from hyrox.training_engine import HyroxLoadManager
+from rutinas.models import Rutina
 
 
 def _make_user(username='tester_acwr'):
@@ -744,6 +750,85 @@ class StravaProcesarRecalibracion5KTests(TestCase):
         self.assertEqual(resp.status_code, 200)
         self.objetivo.refresh_from_db()
         self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+
+class StravaMergeGymCargaHubTests(TestCase):
+    """Strava aporta biometria al Gym, pero no sustituye su carga sRPE por TRIMP."""
+
+    def setUp(self):
+        self.user = User.objects.create_user(username='tester_strava_merge_gym', password='x')
+        self.client.force_login(self.user)
+        self.cliente = self.user.cliente_perfil
+        rutina = Rutina.objects.create(nombre='Torso')
+        self.entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=rutina,
+            fecha=datetime.date.today(),
+            duracion_minutos=88,
+        )
+        EjercicioRealizado.objects.create(
+            entreno=self.entreno,
+            nombre_ejercicio='Press banca',
+            rpe=8,
+        )
+        # El signal se ejecuta al crear el entreno, antes de existir el ejercicio.
+        # Un guardado posterior representa el cierre real de la sesion.
+        self.entreno.save()
+        self.strava = StravaActivityRaw.objects.create(
+            cliente=self.cliente,
+            strava_id=901,
+            fecha_actividad=datetime.date.today(),
+            tipo_strava='WeightTraining',
+            nombre_strava='Entrenamiento de fuerza',
+            duracion_segundos=88 * 60,
+            hr_media=142,
+            hr_maxima=174,
+            raw_json={},
+            estado='pending',
+        )
+
+    def _merge(self):
+        return self.client.post(
+            f'/hyrox/strava/procesar/{self.strava.id}/',
+            {
+                'accion': 'merge_gym',
+                'entreno_id': self.entreno.id,
+                'rpe': '8',
+                'override_hr_media': 'strava',
+                'override_hr_maxima': 'strava',
+            },
+        )
+
+    def test_merge_gym_conserva_srpe_y_enlaces_aunque_strava_tenga_fc(self):
+        respuesta = self._merge()
+
+        self.assertEqual(respuesta.status_code, 200)
+        actividad = ActividadRealizada.objects.get(entreno_gym=self.entreno)
+        self.entreno.refresh_from_db()
+        self.strava.refresh_from_db()
+        self.assertEqual(actividad.carga_ua, 704.0)
+        self.assertEqual(actividad.rpe_medio, 8.0)
+        self.assertEqual(actividad.duracion_minutos, 88)
+        self.assertEqual(actividad.hr_media, 142)
+        self.assertEqual(actividad.hr_maxima, 174)
+        self.assertEqual(actividad.fuente, 'manual')
+        self.assertEqual(self.strava.entreno_gym_id, self.entreno.id)
+        self.assertEqual(self.entreno.frecuencia_cardiaca_promedio, 142)
+        self.assertEqual(self.entreno.frecuencia_cardiaca_maxima, 174)
+
+    def test_repetir_merge_no_cambia_carga_srpe(self):
+        self.assertEqual(self._merge().status_code, 200)
+        self.strava.estado = 'pending'
+        self.strava.save(update_fields=['estado'])
+
+        self.assertEqual(self._merge().status_code, 200)
+        actividad = ActividadRealizada.objects.get(entreno_gym=self.entreno)
+        self.assertEqual(actividad.carga_ua, 704.0)
+        self.assertEqual(actividad.rpe_medio, 8.0)
+        self.assertEqual(
+            ActividadRealizada.objects.filter(entreno_gym=self.entreno).count(),
+            1,
+        )
 
 
 # ─────────────────────────────────────────────────────────────────────────────

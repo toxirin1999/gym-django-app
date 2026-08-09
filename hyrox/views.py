@@ -3221,14 +3221,6 @@ def strava_procesar(request, actividad_id):
         except (ValueError, TypeError):
             return None
 
-    def _trimp_from_strava(hr_media, duracion_min):
-        """TRIMP de Banister a partir de FC media. Usa objetivo activo si existe; sino fc_max=185."""
-        if not hr_media or not duracion_min:
-            return None
-        from .training_engine import HyroxLoadManager
-        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-        return HyroxLoadManager.calcular_trimp(duracion_min, hr_media, objetivo)
-
     # ── IGNORAR ──────────────────────────────────────────────────────────────
     if accion == 'ignore':
         act.estado = 'ignored'
@@ -3296,12 +3288,12 @@ def strava_procesar(request, actividad_id):
         if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             entreno.duracion_minutos = int(duracion_min)
         entreno.save()
-        # Actualizar hub ActividadRealizada con FC, RPE y recalcular carga_ua
+        # Actualizar el hub con la biometria de Strava. La carga del hub Gym
+        # tiene una unica unidad: sRPE x minutos; TRIMP queda reservado al
+        # modelo HyroxSession y nunca sustituye esta carga.
         rpe_manual = _rpe()
         try:
             ar = ActividadRealizada.objects.get(entreno_gym=entreno)
-            hr_final = entreno.frecuencia_cardiaca_promedio
-            trimp = _trimp_from_strava(hr_final, ar.duracion_minutos or int(duracion_min))
             update_fields = []
             if act.hr_media and not ar.hr_media:
                 ar.hr_media = act.hr_media
@@ -3309,20 +3301,33 @@ def strava_procesar(request, actividad_id):
             if act.hr_maxima and not ar.hr_maxima:
                 ar.hr_maxima = act.hr_maxima
                 update_fields.append('hr_maxima')
-            # Guardar RPE manual si el usuario lo seleccionó
-            if rpe_manual and not ar.rpe_medio:
+            # El RPE indicado en la reconciliacion es evidencia directa.
+            if rpe_manual:
                 ar.rpe_medio = rpe_manual
                 update_fields.append('rpe_medio')
-            # TRIMP prevalece; sRPE como fallback si no hay FC
-            if trimp:
-                ar.carga_ua = trimp
-                update_fields.append('carga_ua')
-            elif (ar.rpe_medio or rpe_manual) and not ar.carga_ua:
-                rpe_carga = ar.rpe_medio or rpe_manual
-                ar.carga_ua = round(rpe_carga * duracion_min, 1)
+
+            minutos_carga = ar.duracion_minutos or int(duracion_min)
+            rpe_carga = rpe_manual or ar.rpe_medio
+            if not rpe_carga and ar.hr_media:
+                from .training_engine import HyroxLoadManager
+                objetivo_local = HyroxObjective.objects.filter(
+                    cliente=cliente,
+                    estado='activo',
+                ).first()
+                rpe_carga = HyroxLoadManager.estimar_rpe_desde_fc(
+                    ar.hr_media,
+                    objetivo_local,
+                )
+                if rpe_carga:
+                    ar.rpe_medio = rpe_carga
+                    update_fields.append('rpe_medio')
+            if not rpe_carga and minutos_carga:
+                rpe_carga = 6.5
+            if rpe_carga and minutos_carga:
+                ar.carga_ua = round(float(rpe_carga) * minutos_carga, 1)
                 update_fields.append('carga_ua')
             if update_fields:
-                ar.save(update_fields=update_fields)
+                ar.save(update_fields=list(dict.fromkeys(update_fields)))
         except ActividadRealizada.DoesNotExist:
             pass
         act.estado     = 'merged'
