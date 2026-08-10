@@ -215,6 +215,22 @@ comando no ofrece `--apply` y no persiste ningún cálculo. Las sesiones
 reubicadas entran por su fecha planificada o por su fecha real, evitando perder
 justo la deriva que esta fase necesita estudiar.
 
+### Primer contrato semanal aprobado
+
+La estrategia semanal ya no depende de reinterpretar `dias_disponibles`. Se
+conserva en `EstrategiaSemanalGym` como una política versionada y aprobada, y
+cada lunes puede abrir un `ContratoSemanalGym` con una copia inmutable de sus
+umbrales. El primer acuerdo confirmado establece **5 sesiones objetivo** y
+**3 sesiones como mínimo válido**.
+
+`SesionProgramada` puede quedar anclada al contrato y a su lunes de
+prescripción. Su identidad y fecha prevista no cambian al reubicarla; la fecha
+real se registra aparte. La evaluación semanal cuenta una reubicación una sola
+vez, reconoce tres sesiones como semana válida y declara siempre cero deuda
+automática hacia la semana siguiente. Durante la transición,
+`dias_disponibles` se actualiza como proyección legacy para que Helms genere los
+cinco días, pero la autoridad histórica reside en la estrategia versionada.
+
 ## 8. Fase 4 — Cerrar ciclos Gym
 
 ### Objetivo

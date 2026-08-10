@@ -1335,6 +1335,52 @@ class GymAdaptationProfile(models.Model):
         return round((self.decisiones_validadas / self.decisiones_totales) * 100)
 
 
+class EstrategiaSemanalGym(models.Model):
+    """Versión aprobada de los umbrales que gobiernan una semana Gym."""
+
+    ESTADO_APROBADA = 'aprobada'
+    ESTADO_RETIRADA = 'retirada'
+    ESTADOS = [(ESTADO_APROBADA, 'Aprobada'), (ESTADO_RETIRADA, 'Retirada')]
+
+    cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='estrategias_semanales_gym')
+    version = models.PositiveIntegerField()
+    objetivo_sesiones = models.PositiveSmallIntegerField()
+    minimo_valido = models.PositiveSmallIntegerField()
+    vigente_desde = models.DateField(db_index=True)
+    vigente_hasta = models.DateField(null=True, blank=True, db_index=True)
+    estado = models.CharField(max_length=12, choices=ESTADOS, default=ESTADO_APROBADA)
+    aprobado_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='estrategias_gym_aprobadas')
+    motivo = models.TextField(blank=True)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['cliente_id', 'version']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'version'], name='uniq_estrategia_gym_cliente_version'),
+            models.CheckConstraint(condition=models.Q(minimo_valido__lte=models.F('objetivo_sesiones')), name='estrategia_gym_minimo_lte_objetivo'),
+            models.CheckConstraint(condition=models.Q(minimo_valido__gte=1), name='estrategia_gym_minimo_positivo'),
+            models.CheckConstraint(condition=models.Q(objetivo_sesiones__lte=7), name='estrategia_gym_objetivo_maximo_siete'),
+        ]
+
+
+class ContratoSemanalGym(models.Model):
+    """Snapshot del acuerdo aplicable a una semana natural concreta."""
+
+    cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='contratos_semanales_gym')
+    estrategia = models.ForeignKey(EstrategiaSemanalGym, on_delete=models.PROTECT, related_name='contratos')
+    semana = models.DateField(db_index=True)
+    objetivo_sesiones = models.PositiveSmallIntegerField()
+    minimo_valido = models.PositiveSmallIntegerField()
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['semana', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'semana'], name='uniq_contrato_gym_cliente_semana'),
+            models.CheckConstraint(condition=models.Q(minimo_valido__lte=models.F('objetivo_sesiones')), name='contrato_gym_minimo_lte_objetivo'),
+        ]
+
+
 class SesionProgramada(models.Model):
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_COMPLETADA = "completada"
@@ -1363,6 +1409,12 @@ class SesionProgramada(models.Model):
         on_delete=models.CASCADE,
         related_name="sesiones_programadas",
     )
+
+    contrato_semanal = models.ForeignKey(
+        ContratoSemanalGym, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='sesiones',
+    )
+    semana_prescrita = models.DateField(null=True, blank=True, db_index=True)
 
     fecha_prevista = models.DateField(db_index=True)
     fecha_realizada = models.DateField(null=True, blank=True)
