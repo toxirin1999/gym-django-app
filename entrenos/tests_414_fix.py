@@ -208,6 +208,33 @@ class FallbackGetEjercicios_BriefingTests(_Base):
         nombres = [e.get('nombre') for e in resp.context.get('ejercicios', [])]
         self.assertEqual(nombres, ['Plan explícito del CTA'])
 
+    def test_briefing_no_reaplica_plan_dinamico_a_sesion_de_la_autoridad(self):
+        ejercicios_canonicos = [{
+            'nombre': 'Press banca canónico',
+            'series': 3,
+            'repeticiones': 8,
+            'peso_recomendado_kg': 62.5,
+            '_autoridad_gym_materializada': True,
+            '_autoridad_gym_decision_id': 'gym-2026-08-10-test',
+        }]
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+
+        with patch(
+            'entrenos.services.plan_dinamico_service.aplicar_plan_dinamico',
+        ) as aplicar:
+            resp = self.c.get(url, {
+                'fecha': self.fecha_str,
+                'rutina_nombre': 'Push canónico',
+                'ejercicios': json.dumps(ejercicios_canonicos),
+            })
+
+        self.assertEqual(resp.status_code, 200)
+        aplicar.assert_not_called()
+        self.assertEqual(
+            resp.context['ejercicios'][0]['peso_recomendado_kg'],
+            62.5,
+        )
+
 
 class DeloadIdempotenteTransporteTests(_Base):
     def test_briefing_y_sesion_activa_no_reducen_series_dos_veces(self):

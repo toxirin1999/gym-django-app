@@ -64,7 +64,7 @@ def resolver_estado_sistema_hoy(usuario, decision_gym=None):
     """
     try:
         # 1. PROTEGIENDO — señales fuertes
-        protegiendo = _check_protegiendo(usuario)
+        protegiendo = _check_protegiendo(usuario, decision_gym=decision_gym)
         if protegiendo:
             return protegiendo
 
@@ -91,7 +91,7 @@ def resolver_estado_sistema_hoy(usuario, decision_gym=None):
 # 1. PROTEGIENDO — Señales fuertes (cualquiera activa)
 # ────────────────────────────────────────────────────────────────────
 
-def _check_protegiendo(usuario):
+def _check_protegiendo(usuario, decision_gym=None):
     """
     Retorna dict PROTEGIENDO si hay alguna señal fuerte, None si no.
 
@@ -107,6 +107,20 @@ def _check_protegiendo(usuario):
     modulo_principal = None
     accion_label = None
     accion_url = None
+
+    # Cuando existe autoridad Gym canónica, ella ya resolvió si las señales
+    # físicas afectan realmente a la sesión concreta (por ejemplo, lesión de
+    # pierna frente a un día puro de torso).
+    if decision_gym and decision_gym.get('postura') == 'proteger':
+        cliente = getattr(usuario, 'cliente_perfil', None)
+        causa = decision_gym.get('causa_principal') or 'autoridad_gym'
+        return _estado_dict(
+            'PROTEGIENDO', f'gym_{causa}',
+            decision_gym.get('mensaje') or 'El sistema protege la sesión de hoy.',
+            'Revisar sesión',
+            f'/entrenos/cliente/{cliente.id}/briefing/' if cliente else None,
+            'gym',
+        )
 
     # Check 1: Hyrox Pulso PROTEGIENDO
     try:
@@ -132,7 +146,11 @@ def _check_protegiendo(usuario):
             cliente__user=usuario,
             fecha=timezone.localdate()
         ).order_by('-id').first()
-        if sesion and sesion.sesion_detalle and sesion.sesion_detalle.get('rpe_medio', 0) >= 9:
+        if (
+            decision_gym is None
+            and sesion and sesion.sesion_detalle
+            and sesion.sesion_detalle.get('rpe_medio', 0) >= 9
+        ):
             motivo = 'rpe_extremo'
             modulo_principal = 'gym'
             accion_label = 'Entrenar con margen'
@@ -155,7 +173,7 @@ def _check_protegiendo(usuario):
             activa=True,
             fase__in=['AGUDA', 'SUB_AGUDA']
         ).first()
-        if lesion:
+        if lesion and decision_gym is None:
             motivo = 'lesion_activa'
             modulo_principal = 'hyrox'
             accion_label = 'Ver zona afectada'
@@ -277,7 +295,7 @@ def _check_en_margen(usuario, decision_gym=None):
         # Check 4: ¿Lesión AGUDA/SUB_AGUDA?
         try:
             from hyrox.models import UserInjury
-            if UserInjury.objects.filter(
+            if decision_gym is None and UserInjury.objects.filter(
                 cliente__user=usuario,
                 activa=True,
                 fase__in=['AGUDA', 'SUB_AGUDA']

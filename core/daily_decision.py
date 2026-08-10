@@ -105,6 +105,40 @@ class DailyDecisionEngine:
     )
 
     @classmethod
+    def desde_autoridad_gym(cls, autoridad: Dict[str, Any]) -> Dict[str, Any]:
+        """Proyecta la decisión Gym canónica al contrato visual legacy.
+
+        No consulta señales ni aplica umbrales: el semáforo deja de ser una
+        segunda autoridad cuando ya existe una decisión Gym resuelta.
+        """
+        postura = autoridad.get('postura') or cls.EMPUJAR
+        if postura not in {cls.EMPUJAR, cls.SOSTENER, cls.RECUPERAR}:
+            postura = cls.SOSTENER
+        recomendaciones = {
+            cls.EMPUJAR: cls._RECOMENDACIONES_GYM[cls.EMPUJAR],
+            cls.SOSTENER: 'Versión esencial activa. Principales primero, accesorios opcionales.',
+            cls.RECUPERAR: cls._RECOMENDACIONES_GYM['recuperar_descanso'],
+        }
+        causa = autoridad.get('causa_principal') or 'sesion_hoy'
+        recomendacion_gym = recomendaciones[postura]
+        if causa in {'descanso_planificado', 'descanso_plan'}:
+            recomendacion_gym = 'Movilidad o descanso activo. No hay sesión Gym programada.'
+        return {
+            'estado': postura,
+            'titulo': cls._TITULOS[postura],
+            'causa': causa,
+            'tipo_fatiga': None,
+            'tipo_recuperar': 'descanso' if postura == cls.RECUPERAR else None,
+            'mensaje': autoridad.get('mensaje') or '',
+            'recomendacion_gym': recomendacion_gym,
+            'recomendacion_hyrox': '',
+            'paradoja': None,
+            'datos_raw': autoridad.get('contexto_fisico') or {},
+            'decision_id': autoridad.get('decision_id'),
+            'fuente': 'autoridad_diaria_gym',
+        }
+
+    @classmethod
     def _calcular_ausencia_dias(cls, cliente) -> int:
         """
         Días transcurridos desde la última ActividadRealizada del cliente.

@@ -8586,10 +8586,19 @@ def briefing_entrenamiento(request, cliente_id):
         ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
     from entrenos.services.briefing_service import get_briefing_gym
-    from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
 
-    # ── Capa 2: Plan dinámico — modificar ejercicios antes de mostrar ─────────
-    ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
+    # La autoridad diaria ya materializa progresiones y frenos. Los accesos
+    # legacy siguen recibiendo aquí su ajuste para no romper rutas antiguas.
+    es_sesion_canonica = bool(ejercicios) and all(
+        ejercicio.get('_autoridad_gym_materializada') is True
+        for ejercicio in ejercicios
+    )
+    if es_sesion_canonica:
+        ejercicios_mod = ejercicios
+        cambios_plan = []
+    else:
+        from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
+        ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
 
     # Contrato de transporte briefing → sesión: si esta capa ya materializó
     # el deload, la sesión activa no debe volver a descontar otra serie.

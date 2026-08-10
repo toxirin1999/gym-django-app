@@ -152,6 +152,30 @@ Producir una única decisión soberana sin reescribir progresiones.
 Portada, briefing y entrenamiento consumen la misma decisión y no pueden
 contradecirse.
 
+### Primer corte implementado — contrato canónico reversible
+
+- `resolver_autoridad_diaria_gym()` envuelve el motor existente; no crea un
+  segundo planificador ni modifica sus umbrales.
+- La salida declara `postura` (`proteger`, `sostener` o `empujar`), causa
+  principal, causas secundarias, capas suprimidas, versión de esquema,
+  vigencia diaria e identidad determinista.
+- Las progresiones, frenos y deload se materializan una sola vez antes de que
+  la sesión llegue a la portada. Cada ejercicio transporta la identidad de la
+  decisión que lo produjo.
+- El briefing reconoce una sesión materializada y no vuelve a aplicar el plan
+  dinámico. Los accesos legacy sin esa marca conservan el fallback anterior.
+- El semáforo se convierte en una proyección visual de esta autoridad, y
+  `Organismo` respeta su evaluación de seguridad específica en lugar de
+  imponer otra lectura Gym por encima.
+- La caché se indexa por la huella de la decisión base: un cambio de check-in,
+  lesión, carga externa o sesión prevista produce una nueva identidad sin
+  requerir un modelo persistente todavía.
+
+Este corte unifica **qué sesión se muestra y se ejecuta** y elimina los
+veredictos Gym paralelos en portada. La corrección manual persistente y el
+historial de versiones continúan dentro de la Fase 2; requieren decidir antes
+si su valor justifica un modelo nuevo en vez de una identidad diaria derivada.
+
 ## 7. Fase 3 — Estrategia, bloque y semana
 
 ### Objetivo

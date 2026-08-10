@@ -1099,8 +1099,8 @@ def _get_dashboard_context_data(request, cliente):
     if analisis_mesociclos and analisis_mesociclos.get('mesociclos'):
         mesociclo_actual = analisis_mesociclos['mesociclos'][-1]
 
-    from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy as _get_sesion_hoy
-    _decision_entreno = _get_sesion_hoy(cliente, hoy)
+    from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
+    _decision_entreno = resolver_autoridad_diaria_gym(cliente, hoy)
     proximo_entrenamiento = _decision_entreno['entrenamiento']
 
     # ── Comprobar si el entreno de hoy (o el próximo) ya fue realizado ──────
@@ -1680,19 +1680,10 @@ def mockup_demo(request):
     )
 
     # ── Semáforo de Intención ─────────────────────────────────────
-    # es_descanso_plan: True si el plan gym no tiene sesión hoy (próximo día > hoy)
     try:
         from core.daily_decision import DailyDecisionEngine
-        _prox = context.get('proximo_entrenamiento') or {}
-        _es_descanso_plan = (
-            bool(_prox.get('es_descanso'))
-            or context.get('estado_entreno') == 'descanso'
-        )
-        semaforo = DailyDecisionEngine.get_estado_hoy(cliente, es_descanso_plan=_es_descanso_plan)
-        # Cuando el plan prescribe versión esencial, la recomendación gym del semáforo
-        # no puede decir "Progresión posible / carga objetivo" — contradicción UX.
-        if semaforo and context.get('modo_reducido'):
-            semaforo['recomendacion_gym'] = 'Versión esencial activa. Principales primero, accesorios opcionales.'
+        _autoridad_gym = context.get('_decision_gym_raw') or {}
+        semaforo = DailyDecisionEngine.desde_autoridad_gym(_autoridad_gym)
     except Exception:
         semaforo = None
     context['semaforo'] = semaforo
