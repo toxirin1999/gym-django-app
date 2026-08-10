@@ -9,7 +9,8 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from clientes.models import Cliente
-from entrenos.models import SesionProgramada
+from entrenos.models import EntrenoRealizado, SesionProgramada
+from rutinas.models import Rutina
 
 
 class ContratoSemanalGymTests(TestCase):
@@ -288,6 +289,32 @@ class ContratoSemanalGymTests(TestCase):
         self.assertEqual(existente.semana_prescrita, self.lunes)
         self.assertEqual(existente.estado, SesionProgramada.ESTADO_COMPLETADA)
         self.assertEqual(existente.nombre_sesion, 'Sesión ya visible')
+
+    @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
+    def test_concilia_por_fecha_planificada_y_conserva_fecha_real_reubicada(self, build):
+        from entrenos.services.estrategia_semanal_gym_service import (
+            materializar_contrato_semanal_gym,
+        )
+
+        build.return_value = self._planificador_cinco()
+        self._aprobar()
+        rutina = Rutina.objects.create(nombre='Día 2 - Hipertrofia')
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=rutina,
+            fecha=date(2026, 8, 11),
+            fecha_ejecucion=date(2026, 8, 10),
+        )
+
+        contrato = materializar_contrato_semanal_gym(self.cliente, self.lunes)
+
+        sesion_lunes = contrato.sesiones.get(fecha_prevista=date(2026, 8, 10))
+        sesion_martes = contrato.sesiones.get(fecha_prevista=date(2026, 8, 11))
+        self.assertEqual(sesion_lunes.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertIsNone(sesion_lunes.entreno_realizado_id)
+        self.assertEqual(sesion_martes.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(sesion_martes.entreno_realizado, entreno)
+        self.assertEqual(sesion_martes.fecha_realizada, date(2026, 8, 10))
 
     @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
     def test_plan_incompleto_no_deja_contrato_ni_sesiones_parciales(self, build):

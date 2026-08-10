@@ -224,8 +224,11 @@ def materializar_contrato_semanal_gym(cliente, semana):
                 sesion.save(update_fields=campos)
             continue
 
-        candidatos = EntrenoRealizado.objects.filter(cliente=cliente).filter(
-            Q(fecha_ejecucion=fecha) | Q(fecha_ejecucion__isnull=True, fecha=fecha)
+        # `fecha` conserva la identidad del día prescrito. `fecha_ejecucion`
+        # solo expresa cuándo se realizó y permite reconocer reubicaciones.
+        candidatos = EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha=fecha,
         ).order_by('id')
         if candidatos.count() > 1:
             raise ContratoSemanalIncompleto(
@@ -237,7 +240,7 @@ def materializar_contrato_semanal_gym(cliente, semana):
             contrato_semanal=contrato,
             semana_prescrita=semana,
             fecha_prevista=fecha,
-            fecha_realizada=fecha if entreno else None,
+            fecha_realizada=(entreno.fecha_ejecucion or entreno.fecha) if entreno else None,
             estado=(
                 SesionProgramada.ESTADO_COMPLETADA
                 if entreno else SesionProgramada.ESTADO_PENDIENTE
