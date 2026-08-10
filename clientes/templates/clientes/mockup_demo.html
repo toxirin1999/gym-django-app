@@ -415,6 +415,23 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line);
 }
 .rb-organismo-porque .rb-sema { margin-bottom: 0; }
+.rb-gym-correction {
+  margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line-2);
+}
+.rb-gym-correction-form { display: grid; gap: 8px; padding: 4px 0 2px; }
+.rb-gym-correction-form input {
+  width: 100%; min-height: 42px; box-sizing: border-box;
+  background: var(--bg); border: 1px solid var(--line-2); border-radius: 2px;
+  color: var(--fg); padding: 9px 10px; font: 11px var(--font-body);
+}
+.rb-gym-correction-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.rb-gym-correction-btn {
+  min-height: 42px; background: transparent; border: 1px solid var(--line-2);
+  border-radius: 2px; color: var(--fg-dim); cursor: pointer;
+  font: 700 9px var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.rb-gym-correction-btn:hover { border-color: var(--warn); color: var(--warn); }
+.rb-gym-correction-status { min-height: 14px; color: var(--fg-mute); font-size: 10px; }
 @media (max-width: 640px) {
   .rb-organismo-body { flex-direction: column; align-items: flex-start; }
   .rb-organismo-estado { min-width: auto; }
@@ -668,6 +685,43 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <div class="rb-organismo-porque" style="margin-top:6px;">
       {% include "includes/_semaforo_intencion.html" %}
     </div>
+    </details>
+    {% endif %}
+    {% if autoridad_gym and portada_hoy.sesion_dominante.modulo == 'gym' and autoridad_gym.postura != 'proteger' %}
+    <details data-gym-correction class="rb-gym-correction">
+      <summary class="rb-collapse-summary" style="min-height:44px;">
+        {% if autoridad_gym.origen_decision == 'correccion_manual' %}
+          Ajuste supervisado · v{{ autoridad_gym.version_persistida }}
+        {% else %}
+          Ajustar decisión
+        {% endif %}
+      </summary>
+      <form class="rb-gym-correction-form"
+            data-url="{% url 'entrenos:corregir_autoridad_gym' cliente.id %}"
+            data-revert-url="{% url 'entrenos:revertir_autoridad_gym' cliente.id %}"
+            onsubmit="return rbCorregirGym(event)">
+        {% csrf_token %}
+        <input type="hidden" name="fecha" value="{{ hoy|date:'Y-m-d' }}">
+        <input type="hidden" name="decision_id" value="{{ autoridad_gym.decision_id }}">
+        <input name="motivo" required maxlength="240"
+               placeholder="¿Qué necesitas ajustar hoy?">
+        <div class="rb-gym-correction-actions">
+          {% if autoridad_gym.postura == 'empujar' %}
+          <button class="rb-gym-correction-btn" name="postura" value="sostener" type="submit">
+            Prefiero dejar margen
+          </button>
+          {% endif %}
+          <button class="rb-gym-correction-btn" name="postura" value="proteger" type="submit">
+            Proteger hoy
+          </button>
+          {% if autoridad_gym.origen_decision == 'correccion_manual' %}
+          <button class="rb-gym-correction-btn" type="button" onclick="rbRevertirGym(this.form)">
+            Restaurar propuesta
+          </button>
+          {% endif %}
+        </div>
+        <div class="rb-gym-correction-status" role="status" aria-live="polite"></div>
+      </form>
     </details>
     {% endif %}
     {% if portada_hoy.sesion_dominante %}
@@ -2102,6 +2156,39 @@ document.addEventListener('DOMContentLoaded', function () {
   if (saved === 'hyrox') setMode('hyrox');
   {% endif %}
 });
+</script>
+
+<script>
+async function rbEnviarAjusteGym(form, url, extra) {
+  var status = form.querySelector('.rb-gym-correction-status');
+  var data = new FormData(form);
+  Object.keys(extra || {}).forEach(function(key){ data.set(key, extra[key]); });
+  status.textContent = 'Guardando nueva versión…';
+  try {
+    var response = await fetch(url, {
+      method: 'POST',
+      headers: {'X-CSRFToken': data.get('csrfmiddlewaretoken')},
+      body: data
+    });
+    var payload = await response.json();
+    if (!response.ok || !payload.ok) throw new Error(payload.error || 'No se pudo guardar');
+    status.textContent = 'Decisión actualizada · v' + payload.decision.version;
+    window.setTimeout(function(){ window.location.reload(); }, 500);
+  } catch (error) {
+    status.textContent = error.message + '. Recarga y revisa la decisión vigente.';
+  }
+}
+function rbCorregirGym(event) {
+  event.preventDefault();
+  var button = event.submitter;
+  rbEnviarAjusteGym(event.currentTarget, event.currentTarget.dataset.url, {
+    postura: button ? button.value : ''
+  });
+  return false;
+}
+function rbRevertirGym(form) {
+  rbEnviarAjusteGym(form, form.dataset.revertUrl, {});
+}
 </script>
 
 <!-- ── CHECK-IN MODAL ──────────────────────────── -->

@@ -30,6 +30,16 @@ urlpatterns = [
     # Briefing pre-sesión
     path('cliente/<int:cliente_id>/briefing/', views.briefing_entrenamiento,
          name='briefing_entrenamiento'),
+    path(
+        'cliente/<int:cliente_id>/autoridad-gym/corregir/',
+        views.corregir_autoridad_gym,
+        name='corregir_autoridad_gym',
+    ),
+    path(
+        'cliente/<int:cliente_id>/autoridad-gym/revertir/',
+        views.revertir_autoridad_gym,
+        name='revertir_autoridad_gym',
+    ),
 
     # Muestra la página para registrar el entreno
     path('cliente/<int:cliente_id>/entrenamiento-activo/', views.vista_entrenamiento_activo,

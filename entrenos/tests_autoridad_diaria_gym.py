@@ -5,6 +5,7 @@ from unittest.mock import patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import TestCase
+from django.urls import reverse
 
 from clientes.models import Cliente
 
@@ -13,6 +14,7 @@ class AutoridadDiariaGymContratoTests(TestCase):
     def setUp(self):
         cache.clear()
         user = User.objects.create_user(username='autoridad_gym', password='x')
+        self.user = user
         self.cliente, _ = Cliente.objects.get_or_create(
             user=user,
             defaults={'nombre': 'Autoridad Gym'},
@@ -64,7 +66,7 @@ class AutoridadDiariaGymContratoTests(TestCase):
         segunda = self._resolver()
 
         self.assertEqual(primera, segunda)
-        self.assertEqual(primera['schema_version'], 1)
+        self.assertEqual(primera['schema_version'], 2)
         self.assertEqual(primera['postura'], 'empujar')
         self.assertEqual(primera['fecha'], '2026-08-10')
         self.assertEqual(primera['vigente_hasta'], '2026-08-10')
@@ -182,3 +184,182 @@ class AutoridadDiariaGymContratoTests(TestCase):
 
         self.assertEqual(autoridad['postura'], 'sostener')
         aplicar_plan.assert_not_called()
+
+
+class AutoridadDiariaGymHistorialTests(AutoridadDiariaGymContratoTests):
+    def _versiones(self):
+        from entrenos.models import GymDecisionVersion
+
+        return GymDecisionVersion.objects.filter(
+            cliente=self.cliente,
+            fecha=self.fecha,
+        ).order_by('version')
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_repetir_la_misma_decision_no_crea_otra_version(
+        self, obtener_base, aplicar_plan,
+    ):
+        obtener_base.return_value = self.decision_base
+        aplicar_plan.return_value = (self.decision_base['entrenamiento']['ejercicios'], [])
+
+        primera = self._resolver()
+        segunda = self._resolver()
+
+        self.assertEqual(primera['decision_id'], segunda['decision_id'])
+        self.assertEqual(self._versiones().count(), 1)
+        version = self._versiones().get()
+        self.assertEqual(version.origen, 'motor')
+        self.assertTrue(version.vigente)
+        self.assertEqual(version.version, 1)
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_cambio_de_evidencia_crea_version_y_conserva_la_anterior(
+        self, obtener_base, aplicar_plan,
+    ):
+        obtener_base.return_value = self.decision_base
+        aplicar_plan.return_value = (self.decision_base['entrenamiento']['ejercicios'], [])
+        primera = self._resolver()
+
+        nueva = dict(self.decision_base)
+        nueva['estado'] = 'version_reducida'
+        nueva['causa_principal'] = 'energia_baja'
+        obtener_base.return_value = nueva
+        segunda = self._resolver()
+
+        self.assertNotEqual(primera['decision_id'], segunda['decision_id'])
+        self.assertEqual(self._versiones().count(), 2)
+        self.assertFalse(self._versiones()[0].vigente)
+        self.assertTrue(self._versiones()[1].vigente)
+        self.assertEqual(self._versiones()[1].version, 2)
+        self.assertEqual(self._versiones()[1].reemplaza, self._versiones()[0])
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_correccion_supervisada_crea_version_y_se_reaplica_sobre_la_misma_base(
+        self, obtener_base, aplicar_plan,
+    ):
+        from entrenos.services.autoridad_diaria_gym_service import corregir_autoridad_diaria_gym
+
+        obtener_base.return_value = self.decision_base
+        aplicar_plan.return_value = (self.decision_base['entrenamiento']['ejercicios'], [])
+        original = self._resolver()
+
+        corregida = corregir_autoridad_diaria_gym(
+            self.cliente,
+            self.fecha,
+            decision_id_esperada=original['decision_id'],
+            ajustes={'postura': 'sostener', 'modo_reducido': True},
+            motivo='Hoy prefiero conservar margen.',
+        )
+        releida = self._resolver()
+
+        self.assertEqual(corregida['postura'], 'sostener')
+        self.assertEqual(releida['decision_id'], corregida['decision_id'])
+        self.assertEqual(releida['origen_decision'], 'correccion_manual')
+        self.assertEqual(self._versiones().count(), 2)
+        self.assertEqual(self._versiones()[1].motivo_correccion, 'Hoy prefiero conservar margen.')
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_rechaza_correccion_obsoleta_o_menos_segura(
+        self, obtener_base, aplicar_plan,
+    ):
+        from entrenos.services.autoridad_diaria_gym_service import (
+            AutoridadGymCorreccionInvalida,
+            corregir_autoridad_diaria_gym,
+        )
+
+        protegida = dict(self.decision_base)
+        protegida.update({'estado': 'recuperar', 'causa_principal': 'lesion'})
+        obtener_base.return_value = protegida
+        actual = self._resolver()
+
+        with self.assertRaises(AutoridadGymCorreccionInvalida):
+            corregir_autoridad_diaria_gym(
+                self.cliente, self.fecha,
+                decision_id_esperada='gym-obsoleta',
+                ajustes={'postura': 'sostener'},
+                motivo='Corrección vieja',
+            )
+        with self.assertRaises(AutoridadGymCorreccionInvalida):
+            corregir_autoridad_diaria_gym(
+                self.cliente, self.fecha,
+                decision_id_esperada=actual['decision_id'],
+                ajustes={'postura': 'empujar'},
+                motivo='Ignorar protección',
+            )
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_endpoint_autenticado_aplica_correccion_supervisada(
+        self, obtener_base, aplicar_plan,
+    ):
+        obtener_base.return_value = self.decision_base
+        aplicar_plan.return_value = (self.decision_base['entrenamiento']['ejercicios'], [])
+        actual = self._resolver()
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('entrenos:corregir_autoridad_gym', args=[self.cliente.pk]),
+            {
+                'fecha': self.fecha.isoformat(),
+                'decision_id': actual['decision_id'],
+                'postura': 'sostener',
+                'motivo': 'Hoy quiero dejar margen.',
+            },
+        )
+
+        self.assertEqual(response.status_code, 200, response.content)
+        payload = response.json()
+        self.assertTrue(payload['ok'])
+        self.assertEqual(payload['decision']['postura'], 'sostener')
+        self.assertEqual(payload['decision']['origen_decision'], 'correccion_manual')
+
+    def test_portada_expone_control_supervisado_sin_duplicar_accion_principal(self):
+        from pathlib import Path
+
+        template = Path('clientes/templates/clientes/mockup_demo.html').read_text(
+            encoding='utf-8'
+        )
+        bloque = template[
+            template.index('<!-- ── DECISIÓN ÚNICA HOY'):
+            template.index('<!-- ── TOGGLE GYM / HYROX')
+        ]
+
+        self.assertIn('data-gym-correction', bloque)
+        self.assertIn("entrenos:corregir_autoridad_gym", bloque)
+        self.assertIn('Prefiero dejar margen', bloque)
+        self.assertEqual(bloque.count('data-primary-action'), 3)
+
+    @patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico')
+    @patch('entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy')
+    def test_revertir_correccion_crea_otra_version_sin_borrar_historial(
+        self, obtener_base, aplicar_plan,
+    ):
+        from entrenos.services.autoridad_diaria_gym_service import (
+            corregir_autoridad_diaria_gym,
+            revertir_correccion_autoridad_diaria_gym,
+        )
+
+        obtener_base.return_value = self.decision_base
+        aplicar_plan.return_value = (self.decision_base['entrenamiento']['ejercicios'], [])
+        original = self._resolver()
+        corregida = corregir_autoridad_diaria_gym(
+            self.cliente, self.fecha,
+            decision_id_esperada=original['decision_id'],
+            ajustes={'postura': 'sostener'},
+            motivo='Dejar margen.',
+        )
+
+        restaurada = revertir_correccion_autoridad_diaria_gym(
+            self.cliente, self.fecha,
+            decision_id_esperada=corregida['decision_id'],
+            motivo='Vuelvo a la propuesta del motor.',
+        )
+
+        self.assertEqual(restaurada['postura'], 'empujar')
+        self.assertEqual(restaurada['origen_decision'], 'reversion_manual')
+        self.assertEqual(self._versiones().count(), 3)
+        self.assertEqual(self._versiones()[2].reemplaza, self._versiones()[1])

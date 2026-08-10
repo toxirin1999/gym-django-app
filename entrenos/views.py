@@ -8673,6 +8673,81 @@ def briefing_entrenamiento(request, cliente_id):
     })
 
 
+@login_required
+@require_POST
+def corregir_autoridad_gym(request, cliente_id):
+    """Corrección supervisada y conservadora de la decisión Gym vigente."""
+    from datetime import datetime as _datetime
+    from django.http import JsonResponse
+    from entrenos.services.autoridad_diaria_gym_service import (
+        AutoridadGymCorreccionInvalida,
+        corregir_autoridad_diaria_gym as _corregir,
+    )
+
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    try:
+        fecha = _datetime.strptime(request.POST.get('fecha', ''), '%Y-%m-%d').date()
+        postura = request.POST.get('postura', '').strip()
+        ajustes = {'postura': postura}
+        if postura == 'sostener':
+            ajustes['modo_reducido'] = True
+        decision = _corregir(
+            cliente,
+            fecha,
+            decision_id_esperada=request.POST.get('decision_id', '').strip(),
+            ajustes=ajustes,
+            motivo=request.POST.get('motivo', '').strip(),
+        )
+    except (ValueError, AutoridadGymCorreccionInvalida) as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=409)
+
+    return JsonResponse({
+        'ok': True,
+        'decision': {
+            'decision_id': decision['decision_id'],
+            'postura': decision['postura'],
+            'estado': decision.get('estado'),
+            'origen_decision': decision.get('origen_decision'),
+            'version': decision.get('version_persistida'),
+        },
+    })
+
+
+@login_required
+@require_POST
+def revertir_autoridad_gym(request, cliente_id):
+    """Revierte una corrección vigente creando otra versión, nunca borrándola."""
+    from datetime import datetime as _datetime
+    from django.http import JsonResponse
+    from entrenos.services.autoridad_diaria_gym_service import (
+        AutoridadGymCorreccionInvalida,
+        revertir_correccion_autoridad_diaria_gym,
+    )
+
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    try:
+        fecha = _datetime.strptime(request.POST.get('fecha', ''), '%Y-%m-%d').date()
+        decision = revertir_correccion_autoridad_diaria_gym(
+            cliente,
+            fecha,
+            decision_id_esperada=request.POST.get('decision_id', '').strip(),
+            motivo=request.POST.get('motivo', '').strip(),
+        )
+    except (ValueError, AutoridadGymCorreccionInvalida) as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=409)
+
+    return JsonResponse({
+        'ok': True,
+        'decision': {
+            'decision_id': decision['decision_id'],
+            'postura': decision['postura'],
+            'estado': decision.get('estado'),
+            'origen_decision': decision.get('origen_decision'),
+            'version': decision.get('version_persistida'),
+        },
+    })
+
+
 @require_POST
 def guardar_motivo_pausa(request, pausa_id):
     """Phase Continuidad 1.3b: guarda el motivo declarado de una pausa.

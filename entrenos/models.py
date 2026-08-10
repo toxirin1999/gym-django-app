@@ -1653,6 +1653,64 @@ class GymDecisionTrace(models.Model):
         return 'Sesión del plan.'
 
 
+class GymDecisionVersion(models.Model):
+    """Versión inmutable de la autoridad Gym de un día concreto."""
+
+    ORIGEN_MOTOR = 'motor'
+    ORIGEN_CORRECCION = 'correccion_manual'
+    ORIGEN_REVERSION = 'reversion_manual'
+    ORIGEN_CHOICES = [
+        (ORIGEN_MOTOR, 'Motor'),
+        (ORIGEN_CORRECCION, 'Corrección manual'),
+        (ORIGEN_REVERSION, 'Reversión manual'),
+    ]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente',
+        on_delete=models.CASCADE,
+        related_name='versiones_decision_gym',
+    )
+    fecha = models.DateField(db_index=True)
+    version = models.PositiveIntegerField()
+    decision_id = models.CharField(max_length=100, db_index=True)
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    origen = models.CharField(max_length=24, choices=ORIGEN_CHOICES)
+    vigente = models.BooleanField(default=True, db_index=True)
+    fingerprint = models.CharField(max_length=64, db_index=True)
+    base_fingerprint = models.CharField(max_length=64, db_index=True)
+    postura = models.CharField(max_length=20)
+    causa_principal = models.CharField(max_length=80, blank=True)
+    snapshot = models.JSONField(default=dict)
+    ajustes = models.JSONField(default=dict, blank=True)
+    motivo_correccion = models.TextField(blank=True)
+    reemplaza = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='reemplazos',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha', 'version']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cliente', 'fecha', 'version'],
+                name='uniq_gym_decision_version_cliente_fecha',
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=['cliente', 'fecha', 'vigente'],
+                name='entrenos_gy_cliente_debbfc_idx',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.cliente} — {self.fecha} — v{self.version} ({self.origen})'
+
+
 class GymDecisionTraceEvaluation(models.Model):
     """
     Phase 34 — Seguimiento posterior de decisiones.

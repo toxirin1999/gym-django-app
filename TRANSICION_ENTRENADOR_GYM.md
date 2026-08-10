@@ -168,13 +168,19 @@ contradecirse.
   `Organismo` respeta su evaluación de seguridad específica en lugar de
   imponer otra lectura Gym por encima.
 - La caché se indexa por la huella de la decisión base: un cambio de check-in,
-  lesión, carga externa o sesión prevista produce una nueva identidad sin
-  requerir un modelo persistente todavía.
+  lesión, carga externa o sesión prevista produce una nueva identidad.
+- Desde la versión 2, cada propuesta se conserva como una versión inmutable de
+  `GymDecisionVersion`. El historial incluye motor, correcciones supervisadas y
+  reversiones; ninguna operación reescribe ni elimina la versión anterior.
+- Cada corrección exige el identificador que el usuario está viendo, registra
+  un motivo y solo puede mantener o aumentar la protección. Nunca puede relajar
+  un freno fisiológico decidido por el sistema.
 
 Este corte unifica **qué sesión se muestra y se ejecuta** y elimina los
-veredictos Gym paralelos en portada. La corrección manual persistente y el
-historial de versiones continúan dentro de la Fase 2; requieren decidir antes
-si su valor justifica un modelo nuevo en vez de una identidad diaria derivada.
+veredictos Gym paralelos en portada. El control de supervisión permanece
+plegado dentro de «Decisión hoy» y permite restaurar la propuesta del motor
+creando otra versión de auditoría. Se conserva así todo el aprendizaje sin
+convertir la portada en un editor permanente del plan.
 
 ## 7. Fase 3 — Estrategia, bloque y semana
 

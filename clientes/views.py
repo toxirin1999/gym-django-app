@@ -1372,6 +1372,8 @@ def _get_dashboard_context_data(request, cliente):
         # mockup_demo() para pasarlo a resolver_estado_sistema_hoy(decision_gym=...)
         # y evitar que Organismo recalcule la misma query. No usar en templates.
         '_decision_gym_raw': _decision_entreno,
+        # Contrato público mínimo para controles supervisados de la portada.
+        'autoridad_gym': _decision_entreno,
         'bloque_esencial_resumen': bloque_esencial_resumen,
         'analisis_semanal': _ctx_analisis_semanal(cliente, hoy),
         'calendario_plan': _ctx_calendario_plan(cliente, hoy),
