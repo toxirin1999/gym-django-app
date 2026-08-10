@@ -190,6 +190,9 @@ Dar contexto longitudinal a la decisión diaria.
 
 ### Trabajo
 
+- auditoría semanal de solo lectura como puerta de entrada: versiones de la
+  decisión, sesiones prescritas/realizadas, RPE, biometría y carga externa se
+  extraen en un contrato JSONL sin interpretar todavía causalidad;
 - contrato de bloque propuesto y aprobado;
 - plan objetivo, mínimo y protegido;
 - semana prescrita, viable y realizada;
@@ -201,6 +204,16 @@ Dar contexto longitudinal a la decisión diaria.
 
 Una sesión perdida no crea deuda infinita y una semana mínima válida sigue
 contando como estímulo útil.
+
+### Entrada de fase implementada — auditoría de evidencia real
+
+`auditar_semana_gym` recibe cliente y ventana inclusiva y emite registros JSONL
+deterministas. Usa `GymDecisionVersion` para el historial de autoridad,
+`ActividadRealizada` para sesiones y carga, `BitacoraDiaria` para el check-in y
+`StravaActivityRaw` únicamente como evidencia de procedencia o fusión. El
+comando no ofrece `--apply` y no persiste ningún cálculo. Las sesiones
+reubicadas entran por su fecha planificada o por su fecha real, evitando perder
+justo la deriva que esta fase necesita estudiar.
 
 ## 8. Fase 4 — Cerrar ciclos Gym
 
