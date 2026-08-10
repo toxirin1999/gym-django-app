@@ -231,6 +231,13 @@ automática hacia la semana siguiente. Durante la transición,
 `dias_disponibles` se actualiza como proyección legacy para que Helms genere los
 cinco días, pero la autoridad histórica reside en la estrategia versionada.
 
+La materialización del contrato calcula primero la semana completa desde ese
+snapshot y solo persiste si obtiene exactamente las cinco sesiones acordadas.
+Es idempotente: adopta sesiones ya existentes sin duplicarlas ni alterar su
+estado o reubicación, y enlaza entrenamientos reales inequívocos que ya se
+hubieran completado. El comando `materializar_contrato_semanal_gym` funciona en
+modo de lectura por defecto y exige `--apply` para escribir.
+
 ## 8. Fase 4 — Cerrar ciclos Gym
 
 ### Objetivo

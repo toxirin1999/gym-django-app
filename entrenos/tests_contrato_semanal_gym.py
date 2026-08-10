@@ -1,6 +1,7 @@
 from datetime import date
 import json
 from io import StringIO
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
@@ -33,6 +34,22 @@ class ContratoSemanalGymTests(TestCase):
             aprobado_por=self.user,
             motivo='Objetivo personal confirmado',
         )
+
+    @staticmethod
+    def _planificador_cinco():
+        class Planificador:
+            def generar_entrenamiento_para_fecha(self, fecha):
+                if fecha.weekday() >= 5:
+                    return {'rutina_nombre': 'Descanso', 'ejercicios': []}
+                numero = fecha.weekday() + 1
+                return {
+                    'rutina_nombre': f'Día {numero} - Hipertrofia',
+                    'ejercicios': [{'nombre': f'Ejercicio {numero}'}],
+                    'bloque': 'Hipertrofia',
+                    'dia': numero,
+                }
+
+        return Planificador()
 
     def test_aprueba_estrategia_versionada_cinco_tres(self):
         estrategia = self._aprobar()
@@ -222,3 +239,107 @@ class ContratoSemanalGymTests(TestCase):
         self.assertEqual(aplicado['modo'], 'apply')
         self.assertEqual(aplicado['version'], 1)
         self.assertEqual(EstrategiaSemanalGym.objects.get().minimo_valido, 3)
+
+    @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
+    def test_materializa_exactamente_cinco_sesiones_y_es_idempotente(self, build):
+        from entrenos.services.estrategia_semanal_gym_service import (
+            materializar_contrato_semanal_gym,
+        )
+
+        build.return_value = self._planificador_cinco()
+        self._aprobar()
+
+        primera = materializar_contrato_semanal_gym(self.cliente, self.lunes)
+        segunda = materializar_contrato_semanal_gym(self.cliente, self.lunes)
+
+        self.assertEqual(primera.pk, segunda.pk)
+        self.assertEqual(primera.sesiones.count(), 5)
+        self.assertEqual(SesionProgramada.objects.count(), 5)
+        self.assertEqual(
+            list(primera.sesiones.order_by('fecha_prevista').values_list('dia_numero', flat=True)),
+            [1, 2, 3, 4, 5],
+        )
+        self.assertTrue(all(
+            sesion.semana_prescrita == self.lunes
+            for sesion in primera.sesiones.all()
+        ))
+
+    @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
+    def test_materializacion_adopta_sesion_existente_sin_duplicarla(self, build):
+        from entrenos.services.estrategia_semanal_gym_service import (
+            materializar_contrato_semanal_gym,
+        )
+
+        build.return_value = self._planificador_cinco()
+        self._aprobar()
+        existente = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.lunes,
+            nombre_sesion='Sesión ya visible',
+            estado=SesionProgramada.ESTADO_COMPLETADA,
+            fecha_realizada=self.lunes,
+        )
+
+        contrato = materializar_contrato_semanal_gym(self.cliente, self.lunes)
+
+        existente.refresh_from_db()
+        self.assertEqual(SesionProgramada.objects.count(), 5)
+        self.assertEqual(existente.contrato_semanal, contrato)
+        self.assertEqual(existente.semana_prescrita, self.lunes)
+        self.assertEqual(existente.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(existente.nombre_sesion, 'Sesión ya visible')
+
+    @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
+    def test_plan_incompleto_no_deja_contrato_ni_sesiones_parciales(self, build):
+        from entrenos.models import ContratoSemanalGym
+        from entrenos.services.estrategia_semanal_gym_service import (
+            ContratoSemanalIncompleto,
+            materializar_contrato_semanal_gym,
+        )
+
+        planificador = self._planificador_cinco()
+        original = planificador.generar_entrenamiento_para_fecha
+        planificador.generar_entrenamiento_para_fecha = lambda fecha: (
+            {'rutina_nombre': 'Descanso', 'ejercicios': []}
+            if fecha.weekday() == 4 else original(fecha)
+        )
+        build.return_value = planificador
+        self._aprobar()
+
+        with self.assertRaises(ContratoSemanalIncompleto):
+            materializar_contrato_semanal_gym(self.cliente, self.lunes)
+
+        self.assertEqual(ContratoSemanalGym.objects.count(), 0)
+        self.assertEqual(SesionProgramada.objects.count(), 0)
+
+    @patch('entrenos.services.estrategia_semanal_gym_service._build_planificador')
+    def test_comando_materializacion_es_dry_run_por_defecto_y_apply_crea_cinco(self, build):
+        from entrenos.models import ContratoSemanalGym
+
+        build.return_value = self._planificador_cinco()
+        self._aprobar()
+        salida = StringIO()
+        call_command(
+            'materializar_contrato_semanal_gym',
+            cliente=self.cliente.pk,
+            semana=self.lunes.isoformat(),
+            stdout=salida,
+        )
+        previo = json.loads(salida.getvalue())
+        self.assertTrue(previo['solo_lectura'])
+        self.assertEqual(previo['sesiones_previstas'], 5)
+        self.assertEqual(ContratoSemanalGym.objects.count(), 0)
+
+        salida = StringIO()
+        call_command(
+            'materializar_contrato_semanal_gym',
+            cliente=self.cliente.pk,
+            semana=self.lunes.isoformat(),
+            apply=True,
+            stdout=salida,
+        )
+        aplicado = json.loads(salida.getvalue())
+        self.assertEqual(aplicado['modo'], 'apply')
+        self.assertEqual(aplicado['sesiones_materializadas'], 5)
+        self.assertEqual(ContratoSemanalGym.objects.count(), 1)
+        self.assertEqual(SesionProgramada.objects.count(), 5)

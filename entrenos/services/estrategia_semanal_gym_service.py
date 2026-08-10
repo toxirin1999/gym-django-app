@@ -1,12 +1,84 @@
 """Gestión transaccional del contrato semanal de entrenamiento Gym."""
 
 from datetime import timedelta
+from types import SimpleNamespace
 
 from django.db import transaction
 from django.db.models import F, Max, Q
 
 from clientes.models import Cliente
-from entrenos.models import ContratoSemanalGym, EstrategiaSemanalGym, SesionProgramada
+from entrenos.models import (
+    ContratoSemanalGym,
+    EntrenoRealizado,
+    EstrategiaSemanalGym,
+    SesionProgramada,
+)
+
+
+class ContratoSemanalIncompleto(ValueError):
+    pass
+
+
+def _build_planificador(cliente, contrato):
+    """Construye Helms desde el snapshot, no desde configuración mutable."""
+    from analytics.planificador_helms.core import PlanificadorHelms
+    from analytics.planificador_helms.models.perfil_cliente import PerfilCliente
+
+    perfil = PerfilCliente({
+        'id': cliente.id,
+        'nombre': getattr(cliente, 'nombre', ''),
+        'experiencia_años': getattr(cliente, 'experiencia_años', 0),
+        'objetivo_principal': getattr(cliente, 'objetivo_principal', 'hipertrofia'),
+        'dias_disponibles': contrato.objetivo_sesiones,
+        'año_planificacion': contrato.semana.year,
+        'nivel_estres': getattr(cliente, 'nivel_estres', 5),
+        'calidad_sueño': getattr(cliente, 'calidad_sueño', 7),
+        'nivel_energia': getattr(cliente, 'nivel_energia', 7),
+        'ejercicios_evitar': getattr(cliente, 'ejercicios_evitar', []) or [],
+        'maximos_actuales': getattr(cliente, 'one_rm_data', {}) or {},
+    })
+    return PlanificadorHelms(perfil)
+
+
+def _generar_propuestas(cliente, contrato):
+    planificador = _build_planificador(cliente, contrato)
+    propuestas = []
+    for offset in range(7):
+        fecha = contrato.semana + timedelta(days=offset)
+        entrenamiento = planificador.generar_entrenamiento_para_fecha(fecha)
+        if entrenamiento and entrenamiento.get('ejercicios'):
+            propuestas.append((fecha, entrenamiento))
+    if len(propuestas) != contrato.objetivo_sesiones:
+        raise ContratoSemanalIncompleto(
+            f'El motor produjo {len(propuestas)} sesiones y el contrato exige '
+            f'{contrato.objetivo_sesiones}.'
+        )
+    return propuestas
+
+
+def previsualizar_contrato_semanal_gym(cliente, semana):
+    """Calcula las identidades prescritas sin crear contrato ni sesiones."""
+    if semana.weekday() != 0:
+        raise ValueError('La semana del contrato debe comenzar en lunes.')
+    estrategia = (
+        EstrategiaSemanalGym.objects.filter(
+            cliente=cliente,
+            estado=EstrategiaSemanalGym.ESTADO_APROBADA,
+            vigente_desde__lte=semana,
+        )
+        .filter(Q(vigente_hasta__isnull=True) | Q(vigente_hasta__gte=semana))
+        .order_by('-version')
+        .first()
+    )
+    if estrategia is None:
+        raise EstrategiaSemanalGym.DoesNotExist(
+            'No existe una estrategia Gym aprobada y vigente para esta semana.'
+        )
+    contrato_virtual = SimpleNamespace(
+        semana=semana,
+        objetivo_sesiones=estrategia.objetivo_sesiones,
+    )
+    return _generar_propuestas(cliente, contrato_virtual)
 
 
 @transaction.atomic
@@ -104,3 +176,83 @@ def evaluar_contrato_semanal_gym(contrato):
         'sesiones_pendientes': sesiones.filter(estado=SesionProgramada.ESTADO_PENDIENTE).count(),
         'deuda_generada': 0,
     }
+
+
+@transaction.atomic
+def materializar_contrato_semanal_gym(cliente, semana):
+    """Persiste todas las identidades prescritas por el contrato, sin duplicar."""
+    from entrenos.services.sesion_recomendada import inferir_prioridad_sesion
+
+    Cliente.objects.select_for_update().get(pk=cliente.pk)
+    contrato = abrir_contrato_semanal_gym(cliente, semana)
+    contrato = ContratoSemanalGym.objects.select_for_update().get(pk=contrato.pk)
+    propuestas = _generar_propuestas(cliente, contrato)
+
+    fechas = [fecha for fecha, _ in propuestas]
+    existentes = {
+        sesion.fecha_prevista: sesion
+        for sesion in SesionProgramada.objects.select_for_update().filter(
+            cliente=cliente,
+            fecha_prevista__in=fechas,
+        )
+    }
+    for fecha, entrenamiento in propuestas:
+        sesion = existentes.get(fecha)
+        if sesion is not None:
+            if sesion.contrato_semanal_id not in (None, contrato.pk):
+                raise ContratoSemanalIncompleto(
+                    f'La sesión de {fecha.isoformat()} pertenece a otro contrato.'
+                )
+            campos = []
+            if sesion.contrato_semanal_id is None:
+                sesion.contrato_semanal = contrato
+                campos.append('contrato_semanal')
+            if sesion.semana_prescrita is None:
+                sesion.semana_prescrita = semana
+                campos.append('semana_prescrita')
+            if not sesion.nombre_sesion:
+                sesion.nombre_sesion = entrenamiento.get('rutina_nombre', '')
+                campos.append('nombre_sesion')
+            if not sesion.bloque_nombre:
+                sesion.bloque_nombre = entrenamiento.get('bloque', '')
+                campos.append('bloque_nombre')
+            if sesion.dia_numero is None:
+                sesion.dia_numero = entrenamiento.get('dia')
+                campos.append('dia_numero')
+            if campos:
+                campos.append('actualizada_en')
+                sesion.save(update_fields=campos)
+            continue
+
+        candidatos = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+            Q(fecha_ejecucion=fecha) | Q(fecha_ejecucion__isnull=True, fecha=fecha)
+        ).order_by('id')
+        if candidatos.count() > 1:
+            raise ContratoSemanalIncompleto(
+                f'Hay más de un entrenamiento real para {fecha.isoformat()}.'
+            )
+        entreno = candidatos.first()
+        sesion = SesionProgramada.objects.create(
+            cliente=cliente,
+            contrato_semanal=contrato,
+            semana_prescrita=semana,
+            fecha_prevista=fecha,
+            fecha_realizada=fecha if entreno else None,
+            estado=(
+                SesionProgramada.ESTADO_COMPLETADA
+                if entreno else SesionProgramada.ESTADO_PENDIENTE
+            ),
+            prioridad=(
+                inferir_prioridad_sesion(entrenamiento)
+                or SesionProgramada.PRIORIDAD_ALTA
+            ),
+            nombre_sesion=entrenamiento.get('rutina_nombre', ''),
+            bloque_nombre=entrenamiento.get('bloque', ''),
+            dia_numero=entrenamiento.get('dia'),
+            entreno_realizado=entreno,
+            motivo_estado=(
+                'Sesión ya completada al abrir el contrato.'
+                if entreno else 'Sesión prescrita por el contrato semanal.'
+            ),
+        )
+    return contrato
