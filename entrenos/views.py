@@ -3996,6 +3996,23 @@ def vista_entrenamiento_activo(request, cliente_id):
                     else:
                         ejercicio['reps_objetivo'] = max(reps_min, t_anterior - 1)
 
+            # --- PROGRESIÓN PARA EJERCICIOS DE DISTANCIA ---
+            # Si hay dato anterior: propone anterior+1m (éxito) o anterior-1m (no completado).
+            # "Éxito" = llegó al mínimo del rango objetivo.
+            if ejercicio.get('usa_distancia'):
+                d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
+                if d_anterior > 0:
+                    try:
+                        reps_str = str(ejercicio.get('repeticiones', '8'))
+                        partes = [int(x.strip()) for x in reps_str.split('-')]
+                        reps_min = partes[0]
+                    except (ValueError, AttributeError):
+                        reps_min = 8
+                    if d_anterior >= reps_min:
+                        ejercicio['reps_objetivo'] = d_anterior + 1
+                    else:
+                        ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
+
             # Detectar estancamiento previo (GymDecisionLog activo)
             ejercicio['estancado'] = detectar_estancamiento(
                 cliente, ejercicio.get('nombre', ''), fecha_obj

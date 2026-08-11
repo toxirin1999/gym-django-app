@@ -1397,7 +1397,9 @@ input{background:transparent!important;border:none!important;outline:none!import
       {% if ejercicio.peso_anterior_kg > 0 or ejercicio.repeticiones_anterior > 0 %}
       <div class="historial-zona">
         Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}):
-        {% if ejercicio.usa_peso %}
+        {% if ejercicio.usa_distancia and ejercicio.usa_peso %}
+          <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }}m</span>
+        {% elif ejercicio.usa_peso %}
           <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps</span>
         {% elif ejercicio.usa_tiempo %}
           <span>{{ ejercicio.repeticiones_anterior }}s</span>
