@@ -4013,6 +4013,23 @@ def vista_entrenamiento_activo(request, cliente_id):
                     else:
                         ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
 
+            # --- PROGRESIÓN PARA EJERCICIOS DE SOLO REPS (peso corporal) ---
+            # Si hay dato anterior: propone anterior+1 rep (éxito) o anterior-1 (no completado).
+            # "Éxito" = llegó al mínimo del rango objetivo.
+            if ejercicio.get('solo_reps'):
+                r_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
+                if r_anterior > 0:
+                    try:
+                        reps_str = str(ejercicio.get('repeticiones', '8'))
+                        partes = [int(x.strip()) for x in reps_str.split('-')]
+                        reps_min = partes[0]
+                    except (ValueError, AttributeError):
+                        reps_min = 8
+                    if r_anterior >= reps_min:
+                        ejercicio['reps_objetivo'] = r_anterior + 1
+                    else:
+                        ejercicio['reps_objetivo'] = max(reps_min, r_anterior - 1)
+
             # Detectar estancamiento previo (GymDecisionLog activo)
             ejercicio['estancado'] = detectar_estancamiento(
                 cliente, ejercicio.get('nombre', ''), fecha_obj
