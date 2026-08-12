@@ -69,6 +69,7 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '72.5'
             data[f'ej1_reps_{i}'] = '10'
             data[f'ej1_rpe_{i}'] = '6'
+            data[f'ej1_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
@@ -81,6 +82,7 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '80'
             data[f'ej1_reps_{i}'] = '10'
             data[f'ej1_rpe_{i}'] = '6'
+            data[f'ej1_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
@@ -93,6 +95,7 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '88'
             data[f'ej1_reps_{i}'] = '10'
             data[f'ej1_rpe_{i}'] = '9'
+            data[f'ej1_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
@@ -105,6 +108,7 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '100'
             data[f'ej1_reps_{i}'] = '5'
             data[f'ej1_rpe_{i}'] = '8'
+            data[f'ej1_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
@@ -118,6 +122,7 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '100'
             data[f'ej1_reps_{i}'] = '5'
             data[f'ej1_rpe_{i}'] = ''
+            data[f'ej1_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
         rm_despues = self._refrescar_rm()
@@ -138,9 +143,11 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
             data[f'ej1_peso_{i}'] = '72.5'
             data[f'ej1_reps_{i}'] = '10'
             data[f'ej1_rpe_{i}'] = '6'
+            data[f'ej1_completado_{i}'] = '1'
             data[f'ej2_peso_{i}'] = '40'
             data[f'ej2_reps_{i}'] = '8'
             data[f'ej2_rpe_{i}'] = '7'
+            data[f'ej2_completado_{i}'] = '1'
         resp = self.client.post(self.url, data)
         self.assertEqual(resp.status_code, 302)
 

@@ -73,6 +73,7 @@ class GuardarEntrenamientoActivoCierreE2ETests(TestCase):
             data[f'ej1_peso_{i}'] = '60'
             data[f'ej1_reps_{i}'] = '8'
             data[f'ej1_rpe_{i}'] = '7'
+            data[f'ej1_completado_{i}'] = '1'
         return data
 
     def test_post_reducido_evalua_previa_y_deja_una_nueva_pendiente(self):

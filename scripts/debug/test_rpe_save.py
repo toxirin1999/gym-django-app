@@ -33,9 +33,11 @@ data = {
     'ejercicio_1_peso_1': '100',
     'ejercicio_1_reps_1': '10',
     'ejercicio_1_rpe_1': '9',
+    'ejercicio_1_completado_1': '1',
     'ejercicio_1_peso_2': '100',
     'ejercicio_1_reps_2': '10',
     'ejercicio_1_rpe_2': '8',
+    'ejercicio_1_completado_2': '1',
 }
 
 request = factory.post('/fake-url', data)

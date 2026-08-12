@@ -4232,8 +4232,15 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     serie_valida = (reps > 0) if es_distancia else (
                         (peso > 0 and reps > 0) if usa_peso else (reps > 0)
                     )
+                    # Solo cuenta si el usuario confirmó la serie con "Guardar
+                    # serie" (guardarSeriePanel marca este checkbox). Sin este
+                    # filtro, los inputs ocultos con el valor por defecto del plan
+                    # de un ejercicio nunca tocado también viajan en el POST
+                    # (un solo <form> para todo el entreno) y se guardan como si
+                    # fueran series reales.
+                    serie_confirmada = f"{form_id}_completado_{i}" in request.POST
 
-                    if serie_valida:
+                    if serie_valida and serie_confirmada:
                         if peso > 0:
                             volumen_ejercicio += (Decimal(str(peso)) * Decimal(reps))
                         if peso > 0 and reps > 0:
