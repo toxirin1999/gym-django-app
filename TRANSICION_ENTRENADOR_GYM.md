@@ -739,3 +739,17 @@ el umbral anterior de RPE `≥7`, por lo que una sesión de recuperación no red
 la sesión Gym. Ambas señales solo modifican una sesión de tren inferior, como
 antes. La consulta histórica por fecha planificada permanece únicamente como
 fallback operativo si el snapshot completo no está disponible.
+
+## Fase 5.5 — evidencia física trazable para JOI
+
+JOI puede leer los hechos físicos desde la `GymDecisionVersion` vigente ya
+materializada, sin resolver otra vez el plan ni construir un segundo snapshot.
+La proyección valida cliente, fecha, versión de esquema y procedencia, conserva
+los ceros reales y aplica una whitelist para no trasladar datos internos.
+
+El bloque factual solo se incorpora cuando el flujo existente genera una
+apertura de mañana o verbaliza una decisión del plan. Incluye fecha de corte,
+referencia de huella y fuente de cada hecho disponible; nunca convierte una
+señal ausente u obsoleta en normalidad y prohíbe atribuir causalidad. No crea
+triggers, cards, mensajes adicionales ni presencias fuera de la habitación de
+JOI. El resumen semanal queda excluido porque usa evidencia propia del periodo.

@@ -142,6 +142,9 @@ def construir_contexto(cliente) -> dict:
     from joi.context_builders.hyrox_context     import build_hyrox_context
     from joi.context_builders.life_context      import build_life_context
     from joi.context_builders.joi_state_context import build_joi_state_context
+    from joi.context_builders.physical_evidence_context import (
+        build_physical_evidence_context,
+    )
 
     hoy = date.today()
     semana_reciente = hoy - timedelta(days=7)
@@ -152,6 +155,7 @@ def construir_contexto(cliente) -> dict:
         (build_gym_context,       {'cliente': cliente, 'hoy': hoy, 'semana_reciente': semana_reciente}),
         (build_hyrox_context,     {'cliente': cliente, 'hoy': hoy, 'semana_reciente': semana_reciente}),
         (build_joi_state_context, {'cliente': cliente, 'hoy': hoy}),
+        (build_physical_evidence_context, {'cliente': cliente, 'as_of_date': hoy}),
     ]:
         try:
             ctx.update(builder(**kwargs))
@@ -1612,6 +1616,10 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
         continuidad_ctx = build_continuidad_context(cliente)
         bloque_cont = _bloque_continuidad(continuidad_ctx)
+        bloque_fisico = ''
+        if trigger in ('apertura_manana', 'decision_plan'):
+            from joi.context_builders.physical_evidence_context import _bloque_hechos_fisicos
+            bloque_fisico = _bloque_hechos_fisicos(ctx.get('physical_evidence'))
         if trigger == 'resultado_intervencion':
             # Contrato Phase 3B.3: postura longitudinal, después ManualDavid,
             # y solo al final el acontecimiento puntual. No se incluye el
@@ -1622,6 +1630,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                 _bloque_memoria(ctx),
                 _bloque_temporal(ctx_temporal),
                 bloque_cont,
+                bloque_fisico,
                 builder(ctx, datos_extra),
             ]
         else:
@@ -1631,6 +1640,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                 _bloque_manual(cliente.user),
                 _bloque_temporal(ctx_temporal),
                 bloque_cont,
+                bloque_fisico,
                 builder(ctx, datos_extra),
             ]
         prompt = "\n\n".join(b for b in bloques if b)
