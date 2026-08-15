@@ -725,3 +725,17 @@ motor degrada temporalmente a las consultas legacy.
 Fútbol e Hyrox reciente continúan leyendo la fecha planificada antigua durante
 este corte. El paso a `fecha_realizado` queda reservado como cambio funcional
 aislado para la Fase 5.4.
+
+## Fase 5.4 — carga reciente por fecha efectiva
+
+La señal de actividad previa se deriva ya del snapshot físico y usa como fecha
+efectiva `fecha_realizado`, con `fecha` como fallback cuando no existe una fecha
+de ejecución. Al trabajar con `DateField`, la ventana de 48 horas comprende los
+dos días naturales anteriores a la sesión; excluye el propio día, fechas futuras
+y registros de tres o más días atrás.
+
+El fútbol genera la señal de carga reciente con cualquier RPE. Hyrox conserva
+el umbral anterior de RPE `≥7`, por lo que una sesión de recuperación no reduce
+la sesión Gym. Ambas señales solo modifican una sesión de tren inferior, como
+antes. La consulta histórica por fecha planificada permanece únicamente como
+fallback operativo si el snapshot completo no está disponible.

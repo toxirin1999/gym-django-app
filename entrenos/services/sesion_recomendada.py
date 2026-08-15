@@ -451,16 +451,35 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
     # 2. Actividad intensa de piernas en las últimas 48 h
     # Fútbol siempre cuenta; Hyrox solo si rpe_medio >= 7 (sesiones de recuperación no bloquean).
     try:
-        hace_48h = fecha_hoy - timedelta(days=2)
-        hay_futbol = ActividadRealizada.objects.filter(
-            cliente=cliente, tipo='futbol',
-            fecha__gte=hace_48h, fecha__lt=fecha_hoy,
-        ).exists()
-        hay_hyrox_intenso = ActividadRealizada.objects.filter(
-            cliente=cliente, tipo='hyrox',
-            fecha__gte=hace_48h, fecha__lt=fecha_hoy,
-            rpe_medio__gte=7,
-        ).exists()
+        if snapshot_disponible:
+            recent = signals.get('recent_activity') or {}
+            items = recent.get('items') or []
+            desde = (fecha_hoy - timedelta(days=2)).isoformat()
+            hasta = (fecha_hoy - timedelta(days=1)).isoformat()
+            items_en_ventana = [
+                item for item in items
+                if isinstance(item.get('effective_date'), str)
+                and desde <= item['effective_date'] <= hasta
+            ]
+            hay_futbol = any(item.get('type') == 'futbol' for item in items_en_ventana)
+            hay_hyrox_intenso = any(
+                item.get('type') == 'hyrox'
+                and item.get('rpe') is not None
+                and float(item['rpe']) >= 7
+                for item in items_en_ventana
+            )
+        else:
+            # Fallback exclusivamente operativo si el snapshot no está disponible.
+            hace_48h = fecha_hoy - timedelta(days=2)
+            hay_futbol = ActividadRealizada.objects.filter(
+                cliente=cliente, tipo='futbol',
+                fecha__gte=hace_48h, fecha__lt=fecha_hoy,
+            ).exists()
+            hay_hyrox_intenso = ActividadRealizada.objects.filter(
+                cliente=cliente, tipo='hyrox',
+                fecha__gte=hace_48h, fecha__lt=fecha_hoy,
+                rpe_medio__gte=7,
+            ).exists()
         ctx['futbol_reciente'] = hay_futbol
         ctx['hyrox_reciente'] = hay_hyrox_intenso
     except Exception:

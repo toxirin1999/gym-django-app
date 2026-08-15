@@ -148,12 +148,13 @@ def _active_injuries_signal(cliente, as_of_date):
 
 
 def _recent_activity_signal(cliente, as_of_date):
-    # El modelo solo guarda fechas (no una hora final fiable), así que 48 horas
-    # se representan de forma explícita como el día objetivo y el anterior.
-    window_start = as_of_date - timedelta(days=1)
+    # El modelo solo guarda fechas (no una hora final fiable). La regla legacy
+    # "48 h antes" equivale a los dos días naturales previos: nunca incluye hoy.
+    window_start = as_of_date - timedelta(days=2)
+    window_end = as_of_date - timedelta(days=1)
     activities = ActividadRealizada.objects.filter(cliente=cliente).filter(
-        Q(fecha_realizado__range=(window_start, as_of_date))
-        | Q(fecha_realizado__isnull=True, fecha__range=(window_start, as_of_date))
+        Q(fecha_realizado__range=(window_start, window_end))
+        | Q(fecha_realizado__isnull=True, fecha__range=(window_start, window_end))
     )
     items = []
     for activity in activities:
@@ -174,7 +175,7 @@ def _recent_activity_signal(cliente, as_of_date):
     items.sort(key=lambda item: (item["effective_date"], item["id"]))
     return {
         "status": "available" if items else "missing",
-        "window": {"from": window_start.isoformat(), "to": as_of_date.isoformat()},
+        "window": {"from": window_start.isoformat(), "to": window_end.isoformat()},
         "items": items,
         "provenance": {
             "source": "entrenos.ActividadRealizada",

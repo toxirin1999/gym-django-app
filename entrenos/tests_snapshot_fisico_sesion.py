@@ -134,7 +134,7 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
         self.assertEqual((segura["estado"], segura["causa_principal"]), ("entrenar", "sesion_hoy"))
         self.assertEqual((conflictiva["estado"], conflictiva["causa_principal"]), ("recuperar", "lesion"))
 
-    def test_actividad_reciente_mantiene_temporalmente_semantica_legacy_por_fecha_planificada(self):
+    def test_snapshot_ignora_planificada_ayer_si_fecha_realizada_es_futura(self):
         ActividadRealizada.objects.create(
             cliente=self.cliente,
             tipo="futbol",
@@ -150,11 +150,63 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
             physical_snapshot=snapshot,
         )
 
+        self.assertFalse(contexto["futbol_reciente"])
+
+    def test_snapshot_cuenta_futbol_por_fecha_efectiva_con_cualquier_rpe(self):
+        snapshot = self._snapshot()
+        snapshot["signals"]["recent_activity"] = {
+            "status": "available",
+            "items": [
+                {"id": 1, "type": "futbol", "effective_date": "2026-08-14", "rpe": None},
+            ],
+        }
+
+        contexto = _obtener_contexto_fisico(self.cliente, self.hoy, physical_snapshot=snapshot)
+
         self.assertTrue(contexto["futbol_reciente"])
+
+    def test_snapshot_hyrox_solo_cuenta_desde_rpe_siete_y_otras_actividades_no(self):
+        for rpe, esperado in ((None, False), (6.9, False), (7, True)):
+            with self.subTest(rpe=rpe):
+                snapshot = self._snapshot()
+                snapshot["signals"]["recent_activity"] = {
+                    "status": "available",
+                    "items": [
+                        {"id": 1, "type": "otro", "effective_date": "2026-08-14", "rpe": 10},
+                        {"id": 2, "type": "hyrox", "effective_date": "2026-08-14", "rpe": rpe},
+                    ],
+                }
+                contexto = _obtener_contexto_fisico(
+                    self.cliente,
+                    self.hoy,
+                    physical_snapshot=snapshot,
+                )
+                self.assertFalse(contexto["futbol_reciente"])
+                self.assertEqual(contexto["hyrox_reciente"], esperado)
+
+    def test_snapshot_filtra_defensivamente_hoy_y_fuera_de_ventana(self):
+        snapshot = self._snapshot()
+        snapshot["signals"]["recent_activity"] = {
+            "status": "available",
+            "items": [
+                {"id": 1, "type": "futbol", "effective_date": "2026-08-15", "rpe": 9},
+                {"id": 2, "type": "hyrox", "effective_date": "2026-08-12", "rpe": 9},
+            ],
+        }
+
+        contexto = _obtener_contexto_fisico(self.cliente, self.hoy, physical_snapshot=snapshot)
+
+        self.assertFalse(contexto["futbol_reciente"])
+        self.assertFalse(contexto["hyrox_reciente"])
 
     @patch("core.services.physical_snapshot.build_physical_snapshot", side_effect=RuntimeError("source down"))
     def test_fallo_builder_degrada_a_consultas_legacy_sin_cambiar_decision(self, build_snapshot):
         BitacoraDiaria.objects.create(cliente=self.cliente, energia_subjetiva=3)
+        ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="futbol",
+            fecha=self.hoy - timedelta(days=1),
+        )
         objective = HyroxObjective.objects.create(
             cliente=self.cliente,
             fecha_evento=self.hoy + timedelta(days=30),
@@ -169,6 +221,7 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
         self.assertTrue(contexto["energia_baja"])
         self.assertEqual(contexto["readiness_valor"], 80)
         self.assertFalse(contexto["readiness_bajo"])
+        self.assertTrue(contexto["futbol_reciente"])
         build_snapshot.assert_called_once_with(self.cliente, self.hoy)
 
     def test_contexto_snapshot_real_equivale_al_legacy_en_campos_decisionales(self):

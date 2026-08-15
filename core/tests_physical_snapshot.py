@@ -196,7 +196,7 @@ class PhysicalSnapshotTests(TestCase):
             fecha=AS_OF - timedelta(days=1),
             fecha_realizado=AS_OF + timedelta(days=1),
         )
-        ActividadRealizada.objects.create(
+        too_old = ActividadRealizada.objects.create(
             cliente=self.cliente,
             tipo="carrera",
             titulo="too-old",
@@ -205,13 +205,44 @@ class PhysicalSnapshotTests(TestCase):
 
         activity = build_physical_snapshot(self.cliente, AS_OF)["signals"]["recent_activity"]
 
-        self.assertEqual(activity["window"], {"from": "2026-08-14", "to": "2026-08-15"})
-        self.assertEqual([item["id"] for item in activity["items"]], [moved.pk, planned_yesterday.pk])
-        self.assertEqual(activity["items"][0]["effective_date"], "2026-08-14")
-        self.assertEqual(activity["items"][0]["planned_date"], "2026-08-09")
-        self.assertEqual(activity["items"][0]["duration_minutes"], 0)
-        self.assertEqual(activity["items"][0]["load_au"], 0.0)
-        self.assertEqual(activity["items"][0]["rpe"], 0.0)
+        self.assertEqual(activity["window"], {"from": "2026-08-13", "to": "2026-08-14"})
+        self.assertEqual(
+            [item["id"] for item in activity["items"]],
+            [too_old.pk, moved.pk, planned_yesterday.pk],
+        )
+        self.assertEqual(activity["items"][1]["effective_date"], "2026-08-14")
+        self.assertEqual(activity["items"][1]["planned_date"], "2026-08-09")
+        self.assertEqual(activity["items"][1]["duration_minutes"], 0)
+        self.assertEqual(activity["items"][1]["load_au"], 0.0)
+        self.assertEqual(activity["items"][1]["rpe"], 0.0)
+
+    def test_recent_activity_datefield_window_includes_two_prior_days_only(self):
+        included_exact = ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="futbol",
+            fecha=AS_OF - timedelta(days=2),
+            fecha_realizado=None,
+        )
+        included_yesterday = ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="hyrox",
+            fecha=AS_OF - timedelta(days=20),
+            fecha_realizado=AS_OF - timedelta(days=1),
+        )
+        ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="futbol",
+            fecha=AS_OF,
+        )
+        ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="futbol",
+            fecha=AS_OF - timedelta(days=3),
+        )
+
+        items = build_physical_snapshot(self.cliente, AS_OF)["signals"]["recent_activity"]["items"]
+
+        self.assertEqual([item["id"] for item in items], [included_exact.pk, included_yesterday.pk])
 
     def test_fingerprint_is_canonical_and_excludes_capture_time(self):
         first = build_physical_snapshot(self.cliente, AS_OF)
@@ -225,6 +256,10 @@ class PhysicalSnapshotTests(TestCase):
         ).hexdigest()
         self.assertEqual(first["fingerprint"], expected)
 
-        ActividadRealizada.objects.create(cliente=self.cliente, tipo="futbol", fecha=AS_OF)
+        ActividadRealizada.objects.create(
+            cliente=self.cliente,
+            tipo="futbol",
+            fecha=AS_OF - timedelta(days=1),
+        )
         changed = build_physical_snapshot(self.cliente, AS_OF)
         self.assertNotEqual(first["fingerprint"], changed["fingerprint"])
