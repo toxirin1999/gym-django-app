@@ -622,3 +622,20 @@ El cambio conserva los contratos especiales de tope de máquina, técnica, fallo
 y RPE sostenido. No altera la estrategia semanal ni crea preferencias: solo
 evita que el perfil de adaptación aprenda de progresiones no aplicadas o
 incompletas.
+
+## Ciclo 10 · Perfil de adaptación causal e idempotente V1
+
+El perfil personal de incremento de peso aprende exclusivamente de decisiones
+`progresion_peso` que el plan aplicó y cuya evaluación terminó como validada o
+fallida. Las progresiones pospuestas, resultados neutros, progresiones de
+repeticiones y ciclos protectores no aumentan sus contadores ni su confianza.
+
+La calibración se reconstruye siempre desde la base explícita histórica del
+5 % y la evidencia pertinente más reciente. Por ello, procesar dos veces los
+mismos resultados produce exactamente el mismo perfil: dos validaciones llevan
+al 5,5 % y dos fallos al 4 %, sin multiplicaciones acumulativas accidentales.
+
+La reducción de peso se conserva intacta. Deloads, RPE alto, técnica o fallos
+son intervenciones de seguridad con contratos propios y no se reutilizan para
+calibrar una progresión positiva. La confianza baja, media o alta depende solo
+del número de progresiones de peso aplicadas y concluyentes.

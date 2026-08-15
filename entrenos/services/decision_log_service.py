@@ -548,8 +548,16 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
 
 
 def _actualizar_perfil(cliente, ejercicio):
-    """Recalcula estadísticas del GymAdaptationProfile y ajusta incrementos."""
+    """Reconstruye la calibración positiva desde evidencia causal pertinente.
+
+    La base explícita conserva el default histórico del perfil. El cálculo no
+    parte del valor persistido, por lo que procesar otra vez los mismos logs es
+    idempotente. Las reducciones pertenecen a contratos protectores distintos
+    y se preservan hasta que exista una calibración causal propia.
+    """
     from entrenos.models import GymDecisionLog, GymAdaptationProfile
+
+    incremento_base_pct = 5.0
 
     perfil, _ = GymAdaptationProfile.objects.get_or_create(
         cliente=cliente, ejercicio=ejercicio
@@ -558,7 +566,9 @@ def _actualizar_perfil(cliente, ejercicio):
     logs = GymDecisionLog.objects.filter(
         cliente=cliente,
         ejercicio__iexact=ejercicio,
-        resultado__isnull=False,
+        motivo_codigo='progresion_peso',
+        estado_aplicacion='aplicada',
+        resultado__in=('validada', 'fallida'),
     )
 
     totales = logs.count()
@@ -569,32 +579,22 @@ def _actualizar_perfil(cliente, ejercicio):
     perfil.decisiones_validadas = validadas
     perfil.decisiones_fallidas = fallidas
 
-    # Ajustar incremento según tendencia de las últimas 3 subidas de peso.
-    # Se aplica un único ajuste basado en la mayoría, no acumulativo.
-    ultimas_subidas = list(logs.filter(accion='subir_peso').order_by('-fecha_creacion')[:3])
+    # Una progresión causal de peso ya fija también la acción; el filtro se
+    # mantiene como defensa frente a datos históricos incoherentes.
+    ultimas_subidas = list(
+        logs.filter(accion='subir_peso').order_by('-fecha_creacion', '-pk')[:3]
+    )
+    incremento_calibrado = incremento_base_pct
     if ultimas_subidas:
         n_fallidas = sum(1 for d in ultimas_subidas if d.resultado == 'fallida')
         n_validadas = sum(1 for d in ultimas_subidas if d.resultado == 'validada')
         if n_fallidas >= 2:
-            perfil.incremento_peso_pct = max(perfil.incremento_peso_pct * 0.80, 2.5)
+            incremento_calibrado = max(incremento_base_pct * 0.80, 2.5)
         elif n_validadas >= 2:
-            perfil.incremento_peso_pct = min(perfil.incremento_peso_pct * 1.10, 7.5)
+            incremento_calibrado = min(incremento_base_pct * 1.10, 7.5)
+    perfil.incremento_peso_pct = incremento_calibrado
 
-    # Ajustar reducción según tendencia de las últimas 3 bajadas de peso.
-    # Fallida/neutra → la reducción no fue suficiente → aumentar %.
-    # Validada → la reducción funcionó o fue excesiva → reducir %.
-    ultimas_bajadas = list(
-        logs.filter(accion__in=('bajar_peso', 'deload')).order_by('-fecha_creacion')[:3]
-    )
-    if ultimas_bajadas:
-        n_insuf = sum(1 for d in ultimas_bajadas if d.resultado in ('fallida', 'neutra'))
-        n_ok    = sum(1 for d in ultimas_bajadas if d.resultado == 'validada')
-        if n_insuf >= 2:
-            perfil.reduccion_peso_pct = min(perfil.reduccion_peso_pct * 1.20, 20.0)
-        elif n_ok >= 2:
-            perfil.reduccion_peso_pct = max(perfil.reduccion_peso_pct * 0.85, 5.0)
-
-    # Confianza basada en total de logs
+    # La confianza describe únicamente esta calibración positiva.
     if totales < 3:
         perfil.confianza = 'baja'
     elif totales < 6:
