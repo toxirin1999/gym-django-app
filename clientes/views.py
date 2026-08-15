@@ -5327,7 +5327,8 @@ def plan_decisiones_view(request):
     multiweek pattern, recent load decisions, and essential-mode sessions.
     """
     from entrenos.models import (
-        IntervencionPlan, GymDecisionLog, EntrenoRealizado, PreferenciaPlanAprendida,
+        EvaluacionSemanalGym, IntervencionPlan, GymDecisionLog, EntrenoRealizado,
+        PreferenciaPlanAprendida,
     )
     from entrenos.services.centro_decisiones_service import (
         agrupar_decisiones_carga, agrupar_traces_recientes, construir_estado_plan,
@@ -5337,6 +5338,24 @@ def plan_decisiones_view(request):
     hoy = timezone.localdate()
     hace_60 = hoy - timedelta(days=60)
     hace_30 = hoy - timedelta(days=30)
+
+    # Ciclo 11: consulta pura de la última semana ya cerrada. La pantalla no
+    # materializa ni recalcula evaluaciones; esa operación es explícita.
+    cierre_semanal = (
+        EvaluacionSemanalGym.objects.filter(
+            contrato__cliente=cliente,
+            contrato__semana__lt=hoy - timedelta(days=6),
+        )
+        .select_related('contrato')
+        .order_by('-contrato__semana', '-id')
+        .first()
+    )
+    cierre_metricas_ui = {}
+    if cierre_semanal:
+        metricas_cierre = cierre_semanal.evidencia_snapshot.get('metricas') or {}
+        for clave in ('volumen_total_kg', 'energia_pre_sesion_media', 'rpe_medio'):
+            valor = metricas_cierre.get(clave)
+            cierre_metricas_ui[clave] = str(valor).replace('.', ',') if valor is not None else None
 
     # Una sola propuesta ordinaria, elegida con una consulta pura. Las
     # hipótesis usan su flujo separado y nunca compiten por este espacio.
@@ -5514,7 +5533,45 @@ def plan_decisiones_view(request):
         'estado_plan': estado_plan,
         'traces_agrupados': traces_agrupados,
         'decisiones_agrupadas': decisiones_agrupadas,
+        'cierre_semanal': cierre_semanal,
+        'cierre_metricas_ui': cierre_metricas_ui,
     })
+
+
+@login_required
+@require_POST
+def aceptar_cierre_semanal_view(request, evaluacion_id):
+    """Confirma la lectura semanal propia sin alterar el contrato ni el plan."""
+    from entrenos.models import EvaluacionSemanalGym
+    from entrenos.services.evaluacion_semanal_gym_service import responder_evaluacion_semanal_gym
+
+    evaluacion = get_object_or_404(
+        EvaluacionSemanalGym,
+        pk=evaluacion_id,
+        contrato__cliente__user=request.user,
+        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+    )
+    responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=True)
+    messages.success(request, 'Lectura semanal confirmada.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def rechazar_cierre_semanal_view(request, evaluacion_id):
+    """Marca la lectura semanal propia como no representativa, sin efectos laterales."""
+    from entrenos.models import EvaluacionSemanalGym
+    from entrenos.services.evaluacion_semanal_gym_service import responder_evaluacion_semanal_gym
+
+    evaluacion = get_object_or_404(
+        EvaluacionSemanalGym,
+        pk=evaluacion_id,
+        contrato__cliente__user=request.user,
+        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+    )
+    responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=False)
+    messages.info(request, 'La lectura queda marcada como no representativa.')
+    return redirect('clientes:plan_decisiones')
 
 
 @login_required

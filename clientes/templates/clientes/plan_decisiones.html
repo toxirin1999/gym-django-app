@@ -406,6 +406,56 @@
       background: var(--amber-soft);
     }
 
+    .dc-card.is-weekly-close {
+      border-left: 3px solid var(--teal);
+      background: linear-gradient(110deg, var(--teal-soft), transparent 55%), var(--surface);
+    }
+
+    .dc-close-head,
+    .dc-close-metrics {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 16px;
+    }
+
+    .dc-close-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 25px;
+      line-height: 1.1;
+    }
+
+    .dc-close-score {
+      margin: 12px 0 0;
+      color: var(--ink);
+      font-family: var(--font-display);
+      font-size: clamp(28px, 5vw, 38px);
+      font-weight: 700;
+      line-height: 1;
+    }
+
+    .dc-close-metrics {
+      justify-content: flex-start;
+      margin: 16px 0 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .dc-close-metrics li {
+      min-width: 120px;
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    .dc-close-metrics strong {
+      display: block;
+      color: var(--ink);
+      font-family: var(--font-mono);
+      font-size: 15px;
+    }
+
     .dc-pill {
       display: inline-flex;
       align-items: center;
@@ -997,6 +1047,78 @@
         <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
       </header>
 
+      {% if cierre_semanal %}
+      {% with datos=cierre_semanal.evidencia_snapshot metricas=cierre_semanal.evidencia_snapshot.metricas cobertura=cierre_semanal.evidencia_snapshot.metricas.cobertura %}
+      <article class="dc-card is-weekly-close" aria-labelledby="cierre-semanal-titulo">
+        <div class="dc-close-head">
+          <h3 class="dc-close-title" id="cierre-semanal-titulo">Cierre semanal</h3>
+          {% if cierre_semanal.estado_revision == 'pendiente' %}
+          <span class="dc-pill is-learned">Requiere tu revisión</span>
+          {% elif cierre_semanal.estado_revision == 'aceptada' %}
+          <span class="dc-pill is-learned">Lectura confirmada</span>
+          {% else %}
+          <span class="dc-pill">Lectura no confirmada</span>
+          {% endif %}
+        </div>
+
+        <p class="dc-card-meta">Semana del {{ cierre_semanal.contrato.semana|date:"j N Y" }}</p>
+        <p class="dc-close-score">
+          {% if cierre_semanal.estado_cumplimiento == 'objetivo' %}Objetivo cumplido
+          {% elif cierre_semanal.estado_cumplimiento == 'minima_valida' %}Mínima válida
+          {% else %}Semana insuficiente{% endif %}
+          · {{ cierre_semanal.sesiones_completadas }} de {{ cierre_semanal.contrato.objetivo_sesiones }}
+        </p>
+        <p class="dc-card-meta">
+          Mínimo acordado: {{ cierre_semanal.contrato.minimo_valido }} ·
+          {{ cierre_semanal.sesiones_reubicadas }} reubicada{{ cierre_semanal.sesiones_reubicadas|pluralize:"s" }}.
+          Esta lectura compara el acuerdo de la semana con las sesiones vinculadas realmente ejecutadas.
+        </p>
+
+        {% if metricas %}
+        <ul class="dc-close-metrics" aria-label="Métricas con evidencia disponible">
+          {% if metricas.volumen_total_kg is not None and cobertura.volumen.disponibles %}
+          <li><strong>{{ cierre_metricas_ui.volumen_total_kg }} kg</strong>volumen total</li>
+          {% endif %}
+          {% if metricas.duracion_total_minutos is not None and cobertura.duracion.disponibles %}
+          <li><strong>{{ metricas.duracion_total_minutos }} min</strong>duración registrada</li>
+          {% endif %}
+          {% if metricas.rpe_medio is not None and cobertura.rpe.disponibles %}
+          <li><strong>{{ cierre_metricas_ui.rpe_medio }}</strong>RPE medio</li>
+          {% endif %}
+          {% if metricas.energia_pre_sesion_media is not None and cobertura.energia_pre_sesion.disponibles %}
+          <li><strong>{{ cierre_metricas_ui.energia_pre_sesion_media }}</strong>energía media</li>
+          {% endif %}
+        </ul>
+        {% if cobertura.volumen.disponibles and cobertura.volumen.disponibles != cobertura.volumen.total %}
+        <p class="dc-card-meta">{{ cobertura.volumen.disponibles }} de {{ cobertura.volumen.total }} sesiones con volumen.</p>
+        {% endif %}
+        {% if cobertura.duracion.disponibles and cobertura.duracion.disponibles != cobertura.duracion.total %}
+        <p class="dc-card-meta">{{ cobertura.duracion.disponibles }} de {{ cobertura.duracion.total }} sesiones con duración.</p>
+        {% endif %}
+        {% if cobertura.rpe.disponibles and cobertura.rpe.disponibles != cobertura.rpe.total %}
+        <p class="dc-card-meta">{{ cobertura.rpe.disponibles }} de {{ cobertura.rpe.total }} sesiones con RPE.</p>
+        {% endif %}
+        {% if cobertura.energia_pre_sesion.disponibles and cobertura.energia_pre_sesion.disponibles != cobertura.energia_pre_sesion.total %}
+        <p class="dc-card-meta">{{ cobertura.energia_pre_sesion.disponibles }} de {{ cobertura.energia_pre_sesion.total }} sesiones con energía.</p>
+        {% endif %}
+        {% endif %}
+
+        {% if cierre_semanal.estado_revision == 'pendiente' %}
+        <div class="dc-actions" aria-label="Revisar cierre semanal">
+          <form method="post" action="{% url 'clientes:aceptar_cierre_semanal' cierre_semanal.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-primary" type="submit">Sí, esta lectura encaja</button>
+          </form>
+          <form method="post" action="{% url 'clientes:rechazar_cierre_semanal' cierre_semanal.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-quiet" type="submit">No refleja mi semana</button>
+          </form>
+        </div>
+        {% endif %}
+      </article>
+      {% endwith %}
+      {% endif %}
+
       {% if sugerencia_prioritaria %}
       <article class="dc-card is-temporary" aria-labelledby="sugerencia-prioritaria-titulo">
         <span class="dc-pill is-temporary">Requiere tu decisión</span>
@@ -1057,7 +1179,7 @@
       </article>
       {% endif %}
 
-      {% if not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+      {% if not cierre_semanal and not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
       <div class="dc-empty">
         <strong>El plan no necesita ninguna decisión tuya ahora.</strong>
         Seguirá observando tus sesiones y te avisará cuando exista evidencia suficiente para proponer un cambio.

@@ -660,3 +660,22 @@ una evidencia nueva actualiza el mismo cierre; después de aceptarlo o rechazarl
 el snapshot queda protegido frente a sobrescrituras automáticas. La respuesta
 del usuario solo registra su revisión: no cambia la estrategia, el contrato, las
 sesiones ni `dias_disponibles`.
+
+# Operación e interfaz del cierre semanal (Ciclo 11)
+
+El Centro de decisiones consulta, sin crear ni recalcular, la evaluación más
+reciente de una semana cerrada. Si está pendiente presenta una única card de
+`Cierre semanal` dentro de `Activo ahora`; aceptar o rechazar solo registra la
+revisión humana y no cambia la estrategia 5/3 ni los días disponibles.
+
+El cierre se ejecuta de forma explícita. Por defecto el comando previsualiza la
+semana anterior y no escribe; `--apply` persiste la evaluación:
+
+```bash
+python manage.py cerrar_semana_gym --cliente <ID>
+python manage.py cerrar_semana_gym --cliente <ID> --semana AAAA-MM-DD --apply
+```
+
+La semana debe estar cerrada y el contrato debe contener exactamente todas sus
+sesiones prescritas. La salida es JSON estable para facilitar su operación y
+auditoría.
