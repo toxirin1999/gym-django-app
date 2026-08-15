@@ -19,6 +19,10 @@ class GrupoMuscular(models.Model):
 
 class EjercicioRealizado(models.Model):
     entreno = models.ForeignKey('EntrenoRealizado', on_delete=models.CASCADE, related_name='ejercicios_realizados')
+    experimento_variante = models.ForeignKey(
+        'ExperimentoVarianteGym', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='ejecuciones',
+    )
 
     nombre_ejercicio = models.CharField(max_length=100)
     grupo_muscular = models.CharField(max_length=50, blank=True, null=True)
@@ -1304,6 +1308,46 @@ class GymDecisionLog(models.Model):
         if decision['aplica']:
             return decision['peso'], decision['motivo_tipo']
         return self.peso_sugerido, None
+
+
+class ExperimentoVarianteGym(models.Model):
+    ESTADO_ACTIVA = 'activa'
+    ESTADO_FAVORABLE = 'favorable'
+    ESTADO_FALLIDA = 'fallida'
+    ESTADO_INSUFICIENTE = 'insuficiente'
+    ESTADOS = [
+        (ESTADO_ACTIVA, 'Activa'),
+        (ESTADO_FAVORABLE, 'Favorable'),
+        (ESTADO_FALLIDA, 'Fallida'),
+        (ESTADO_INSUFICIENTE, 'Insuficiente'),
+    ]
+
+    cliente = models.ForeignKey(
+        Cliente, on_delete=models.CASCADE, related_name='experimentos_variante_gym',
+    )
+    decision_origen = models.OneToOneField(
+        GymDecisionLog, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='experimento_variante',
+    )
+    original = models.JSONField()
+    original_normalizado = models.CharField(max_length=160, db_index=True)
+    variante = models.JSONField()
+    variante_normalizada = models.CharField(max_length=160, db_index=True)
+    baseline = models.JSONField(default=dict)
+    estado = models.CharField(max_length=16, choices=ESTADOS, default=ESTADO_ACTIVA, db_index=True)
+    iniciada_en = models.DateTimeField()
+    vence_en = models.DateTimeField(db_index=True)
+    finalizada_en = models.DateTimeField(null=True, blank=True)
+    motivo_cierre = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-iniciada_en', '-id']
+        indexes = [
+            models.Index(fields=['cliente', 'estado'], name='expvar_cliente_estado_idx'),
+            models.Index(fields=['cliente', 'original_normalizado'], name='expvar_cliente_orig_idx'),
+        ]
 
 
 class GymAdaptationProfile(models.Model):

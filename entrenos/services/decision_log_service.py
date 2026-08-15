@@ -229,7 +229,8 @@ def evaluar_decisiones_para_entreno(entreno):
         log = GymDecisionLog.objects.filter(
             cliente=cliente,
             resultado__isnull=True,
-        ).exclude(entreno_origen=entreno).filter(
+            experimento_variante__isnull=True,
+        ).exclude(accion='cambiar_variante').exclude(entreno_origen=entreno).filter(
             ejercicio_normalizado=nombre,
         ).order_by('-fecha_creacion').first()
 
@@ -238,7 +239,8 @@ def evaluar_decisiones_para_entreno(entreno):
             log = GymDecisionLog.objects.filter(
                 cliente=cliente, ejercicio__iexact=nombre,
                 resultado__isnull=True, entreno_origen__isnull=True,
-            ).order_by('-fecha_creacion').first()
+                experimento_variante__isnull=True,
+            ).exclude(accion='cambiar_variante').order_by('-fecha_creacion').first()
 
         if not log:
             continue

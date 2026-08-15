@@ -257,6 +257,16 @@ Orden recomendado:
 Cada una debe declarar resultado esperado, ventana, métrica, reversión y
 promoción —o no— a conocimiento.
 
+### Ciclo 1 implementado — variante por estancamiento
+
+El cambio de variante deja de ser una sustitución efímera y pasa a ser un
+experimento causal independiente. La alternativa se fija una sola vez durante
+un máximo de dos ejecuciones o 21 días; cada ejecución queda vinculada al
+experimento y su resultado se cierra como favorable, fallido o insuficiente.
+Al cerrarse, el plan vuelve automáticamente al ejercicio original porque la
+rutina nunca se muta. Este resultado permanece como evidencia local y no se
+promueve todavía a preferencia ni a conocimiento longitudinal.
+
 ## 9. Fase 5 — Carga externa y recuperación
 
 ### Objetivo

@@ -444,19 +444,18 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             GymDecisionLog.objects
             .filter(cliente=cliente, accion='cambiar_variante',
                     fecha_creacion__date__gte=hace_21)
-            .values('ejercicio', 'motivo')
         )
 
         # Construir sets normalizados por tipo de señal
         logs_estancados_norm = {
-            _normalizar(l['ejercicio'])
+            _normalizar(l.ejercicio)
             for l in logs_recientes
-            if 'Sin progresión' in l['motivo'] or 'sin progresion' in l['motivo'].lower()
+            if 'Sin progresión' in l.motivo or 'sin progresion' in l.motivo.lower()
         }
         logs_molestia_norm = {
-            _normalizar(l['ejercicio'])
+            _normalizar(l.ejercicio)
             for l in logs_recientes
-            if 'molestia' in l['motivo'].lower()
+            if 'molestia' in l.motivo.lower()
         }
 
         for ej in ejercicios_mod:
@@ -467,7 +466,13 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 continue
 
             nombre_norm = _normalizar(nombre)
-            es_estancado = any(
+            from entrenos.models import ExperimentoVarianteGym
+            from entrenos.services.experimento_variante_gym_service import (
+                asegurar_experimento_variante, evaluar_experimento,
+                experimento_para_original,
+            )
+            experimento = experimento_para_original(cliente, nombre)
+            es_estancado = bool(experimento) or any(
                 _match_nombre(nombre_norm, log_norm)
                 for log_norm in logs_estancados_norm
             )
@@ -478,11 +483,27 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
 
             # Estancamiento → sustituir ejercicio
             if es_estancado and not es_molestia:
-                alternativa, razon_alt = _elegir_alternativa(nombre, grupo, recientes)
-                if alternativa:
+                if experimento and experimento.estado == ExperimentoVarianteGym.ESTADO_ACTIVA:
+                    experimento = evaluar_experimento(experimento)
+                if experimento is None:
+                    log = next(
+                        (item for item in logs_recientes if
+                         'sin progresion' in _normalizar(item.motivo)
+                         and _match_nombre(nombre_norm, _normalizar(item.ejercicio))),
+                        None,
+                    )
+                    alternativa, razon_alt = _elegir_alternativa(nombre, grupo, recientes)
+                    if log and alternativa:
+                        snapshot_variante = copy.deepcopy(ej)
+                        snapshot_variante['nombre'] = alternativa
+                        experimento = asegurar_experimento_variante(log, ej, snapshot_variante)
+                if experimento and experimento.estado == ExperimentoVarianteGym.ESTADO_ACTIVA:
+                    alternativa = experimento.variante.get('nombre')
+                    razon_alt = 'variante fijada por experimento acotado'
                     ej['nombre_original']    = nombre
                     ej['nombre']             = alternativa
                     ej['sustituido']         = True
+                    ej['experimento_variante_id'] = experimento.pk
                     ej['motivo_sustitucion'] = 'estancamiento'
                     ej['razon_sustitucion']  = razon_alt or 'cambio de estímulo'
                     recientes.add(alternativa)
@@ -492,6 +513,10 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                         'ejercicio_nuevo': alternativa,
                         'razon': f'Sin progresión en 3+ sesiones → {razon_alt}.',
                     })
+                    if experimento.decision_origen_id:
+                        _persistir_estado_aplicacion(
+                            experimento.decision_origen, 'aplicada', None,
+                        )
 
             # Molestia → sustituir por variante más segura
             elif es_molestia:

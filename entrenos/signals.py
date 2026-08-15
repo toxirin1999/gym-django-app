@@ -2,12 +2,20 @@ import logging
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from entrenos.models import EntrenoRealizado, EjercicioLiftinDetallado, ActividadRealizada
+from entrenos.models import EntrenoRealizado, EjercicioRealizado, EjercicioLiftinDetallado, ActividadRealizada
 from entrenos.utils.utils import parse_reps_and_series
 from django.utils.timezone import make_aware
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=EjercicioRealizado)
+def enlazar_ejecucion_experimento_variante(sender, instance, created, raw=False, **kwargs):
+    if raw or not created or not instance.completado:
+        return
+    from entrenos.services.experimento_variante_gym_service import enlazar_y_evaluar_ejecucion
+    enlazar_y_evaluar_ejecucion(instance)
 
 # Keywords que mapean un ejercicio de gym a un RM de HyroxObjective
 _SENTADILLA_KW = ('sentadilla', 'squat', 'goblet', 'hack squat', 'front squat')
@@ -275,9 +283,12 @@ def detectar_estancamiento(sender, instance, created, raw=False, **kwargs):
             if ya_existe:
                 continue
 
+            from entrenos.services.decision_log_service import normalizar_ejercicio
             GymDecisionLog.objects.create(
                 cliente=instance.cliente,
+                entreno_origen=instance,
                 ejercicio=nombre,
+                ejercicio_normalizado=normalizar_ejercicio(nombre),
                 accion='cambiar_variante',
                 motivo=(
                     f'Sin progresión en 3 sesiones consecutivas '
