@@ -551,3 +551,21 @@ El ciclo es local, automático y reversible. No crea preferencias, no cambia la
 estrategia semanal y no convierte una observación técnica en conocimiento
 permanente. Los logs históricos reconocibles se clasifican durante la migración
 para que las decisiones aún pendientes puedan evaluarse con el contrato nuevo.
+
+## Ciclo 6 · Tope de máquina V1
+
+Un tope físico mantiene el peso disponible y propone progresar `+1 rep` o
+`+5 m` cuando el ejercicio usa distancia. La decisión queda clasificada como
+`tope_maquina` y la siguiente ejecución solo la valida si alcanza el objetivo
+sin cambiar el peso; fallo, RPE crítico, cambio de carga o rendimiento inferior
+se distinguen explícitamente.
+
+Si tres topes consecutivos repiten el mismo peso y las mismas repeticiones, el
+sistema deja de insistir con una progresión imposible y crea una propuesta
+colaborativa `cambiar_variante`, con causa `tope_maquina_sin_margen`. Cualquier
+ganancia de repeticiones reinicia el conteo. Las señales de seguridad —fallo,
+RPE extremo y técnica comprometida— conservan prioridad.
+
+El tope no se convierte en preferencia ni modifica la estrategia semanal. Los
+logs históricos reconocibles se clasifican para evaluar correctamente las
+decisiones que aún estuvieran pendientes al desplegar esta versión.

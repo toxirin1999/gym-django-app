@@ -36,6 +36,18 @@ def _tecnicas_sesion(entreno, ejercicio_normalizado):
     ]
 
 
+def _tope_sin_margen(ejercicio, historial):
+    """Tres topes consecutivos idénticos indican que +reps dejó de avanzar."""
+    if not ejercicio.es_tope_maquina:
+        return False
+    anteriores = historial[:2]
+    if len(anteriores) < 2 or any(not ej.es_tope_maquina for ej in anteriores):
+        return False
+    pesos = [float(ejercicio.peso_kg or 0)] + [float(ej.peso_kg or 0) for ej in anteriores]
+    reps = [ejercicio.repeticiones or 0] + [ej.repeticiones or 0 for ej in anteriores]
+    return max(pesos) - min(pesos) <= 0.5 and len(set(reps)) == 1
+
+
 @transaction.atomic
 def cerrar_aprendizaje_gym(entreno):
     """Cierra causalmente una sesión: evalúa pasado y después crea futuro.
@@ -118,6 +130,9 @@ def generar_decisiones_para_entreno(entreno):
         )
         motivo_codigo = ''
 
+        if accion == 'subir_reps' and es_tope:
+            motivo_codigo = 'tope_maquina'
+
         # El fallo/RPE extremo conserva prioridad por ser una señal más
         # protectora. En el resto de casos, una serie comprometida impide que
         # una sesión aparentemente exitosa produzca una subida de carga.
@@ -130,6 +145,18 @@ def generar_decisiones_para_entreno(entreno):
                 'consolidar antes de progresar.'
             )
             motivo_codigo = 'tecnica_comprometida'
+
+        # Solo tras tres ejecuciones idénticas. No pisa señales protectoras:
+        # fallo/RPE crítico ya ordenan bajar y técnica ya ordena consolidar.
+        if motivo_codigo == 'tope_maquina' and _tope_sin_margen(ej, historial):
+            accion = 'cambiar_variante'
+            valor_cambio = None
+            motivo = (
+                f'Sin progresión en 3 sesiones consecutivas en el tope de máquina '
+                f'({float(peso):g} kg × {reps} reps). '
+                'Cambiar estímulo: variante, rango de reps o tempo.'
+            )
+            motivo_codigo = 'tope_maquina_sin_margen'
 
         GymDecisionLog.objects.get_or_create(
             cliente=cliente,
@@ -317,6 +344,31 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         else:
             resultado = 'neutra'
             notas = 'Técnica recuperada, pero la carga no se mantuvo para aislar el ajuste'
+
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
+
+    if log.motivo_codigo == 'tope_maquina':
+        mismo_peso = abs(float(peso_nuevo) - float(peso_anterior)) <= 0.5
+        objetivo = log.reps_sugeridas or (reps_anteriores + 1)
+        if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+            resultado = 'fallida'
+            notas = 'El intento en el tope produjo fallo o RPE extremo'
+        elif not mismo_peso:
+            resultado = 'neutra'
+            notas = 'El peso cambió; no se puede aislar la progresión del tope'
+        elif reps_nuevas >= objetivo:
+            resultado = 'validada'
+            notas = 'Tope consolidado: objetivo alcanzado con el mismo peso'
+        elif reps_nuevas < reps_anteriores:
+            resultado = 'fallida'
+            notas = 'Rendimiento inferior manteniendo el tope de máquina'
+        else:
+            resultado = 'neutra'
+            notas = 'Mismo rendimiento en el tope; aún no alcanzó el objetivo'
 
         log.resultado = resultado
         log.notas_resultado = notas

@@ -1170,6 +1170,8 @@ class GymDecisionLog(models.Model):
     MOTIVO_CODIGO_CHOICES = [
         ('', 'Sin clasificar'),
         ('tecnica_comprometida', 'Técnica comprometida'),
+        ('tope_maquina', 'Tope de máquina'),
+        ('tope_maquina_sin_margen', 'Tope de máquina sin margen'),
     ]
     ACCION_CHOICES = [
         ('subir_peso', 'Subir peso'),
