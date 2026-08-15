@@ -9,6 +9,7 @@ Flujo:
 
 from datetime import timedelta
 from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -189,6 +190,13 @@ def generar_decisiones_para_entreno(entreno):
             )
             motivo_codigo = 'tope_maquina_sin_margen'
 
+        # Clasifica las progresiones ordinarias solo después de resolver las
+        # señales protectoras y los casos especiales (técnica, fallo y tope).
+        if not motivo_codigo and accion == 'subir_peso':
+            motivo_codigo = 'progresion_peso'
+        elif not motivo_codigo and accion == 'subir_reps':
+            motivo_codigo = 'progresion_reps'
+
         GymDecisionLog.objects.get_or_create(
             cliente=cliente,
             entreno_origen=entreno,
@@ -318,11 +326,16 @@ def evaluar_decisiones_para_entreno(entreno):
         if not nombre:
             continue
 
+        aplicable = (
+            ~Q(motivo_codigo__in=('progresion_peso', 'progresion_reps'))
+            | Q(estado_aplicacion='aplicada')
+        )
         log = GymDecisionLog.objects.filter(
             cliente=cliente,
             resultado__isnull=True,
             experimento_variante__isnull=True,
         ).exclude(accion='cambiar_variante').exclude(entreno_origen=entreno).filter(
+            aplicable,
             ejercicio_normalizado=nombre,
         ).order_by('-fecha_creacion').first()
 
@@ -332,7 +345,9 @@ def evaluar_decisiones_para_entreno(entreno):
                 cliente=cliente, ejercicio__iexact=nombre,
                 resultado__isnull=True, entreno_origen__isnull=True,
                 experimento_variante__isnull=True,
-            ).exclude(accion='cambiar_variante').order_by('-fecha_creacion').first()
+            ).exclude(accion='cambiar_variante').filter(
+                aplicable,
+            ).order_by('-fecha_creacion').first()
 
         if not log:
             continue
@@ -354,6 +369,52 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
 
     peso_anterior = log.peso_anterior or 0
     reps_anteriores = log.reps_anteriores or 0
+
+    if log.motivo_codigo in ('progresion_peso', 'progresion_reps'):
+        tecnicas = _tecnicas_sesion(
+            nueva_sesion.entreno,
+            normalizar_ejercicio(nueva_sesion.nombre_ejercicio),
+        )
+        if fallo_nuevo:
+            resultado = 'fallida'
+            notas = 'La progresión aplicada produjo fallo muscular'
+        elif 'comprometida' in tecnicas:
+            resultado = 'fallida'
+            notas = 'El objetivo se alcanzó con técnica comprometida'
+        elif rpe_nuevo is None:
+            resultado = 'neutra'
+            notas = 'Falta el RPE para confirmar que el objetivo fue sostenible'
+        elif rpe_nuevo > 8:
+            resultado = 'fallida'
+            notas = f'El objetivo exigió un RPE {float(rpe_nuevo):g}, sin margen sostenible'
+        elif log.motivo_codigo == 'progresion_peso':
+            objetivo = log.peso_sugerido
+            if objetivo is None:
+                resultado = 'neutra'
+                notas = 'La decisión no conserva un objetivo de peso evaluable'
+            elif float(peso_nuevo) >= float(objetivo) - 0.5:
+                resultado = 'validada'
+                notas = 'Objetivo de peso alcanzado con una ejecución sostenible'
+            else:
+                resultado = 'neutra'
+                notas = 'Hubo ejecución, pero todavía no se alcanzó el objetivo de peso'
+        else:
+            objetivo = log.reps_sugeridas
+            if objetivo is None:
+                resultado = 'neutra'
+                notas = 'La decisión no conserva un objetivo evaluable'
+            elif reps_nuevas >= objetivo:
+                resultado = 'validada'
+                notas = 'Objetivo de repeticiones o distancia alcanzado de forma sostenible'
+            else:
+                resultado = 'neutra'
+                notas = 'Hubo avance, pero todavía no se alcanzó el objetivo completo'
+
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
 
     if log.motivo_codigo == 'tecnica_comprometida':
         tecnicas = _tecnicas_sesion(

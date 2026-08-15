@@ -604,3 +604,21 @@ Este ajuste es local, diario y reversible. No sustituye al ciclo de deload
 global basado en fatiga acumulada, no cambia la estrategia semanal y no genera
 preferencias. JOI usa la decisión existente de reducción para verbalizarla sin
 crear una segunda presencia paralela.
+
+## Ciclo 9 · Progresión positiva V1
+
+Las progresiones ordinarias de peso y repeticiones quedan identificadas con una
+causa estable. Solo se evalúan cuando el plan las materializó con estado
+`aplicada`; una decisión pendiente o pospuesta no puede aprender por accidente
+de una ejecución que no siguió esa prescripción.
+
+La siguiente ejecución valida el ajuste únicamente si alcanza el objetivo
+completo con RPE `≤8`, sin fallo muscular y sin técnica comprometida. Un avance
+parcial o la falta de RPE quedan como evidencia neutra; alcanzar el objetivo con
+RPE alto, fallo o técnica comprometida lo marca como fallido. La progresión por
+distancia usa el mismo contrato mediante su objetivo concreto de repeticiones.
+
+El cambio conserva los contratos especiales de tope de máquina, técnica, fallo
+y RPE sostenido. No altera la estrategia semanal ni crea preferencias: solo
+evita que el perfil de adaptación aprenda de progresiones no aplicadas o
+incompletas.
