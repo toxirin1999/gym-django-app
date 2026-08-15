@@ -753,3 +753,22 @@ referencia de huella y fuente de cada hecho disponible; nunca convierte una
 señal ausente u obsoleta en normalidad y prohíbe atribuir causalidad. No crea
 triggers, cards, mensajes adicionales ni presencias fuera de la habitación de
 JOI. El resumen semanal queda excluido porque usa evidencia propia del periodo.
+
+## Fase 5.6 — auditoría pasiva de divergencias
+
+El comando `auditar_snapshot_fisico_gym` compara la evidencia física persistida
+con el `contexto_fisico` que quedó materializado en cada decisión. Es siempre de
+solo lectura: no ofrece `--apply`, no resuelve la autoridad y no reconstruye
+snapshots desde fuentes vivas.
+
+La salida JSONL diferencia versiones legacy sin captura, capturas no disponibles,
+contratos inválidos y divergencias campo a campo. Las correcciones y reversiones
+se auditan contra su versión motor base para no confundir una intervención humana
+con una incoherencia física. El rango predeterminado usa la fecha local de Django,
+cubre 30 días y admite como máximo 500 autoridades por ejecución.
+
+```bash
+python manage.py auditar_snapshot_fisico_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```
