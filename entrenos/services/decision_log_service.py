@@ -142,6 +142,14 @@ def generar_decisiones_para_entreno(entreno):
         if accion == 'subir_reps' and es_tope:
             motivo_codigo = 'tope_maquina'
 
+        if not fallo and rpe is not None and rpe >= 10:
+            motivo_codigo = 'rpe_extremo'
+        elif (
+            not fallo and accion == 'bajar_peso'
+            and rpe is not None and rpe >= 9
+        ):
+            motivo_codigo = 'rpe_alto_sostenido'
+
         if fallo:
             if ej.fallo_intencional is True:
                 accion = 'mantener'
@@ -212,11 +220,11 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
                 None,
                 'Fallo muscular previsto — consolidar antes de progresar',
             )
-        if rpe is not None and rpe >= 9.5:
+        if rpe is not None and rpe >= 10:
             return (
                 'bajar_peso',
                 perfil.reduccion_peso_pct,
-                'Fallo muscular con RPE extremo (≥9.5) — carga excesiva',
+                'Fallo muscular con RPE extremo (10) — carga excesiva',
             )
         return (
             'mantener',
@@ -225,11 +233,11 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
         )
 
     # RPE extremo sin fallo → reducir
-    if rpe is not None and rpe >= 9.5:
+    if rpe is not None and rpe >= 10:
         return (
             'bajar_peso',
             perfil.reduccion_peso_pct,
-            'RPE extremo (≥9.5) detectado — reducir carga',
+            'RPE extremo (10) detectado — reducir carga',
         )
 
     # 2. Tope de máquina → subir reps (o distancia, si el ejercicio progresa así)
@@ -246,10 +254,10 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
             'Tope de máquina alcanzado — progresión por repeticiones',
         )
 
-    # 3. RPE alto sostenido (≥8.5 en las últimas 2 sesiones) → reducir
-    if rpe is not None and rpe >= 8.5 and len(historial) >= 2:
+    # 3. RPE alto sostenido: 3 ejecuciones consecutivas con RPE entero ≥9.
+    if rpe is not None and rpe >= 9 and len(historial) >= 2:
         rpes_prev = [h.rpe for h in historial[:2] if h.rpe is not None]
-        if len(rpes_prev) >= 2 and all(r >= 8 for r in rpes_prev):
+        if len(rpes_prev) >= 2 and all(r >= 9 for r in rpes_prev):
             return (
                 'bajar_peso',
                 perfil.reduccion_peso_pct,
@@ -358,7 +366,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         elif not tecnicas:
             resultado = 'neutra'
             notas = 'Sin dato técnico en la sesión posterior; evidencia insuficiente'
-        elif fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+        elif fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
             resultado = 'fallida'
             notas = 'La técnica mejora, pero la ejecución sigue excediendo el margen seguro'
         elif peso_nuevo <= peso_anterior + 0.5:
@@ -377,7 +385,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     if log.motivo_codigo == 'tope_maquina':
         mismo_peso = abs(float(peso_nuevo) - float(peso_anterior)) <= 0.5
         objetivo = log.reps_sugeridas or (reps_anteriores + 1)
-        if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+        if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
             resultado = 'fallida'
             notas = 'El intento en el tope produjo fallo o RPE extremo'
         elif not mismo_peso:
@@ -405,7 +413,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         fallo_no_previsto = (
             fallo_nuevo and nueva_sesion.fallo_intencional is not True
         )
-        if fallo_no_previsto or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+        if fallo_no_previsto or (rpe_nuevo is not None and rpe_nuevo >= 10):
             resultado = 'fallida'
             notas = 'El ejercicio sigue sin recuperar un margen controlado'
         elif peso_nuevo <= peso_anterior + 0.5:
@@ -421,7 +429,28 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
         return
 
-    if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+    if log.motivo_codigo in ('rpe_alto_sostenido', 'rpe_extremo'):
+        reduccion_aplicada = float(peso_nuevo) < float(peso_anterior) - 0.5
+        if not reduccion_aplicada:
+            resultado = 'neutra'
+            notas = 'La reducción propuesta no se aplicó; no puede evaluarse su efecto'
+        elif fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9):
+            resultado = 'fallida'
+            notas = 'La carga se redujo, pero el RPE sigue alto en la sesión posterior'
+        elif rpe_nuevo is not None and rpe_nuevo <= 8:
+            resultado = 'validada'
+            notas = 'Margen recuperado tras aplicar la reducción de carga'
+        else:
+            resultado = 'neutra'
+            notas = 'Reducción aplicada sin dato suficiente para confirmar el margen'
+
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
+
+    if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
         resultado = 'fallida'
         notas = 'Carga excesiva: fallo o RPE extremo en la sesión posterior'
     elif log.accion == 'subir_peso' and peso_nuevo > peso_anterior:

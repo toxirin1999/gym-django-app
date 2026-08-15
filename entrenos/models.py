@@ -1180,6 +1180,8 @@ class GymDecisionLog(models.Model):
         ('fallo_intencional', 'Fallo muscular previsto'),
         ('fallo_no_controlado', 'Fallo muscular no previsto'),
         ('fallo_repetido_no_controlado', 'Fallo muscular no previsto repetido'),
+        ('rpe_alto_sostenido', 'RPE alto sostenido'),
+        ('rpe_extremo', 'RPE extremo'),
     ]
     ACCION_CHOICES = [
         ('subir_peso', 'Subir peso'),

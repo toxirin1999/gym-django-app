@@ -586,3 +586,21 @@ La interfaz presenta un único control compacto y pide la intención en un diál
 de tres opciones. El ciclo es local y reversible, no modifica la estrategia
 semanal ni genera preferencias. JOI solo verbaliza el fallo no previsto; un
 fallo deliberado no produce una intervención narrativa innecesaria.
+
+## Ciclo 8 · RPE alto sostenido V1
+
+El RPE local se evalúa según su almacenamiento real entero. Tres ejecuciones
+consecutivas del mismo ejercicio con RPE `≥9` generan una reducción de carga;
+una ejecución aislada no. Un RPE `10` sigue siendo una señal extrema que actúa
+sin esperar historial. Los umbrales decimales permanecen únicamente en métricas
+agregadas donde sí pueden existir promedios.
+
+La siguiente ejecución cierra causalmente la reducción: queda validada si el
+peso baja y el RPE vuelve a `≤8`, fallida si la reducción se aplica pero el RPE
+sigue en `≥9`, y neutra si la reducción no llegó a aplicarse o falta evidencia.
+Una sesión controlada interrumpe la consecutividad.
+
+Este ajuste es local, diario y reversible. No sustituye al ciclo de deload
+global basado en fatiga acumulada, no cambia la estrategia semanal y no genera
+preferencias. JOI usa la decisión existente de reducción para verbalizarla sin
+crear una segunda presencia paralela.
