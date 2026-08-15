@@ -1490,6 +1490,58 @@ class ContratoSemanalGym(models.Model):
         ]
 
 
+class EvaluacionSemanalGym(models.Model):
+    """Cierre causal y revisable de un contrato semanal materializado."""
+
+    CUMPLIMIENTO_OBJETIVO = 'objetivo'
+    CUMPLIMIENTO_MINIMA_VALIDA = 'minima_valida'
+    CUMPLIMIENTO_INSUFICIENTE = 'insuficiente'
+    CUMPLIMIENTOS = [
+        (CUMPLIMIENTO_OBJETIVO, 'Objetivo'),
+        (CUMPLIMIENTO_MINIMA_VALIDA, 'Mínima válida'),
+        (CUMPLIMIENTO_INSUFICIENTE, 'Insuficiente'),
+    ]
+
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_ACEPTADA = 'aceptada'
+    ESTADO_RECHAZADA = 'rechazada'
+    ESTADOS_REVISION = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_ACEPTADA, 'Aceptada'),
+        (ESTADO_RECHAZADA, 'Rechazada'),
+    ]
+
+    contrato = models.OneToOneField(
+        ContratoSemanalGym,
+        on_delete=models.CASCADE,
+        related_name='evaluacion',
+    )
+    version_calculo = models.PositiveSmallIntegerField(default=1)
+    estado_cumplimiento = models.CharField(max_length=16, choices=CUMPLIMIENTOS)
+    sesiones_completadas = models.PositiveSmallIntegerField(default=0)
+    sesiones_reubicadas = models.PositiveSmallIntegerField(default=0)
+    evidencia_snapshot = models.JSONField(default=dict)
+    estado_revision = models.CharField(
+        max_length=10,
+        choices=ESTADOS_REVISION,
+        default=ESTADO_PENDIENTE,
+        db_index=True,
+    )
+    respondida_por = models.ForeignKey(
+        User,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='evaluaciones_semanales_gym_respondidas',
+    )
+    respondida_en = models.DateTimeField(null=True, blank=True)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    actualizada_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-contrato__semana', '-id']
+
+
 class SesionProgramada(models.Model):
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_COMPLETADA = "completada"

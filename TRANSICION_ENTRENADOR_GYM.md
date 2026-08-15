@@ -639,3 +639,24 @@ La reducción de peso se conserva intacta. Deloads, RPE alto, técnica o fallos
 son intervenciones de seguridad con contratos propios y no se reutilizan para
 calibrar una progresión positiva. La confianza baja, media o alta depende solo
 del número de progresiones de peso aplicadas y concluyentes.
+
+## Ciclo 11 · Cierre semanal causal V1
+
+Cada contrato semanal completamente materializado puede producir una única
+evaluación versionada cuando termina su semana. El cumplimiento distingue el
+objetivo completo, la mínima válida y una semana insuficiente usando los
+umbrales inmutables del propio contrato. Las sesiones reubicadas conservan su
+identidad prescrita y se cuentan una sola vez; las pendientes nunca pasan a la
+semana siguiente como deuda.
+
+La evidencia se construye exclusivamente desde las sesiones ancladas al
+contrato. Volumen, duración, energía y RPE solo entran mediante el vínculo
+explícito con `EntrenoRealizado`; una coincidencia de cliente o fecha no basta.
+Cada métrica declara su cobertura y mantiene `None` cuando falta información,
+sin completar huecos mediante heurísticas.
+
+El cálculo es transaccional e idempotente. Mientras la revisión siga pendiente,
+una evidencia nueva actualiza el mismo cierre; después de aceptarlo o rechazarlo,
+el snapshot queda protegido frente a sobrescrituras automáticas. La respuesta
+del usuario solo registra su revisión: no cambia la estrategia, el contrato, las
+sesiones ni `dias_disponibles`.
