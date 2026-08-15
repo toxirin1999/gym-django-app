@@ -472,14 +472,9 @@ def evaluar_permiso_local_ejercicio(cliente, nombre_ejercicio, hoy=None):
         ultima = sesiones[0]
 
         # 2. fallo_repetido_no_controlado — últimas 2 sesiones, ambas con fallo
-        # sin control aparente. NOTA: "rir == 0" se usa como proxy de "fallo
-        # intencional" (heurística, no un campo explícito — RIR=0 también puede
-        # significar "me quedé sin margen sin buscarlo"). Aceptado para 62K;
-        # si se necesita precisión real, añadir un campo explícito
-        # fallo_intencional en EjercicioRealizado en una fase futura.
+        # no previsto. La intención es explícita; RIR=0 no se usa como proxy.
         def _fallo_no_controlado(ej):
-            fallo_intencional = (ej.rir is not None and ej.rir == 0)
-            return ej.fallo_muscular and not fallo_intencional and not ej.es_tope_maquina
+            return ej.fallo_muscular and ej.fallo_intencional is not True
 
         if len(sesiones) >= 2 and all(_fallo_no_controlado(s) for s in sesiones):
             return {'puede_subir': False, 'motivo': 'fallo_repetido_no_controlado',

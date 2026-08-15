@@ -569,3 +569,20 @@ RPE extremo y técnica comprometida— conservan prioridad.
 El tope no se convierte en preferencia ni modifica la estrategia semanal. Los
 logs históricos reconocibles se clasifican para evaluar correctamente las
 decisiones que aún estuvieran pendientes al desplegar esta versión.
+
+## Ciclo 7 · Fallo muscular V1
+
+El entrenamiento activo captura de forma explícita si el fallo fue `previsto`
+o `no previsto`. `RIR=0` deja de utilizarse como proxy de intención: los datos
+legacy sin clasificación se tratan como no controlados por seguridad.
+
+Un fallo previsto consolida la carga sin penalizar la sesión. El primer fallo
+no previsto mantiene la carga y abre una evaluación; dos fallos no previstos
+consecutivos reducen el peso. La siguiente ejecución valida el ajuste cuando
+recupera margen sin un nuevo fallo accidental ni RPE crítico. Un tope de
+máquina no anula esta señal de seguridad.
+
+La interfaz presenta un único control compacto y pide la intención en un diálogo
+de tres opciones. El ciclo es local y reversible, no modifica la estrategia
+semanal ni genera preferencias. JOI solo verbaliza el fallo no previsto; un
+fallo deliberado no produce una intervención narrativa innecesaria.

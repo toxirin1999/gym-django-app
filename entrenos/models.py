@@ -38,6 +38,11 @@ class EjercicioRealizado(models.Model):
     rpe = models.PositiveIntegerField(blank=True, null=True)  # 1-10
     rir = models.PositiveIntegerField(blank=True, null=True)  # 0-5
     fallo_muscular = models.BooleanField(default=False)
+    fallo_intencional = models.BooleanField(
+        null=True,
+        blank=True,
+        help_text='True=previsto, False=no previsto, None=sin fallo o dato legacy.',
+    )
 
     orden = models.PositiveIntegerField(default=0)
     completado = models.BooleanField(default=True)
@@ -1172,6 +1177,9 @@ class GymDecisionLog(models.Model):
         ('tecnica_comprometida', 'Técnica comprometida'),
         ('tope_maquina', 'Tope de máquina'),
         ('tope_maquina_sin_margen', 'Tope de máquina sin margen'),
+        ('fallo_intencional', 'Fallo muscular previsto'),
+        ('fallo_no_controlado', 'Fallo muscular no previsto'),
+        ('fallo_repetido_no_controlado', 'Fallo muscular no previsto repetido'),
     ]
     ACCION_CHOICES = [
         ('subir_peso', 'Subir peso'),

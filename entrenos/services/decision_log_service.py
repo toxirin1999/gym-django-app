@@ -48,6 +48,15 @@ def _tope_sin_margen(ejercicio, historial):
     return max(pesos) - min(pesos) <= 0.5 and len(set(reps)) == 1
 
 
+def _fallo_no_controlado_repetido(ejercicio, historial):
+    if not ejercicio.fallo_muscular or ejercicio.fallo_intencional is True:
+        return False
+    if not historial:
+        return False
+    anterior = historial[0]
+    return anterior.fallo_muscular and anterior.fallo_intencional is not True
+
+
 @transaction.atomic
 def cerrar_aprendizaje_gym(entreno):
     """Cierra causalmente una sesión: evalúa pasado y después crea futuro.
@@ -133,6 +142,20 @@ def generar_decisiones_para_entreno(entreno):
         if accion == 'subir_reps' and es_tope:
             motivo_codigo = 'tope_maquina'
 
+        if fallo:
+            if ej.fallo_intencional is True:
+                accion = 'mantener'
+                valor_cambio = None
+                motivo = 'Fallo muscular previsto — consolidar antes de progresar'
+                motivo_codigo = 'fallo_intencional'
+            elif _fallo_no_controlado_repetido(ej, historial):
+                accion = 'bajar_peso'
+                valor_cambio = perfil.reduccion_peso_pct
+                motivo = 'Fallo muscular no previsto en 2 sesiones consecutivas — reducir carga'
+                motivo_codigo = 'fallo_repetido_no_controlado'
+            else:
+                motivo_codigo = 'fallo_no_controlado'
+
         # El fallo/RPE extremo conserva prioridad por ser una señal más
         # protectora. En el resto de casos, una serie comprometida impide que
         # una sesión aparentemente exitosa produzca una subida de carga.
@@ -179,15 +202,15 @@ def generar_decisiones_para_entreno(entreno):
 def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion='peso_reps'):
     """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado."""
 
-    # 1. Fallo muscular — distinguir intencional (RIR=0) de exceso de carga
+    # 1. Fallo muscular. La intención se clasifica después con el campo
+    # explícito; RIR=0 ya no se interpreta como prueba de intención.
     if fallo:
-        fallo_intencional = (ej.rir is not None and ej.rir == 0)
-        if fallo_intencional:
+        if getattr(ej, 'fallo_intencional', None) is True:
             # Fallo buscado deliberadamente — consolidar sin penalizar
             return (
                 'mantener',
                 None,
-                'Fallo muscular intencional (RIR=0) — consolidar antes de progresar',
+                'Fallo muscular previsto — consolidar antes de progresar',
             )
         if rpe is not None and rpe >= 9.5:
             return (
@@ -369,6 +392,28 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         else:
             resultado = 'neutra'
             notas = 'Mismo rendimiento en el tope; aún no alcanzó el objetivo'
+
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
+
+    if log.motivo_codigo in (
+        'fallo_intencional', 'fallo_no_controlado', 'fallo_repetido_no_controlado',
+    ):
+        fallo_no_previsto = (
+            fallo_nuevo and nueva_sesion.fallo_intencional is not True
+        )
+        if fallo_no_previsto or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+            resultado = 'fallida'
+            notas = 'El ejercicio sigue sin recuperar un margen controlado'
+        elif peso_nuevo <= peso_anterior + 0.5:
+            resultado = 'validada'
+            notas = 'Margen recuperado sin fallo no previsto en la sesión posterior'
+        else:
+            resultado = 'neutra'
+            notas = 'Sin fallo no previsto, pero la carga cambió y no permite aislar el ajuste'
 
         log.resultado = resultado
         log.notas_resultado = notas

@@ -473,12 +473,18 @@ class TestPermisoLocal07_FalloRepetidoNoControlado(PermisoLocalEjercicioBase):
         self.assertEqual(resultado['motivo'], 'fallo_repetido_no_controlado')
 
 
-class TestPermisoLocal08_FalloControladoRirCero(PermisoLocalEjercicioBase):
-    def test_fallo_con_rir_cero_se_considera_controlado(self):
+class TestPermisoLocal08_FalloControladoExplicito(PermisoLocalEjercicioBase):
+    def test_fallo_intencional_explicito_se_considera_controlado(self):
         entreno1 = self._entreno(date(2026, 6, 4))
-        self._ejercicio_realizado(entreno1, nombre='Press Banca', fallo_muscular=True, rir=0)
+        self._ejercicio_realizado(
+            entreno1, nombre='Press Banca', fallo_muscular=True,
+            fallo_intencional=True, rir=0,
+        )
         entreno2 = self._entreno(date(2026, 6, 9))
-        self._ejercicio_realizado(entreno2, nombre='Press Banca', fallo_muscular=True, rir=0)
+        self._ejercicio_realizado(
+            entreno2, nombre='Press Banca', fallo_muscular=True,
+            fallo_intencional=True, rir=0,
+        )
 
         with patch(_DELOAD_PATH, return_value=False):
             resultado = evaluar_permiso_local_ejercicio(self.cliente, 'Press Banca', self.hoy)
@@ -487,7 +493,7 @@ class TestPermisoLocal08_FalloControladoRirCero(PermisoLocalEjercicioBase):
 
 
 class TestPermisoLocal09_FalloConTopeMaquina(PermisoLocalEjercicioBase):
-    def test_fallo_con_tope_maquina_no_bloquea(self):
+    def test_fallo_no_previsto_con_tope_maquina_tambien_bloquea(self):
         entreno1 = self._entreno(date(2026, 6, 4))
         self._ejercicio_realizado(entreno1, nombre='Press Banca', fallo_muscular=True, rir=1, es_tope_maquina=True)
         entreno2 = self._entreno(date(2026, 6, 9))
@@ -496,7 +502,8 @@ class TestPermisoLocal09_FalloConTopeMaquina(PermisoLocalEjercicioBase):
         with patch(_DELOAD_PATH, return_value=False):
             resultado = evaluar_permiso_local_ejercicio(self.cliente, 'Press Banca', self.hoy)
 
-        self.assertTrue(resultado['puede_subir'])
+        self.assertFalse(resultado['puede_subir'])
+        self.assertEqual(resultado['motivo'], 'fallo_repetido_no_controlado')
 
 
 class TestPermisoLocal10_SoloUltimaConFalloNoEsRepetido(PermisoLocalEjercicioBase):

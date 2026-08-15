@@ -4291,6 +4291,13 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 is_recovery_load = is_recovery_load_str == 'true'
 
                 es_tope_maquina = request.POST.get(f'{form_id}_es_tope_maquina', 'false').lower() == 'true'
+                fallo_tipo = request.POST.get(f'{form_id}_fallo_tipo', '').strip()
+                fallo_muscular = fallo_tipo in ('previsto', 'no_previsto')
+                fallo_intencional = (
+                    True if fallo_tipo == 'previsto'
+                    else False if fallo_tipo == 'no_previsto'
+                    else None
+                )
 
                 # Extraer datos de molestia reportada intra-entreno
                 molestia_reportada = request.POST.get(f'{form_id}_molestia_reportada', 'false').lower() == 'true'
@@ -4313,6 +4320,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     rpe=rpe_promedio_ejercicio,
                     is_recovery_load=is_recovery_load,
                     es_tope_maquina=es_tope_maquina,
+                    fallo_muscular=fallo_muscular,
+                    fallo_intencional=fallo_intencional,
                     molestia_reportada=molestia_reportada,
                     molestia_zona=molestia_zona,
                     molestia_severidad=molestia_severidad,

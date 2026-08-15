@@ -413,7 +413,13 @@ def joi_decision_plan(sender, instance, created, **kwargs):
     # 'mantener' solo interesa cuando la causa es técnica o molestia, no rutina
     if instance.accion == 'mantener':
         motivo_lower = (instance.motivo or '').lower()
-        if not any(k in motivo_lower for k in ('técnica', 'tecnica', 'molestia', 'dolor', 'comprometida')):
+        causas_relevantes = {
+            'tecnica_comprometida', 'fallo_no_controlado',
+        }
+        if (
+            instance.motivo_codigo not in causas_relevantes
+            and not any(k in motivo_lower for k in ('técnica', 'tecnica', 'molestia', 'dolor', 'comprometida'))
+        ):
             return
 
     try:
