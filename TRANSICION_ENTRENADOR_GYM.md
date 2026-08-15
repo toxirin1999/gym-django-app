@@ -515,3 +515,20 @@ Política V1:
 El signal Hyrox TSB < -30 dejó de mutar sesiones. `DeloadAutoTrigger` conserva
 TSB < -25 como detector puro. JOI recibe un evento al abrir y otro al cerrar
 mediante sus generadores existentes; no se hardcodea su voz aquí.
+
+## Ciclo 4 · Evaluación de la versión esencial V1
+
+Al aceptar `esenciales_frecuentes`, el snapshot contractual conserva un bloque
+aditivo `evaluacion_v1`: congela los 21 días anteriores como baseline y las
+fechas efectivas de la prueba. Los snapshots antiguos siguen siendo válidos.
+
+La medición usa `SesionProgramada`, excluye omisiones de sistema y cancelaciones
+por lesión, cuenta una reubicación una sola vez y atribuye una completada al día
+real (`fecha_ejecucion`). Registra cobertura de principales, RPE y energía, y
+lee el objetivo/mínimo del `ContratoSemanalGym`; el fallback histórico 5/3 solo
+se usa cuando aún no existe contrato.
+
+El veredicto legacy se conserva. La comparación con baseline es descriptiva,
+marca el abandono evitado como no demostrable y revierte el freeze al terminar
+o cancelarlo. Nunca crea preferencias, escribe ManualDavid, cambia estrategia
+ni promociona automáticamente la observación.

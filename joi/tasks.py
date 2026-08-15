@@ -44,6 +44,7 @@ def generar_resultado_intervencion_joi(self, intervencion_id):
         'resultado', 'sesiones_completadas', 'sesiones_esenciales',
         'porcentaje_esenciales', 'ventana',
     )}
+    datos['evaluacion_v1'] = snap.get('evaluacion_v1')
     mensaje = generar_mensaje_joi(iv.cliente, 'resultado_intervencion', datos)
 
     with transaction.atomic():

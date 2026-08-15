@@ -219,6 +219,14 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
     else:
         fecha_fin = _fin_de_semana(fecha_ref)
 
+    if sugerencia.patron == 'esenciales_frecuentes':
+        from entrenos.services.ciclo_intervencion_esenciales_service import construir_evaluacion_v1
+        snap = dict(sugerencia.contrato_snapshot or {})
+        snap.setdefault('evaluacion_v1', construir_evaluacion_v1(
+            sugerencia.cliente, fecha_ref, fecha_fin,
+        ))
+        sugerencia.contrato_snapshot = snap
+
     IntervencionPlan.objects.create(
         cliente=sugerencia.cliente,
         sugerencia=sugerencia,
@@ -231,7 +239,7 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
 
     sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
     sugerencia.fecha_respuesta = timezone.now()
-    sugerencia.save(update_fields=['estado', 'fecha_respuesta'])
+    sugerencia.save(update_fields=['estado', 'fecha_respuesta', 'contrato_snapshot'])
     return sugerencia
 
 

@@ -1462,13 +1462,26 @@ def _prompt_resultado_intervencion(ctx: dict, datos_extra: dict) -> str:
         'persistente': 'la señal siguió presente',
         'datos_insuficientes': 'no hubo sesiones suficientes para valorar el ajuste',
     }.get(resultado, 'el resultado aún no es concluyente')
+    ev1 = datos_extra.get('evaluacion_v1') or {}
+    medicion = ev1.get('medicion') or {}
+    rpe = medicion.get('rpe') or {}
+    energia = medicion.get('energia_pre') or {}
+    principales = medicion.get('principales') or {}
+    cobertura = (
+        f"- Cobertura: RPE mediana {rpe.get('mediana')} (n={rpe.get('n', 0)}); "
+        f"energía previa mediana {energia.get('mediana')} (n={energia.get('n', 0)}); "
+        f"principales {principales.get('completados', 0)}/{principales.get('planificados', 0)}.\n"
+        if ev1 else ''
+    )
     return (
         "RESULTADO DE UN AJUSTE TEMPORAL:\n"
         f"- Ventana cerrada: {completas} sesiones, {esenciales} esenciales.\n"
         f"- Lectura descriptiva: {lectura}.\n"
+        f"{cobertura}"
         "Habla en 2 o 3 frases. Nombra lo aprendido sin atribuir causalidad: "
         "no digas que el ajuste causó, logró, funcionó o provocó el resultado. "
-        "No prescribas un cambio nuevo; el plan solo acaba de observar esta comparación."
+        "No prescribas un cambio nuevo ni promociones una preferencia o estrategia; "
+        "el plan solo acaba de observar esta comparación y el abandono evitado no es demostrable."
     )
 
 

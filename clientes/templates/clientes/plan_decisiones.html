@@ -1161,6 +1161,17 @@
             {% else %}No hubo sesiones suficientes para valorar el ajuste.{% endif %}
           </p>
           <p class="dc-card-meta">{{ ev.sesiones_esenciales }} esenciales de {{ ev.sesiones_completadas }} sesiones. Esta comparación no demuestra que el ajuste fuera la causa.</p>
+          {% with ev1=iv.sugerencia.contrato_snapshot.evaluacion_v1 %}
+          {% if ev1.medicion %}
+          <p class="dc-card-meta">
+            Cobertura observada: {{ ev1.medicion.sesiones_completadas }} de {{ ev1.medicion.sesiones_elegibles }} sesiones elegibles ·
+            principales {% if ev1.medicion.principales.porcentaje == None %}sin clasificación{% else %}{{ ev1.medicion.principales.completados }}/{{ ev1.medicion.principales.planificados }}{% endif %} ·
+            RPE mediano {{ ev1.medicion.rpe.mediana|default:"sin dato" }} (n={{ ev1.medicion.rpe.n }}) ·
+            energía previa mediana {{ ev1.medicion.energia_pre.mediana|default:"sin dato" }} (n={{ ev1.medicion.energia_pre.n }}).
+            Es una comparación descriptiva: no demuestra causalidad, abandono evitado ni promueve un cambio estable del plan.
+          </p>
+          {% endif %}
+          {% endwith %}
           {% endwith %}
         </article>
       {% endfor %}
