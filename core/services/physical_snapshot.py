@@ -120,7 +120,8 @@ def _active_injuries_signal(cliente, as_of_date):
         )
         .exclude(fase=UserInjury.Fase.RECUPERADO)
         .filter(Q(fecha_resolucion__isnull=True) | Q(fecha_resolucion__gt=as_of_date))
-        .order_by("fecha_inicio", "pk")
+        # Equivale al `.first()` legacy de UserInjury (Meta: fecha más reciente).
+        .order_by("-fecha_inicio", "-pk")
     )
     items = [
         {

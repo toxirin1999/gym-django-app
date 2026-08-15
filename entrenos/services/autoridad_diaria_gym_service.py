@@ -79,36 +79,12 @@ def _snapshot_fisico_no_disponible(cliente, fecha) -> dict:
     }
 
 
-def _obtener_snapshot_fisico(cliente, fecha, huella_base):
-    """Recupera la captura de la versión o construye una sola captura nueva.
-
-    Reusar la evidencia persistida evita que una relectura, corrección o
-    reversión reescriba la historia física de una decisión ya materializada.
-    """
-    from entrenos.models import GymDecisionVersion
-
-    version = (
-        GymDecisionVersion.objects.filter(
-            cliente=cliente,
-            fecha=fecha,
-            base_fingerprint=huella_base,
-        )
-        .order_by('-version')
-        .first()
-    )
-    if version:
-        snapshot = (version.snapshot or {}).get('physical_snapshot')
-        if snapshot is not None:
-            fingerprint = (version.snapshot or {}).get('physical_snapshot_fingerprint')
-            return deepcopy(snapshot), fingerprint or _fingerprint_snapshot_fisico(snapshot)
-
+def _construir_snapshot_fisico(cliente, fecha):
     try:
         from core.services.physical_snapshot import build_physical_snapshot
 
         snapshot = build_physical_snapshot(cliente, fecha)
     except Exception:
-        # La autoridad legacy sigue disponible. El contrato público no filtra
-        # excepciones, stack traces, nombres de infraestructura ni datos fuente.
         snapshot = _snapshot_fisico_no_disponible(cliente, fecha)
     return deepcopy(snapshot), snapshot.get('fingerprint') or _fingerprint_snapshot_fisico(snapshot)
 
@@ -224,12 +200,25 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
         return autoridad
 
 
-def resolver_autoridad_diaria_gym(cliente, fecha=None) -> dict:
+def resolver_autoridad_diaria_gym(cliente, fecha=None, *, physical_snapshot=None) -> dict:
     """Devuelve la única decisión Gym preparada para presentar y ejecutar."""
     from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
 
     fecha = fecha or timezone.localdate()
-    decision_base = obtener_sesion_recomendada_hoy(cliente, fecha)
+    if physical_snapshot is None:
+        # Se recaptura en cada resolución para que un check-in/readiness recién
+        # guardado pueda cambiar la decisión y, por tanto, su cache key ejecutiva.
+        physical_snapshot, huella_fisica = _construir_snapshot_fisico(cliente, fecha)
+    else:
+        physical_snapshot = deepcopy(physical_snapshot)
+        huella_fisica = physical_snapshot.get('fingerprint') or _fingerprint_snapshot_fisico(
+            physical_snapshot
+        )
+    decision_base = obtener_sesion_recomendada_hoy(
+        cliente,
+        fecha,
+        physical_snapshot=physical_snapshot,
+    )
     huella = _fingerprint(decision_base, fecha)
     cache_key = f'autoridad_diaria_gym_v{SCHEMA_VERSION}_{cliente.pk}_{fecha.isoformat()}_{huella}'
     cached = cache.get(cache_key)
@@ -263,12 +252,7 @@ def resolver_autoridad_diaria_gym(cliente, fecha=None) -> dict:
         'cambios_materializados': cambios,
         'sesion_materializada': bool(entrenamiento and entrenamiento.get('ejercicios')),
     })
-    snapshot_fisico, huella_fisica = _obtener_snapshot_fisico(
-        cliente,
-        fecha,
-        huella,
-    )
-    autoridad['physical_snapshot'] = snapshot_fisico
+    autoridad['physical_snapshot'] = physical_snapshot
     autoridad['physical_snapshot_fingerprint'] = huella_fisica
     deload_materializado = any(cambio.get('tipo') == 'deload' for cambio in cambios)
     for ejercicio in (autoridad.get('entrenamiento') or {}).get('ejercicios', []):
@@ -299,7 +283,17 @@ def corregir_autoridad_diaria_gym(
     if not str(motivo or '').strip():
         raise AutoridadGymCorreccionInvalida('La corrección necesita un motivo.')
 
-    actual = resolver_autoridad_diaria_gym(cliente, fecha)
+    vigente_previa = (
+        GymDecisionVersion.objects.filter(cliente=cliente, fecha=fecha, vigente=True)
+        .order_by('-version')
+        .first()
+    )
+    snapshot_previo = (vigente_previa.snapshot or {}).get('physical_snapshot') if vigente_previa else None
+    actual = resolver_autoridad_diaria_gym(
+        cliente,
+        fecha,
+        physical_snapshot=snapshot_previo,
+    )
     if actual.get('decision_id') != decision_id_esperada:
         raise AutoridadGymCorreccionInvalida('La decisión cambió; revisa la versión vigente.')
 
@@ -375,7 +369,17 @@ def revertir_correccion_autoridad_diaria_gym(
 
     if not str(motivo or '').strip():
         raise AutoridadGymCorreccionInvalida('La reversión necesita un motivo.')
-    actual = resolver_autoridad_diaria_gym(cliente, fecha)
+    vigente_previa = (
+        GymDecisionVersion.objects.filter(cliente=cliente, fecha=fecha, vigente=True)
+        .order_by('-version')
+        .first()
+    )
+    snapshot_previo = (vigente_previa.snapshot or {}).get('physical_snapshot') if vigente_previa else None
+    actual = resolver_autoridad_diaria_gym(
+        cliente,
+        fecha,
+        physical_snapshot=snapshot_previo,
+    )
     if actual.get('decision_id') != decision_id_esperada:
         raise AutoridadGymCorreccionInvalida('La decisión cambió; revisa la versión vigente.')
 

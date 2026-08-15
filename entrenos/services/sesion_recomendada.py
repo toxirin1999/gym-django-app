@@ -362,7 +362,7 @@ _MENSAJES_POR_CAUSA = {
 }
 
 
-def _obtener_contexto_fisico(cliente, fecha_hoy):
+def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
     """
     Gathers physical context for the daily decision.
     All lookups are wrapped in try/except — missing models degrade gracefully.
@@ -376,6 +376,7 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         readiness_bajo (bool), readiness_valor (int|None),
         preferencias_activas (list[str])  — active preference types
     """
+    snapshot_inyectado = physical_snapshot is not None
     ctx = {
         'lesion_activa': False,
         'lesion_fase': None,
@@ -394,6 +395,27 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
         'readiness_valor': None,
         'preferencias_activas': [],
     }
+    if snapshot_inyectado:
+        ctx['_cliente'] = cliente
+
+    snapshot_disponible = physical_snapshot is not None
+    if physical_snapshot is None:
+        try:
+            from core.services.physical_snapshot import build_physical_snapshot
+            physical_snapshot = build_physical_snapshot(cliente, fecha_hoy)
+            snapshot_disponible = True
+        except Exception:
+            # Compatibilidad operacional: si una fuente del snapshot falla,
+            # esta fase conserva las consultas legacy y sus mismas decisiones.
+            physical_snapshot = None
+            snapshot_disponible = False
+    if (
+        not isinstance(physical_snapshot, dict)
+        or physical_snapshot.get('status') == 'unavailable'
+        or not isinstance(physical_snapshot.get('signals'), dict)
+    ):
+        snapshot_disponible = False
+    signals = physical_snapshot.get('signals', {}) if snapshot_disponible else {}
 
     # Phase 22E: load active preferences as soft signals
     try:
@@ -404,15 +426,25 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
 
     # 1. Lesión activa (AGUDA o SUB_AGUDA)
     try:
-        from hyrox.models import UserInjury
-        lesion = UserInjury.objects.filter(
-            cliente=cliente,
-            activa=True,
-            fase__in=['AGUDA', 'SUB_AGUDA'],
-        ).first()
-        if lesion:
-            ctx['lesion_activa'] = True
-            ctx['lesion_fase'] = lesion.fase
+        if snapshot_disponible:
+            lesiones = (signals.get('active_injuries') or {}).get('items') or []
+            lesion = next(
+                (item for item in lesiones if item.get('phase') in {'AGUDA', 'SUB_AGUDA'}),
+                None,
+            )
+            if lesion:
+                ctx['lesion_activa'] = True
+                ctx['lesion_fase'] = lesion.get('phase')
+        else:
+            from hyrox.models import UserInjury
+            lesion = UserInjury.objects.filter(
+                cliente=cliente,
+                activa=True,
+                fase__in=['AGUDA', 'SUB_AGUDA'],
+            ).first()
+            if lesion:
+                ctx['lesion_activa'] = True
+                ctx['lesion_fase'] = lesion.fase
     except Exception:
         pass
 
@@ -436,49 +468,76 @@ def _obtener_contexto_fisico(cliente, fecha_hoy):
 
     # 3. Energía subjetiva del día (BitacoraDiaria) — ≤ 3 = baja
     try:
-        from clientes.models import BitacoraDiaria
-        bitacora = BitacoraDiaria.objects.filter(
-            cliente=cliente, fecha=fecha_hoy
-        ).first()
-        if bitacora:
-            ctx.update({
-                'evidencia_fecha': bitacora.fecha,
-                'evidencia_presente': True,
-                'horas_sueno': (
-                    float(bitacora.horas_sueno)
-                    if bitacora.horas_sueno is not None else None
-                ),
-                'frecuencia_cardiaca_reposo': bitacora.fc_reposo,
-                'hrv_ms': bitacora.hrv_ms,
-                'calidad_sueno': bitacora.calidad_sueno,
-                'dolor': bitacora.dolor_articular,
-            })
-            if bitacora.energia_subjetiva is not None:
-                ctx['energia_valor'] = int(bitacora.energia_subjetiva)
-                ctx['energia_baja'] = ctx['energia_valor'] <= 3
+        if snapshot_disponible:
+            checkin = signals.get('checkin') or {}
+            # El snapshot conserva registros recientes para auditoría, pero la
+            # autoridad Gym mantiene la regla legacy: solo gobierna el día exacto.
+            if checkin.get('observed_on') == fecha_hoy.isoformat():
+                values = checkin.get('values') or {}
+                ctx.update({
+                    'evidencia_fecha': fecha_hoy,
+                    'evidencia_presente': True,
+                    'horas_sueno': values.get('sleep_hours'),
+                    'frecuencia_cardiaca_reposo': values.get('resting_hr'),
+                    'hrv_ms': values.get('hrv_ms'),
+                    'calidad_sueno': values.get('sleep_quality'),
+                    'dolor': values.get('joint_pain'),
+                })
+                if values.get('energy') is not None:
+                    ctx['energia_valor'] = int(values['energy'])
+                    ctx['energia_baja'] = ctx['energia_valor'] <= 3
+        else:
+            from clientes.models import BitacoraDiaria
+            bitacora = BitacoraDiaria.objects.filter(
+                cliente=cliente, fecha=fecha_hoy
+            ).first()
+            if bitacora:
+                ctx.update({
+                    'evidencia_fecha': bitacora.fecha,
+                    'evidencia_presente': True,
+                    'horas_sueno': (
+                        float(bitacora.horas_sueno)
+                        if bitacora.horas_sueno is not None else None
+                    ),
+                    'frecuencia_cardiaca_reposo': bitacora.fc_reposo,
+                    'hrv_ms': bitacora.hrv_ms,
+                    'calidad_sueno': bitacora.calidad_sueno,
+                    'dolor': bitacora.dolor_articular,
+                })
+                if bitacora.energia_subjetiva is not None:
+                    ctx['energia_valor'] = int(bitacora.energia_subjetiva)
+                    ctx['energia_baja'] = ctx['energia_valor'] <= 3
     except Exception:
         pass
 
     # 4. Readiness Hyrox — solo para usuarios con objetivo activo (< 45 = bajo)
     try:
-        from hyrox.models import HyroxObjective, HyroxReadinessLog
-        objetivo = (
-            HyroxObjective.objects
-            .filter(
-                cliente=cliente,
-                estado='activo',
-                fecha_evento__gte=fecha_hoy,
+        if snapshot_disponible:
+            readiness = signals.get('hyrox_readiness') or {}
+            if readiness.get('observed_on') == fecha_hoy.isoformat():
+                score = (readiness.get('values') or {}).get('score')
+                if score is not None:
+                    ctx['readiness_valor'] = score
+                    ctx['readiness_bajo'] = score < 45
+        else:
+            from hyrox.models import HyroxObjective, HyroxReadinessLog
+            objetivo = (
+                HyroxObjective.objects
+                .filter(
+                    cliente=cliente,
+                    estado='activo',
+                    fecha_evento__gte=fecha_hoy,
+                )
+                .order_by('fecha_evento', 'pk')
+                .first()
             )
-            .order_by('fecha_evento', 'pk')
-            .first()
-        )
-        if objetivo:
-            rl = HyroxReadinessLog.objects.filter(
-                objective=objetivo, fecha=fecha_hoy
-            ).first()
-            if rl:
-                ctx['readiness_valor'] = rl.score
-                ctx['readiness_bajo'] = rl.score < 45
+            if objetivo:
+                rl = HyroxReadinessLog.objects.filter(
+                    objective=objetivo, fecha=fecha_hoy
+                ).first()
+                if rl:
+                    ctx['readiness_valor'] = rl.score
+                    ctx['readiness_bajo'] = rl.score < 45
     except Exception:
         pass
 
@@ -1117,7 +1176,7 @@ def _devolver_con_traza(cliente, decision, fecha):
     return decision
 
 
-def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
+def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=None):
     """
     Returns the recommended session for today as a dict:
         tipo:              'pendiente' | 'programada_hoy' | 'descanso'
@@ -1193,7 +1252,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
             'modo_reducido': False,
             'distribucion_aviso': None,
         }
-        contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
+        contexto = _obtener_contexto_fisico(
+            cliente,
+            fecha_hoy,
+            physical_snapshot=physical_snapshot,
+        )
         contexto['_cliente'] = cliente  # for injury-session conflict check in _aplicar_contexto
         decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
         decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)
@@ -1270,7 +1333,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None):
         'modo_reducido': False,
         'distribucion_aviso': None,
     }
-    contexto = _obtener_contexto_fisico(cliente, fecha_hoy)
+    contexto = _obtener_contexto_fisico(
+        cliente,
+        fecha_hoy,
+        physical_snapshot=physical_snapshot,
+    )
     contexto['_cliente'] = cliente  # for injury-session conflict check
     decision = _aplicar_contexto(decision_base, contexto, fecha_hoy)
     decision = _aplicar_efecto_distribucion(cliente, decision, fecha_hoy)

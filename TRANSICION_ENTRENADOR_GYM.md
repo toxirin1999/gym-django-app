@@ -706,3 +706,22 @@ leer una fuente no bloquea el comportamiento vigente del entrenador.
 
 Este corte no añade tablas ni migraciones. Su objetivo es medir divergencias
 entre las lecturas históricas antes de sustituirlas de forma gradual.
+
+## Fase 5.3 — lectura canónica con equivalencia legacy
+
+La autoridad construye una sola captura física por resolución y entrega esa
+misma evidencia al motor Gym y a `GymDecisionVersion`. Energía, sueño, frecuencia
+cardiaca en reposo, HRV, dolor, readiness y lesión se derivan ya desde el
+snapshot. Se conservan exactamente los umbrales y prioridades anteriores: el
+check-in solo gobierna en su fecha exacta y únicamente una lesión aguda o
+subaguda activa la protección existente.
+
+El snapshot se recaptura antes de consultar la caché ejecutiva, de modo que un
+check-in o readiness recién guardado puede cambiar la decisión inmediatamente.
+Las correcciones y reversiones, en cambio, reutilizan la captura de su versión
+vigente para no reescribir la evidencia histórica. Si el constructor falla, el
+motor degrada temporalmente a las consultas legacy.
+
+Fútbol e Hyrox reciente continúan leyendo la fecha planificada antigua durante
+este corte. El paso a `fecha_realizado` queda reservado como cambio funcional
+aislado para la Fase 5.4.

@@ -69,11 +69,16 @@ class SnapshotFisicoAutoridadTests(TestCase):
         self.assertEqual(version.snapshot["physical_snapshot"], self.physical)
         self.assertEqual(version.snapshot["physical_snapshot_fingerprint"], "physical-a")
         build_snapshot.assert_called_once_with(self.cliente, self.fecha)
+        obtener_base.assert_called_once_with(
+            self.cliente,
+            self.fecha,
+            physical_snapshot=self.physical,
+        )
 
     @patch("core.services.physical_snapshot.build_physical_snapshot")
     @patch("entrenos.services.plan_dinamico_service.aplicar_plan_dinamico")
     @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
-    def test_relectura_sin_cache_reusa_evidencia_persistida_y_no_versiona_por_captura(
+    def test_relectura_sin_cache_recaptura_una_vez_y_no_versiona_si_decision_equivale(
         self, obtener_base, aplicar_plan, build_snapshot,
     ):
         obtener_base.return_value = self.base
@@ -87,7 +92,38 @@ class SnapshotFisicoAutoridadTests(TestCase):
         self.assertEqual(segunda["decision_id"], primera["decision_id"])
         self.assertEqual(segunda["physical_snapshot"], self.physical)
         self.assertEqual(GymDecisionVersion.objects.filter(cliente=self.cliente, fecha=self.fecha).count(), 1)
-        build_snapshot.assert_called_once_with(self.cliente, self.fecha)
+        self.assertEqual(build_snapshot.call_count, 2)
+        build_snapshot.assert_called_with(self.cliente, self.fecha)
+
+    @patch("core.services.physical_snapshot.build_physical_snapshot")
+    @patch("entrenos.services.plan_dinamico_service.aplicar_plan_dinamico")
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_nueva_evidencia_sin_limpiar_cache_se_recaptura_y_llega_al_motor(
+        self, obtener_base, aplicar_plan, build_snapshot,
+    ):
+        normal = {**self.physical, "signals": {"checkin": {"values": {"energy": 7}}}, "fingerprint": "physical-normal"}
+        baja = {**self.physical, "signals": {"checkin": {"values": {"energy": 2}}}, "fingerprint": "physical-low"}
+        build_snapshot.side_effect = [normal, baja]
+
+        def decidir(_cliente, _fecha, *, physical_snapshot):
+            decision = dict(self.base)
+            energy = physical_snapshot["signals"]["checkin"]["values"]["energy"]
+            if energy <= 3:
+                decision.update(estado="version_reducida", causa_principal="energia_baja")
+            return decision
+
+        obtener_base.side_effect = decidir
+        aplicar_plan.return_value = (self.base["entrenamiento"]["ejercicios"], [])
+
+        primera = self._resolver()
+        segunda = self._resolver()
+
+        self.assertEqual(build_snapshot.call_count, 2)
+        self.assertEqual(obtener_base.call_args_list[0].kwargs["physical_snapshot"], normal)
+        self.assertEqual(obtener_base.call_args_list[1].kwargs["physical_snapshot"], baja)
+        self.assertEqual(primera["postura"], "empujar")
+        self.assertEqual(segunda["postura"], "sostener")
+        self.assertNotEqual(primera["decision_id"], segunda["decision_id"])
 
     @patch("core.services.physical_snapshot.build_physical_snapshot")
     @patch("entrenos.services.plan_dinamico_service.aplicar_plan_dinamico")
