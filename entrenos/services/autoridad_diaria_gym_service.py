@@ -53,6 +53,66 @@ def _fingerprint(decision: dict, fecha) -> str:
     return hashlib.sha256(crudo.encode('utf-8')).hexdigest()[:20]
 
 
+def _fingerprint_snapshot_fisico(snapshot: dict) -> str:
+    """Huella observacional; nunca participa en la identidad ejecutiva Gym."""
+    payload = {
+        clave: valor
+        for clave, valor in snapshot.items()
+        if clave not in {'captured_at', 'fingerprint'}
+    }
+    crudo = json.dumps(
+        _serializable(payload),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(',', ':'),
+    )
+    return hashlib.sha256(crudo.encode('utf-8')).hexdigest()
+
+
+def _snapshot_fisico_no_disponible(cliente, fecha) -> dict:
+    return {
+        'schema_version': 1,
+        'cliente_id': cliente.pk,
+        'as_of_date': fecha.isoformat(),
+        'status': 'unavailable',
+        'error_code': 'physical_snapshot_unavailable',
+    }
+
+
+def _obtener_snapshot_fisico(cliente, fecha, huella_base):
+    """Recupera la captura de la versión o construye una sola captura nueva.
+
+    Reusar la evidencia persistida evita que una relectura, corrección o
+    reversión reescriba la historia física de una decisión ya materializada.
+    """
+    from entrenos.models import GymDecisionVersion
+
+    version = (
+        GymDecisionVersion.objects.filter(
+            cliente=cliente,
+            fecha=fecha,
+            base_fingerprint=huella_base,
+        )
+        .order_by('-version')
+        .first()
+    )
+    if version:
+        snapshot = (version.snapshot or {}).get('physical_snapshot')
+        if snapshot is not None:
+            fingerprint = (version.snapshot or {}).get('physical_snapshot_fingerprint')
+            return deepcopy(snapshot), fingerprint or _fingerprint_snapshot_fisico(snapshot)
+
+    try:
+        from core.services.physical_snapshot import build_physical_snapshot
+
+        snapshot = build_physical_snapshot(cliente, fecha)
+    except Exception:
+        # La autoridad legacy sigue disponible. El contrato público no filtra
+        # excepciones, stack traces, nombres de infraestructura ni datos fuente.
+        snapshot = _snapshot_fisico_no_disponible(cliente, fecha)
+    return deepcopy(snapshot), snapshot.get('fingerprint') or _fingerprint_snapshot_fisico(snapshot)
+
+
 def _postura(estado: str) -> str:
     if estado in {'recuperar', 'posponer'}:
         return 'proteger'
@@ -88,6 +148,12 @@ def _capas_suprimidas(decision: dict) -> list[str]:
 def _aplicar_version_manual(autoridad: dict, version) -> dict:
     resultado = deepcopy(autoridad)
     resultado.update(version.ajustes or {})
+    snapshot_version = version.snapshot or {}
+    if 'physical_snapshot' in snapshot_version:
+        resultado['physical_snapshot'] = deepcopy(snapshot_version['physical_snapshot'])
+        resultado['physical_snapshot_fingerprint'] = snapshot_version.get(
+            'physical_snapshot_fingerprint'
+        ) or _fingerprint_snapshot_fisico(snapshot_version['physical_snapshot'])
     resultado.update({
         'decision_id': version.decision_id,
         'origen_decision': version.origen,
@@ -124,6 +190,12 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
             and vigente.origen == GymDecisionVersion.ORIGEN_MOTOR
             and vigente.fingerprint == huella
         ):
+            snapshot_vigente = vigente.snapshot or {}
+            if 'physical_snapshot' in snapshot_vigente:
+                autoridad['physical_snapshot'] = deepcopy(snapshot_vigente['physical_snapshot'])
+                autoridad['physical_snapshot_fingerprint'] = snapshot_vigente.get(
+                    'physical_snapshot_fingerprint'
+                ) or _fingerprint_snapshot_fisico(snapshot_vigente['physical_snapshot'])
             autoridad['origen_decision'] = vigente.origen
             autoridad['version_persistida'] = vigente.version
             return autoridad
@@ -191,6 +263,13 @@ def resolver_autoridad_diaria_gym(cliente, fecha=None) -> dict:
         'cambios_materializados': cambios,
         'sesion_materializada': bool(entrenamiento and entrenamiento.get('ejercicios')),
     })
+    snapshot_fisico, huella_fisica = _obtener_snapshot_fisico(
+        cliente,
+        fecha,
+        huella,
+    )
+    autoridad['physical_snapshot'] = snapshot_fisico
+    autoridad['physical_snapshot_fingerprint'] = huella_fisica
     deload_materializado = any(cambio.get('tipo') == 'deload' for cambio in cambios)
     for ejercicio in (autoridad.get('entrenamiento') or {}).get('ejercicios', []):
         ejercicio['_autoridad_gym_materializada'] = True

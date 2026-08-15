@@ -688,3 +688,21 @@ auditoría.
 - La primera reexposición cierra la evaluación como validada, fallida o neutra.
 - Fallo, RPE extremo, técnica comprometida, reducción y deload conservan prioridad.
 - El modo API `solo_alternativas` es una previsualización sin mutaciones clínicas.
+
+# Fase 5.1–5.2 — snapshot físico canónico V1
+
+La evidencia física diaria dispone de un contrato de solo lectura común en
+`core`. El snapshot conserva la procedencia y antigüedad del check-in, el
+readiness Hyrox exacto del día, las lesiones activas y la actividad de las
+últimas 48 horas. La actividad reubicada declara como fecha efectiva
+`fecha_realizado` y usa `fecha` únicamente como fallback; los datos ausentes o
+obsoletos se mantienen explícitos, sin inventar valores neutros.
+
+La autoridad Gym adjunta esta fotografía y su huella SHA-256 a la versión de la
+decisión como evidencia en sombra. Todavía no interviene en el fingerprint
+ejecutivo, los umbrales, la postura, el volumen ni la sesión recomendada. Las
+correcciones y reversiones reutilizan la evidencia ya capturada, y un fallo al
+leer una fuente no bloquea el comportamiento vigente del entrenador.
+
+Este corte no añade tablas ni migraciones. Su objetivo es medir divergencias
+entre las lecturas históricas antes de sustituirlas de forma gradual.
