@@ -532,3 +532,22 @@ El veredicto legacy se conserva. La comparación con baseline es descriptiva,
 marca el abandono evitado como no demostrable y revierte el freeze al terminar
 o cancelarlo. Nunca crea preferencias, escribe ManualDavid, cambia estrategia
 ni promociona automáticamente la observación.
+
+## Ciclo 5 · Técnica comprometida V1
+
+La técnica por serie deja de ser solo un freno momentáneo. Una sesión con al
+menos una serie comprometida genera una `GymDecisionLog` causal de tipo
+`tecnica_comprometida`, mantiene la carga y bloquea la progresión. El fallo
+muscular o un RPE extremo conservan prioridad y pueden ordenar una reducción.
+
+La siguiente ejecución del mismo ejercicio cierra la decisión:
+
+- técnica buena o aceptable con carga consolidada: validada;
+- técnica comprometida de nuevo: fallida y se abre un nuevo freno;
+- sin valoración técnica: neutra por evidencia insuficiente;
+- técnica recuperada sin respetar la consolidación: neutra.
+
+El ciclo es local, automático y reversible. No crea preferencias, no cambia la
+estrategia semanal y no convierte una observación técnica en conocimiento
+permanente. Los logs históricos reconocibles se clasifican durante la migración
+para que las decisiones aún pendientes puedan evaluarse con el contrato nuevo.

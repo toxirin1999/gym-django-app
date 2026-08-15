@@ -1167,6 +1167,10 @@ class ActividadRealizada(models.Model):
 
 
 class GymDecisionLog(models.Model):
+    MOTIVO_CODIGO_CHOICES = [
+        ('', 'Sin clasificar'),
+        ('tecnica_comprometida', 'Técnica comprometida'),
+    ]
     ACCION_CHOICES = [
         ('subir_peso', 'Subir peso'),
         ('subir_reps', 'Subir repeticiones'),
@@ -1203,6 +1207,14 @@ class GymDecisionLog(models.Model):
     accion = models.CharField(max_length=30, choices=ACCION_CHOICES)
     valor_cambio = models.FloatField(null=True, blank=True)
     motivo = models.TextField()
+    motivo_codigo = models.CharField(
+        max_length=40,
+        choices=MOTIVO_CODIGO_CHOICES,
+        default='',
+        blank=True,
+        db_index=True,
+        help_text='Causa estable y evaluable de la decisión; el texto queda para explicación.',
+    )
 
     resultado = models.CharField(max_length=20, choices=RESULTADO_CHOICES, null=True, blank=True)
     notas_resultado = models.TextField(null=True, blank=True)

@@ -17,6 +17,25 @@ def normalizar_ejercicio(valor):
     return ' '.join((valor or '').split()).casefold()[:120]
 
 
+def _tecnicas_sesion(entreno, ejercicio_normalizado):
+    """Devuelve las técnicas registradas para el ejercicio en una sesión.
+
+    La relación de SerieRealizada apunta a EjercicioBase, mientras que el
+    cierre trabaja con el nombre capturado en EjercicioRealizado. Comparar la
+    clave normalizada evita depender de mayúsculas o espacios.
+    """
+    from entrenos.models import SerieRealizada
+
+    return [
+        serie.tecnica_calidad
+        for serie in SerieRealizada.objects.filter(entreno=entreno)
+        .exclude(tecnica_calidad__isnull=True)
+        .exclude(tecnica_calidad='')
+        .select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
+    ]
+
+
 @transaction.atomic
 def cerrar_aprendizaje_gym(entreno):
     """Cierra causalmente una sesión: evalúa pasado y después crea futuro.
@@ -97,6 +116,20 @@ def generar_decisiones_para_entreno(entreno):
         accion, valor_cambio, motivo = _decidir_accion(
             ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
         )
+        motivo_codigo = ''
+
+        # El fallo/RPE extremo conserva prioridad por ser una señal más
+        # protectora. En el resto de casos, una serie comprometida impide que
+        # una sesión aparentemente exitosa produzca una subida de carga.
+        tecnicas = _tecnicas_sesion(entreno, nombre)
+        if 'comprometida' in tecnicas and accion not in ('bajar_peso', 'deload'):
+            accion = 'mantener'
+            valor_cambio = None
+            motivo = (
+                'Técnica comprometida en al menos una serie — '
+                'consolidar antes de progresar.'
+            )
+            motivo_codigo = 'tecnica_comprometida'
 
         GymDecisionLog.objects.get_or_create(
             cliente=cliente,
@@ -110,6 +143,7 @@ def generar_decisiones_para_entreno(entreno):
                 'accion': accion,
                 'valor_cambio': valor_cambio,
                 'motivo': motivo,
+                'motivo_codigo': motivo_codigo,
                 'confianza': confianza,
             },
         )
@@ -262,6 +296,33 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
 
     peso_anterior = log.peso_anterior or 0
     reps_anteriores = log.reps_anteriores or 0
+
+    if log.motivo_codigo == 'tecnica_comprometida':
+        tecnicas = _tecnicas_sesion(
+            nueva_sesion.entreno,
+            normalizar_ejercicio(nueva_sesion.nombre_ejercicio),
+        )
+        if 'comprometida' in tecnicas:
+            resultado = 'fallida'
+            notas = 'La técnica comprometida persiste en la sesión posterior'
+        elif not tecnicas:
+            resultado = 'neutra'
+            notas = 'Sin dato técnico en la sesión posterior; evidencia insuficiente'
+        elif fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
+            resultado = 'fallida'
+            notas = 'La técnica mejora, pero la ejecución sigue excediendo el margen seguro'
+        elif peso_nuevo <= peso_anterior + 0.5:
+            resultado = 'validada'
+            notas = 'Técnica recuperada con la carga consolidada'
+        else:
+            resultado = 'neutra'
+            notas = 'Técnica recuperada, pero la carga no se mantuvo para aislar el ajuste'
+
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
 
     if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 9.5):
         resultado = 'fallida'
