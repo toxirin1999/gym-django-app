@@ -95,7 +95,7 @@ def _decision(estado, causa, titulo, subtitulo, mensaje, accion_label,
 
 def calcular_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None,
                             es_descanso_plan=False, estado_entreno=None,
-                            senales_secundarias=None):
+                            senales_secundarias=None, ciclo_deload=None):
     """Calcula la decisión soberana: lesión > descanso > TSB > ACWR > readiness."""
     if lesion_activa:
         tags = normalizar_tags_restringidos(lesion_activa)
@@ -115,6 +115,15 @@ def calcular_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=N
             'Día de descanso', False,
             ['Movilidad suave', 'Paseo tranquilo', 'Técnica sin carga'],
             ['Sesión intensa', 'Series Hyrox', 'Trabajo al límite'],
+        )
+    if ciclo_deload:
+        return _decision(
+            'recuperar', 'deload_seguridad', 'Recuperar', 'Descarga de seguridad activa',
+            'El ciclo global modula la sesión de hoy conservando el calendario.',
+            'Sesión reducida', True,
+            ['Técnica', 'Volumen reducido', 'Trabajo controlado'],
+            ['Series al límite', 'Volumen extra', 'Trabajo al fallo'],
+            ciclo_deload_id=getattr(ciclo_deload, 'pk', None),
         )
 
     tsb = resumen_semanal.get('tsb') if isinstance(resumen_semanal, dict) else getattr(resumen_semanal, 'tsb', None)

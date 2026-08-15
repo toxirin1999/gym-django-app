@@ -182,13 +182,17 @@ def _leer_senales_secundarias(cliente):
 
 def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=None,
                           es_descanso_plan=False, estado_entreno=None,
-                          senales_secundarias=None):
+                          senales_secundarias=None, cliente=None):
     """
     Devuelve el objeto de decisión soberana del día para el panel Hyrox.
     Prioridad: lesión > descanso global > fatiga (TSB) > carga (ACWR) > readiness > normal.
     """
     from . import decision_service
-    return decision_service.calcular_hyrox_decision(
+    ciclo_deload = None
+    if cliente is not None:
+        from entrenos.services.deload_cycle_service import obtener_ciclo_activo
+        ciclo_deload = obtener_ciclo_activo(cliente)
+    kwargs = dict(
         current_score=current_score,
         resumen_semanal=resumen_semanal,
         lesion_activa=lesion_activa,
@@ -196,6 +200,9 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
         estado_entreno=estado_entreno,
         senales_secundarias=senales_secundarias,
     )
+    if cliente is not None:
+        kwargs['ciclo_deload'] = ciclo_deload
+    return decision_service.calcular_hyrox_decision(**kwargs)
 
 
 
@@ -1658,6 +1665,7 @@ def hyrox_dashboard(request):
         es_descanso_plan=_es_descanso_plan,
         estado_entreno=_estado_entreno,
         senales_secundarias=_senales_secundarias,
+        cliente=cliente,
     )
     # ── Verificar si ya hay sesión completada hoy (app viva) ──────
     sesion_completada_hoy = None
@@ -2014,10 +2022,13 @@ def registrar_entrenamiento(request, objective_id, session_id=None):
 
             # Prepare activities for the context to preserve display_name and is_substituted
             from .station_intelligence import HyroxStationIntelligence as _SI
+            from entrenos.services.deload_cycle_service import aplicar_overlay_hyrox
             actividades_planificadas = list(sesion_planificada.activities.all())
             for act in actividades_planificadas:
                 act.display_name = act.nombre_ejercicio # Default
-                m = act.data_metricas or {}
+                # Overlay efímero: no se guarda ni altera el calendario/taper.
+                m = aplicar_overlay_hyrox(cliente, act.data_metricas or {}, timezone.localdate())
+                act.data_metricas = m
                 nombre_lower = act.nombre_ejercicio.lower()
                 # Inject station coaching tip into a copy (don't mutate the DB object)
                 if not m.get('coach_tip'):

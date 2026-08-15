@@ -490,3 +490,28 @@ La transición termina cuando:
 - los módulos archivados dejan de competir por atención.
 
 Después, el producto podrá evolucionar sin volver a perder su identidad.
+
+
+---
+
+## Ciclo 3 · Fase 4 — ciclo de descarga global
+
+`entrenos.CicloDeload` es la fuente persistida compartida. Gym abre y gobierna el
+ciclo global; Hyrox aporta la señal TSB y consume su política. `GymDecisionLog`
+solo registra el evento derivado de apertura, no el lifecycle.
+
+La prioridad operativa es lesión activa, descanso planificado, ciclo de descarga
+de seguridad y estrategia/progresión ordinaria.
+
+Política V1:
+
+- Gym: 7 días; resta una serie (mínimo dos) y limita el RPE a 7.
+- Hyrox: 9 días; factor 0.55 al materializar métricas.
+- Los overlays son idempotentes y nunca guardan cambios en sesiones futuras.
+- El calendario Hyrox y su taper permanecen intactos.
+- La apertura usa transacción y bloqueo del cliente para un único ciclo activo en MySQL.
+- El cierre clasifica el resultado como favorable, fallido o insuficiente.
+
+El signal Hyrox TSB < -30 dejó de mutar sesiones. `DeloadAutoTrigger` conserva
+TSB < -25 como detector puro. JOI recibe un evento al abrir y otro al cerrar
+mediante sus generadores existentes; no se hardcodea su voz aquí.

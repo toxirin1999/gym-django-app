@@ -419,15 +419,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=deload)
 
         if deload:
-            for ej in ejercicios_mod:
-                series_orig = ej.get('series', 3)
-                rpe_orig    = ej.get('rpe_objetivo', 8)
-                series_new  = max(2, int(series_orig) - 1)
-                rpe_new     = min(int(rpe_orig), 7)
-                if series_new != series_orig or rpe_new != rpe_orig:
-                    ej['series']       = series_new
-                    ej['rpe_objetivo'] = rpe_new
-                    ej['deload']       = True
+            from entrenos.services.deload_cycle_service import (
+                aplicar_overlay_gym, abrir_ciclo_deload, obtener_ciclo_activo,
+            )
+            if not obtener_ciclo_activo(cliente, hoy):
+                abrir_ciclo_deload(cliente, 'fatiga_gym', hoy=hoy)
+            ejercicios_mod = aplicar_overlay_gym(cliente, ejercicios_mod, hoy)
             cambios.append({
                 'tipo': 'deload',
                 'ejercicio_original': None,

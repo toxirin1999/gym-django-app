@@ -3731,7 +3731,9 @@ def _calcular_hyrox_decision_payload(objetivo, readiness_score, resumen_semanal=
     """
     try:
         from .decision_service import calcular_hyrox_decision
+        from entrenos.services.deload_cycle_service import obtener_ciclo_activo
         lesion = objetivo._lesion_activa_primera()
+        ciclo_deload = obtener_ciclo_activo(objetivo.cliente)
         decision = calcular_hyrox_decision(
             readiness_score,
             resumen_semanal=resumen_semanal,
@@ -3739,6 +3741,7 @@ def _calcular_hyrox_decision_payload(objetivo, readiness_score, resumen_semanal=
             es_descanso_plan=es_descanso_plan,
             estado_entreno=estado_entreno,
             senales_secundarias=senales_secundarias,
+            ciclo_deload=ciclo_deload,
         )
         return {
             'estado': decision.get('estado'),

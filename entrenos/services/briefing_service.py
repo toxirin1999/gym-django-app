@@ -39,6 +39,9 @@ def necesita_deload_gym(cliente, hoy=None):
     from entrenos.models import EntrenoRealizado, EjercicioRealizado
 
     hoy = hoy or date.today()
+    from entrenos.services.deload_cycle_service import obtener_ciclo_activo, abrir_ciclo_deload
+    if obtener_ciclo_activo(cliente, hoy):
+        return True
     hace_14 = hoy - timedelta(days=14)
     hace_28 = hoy - timedelta(days=28)
 
@@ -62,6 +65,10 @@ def necesita_deload_gym(cliente, hoy=None):
 
     # Criterio B: energía crónicamente baja (subjetiva, válida para gym)
     if energia_media is not None and energia_media <= 3.5 and recientes.count() >= 3:
+        abrir_ciclo_deload(
+            cliente, 'fatiga_gym', metrica='energia_media', umbral=3.5,
+            valor=energia_media, evidencia={'sesiones': recientes.count()}, hoy=hoy,
+        )
         return True
 
     # Criterio A: RPE bruto de gym alto dos semanas consecutivas
@@ -77,6 +84,10 @@ def necesita_deload_gym(cliente, hoy=None):
         ]
         rpe_prev = sum(rpes_prev) / len(rpes_prev) if rpes_prev else None
         if rpe_prev is not None and rpe_prev >= 8.0:
+            abrir_ciclo_deload(
+                cliente, 'fatiga_gym', metrica='rpe_medio', umbral=8.5,
+                valor=rpe_rec, evidencia={'rpe_previo': rpe_prev, 'sesiones': recientes.count()}, hoy=hoy,
+            )
             return True
 
     return False

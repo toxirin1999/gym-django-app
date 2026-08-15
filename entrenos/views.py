@@ -4048,34 +4048,21 @@ def vista_entrenamiento_activo(request, cliente_id):
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
         return redirect('entrenos:vista_plan_anual', cliente_id=cliente.id)
 
-    # ── DELOAD AUTOMÁTICO ─────────────────────────────────────────
+    # Entrada directa (sin briefing): materializa la misma autoridad global.
+    # El marcador legacy se conserva únicamente como contrato de transporte;
+    # la idempotencia real pertenece a `_deload_cycle_id` del overlay.
     from entrenos.services.briefing_service import necesita_deload_gym
-    forzar_plan = request.GET.get('forzar_plan') == '1'
-    deload_activo = (not forzar_plan) and necesita_deload_gym(cliente, fecha_obj)
-
-    if deload_activo:
+    from entrenos.services.deload_cycle_service import (
+        aplicar_overlay_gym, abrir_ciclo_deload, obtener_ciclo_activo,
+    )
+    if necesita_deload_gym(cliente, fecha_obj):
+        if not obtener_ciclo_activo(cliente, fecha_obj):
+            abrir_ciclo_deload(cliente, 'fatiga_gym', hoy=fecha_obj)
+        ejercicios_planificados = aplicar_overlay_gym(
+            cliente, ejercicios_planificados, fecha_obj,
+        )
         for ejercicio in ejercicios_planificados:
-            if not ejercicio.get('_deload_aplicado'):
-                ejercicio['series'] = max(2, int(ejercicio.get('series', 3)) - 1)
-                ejercicio['rpe_objetivo'] = min(int(ejercicio.get('rpe_objetivo', 8)), 7)
-                ejercicio['_deload_aplicado'] = True
-
-        # Registrar decisión (evitar duplicados en los últimos 7 días)
-        from datetime import timedelta as _td7
-        ya_registrado = GymDecisionLog.objects.filter(
-            cliente=cliente,
-            accion='deload',
-            fecha_creacion__date__gte=fecha_obj - _td7(days=7),
-        ).exists()
-        if not ya_registrado:
-            GymDecisionLog.objects.create(
-                cliente=cliente,
-                ejercicio='(sesión completa)',
-                accion='deload',
-                motivo='RPE/energía acumulada alta — deload automático',
-                peso_anterior=None,
-                reps_anteriores=None,
-            )
+            ejercicio['_deload_aplicado'] = True
 
     # Construir resumen bio para el banner del template
     bio_adjustments = []
@@ -4151,7 +4138,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             or (vol_mod < 1.0 and not _hay_lesion_activa)  # fatiga global sin lesión
             or (vol_mod_excl_lesion < 1.0)  # reducción por carga legítima
         ),
-        'deload_activo': deload_activo,
+        'deload_activo': bool(obtener_ciclo_activo(cliente, fecha_obj)),
         'sesion_programada_id': sesion_programada_id,
         'modo_reducido': modo_reducido,
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
@@ -8629,12 +8616,6 @@ def briefing_entrenamiento(request, cliente_id):
     else:
         from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
         ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
-
-    # Contrato de transporte briefing → sesión: si esta capa ya materializó
-    # el deload, la sesión activa no debe volver a descontar otra serie.
-    if any(cambio.get('tipo') == 'deload' for cambio in cambios_plan):
-        for ejercicio in ejercicios_mod:
-            ejercicio['_deload_aplicado'] = True
 
     briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_obj)
 

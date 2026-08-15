@@ -1937,3 +1937,49 @@ class PausaEntrenamiento(models.Model):
     def __str__(self):
         estado = 'abierta' if self.fecha_fin is None else f'cerrada {self.fecha_fin}'
         return f"Pausa {self.cliente_id} {self.nivel} ({estado})"
+
+
+class CicloDeload(models.Model):
+    """Descarga global persistida; las prescripciones se conservan y se modulan al leerlas."""
+
+    ESTADO_ACTIVO = 'activo'
+    ESTADO_CERRADO = 'cerrado'
+    ESTADOS = [(ESTADO_ACTIVO, 'Activo'), (ESTADO_CERRADO, 'Cerrado')]
+
+    CAUSA_FATIGA_GYM = 'fatiga_gym'
+    CAUSA_TSB_HYROX = 'tsb_hyrox'
+    CAUSA_MANUAL = 'manual'
+    CAUSAS = [
+        (CAUSA_FATIGA_GYM, 'Fatiga detectada en Gym'),
+        (CAUSA_TSB_HYROX, 'TSB de seguridad Hyrox'),
+        (CAUSA_MANUAL, 'Decisión manual'),
+    ]
+    RESULTADOS = [
+        ('favorable', 'Favorable'),
+        ('fallido', 'Fallido'),
+        ('insuficiente', 'Datos insuficientes'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='ciclos_deload')
+    estado = models.CharField(max_length=16, choices=ESTADOS, default=ESTADO_ACTIVO, db_index=True)
+    alcance = models.CharField(max_length=16, default='global')
+    causa = models.CharField(max_length=32, choices=CAUSAS)
+    fecha_inicio = models.DateField()
+    fecha_fin_prevista = models.DateField()
+    fecha_cierre = models.DateField(null=True, blank=True)
+    metrica = models.CharField(max_length=40, blank=True)
+    umbral = models.FloatField(null=True, blank=True)
+    valor_apertura = models.FloatField(null=True, blank=True)
+    evidencia = models.JSONField(default=dict, blank=True)
+    politica_snapshot = models.JSONField(default=dict)
+    resultado = models.CharField(max_length=20, choices=RESULTADOS, null=True, blank=True)
+    motivo_cierre = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-fecha_inicio', '-pk']
+        indexes = [models.Index(fields=['cliente', 'estado'], name='deload_cliente_estado_idx')]
+
+    def __str__(self):
+        return f"Deload {self.cliente_id} ({self.estado})"

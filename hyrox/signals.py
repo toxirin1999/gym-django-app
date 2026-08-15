@@ -349,40 +349,8 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
     except Exception as e:
         logger.error(f"[JOI Hyrox signal] {e}")
 
-    # ── 7. Deload automático por TSB < -30 ────────────────────────────────────
-    if tsb_actual is not None and tsb_actual < -30:
-        try:
-            from joi.services import generar_mensaje_joi
-            from django.utils import timezone as _tz
-            hoy_d = _tz.now().date()
-            limite = hoy_d + timedelta(days=14)
-            proximas = HyroxSession.objects.filter(
-                objective=instance.objective,
-                estado='planificado',
-                fecha__range=(hoy_d, limite),
-            ).order_by('fecha')
-
-            modificadas = 0
-            for s in proximas:
-                titulo_actual = s.titulo or ''
-                if '[DELOAD]' not in titulo_actual:
-                    s.titulo = f"[DELOAD] {titulo_actual}".strip()
-                    s.muscle_fatigue_index = 'Alta'
-                    s.fatiga_updated_at = _tz.now()
-                    s.save(update_fields=['titulo', 'muscle_fatigue_index', 'fatiga_updated_at'])
-                    modificadas += 1
-
-            cliente = instance.objective.cliente
-            generar_mensaje_joi(cliente, 'hyrox_deload_automatico', {
-                'tsb': round(tsb_actual, 1),
-                'sesiones_modificadas': modificadas,
-            })
-            logger.info(
-                f"[HYROX Deload] TSB {tsb_actual:.1f} < -30 → {modificadas} sesiones "
-                f"marcadas como deload para {cliente.user.username}"
-            )
-        except Exception as e:
-            logger.error(f"[HYROX Deload automático] {e}")
+    # El detector único vive en DeloadAutoTrigger (TSB < -25). Este signal no
+    # muta sesiones futuras: el ciclo global se aplica como overlay al consumir.
 
 
 # ==============================================================================
