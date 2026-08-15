@@ -1182,6 +1182,7 @@ class GymDecisionLog(models.Model):
         ('fallo_repetido_no_controlado', 'Fallo muscular no previsto repetido'),
         ('rpe_alto_sostenido', 'RPE alto sostenido'),
         ('rpe_extremo', 'RPE extremo'),
+        ('molestia_reciente', 'Molestia reciente'),
         ('progresion_peso', 'Progresión de peso'),
         ('progresion_reps', 'Progresión de repeticiones o distancia'),
     ]
@@ -1217,6 +1218,7 @@ class GymDecisionLog(models.Model):
     peso_anterior = models.FloatField(null=True, blank=True)
     reps_anteriores = models.PositiveIntegerField(null=True, blank=True)
     rpe_anterior = models.FloatField(null=True, blank=True)
+    molestia_zona_snapshot = models.CharField(max_length=100, blank=True, default='')
 
     accion = models.CharField(max_length=30, choices=ACCION_CHOICES)
     valor_cambio = models.FloatField(null=True, blank=True)

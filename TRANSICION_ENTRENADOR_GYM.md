@@ -679,3 +679,12 @@ python manage.py cerrar_semana_gym --cliente <ID> --semana AAAA-MM-DD --apply
 La semana debe estar cerrada y el contrato debe contener exactamente todas sus
 sesiones prescritas. La salida es JSON estable para facilitar su operación y
 auditoría.
+
+# Ciclo 12 — molestia reciente causal V1
+
+- Severidad exactamente 1 genera una decisión causal e idempotente `molestia_reciente`.
+- La decisión conserva peso, repeticiones, RPE y zona como snapshot estructurado.
+- Durante 14 días limita únicamente el mismo ejercicio; después caduca de forma neutra.
+- La primera reexposición cierra la evaluación como validada, fallida o neutra.
+- Fallo, RPE extremo, técnica comprometida, reducción y deload conservan prioridad.
+- El modo API `solo_alternativas` es una previsualización sin mutaciones clínicas.

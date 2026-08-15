@@ -190,6 +190,20 @@ def generar_decisiones_para_entreno(entreno):
             )
             motivo_codigo = 'tope_maquina_sin_margen'
 
+        # Una molestia aislada leve abre únicamente un límite local y temporal.
+        # Las causas que reducen carga y la técnica comprometida conservan la
+        # autoridad protectora; severidades clínicas pertenecen a UserInjury.
+        if (
+            ej.molestia_reportada and ej.molestia_severidad == 1
+            and accion not in ('bajar_peso', 'deload')
+            and motivo_codigo not in ('fallo_no_controlado', 'fallo_repetido_no_controlado',
+                                      'rpe_extremo', 'tecnica_comprometida')
+        ):
+            accion = 'mantener'
+            valor_cambio = None
+            motivo_codigo = 'molestia_reciente'
+            motivo = 'Molestia leve reciente — consolidar esta ejecución durante 14 días'
+
         # Clasifica las progresiones ordinarias solo después de resolver las
         # señales protectoras y los casos especiales (técnica, fallo y tope).
         if not motivo_codigo and accion == 'subir_peso':
@@ -206,6 +220,7 @@ def generar_decisiones_para_entreno(entreno):
                 'peso_anterior': peso,
                 'reps_anteriores': reps,
                 'rpe_anterior': rpe,
+                'molestia_zona_snapshot': ej.molestia_zona,
                 'accion': accion,
                 'valor_cambio': valor_cambio,
                 'motivo': motivo,
@@ -326,9 +341,10 @@ def evaluar_decisiones_para_entreno(entreno):
         if not nombre:
             continue
 
+        ejecutivas = ('progresion_peso', 'progresion_reps', 'molestia_reciente')
         aplicable = (
-            ~Q(motivo_codigo__in=('progresion_peso', 'progresion_reps'))
-            | Q(estado_aplicacion='aplicada')
+            ~Q(motivo_codigo__in=ejecutivas)
+            | Q(motivo_codigo__in=ejecutivas, estado_aplicacion='aplicada')
         )
         log = GymDecisionLog.objects.filter(
             cliente=cliente,
@@ -369,6 +385,33 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
 
     peso_anterior = log.peso_anterior or 0
     reps_anteriores = log.reps_anteriores or 0
+
+    if log.motivo_codigo == 'molestia_reciente':
+        fecha_nueva = nueva_sesion.entreno.fecha_ejecucion or nueva_sesion.entreno.fecha
+        fecha_origen = log.entreno_origen.fecha_ejecucion or log.entreno_origen.fecha
+        dias = (fecha_nueva - fecha_origen).days
+        misma_zona = (
+            nueva_sesion.molestia_reportada
+            and normalizar_ejercicio(nueva_sesion.molestia_zona)
+            == normalizar_ejercicio(log.molestia_zona_snapshot)
+        )
+        if dias > 14:
+            resultado, notas = 'neutra', 'La reexposición ocurrió después de la caducidad de 14 días'
+        elif misma_zona or (nueva_sesion.molestia_severidad or 0) >= 2 or fallo_nuevo:
+            resultado, notas = 'fallida', 'La primera reexposición mantuvo una señal protectora'
+        elif rpe_nuevo is None:
+            resultado, notas = 'neutra', 'Falta RPE para aislar la respuesta al límite local'
+        elif peso_nuevo > peso_anterior + 0.5 or reps_nuevas > reps_anteriores:
+            resultado, notas = 'neutra', 'La carga o repeticiones superaron el snapshot y no aíslan el ajuste'
+        elif not nueva_sesion.molestia_reportada and rpe_nuevo <= 8:
+            resultado, notas = 'validada', 'Primera reexposición sin molestia y dentro del límite local'
+        else:
+            resultado, notas = 'neutra', 'La primera reexposición no aporta evidencia concluyente'
+        log.resultado = resultado
+        log.notas_resultado = notas
+        log.fecha_evaluacion = timezone.now()
+        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        return
 
     if log.motivo_codigo in ('progresion_peso', 'progresion_reps'):
         tecnicas = _tecnicas_sesion(

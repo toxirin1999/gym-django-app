@@ -7949,28 +7949,31 @@ def api_reportar_molestia(request, cliente_id):
         buscar_ejercicio_por_nombre,
     )
 
+    # El scope de propietario se resuelve fuera del manejador de errores para
+    # conservar el 404 contractual y no convertirlo accidentalmente en 500.
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
     try:
-        cliente = get_object_or_404(Cliente, id=cliente_id)
         data = json.loads(request.body)
 
         ejercicio_nombre = data.get('ejercicio_nombre', '').strip()
         zona = data.get('zona', 'otro').lower().strip()
         severidad = int(data.get('severidad', 1))
         descripcion = data.get('descripcion', '').strip()
+        solo_alternativas = bool(data.get('solo_alternativas', False))
 
         tags_zona = ZONA_TAGS_MAP.get(zona, [])
         alternativas = []
         lesion_creada = False
 
         # ── Severidad 2-3: crear/actualizar UserInjury ──────────────────
-        if severidad >= 2 and tags_zona:
+        if not solo_alternativas and severidad >= 2 and tags_zona:
             fase_str = SEVERIDAD_FASE.get(severidad, 'SUB_AGUDA')
             gravedad_val = SEVERIDAD_GRAVEDAD.get(severidad, 4)
 
             # Buscar lesión activa en la misma zona para no duplicar
             lesion_existente = UserInjury.objects.filter(
                 cliente=cliente,
-                zona_afectada__icontains=zona,
+                zona_afectada__iexact=zona.title(),
                 activa=True,
             ).first()
 

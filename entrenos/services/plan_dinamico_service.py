@@ -183,6 +183,47 @@ def _persistir_estado_aplicacion(log, nuevo_estado, nuevo_motivo):
         log.save(update_fields=['estado_aplicacion', 'motivo_postergacion', 'fecha_aplicacion'])
 
 
+def _aplicar_overlay_molestia_reciente(cliente, ejercicios, hoy, cambios):
+    """Acota una sola reexposición sin sustituir ni reestructurar el plan."""
+    from entrenos.models import GymDecisionLog
+
+    logs = list(GymDecisionLog.objects.filter(
+        cliente=cliente, motivo_codigo='molestia_reciente', resultado__isnull=True,
+    ).select_related('entreno_origen').order_by('-fecha_creacion'))
+    for log in logs:
+        if not log.entreno_origen_id:
+            continue
+        if (hoy - log.entreno_origen.fecha).days > 14:
+            log.resultado = 'neutra'
+            log.notas_resultado = 'Ciclo cerrado por caducidad: no reapareció dentro de 14 días'
+            log.fecha_evaluacion = timezone.now()
+            log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+            continue
+        ej = next((item for item in ejercicios if _match_nombre(
+            _normalizar(item.get('nombre', '')), _normalizar(log.ejercicio_normalizado)
+        )), None)
+        if not ej:
+            continue
+        # Una reducción ya aplicada es más protectora que este techo.
+        peso_actual = ej.get('peso_kg')
+        if log.peso_anterior is not None and peso_actual is not None:
+            ej['peso_kg'] = min(float(peso_actual), float(log.peso_anterior))
+        if log.reps_anteriores is not None:
+            try:
+                minimo = int(str(ej.get('repeticiones', log.reps_anteriores)).split('-')[0])
+            except (TypeError, ValueError):
+                minimo = log.reps_anteriores
+            ej['repeticiones'] = str(min(minimo, log.reps_anteriores))
+            ej['reps_objetivo'] = min(minimo, log.reps_anteriores)
+        ej['molestia_reciente_aplicada'] = True
+        cambios.append({
+            'tipo': 'molestia_reciente', 'ejercicio_original': ej.get('nombre'),
+            'ejercicio_nuevo': None,
+            'razon': f'Límite local de 14 días por molestia en {log.molestia_zona_snapshot or "zona reportada"}.',
+        })
+        _persistir_estado_aplicacion(log, 'aplicada', None)
+
+
 def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=False):
     """
     Phase 62H — Progresión ejecutiva.
@@ -417,6 +458,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
 
         # ── Progresión ejecutiva (Phase 62H + Phase Gym Peso 2) ─────────────────
         _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=deload)
+        _aplicar_overlay_molestia_reciente(cliente, ejercicios_mod, hoy, cambios)
 
         if deload:
             from entrenos.services.deload_cycle_service import (

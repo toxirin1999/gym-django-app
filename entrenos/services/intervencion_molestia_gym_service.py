@@ -45,11 +45,34 @@ def procesar_molestias_recurrentes(entreno):
         from entrenos.services.alternativas_lesion_service import buscar_alternativas_lesion
         alternativas = buscar_alternativas_lesion(actual.nombre_ejercicio, actual.grupo_muscular or '', tags, 'RETORNO', 1)
         alternativa = alternativas[0] if alternativas else {}
-        decision = GymDecisionLog.objects.create(
-            cliente=entreno.cliente, entreno_origen=entreno,
-            ejercicio=actual.nombre_ejercicio, ejercicio_normalizado=original_norm,
-            accion='cambiar_variante', motivo=f'Molestia recurrente leve en {zona}: intervención acotada.', confianza='alta',
+        decision, decision_creada = GymDecisionLog.objects.get_or_create(
+            cliente=entreno.cliente,
+            entreno_origen=entreno,
+            ejercicio_normalizado=original_norm,
+            defaults={
+                'ejercicio': actual.nombre_ejercicio,
+                'accion': 'cambiar_variante',
+                'motivo': f'Molestia recurrente leve en {zona}: intervención acotada.',
+                'confianza': 'alta',
+            },
         )
+        # La tercera evidencia puede haber abierto primero el límite local del
+        # Ciclo 12. Se promociona esa misma decisión causal en vez de crear una
+        # segunda fila. Una causa protectora más fuerte nunca se sobrescribe.
+        if not decision_creada and decision.motivo_codigo == 'molestia_reciente':
+            decision.accion = 'cambiar_variante'
+            decision.valor_cambio = None
+            decision.motivo = f'Molestia recurrente leve en {zona}: intervención acotada.'
+            decision.motivo_codigo = ''
+            decision.confianza = 'alta'
+            decision.estado_aplicacion = 'pendiente'
+            decision.motivo_postergacion = None
+            decision.fecha_aplicacion = None
+            decision.save(update_fields=[
+                'accion', 'valor_cambio', 'motivo', 'motivo_codigo',
+                'confianza', 'estado_aplicacion', 'motivo_postergacion',
+                'fecha_aplicacion',
+            ])
         ahora = timezone.now()
         creadas.append(IntervencionMolestiaGym.objects.create(
             cliente=entreno.cliente, decision_origen=decision, zona_canonica=zona,
