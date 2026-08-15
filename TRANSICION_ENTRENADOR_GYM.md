@@ -267,6 +267,17 @@ Al cerrarse, el plan vuelve automáticamente al ejercicio original porque la
 rutina nunca se muta. Este resultado permanece como evidencia local y no se
 promueve todavía a preferencia ni a conocimiento longitudinal.
 
+### Ciclo 2 implementado — molestia recurrente por zona
+
+Las molestias leves solo activan una intervención tras aparecer en tres
+sesiones distintas dentro de 21 días. La zona se normaliza y se traduce a
+`risk_tags`; la alternativa queda fijada y no comparte los riesgos
+restringidos. La intervención dura dos ejecuciones o 21 días y termina como
+favorable, fallida o insuficiente, volviendo después al ejercicio original.
+Una molestia moderada o severa queda fuera de este ciclo y conserva la
+autoridad de lesión. Esta evidencia tampoco se convierte en preferencia ni en
+conocimiento longitudinal.
+
 ## 9. Fase 5 — Carga externa y recuperación
 
 ### Objetivo

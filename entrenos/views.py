@@ -7927,18 +7927,7 @@ def api_alternativas_lesion(request, cliente_id):
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Mapa zona corporal → risk_tags que deben bloquearse
-ZONA_TAGS_MAP = {
-    'hombro':  ['empuje_horizontal', 'empuje_vertical', 'rotacion_interna_hombro'],
-    'rodilla': ['flexion_rodilla_profunda', 'impacto_vertical', 'triple_extension_explosiva'],
-    'cadera':  ['flexion_cadera_profunda', 'triple_extension_explosiva', 'bisagra_cadera_cargada'],
-    'lumbar':  ['flexion_lumbar', 'carga_axial', 'bisagra_cadera_cargada'],
-    'muñeca':  ['agarre_pesado', 'apoyo_muñeca'],
-    'cuello':  ['carga_cervical'],
-    'tobillo': ['impacto_vertical', 'dorsiflexion_tobillo'],
-    'pecho':   ['empuje_horizontal'],
-    'codo':    ['traccion_codo', 'empuje_codo'],
-    'otro':    [],
-}
+from entrenos.services.zona_molestia_service import ZONA_TAGS_MAP
 
 SEVERIDAD_FASE = {
     2: 'SUB_AGUDA',

@@ -444,6 +444,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             GymDecisionLog.objects
             .filter(cliente=cliente, accion='cambiar_variante',
                     fecha_creacion__date__gte=hace_21)
+            .select_related('intervencion_molestia')
         )
 
         # Construir sets normalizados por tipo de señal
@@ -456,6 +457,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             _normalizar(l.ejercicio)
             for l in logs_recientes
             if 'molestia' in l.motivo.lower()
+            and not hasattr(l, 'intervencion_molestia')
         }
 
         for ej in ejercicios_mod:
@@ -463,6 +465,47 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             grupo  = _grupo_desde_nombre(nombre, ej.get('grupo_muscular'))
 
             if not grupo:
+                continue
+
+            # Lesión clínica ya se resolvió antes en la autoridad base. Aquí la
+            # molestia leve recurrente precede al experimento por estancamiento.
+            from entrenos.models import IntervencionMolestiaGym
+            from entrenos.services.intervencion_molestia_gym_service import (
+                evaluar_intervencion, interrumpir_experimento_estancamiento,
+            )
+            tags_ejercicio = set(ej.get('risk_tags') or [])
+            if not tags_ejercicio:
+                from rutinas.models import EjercicioBase
+                base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+                tags_ejercicio = set((base.risk_tags if base else []) or [])
+            intervencion = next((item for item in
+                IntervencionMolestiaGym.objects.filter(cliente=cliente, estado='activa').order_by('-iniciada_en')
+                if tags_ejercicio & set(item.risk_tags_snapshot or [])
+                and _match_nombre(_normalizar(nombre), item.original_normalizado)
+            ), None)
+            if intervencion:
+                intervencion = evaluar_intervencion(intervencion)
+            if intervencion and intervencion.estado == IntervencionMolestiaGym.ESTADO_ACTIVA:
+                interrumpir_experimento_estancamiento(cliente, intervencion.original_normalizado)
+                alternativa = intervencion.alternativa.get('nombre')
+                if alternativa:
+                    ej['nombre_original'] = nombre
+                    ej['nombre'] = alternativa
+                    ej['sustituido'] = True
+                    ej['motivo_sustitucion'] = 'molestia'
+                    ej['intervencion_molestia_id'] = intervencion.pk
+                    cambios.append({'tipo': 'sustitucion_molestia', 'ejercicio_original': nombre,
+                                    'ejercicio_nuevo': alternativa, 'razon': 'Intervención leve acotada.'})
+                    if intervencion.decision_origen_id:
+                        _persistir_estado_aplicacion(intervencion.decision_origen, 'aplicada', None)
+                else:
+                    ej['intervencion_pospuesta'] = True
+                    cambios.append({'tipo': 'intervencion_molestia_pospuesta', 'ejercicio_original': nombre,
+                                    'ejercicio_nuevo': None, 'razon': 'No existe alternativa segura.'})
+                    if intervencion.decision_origen_id:
+                        _persistir_estado_aplicacion(
+                            intervencion.decision_origen, 'pospuesta', 'No existe alternativa segura.',
+                        )
                 continue
 
             nombre_norm = _normalizar(nombre)

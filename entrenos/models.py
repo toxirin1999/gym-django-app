@@ -23,6 +23,10 @@ class EjercicioRealizado(models.Model):
         'ExperimentoVarianteGym', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='ejecuciones',
     )
+    intervencion_molestia = models.ForeignKey(
+        'IntervencionMolestiaGym', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='ejecuciones',
+    )
 
     nombre_ejercicio = models.CharField(max_length=100)
     grupo_muscular = models.CharField(max_length=50, blank=True, null=True)
@@ -1347,6 +1351,41 @@ class ExperimentoVarianteGym(models.Model):
         indexes = [
             models.Index(fields=['cliente', 'estado'], name='expvar_cliente_estado_idx'),
             models.Index(fields=['cliente', 'original_normalizado'], name='expvar_cliente_orig_idx'),
+        ]
+
+
+class IntervencionMolestiaGym(models.Model):
+    ESTADO_ACTIVA = 'activa'
+    ESTADO_FAVORABLE = 'favorable'
+    ESTADO_FALLIDA = 'fallida'
+    ESTADO_INSUFICIENTE = 'insuficiente'
+    ESTADOS = [(valor, valor.title()) for valor in (
+        ESTADO_ACTIVA, ESTADO_FAVORABLE, ESTADO_FALLIDA, ESTADO_INSUFICIENTE,
+    )]
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='intervenciones_molestia_gym')
+    decision_origen = models.OneToOneField(
+        GymDecisionLog, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='intervencion_molestia',
+    )
+    zona_canonica = models.CharField(max_length=40, db_index=True)
+    risk_tags_snapshot = models.JSONField(default=list)
+    original = models.JSONField()
+    original_normalizado = models.CharField(max_length=160, db_index=True)
+    alternativa = models.JSONField(default=dict)
+    alternativa_normalizada = models.CharField(max_length=160, blank=True, db_index=True)
+    estado = models.CharField(max_length=16, choices=ESTADOS, default=ESTADO_ACTIVA, db_index=True)
+    iniciada_en = models.DateTimeField()
+    vence_en = models.DateTimeField(db_index=True)
+    finalizada_en = models.DateTimeField(null=True, blank=True)
+    motivo_cierre = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-iniciada_en', '-id']
+        indexes = [
+            models.Index(fields=['cliente', 'estado'], name='intmol_cliente_estado_idx'),
+            models.Index(fields=['cliente', 'zona_canonica', 'original_normalizado'], name='intmol_cliente_zona_orig_idx'),
         ]
 
 

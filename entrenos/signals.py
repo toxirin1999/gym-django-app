@@ -16,6 +16,8 @@ def enlazar_ejecucion_experimento_variante(sender, instance, created, raw=False,
         return
     from entrenos.services.experimento_variante_gym_service import enlazar_y_evaluar_ejecucion
     enlazar_y_evaluar_ejecucion(instance)
+    from entrenos.services.intervencion_molestia_gym_service import enlazar_y_evaluar_ejecucion_molestia
+    enlazar_y_evaluar_ejecucion_molestia(instance)
 
 # Keywords que mapean un ejercicio de gym a un RM de HyroxObjective
 _SENTADILLA_KW = ('sentadilla', 'squat', 'goblet', 'hack squat', 'front squat')
@@ -191,47 +193,11 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
 
 @receiver(post_save, sender=EntrenoRealizado)
 def detectar_molestia_recurrente(sender, instance, created, raw=False, **kwargs):
-    """Si la misma zona corporal aparece con molestia en 3+ sesiones recientes → GymDecisionLog."""
+    """Delega la molestia leve recurrente al ciclo acotado especializado."""
     if raw:
         return
-    try:
-        from entrenos.models import EjercicioRealizado, GymDecisionLog
-        from datetime import timedelta, date
-
-        zonas_esta_sesion = set(
-            instance.ejercicios_realizados.filter(
-                molestia_reportada=True
-            ).exclude(molestia_zona='').values_list('molestia_zona', flat=True)
-        )
-        if not zonas_esta_sesion:
-            return
-
-        ventana = date.today() - timedelta(days=21)
-        for zona in zonas_esta_sesion:
-            count = EjercicioRealizado.objects.filter(
-                entreno__cliente=instance.cliente,
-                molestia_reportada=True,
-                molestia_zona=zona,
-                entreno__fecha__gte=ventana,
-            ).count()
-            if count >= 3:
-                clave_zona = f'ZONA:{zona}'
-                ya_existe = GymDecisionLog.objects.filter(
-                    cliente=instance.cliente,
-                    ejercicio=clave_zona,
-                    accion='cambiar_variante',
-                    fecha_creacion__date__gte=ventana,
-                ).exists()
-                if not ya_existe:
-                    GymDecisionLog.objects.create(
-                        cliente=instance.cliente,
-                        ejercicio=clave_zona,
-                        accion='cambiar_variante',
-                        motivo=f'Molestia recurrente en {zona} (≥3 sesiones en 21 días). Reducir o sustituir movimientos que carguen esta zona la próxima semana.',
-                        confianza='alta',
-                    )
-    except Exception as e:
-        print(f"⚠️ Molestia recurrente check error (entreno {instance.id}): {e}")
+    from entrenos.services.intervencion_molestia_gym_service import procesar_molestias_recurrentes
+    procesar_molestias_recurrentes(instance)
 
 
 @receiver(post_save, sender=EntrenoRealizado)
