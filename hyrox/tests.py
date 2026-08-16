@@ -839,6 +839,26 @@ class StravaMergeGymCargaHubTests(TestCase):
             1,
         )
 
+    def test_merge_gym_usa_fecha_strava_como_fecha_efectiva(self):
+        fecha_plan = datetime.date.today() - datetime.timedelta(days=1)
+        self.entreno.fecha = fecha_plan
+        self.entreno.fecha_ejecucion = fecha_plan
+        self.entreno.save(update_fields=['fecha', 'fecha_ejecucion'])
+        actividad = ActividadRealizada.objects.get(entreno_gym=self.entreno)
+        actividad.fecha = fecha_plan
+        actividad.fecha_realizado = fecha_plan
+        actividad.save(update_fields=['fecha', 'fecha_realizado'])
+
+        respuesta = self._merge()
+
+        self.assertEqual(respuesta.status_code, 200)
+        self.entreno.refresh_from_db()
+        actividad.refresh_from_db()
+        self.assertEqual(self.entreno.fecha, fecha_plan)
+        self.assertEqual(actividad.fecha, fecha_plan)
+        self.assertEqual(self.entreno.fecha_ejecucion, self.strava.fecha_actividad)
+        self.assertEqual(actividad.fecha_realizado, self.strava.fecha_actividad)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Item 1 — Estándares oficiales Sled Push/Pull: fuente única de verdad

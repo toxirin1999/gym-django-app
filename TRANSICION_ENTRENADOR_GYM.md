@@ -861,3 +861,22 @@ python manage.py vincular_strava_hub_legacy \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+## Fase 5.11 — fecha efectiva Gym reconciliada con Strava
+
+Cuando Strava se fusiona con un entrenamiento Gym, su fecha observada gobierna
+`EntrenoRealizado.fecha_ejecucion` y `ActividadRealizada.fecha_realizado`. La
+fecha planificada de la rutina permanece intacta en los campos `fecha`, por lo
+que corregir el día real no altera la pertenencia de la sesión al plan.
+
+Para datos legacy, `reconciliar_fechas_strava_gym` compara únicamente registros
+`merged` que conservan los tres enlaces Strava, Gym y hub. Un desfase exacto de
+un día se propone en dry-run; diferencias mayores o desacuerdo previo entre Gym
+y hub quedan ambiguos. `--apply` actualiza ambas fechas efectivas en una sola
+transacción y repetir el comando es neutro.
+
+```bash
+python manage.py reconciliar_fechas_strava_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```

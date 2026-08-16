@@ -3302,6 +3302,9 @@ def strava_procesar(request, actividad_id):
             entreno.frecuencia_cardiaca_maxima = act.hr_maxima
         if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             entreno.duracion_minutos = int(duracion_min)
+        # Strava observa el día real del esfuerzo. La fecha planificada de la
+        # rutina se conserva en `fecha`; solo se reconcilia la ejecución.
+        entreno.fecha_ejecucion = act.fecha_actividad
         entreno.save()
         # Actualizar el hub con la biometria de Strava. La carga del hub Gym
         # tiene una unica unidad: sRPE x minutos; TRIMP queda reservado al
@@ -3316,6 +3319,9 @@ def strava_procesar(request, actividad_id):
             if act.hr_maxima and not ar.hr_maxima:
                 ar.hr_maxima = act.hr_maxima
                 update_fields.append('hr_maxima')
+            if ar.fecha_realizado != act.fecha_actividad:
+                ar.fecha_realizado = act.fecha_actividad
+                update_fields.append('fecha_realizado')
             # El RPE indicado en la reconciliacion es evidencia directa.
             if rpe_manual:
                 ar.rpe_medio = rpe_manual
