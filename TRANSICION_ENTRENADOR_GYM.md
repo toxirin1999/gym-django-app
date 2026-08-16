@@ -844,3 +844,20 @@ como posibles duplicados. Solo eleva como probable una coincidencia entre
 fuentes con duraciones próximas o dos filas manuales con el mismo título. Los
 registros `created` anteriores al nuevo vínculo se clasifican como deuda de
 trazabilidad legacy, no como prueba de carga duplicada.
+
+## Fase 5.10 — recuperación de identidad Strava legacy
+
+El comando `vincular_strava_hub_legacy` recupera enlaces anteriores al contrato
+5.9 únicamente cuando existe un candidato inequívoco: misma fecha efectiva,
+fuente Strava, título normalizado y duración con un margen máximo de dos minutos.
+Cuando hay empate, falta candidato o el registro figura como `merged` sin una
+autoridad Gym/Hyrox, el caso queda ambiguo y no se modifica.
+
+El modo predeterminado es dry-run; `--apply` solo escribe la relación uno-a-uno,
+sin cambiar carga, fechas, estado ni contenido del evento. Repetirlo es neutro.
+
+```bash
+python manage.py vincular_strava_hub_legacy \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```

@@ -73,8 +73,9 @@ def auditar_eventos_fisicos(*, cliente_id, desde, hasta, limit=MAX_LIMIT):
         normalized_titles = {
             " ".join((event["titulo"] or "").casefold().split()) for event in events
         }
+        mixed_sources_same_title = len(sources) > 1 and len(normalized_titles) == 1
         same_manual_title = sources == {"manual"} and len(normalized_titles) == 1
-        if not (mixed_sources_close_duration or same_manual_title):
+        if not (mixed_sources_close_duration or mixed_sources_same_title or same_manual_title):
             continue
         loads = [event["carga_ua"] for event in events if event["carga_ua"] is not None]
         findings.append({

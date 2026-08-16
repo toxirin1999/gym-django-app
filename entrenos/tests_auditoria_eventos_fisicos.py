@@ -85,6 +85,24 @@ class AuditarEventosFisicosTests(TestCase):
 
         self.assertEqual(self.auditar()["findings"], [])
 
+    def test_placeholder_manual_sin_duracion_y_strava_mismo_titulo_es_probable(self):
+        self.actividad(
+            tipo="futbol", titulo="Fútbol al anochecer", fuente="manual",
+            duracion_minutos=None, rpe_medio=5, carga_ua=None,
+        )
+        self.actividad(
+            tipo="futbol", titulo="FÚTBOL   AL ANOCHECER", fuente="strava",
+            duracion_minutos=60, rpe_medio=8, carga_ua=480,
+        )
+
+        finding = next(
+            row for row in self.auditar()["findings"]
+            if row["code"] == "duplicado_probable"
+        )
+
+        self.assertEqual(finding["fuentes"], ["manual", "strava"])
+        self.assertEqual(finding["carga_ua_sumada"], 480.0)
+
     def test_strava_created_legacy_sin_vinculo_no_se_presenta_como_duplicado(self):
         raw = StravaActivityRaw.objects.create(
             cliente=self.cliente,
