@@ -682,6 +682,9 @@ class StravaProcesarRecalibracion5KTests(TestCase):
             f'/hyrox/strava/procesar/{act.id}/', {'accion': 'create_gym'}
         )
         self.assertEqual(resp.status_code, 200)
+        act.refresh_from_db()
+        self.assertIsNotNone(act.actividad_hub_id)
+        self.assertEqual(act.actividad_hub.fuente, 'strava')
         self.objetivo.refresh_from_db()
         self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
 
@@ -702,6 +705,9 @@ class StravaProcesarRecalibracion5KTests(TestCase):
             {'accion': 'merge_hyrox', 'session_id': sesion.id},
         )
         self.assertEqual(resp.status_code, 200)
+        act.refresh_from_db()
+        self.assertEqual(act.hyrox_session_id, sesion.pk)
+        self.assertIsNone(act.actividad_hub_id)
         self.objetivo.refresh_from_db()
         self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
 
@@ -738,6 +744,8 @@ class StravaProcesarRecalibracion5KTests(TestCase):
             f'/hyrox/strava/procesar/{act.id}/', {'accion': 'create_hyrox'}
         )
         self.assertEqual(resp.status_code, 200)
+        act.refresh_from_db()
+        self.assertEqual(act.actividad_hub_id, act.hyrox_session.hub_actividad.pk)
         self.objetivo.refresh_from_db()
         self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
 
@@ -813,6 +821,7 @@ class StravaMergeGymCargaHubTests(TestCase):
         self.assertEqual(actividad.hr_maxima, 174)
         self.assertEqual(actividad.fuente, 'manual')
         self.assertEqual(self.strava.entreno_gym_id, self.entreno.id)
+        self.assertEqual(self.strava.actividad_hub_id, actividad.pk)
         self.assertEqual(self.entreno.frecuencia_cardiaca_promedio, 142)
         self.assertEqual(self.entreno.frecuencia_cardiaca_maxima, 174)
 

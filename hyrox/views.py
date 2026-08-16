@@ -3277,7 +3277,11 @@ def strava_procesar(request, actividad_id):
         sesion.save()
         act.estado = 'merged'
         act.hyrox_session = sesion
-        act.save()
+        try:
+            act.actividad_hub = sesion.hub_actividad
+        except ActividadRealizada.DoesNotExist:
+            act.actividad_hub = None
+        act.save(update_fields=['estado', 'hyrox_session', 'actividad_hub'])
         rpe_info = f' · RPE {sesion.rpe_global}' if sesion.rpe_global else ' (sin RPE — no computará en ACWR)'
         pace_info = f' · 5K recalibrado a {objetivo.tiempo_5k_base}' if recalibrado_5k else ''
         return JsonResponse({'ok': True, 'msg': f'Fusionado con sesión Hyrox{rpe_info}{pace_info}.'})
@@ -3339,11 +3343,12 @@ def strava_procesar(request, actividad_id):
                 update_fields.append('carga_ua')
             if update_fields:
                 ar.save(update_fields=list(dict.fromkeys(update_fields)))
+            act.actividad_hub = ar
         except ActividadRealizada.DoesNotExist:
             pass
         act.estado     = 'merged'
         act.entreno_gym = entreno
-        act.save()
+        act.save(update_fields=['estado', 'entreno_gym', 'actividad_hub'])
         detalles = []
         if ov_tiempo == 'strava' or not entreno.duracion_minutos:
             detalles.append(f'{int(duracion_min)} min (Strava)')
@@ -3388,7 +3393,11 @@ def strava_procesar(request, actividad_id):
             )
         act.estado = 'created'
         act.hyrox_session = sesion
-        act.save()
+        try:
+            act.actividad_hub = sesion.hub_actividad
+        except ActividadRealizada.DoesNotExist:
+            act.actividad_hub = None
+        act.save(update_fields=['estado', 'hyrox_session', 'actividad_hub'])
         trimp_info = f' · TRIMP {trimp}' if trimp else (' · RPE {rpe}' if rpe else ' (sin FC ni RPE — ACWR sin carga)')
         pace_info = ''
         if tipo in ('carrera', 'cardio_sustituto'):
@@ -3432,7 +3441,7 @@ def strava_procesar(request, actividad_id):
 
         carga_ua = round(float(rpe_efectivo) * duracion_min, 1) if rpe_efectivo else (round(6.5 * duracion_min, 1) if duracion_min else None)
 
-        ActividadRealizada.objects.create(
+        actividad_hub = ActividadRealizada.objects.create(
             cliente=cliente,
             tipo=tipo_actividad,
             titulo=act.nombre_strava or f'Strava — {act.tipo_strava}',
@@ -3446,7 +3455,8 @@ def strava_procesar(request, actividad_id):
             fuente='strava',
         )
         act.estado = 'created'
-        act.save()
+        act.actividad_hub = actividad_hub
+        act.save(update_fields=['estado', 'actividad_hub'])
         origen = 'RPE estimado desde FC' if not rpe_manual and rpe_efectivo else ('RPE manual' if rpe_manual else 'sin RPE')
         return JsonResponse({'ok': True, 'msg': f'Actividad registrada · {origen}'})
 

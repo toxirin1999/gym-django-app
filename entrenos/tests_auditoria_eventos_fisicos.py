@@ -70,8 +70,8 @@ class AuditarEventosFisicosTests(TestCase):
 
         finding = self.auditar()["findings"][0]
 
-        self.assertEqual(finding["code"], "eventos_mismo_dia_tipo")
-        self.assertEqual(finding["confidence"], "ambigua")
+        self.assertEqual(finding["code"], "duplicado_probable")
+        self.assertEqual(finding["confidence"], "alta")
         self.assertEqual(finding["fecha_efectiva"], "2026-08-10")
         self.assertEqual(finding["tipo"], "gym")
         self.assertEqual(finding["event_ids"], [first.pk, second.pk])
@@ -85,7 +85,7 @@ class AuditarEventosFisicosTests(TestCase):
 
         self.assertEqual(self.auditar()["findings"], [])
 
-    def test_strava_procesado_sin_vinculo_declara_trazabilidad_incompleta(self):
+    def test_strava_created_legacy_sin_vinculo_no_se_presenta_como_duplicado(self):
         raw = StravaActivityRaw.objects.create(
             cliente=self.cliente,
             strava_id=818181,
@@ -99,11 +99,61 @@ class AuditarEventosFisicosTests(TestCase):
 
         finding = self.auditar()["findings"][0]
 
-        self.assertEqual(finding["code"], "strava_procesado_sin_vinculo")
+        self.assertEqual(finding["code"], "strava_legacy_sin_vinculo_hub")
         self.assertEqual(finding["strava_raw_id"], raw.pk)
         self.assertEqual(finding["strava_id"], 818181)
         self.assertEqual(finding["estado"], "created")
+        self.assertEqual(finding["confidence"], "media")
+
+    def test_varias_actividades_strava_mismo_tipo_son_eventos_independientes(self):
+        self.actividad(titulo="Caminata mañana", tipo="otro", fuente="strava")
+        self.actividad(titulo="Caminata noche", tipo="otro", fuente="strava")
+
+        result = self.auditar()
+
+        self.assertFalse(any(
+            row["code"] == "duplicado_probable" for row in result["findings"]
+        ))
+
+    def test_strava_vinculado_al_hub_conserva_identidad_y_no_genera_gap(self):
+        activity = self.actividad(fuente="strava")
+        raw = StravaActivityRaw.objects.create(
+            cliente=self.cliente,
+            strava_id=919191,
+            fecha_actividad=date(2026, 8, 10),
+            tipo_strava="WeightTraining",
+            nombre_strava="Fuerza",
+            duracion_segundos=3600,
+            raw_json={},
+            estado="created",
+            actividad_hub=activity,
+        )
+
+        result = self.auditar()
+
+        self.assertEqual(raw.actividad_hub_id, activity.pk)
+        self.assertEqual(activity.strava_source.pk, raw.pk)
+        self.assertFalse(any(
+            row.get("strava_raw_id") == raw.pk for row in result["findings"]
+        ))
+
+    def test_merged_sin_ningun_vinculo_sigue_siendo_incoherencia_alta(self):
+        raw = StravaActivityRaw.objects.create(
+            cliente=self.cliente,
+            strava_id=929292,
+            fecha_actividad=date(2026, 8, 10),
+            tipo_strava="WeightTraining",
+            nombre_strava="Fuerza",
+            duracion_segundos=3600,
+            raw_json={},
+            estado="merged",
+        )
+
+        finding = self.auditar()["findings"][0]
+
+        self.assertEqual(finding["code"], "strava_procesado_sin_vinculo")
         self.assertEqual(finding["confidence"], "alta")
+        self.assertEqual(finding["strava_raw_id"], raw.pk)
 
     def test_comando_emite_jsonl_estable_y_no_acepta_apply(self):
         self.actividad()
@@ -123,4 +173,3 @@ class AuditarEventosFisicosTests(TestCase):
         self.assertEqual(records[-1]["desde"], "2026-08-01")
         self.assertEqual(records[-1]["hasta"], "2026-08-16")
         self.assertTrue(records[-1]["solo_lectura"])
-

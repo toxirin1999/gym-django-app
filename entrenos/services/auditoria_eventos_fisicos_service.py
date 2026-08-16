@@ -59,16 +59,33 @@ def auditar_eventos_fisicos(*, cliente_id, desde, hasta, limit=MAX_LIMIT):
         if len(group) < 2:
             continue
         events = [_event_payload(activity) for activity in group]
+        sources = {event["fuente"] for event in events}
+        durations = [
+            event["duracion_minutos"]
+            for event in events
+            if event["duracion_minutos"] is not None
+        ]
+        mixed_sources_close_duration = (
+            len(sources) > 1
+            and len(durations) == len(events)
+            and max(durations) - min(durations) <= 10
+        )
+        normalized_titles = {
+            " ".join((event["titulo"] or "").casefold().split()) for event in events
+        }
+        same_manual_title = sources == {"manual"} and len(normalized_titles) == 1
+        if not (mixed_sources_close_duration or same_manual_title):
+            continue
         loads = [event["carga_ua"] for event in events if event["carga_ua"] is not None]
         findings.append({
             "tipo_registro": "hallazgo",
-            "code": "eventos_mismo_dia_tipo",
-            "confidence": "ambigua",
+            "code": "duplicado_probable",
+            "confidence": "alta",
             "cliente_id": cliente_id,
             "fecha_efectiva": effective_date.isoformat(),
             "tipo": activity_type,
             "event_ids": [event["id"] for event in events],
-            "fuentes": sorted({event["fuente"] for event in events}),
+            "fuentes": sorted(sources),
             "carga_ua_sumada": round(sum(loads), 2) if loads else None,
             "eventos": events,
             "aplicar_automaticamente": False,
@@ -81,13 +98,19 @@ def auditar_eventos_fisicos(*, cliente_id, desde, hasta, limit=MAX_LIMIT):
             estado__in=("merged", "created"),
             entreno_gym__isnull=True,
             hyrox_session__isnull=True,
+            actividad_hub__isnull=True,
         ).order_by("fecha_actividad", "pk")[:limit]
     )
     for raw in strava_without_link:
+        is_legacy_created = raw.estado == "created"
         findings.append({
             "tipo_registro": "hallazgo",
-            "code": "strava_procesado_sin_vinculo",
-            "confidence": "alta",
+            "code": (
+                "strava_legacy_sin_vinculo_hub"
+                if is_legacy_created
+                else "strava_procesado_sin_vinculo"
+            ),
+            "confidence": "media" if is_legacy_created else "alta",
             "cliente_id": cliente_id,
             "fecha_efectiva": raw.fecha_actividad.isoformat(),
             "strava_raw_id": raw.pk,
@@ -111,7 +134,7 @@ def auditar_eventos_fisicos(*, cliente_id, desde, hasta, limit=MAX_LIMIT):
         "eventos_evaluados": len(activities),
         "strava_procesados_sin_vinculo": len(strava_without_link),
         "grupos_candidatos": sum(
-            finding["code"] == "eventos_mismo_dia_tipo" for finding in findings
+            finding["code"] == "duplicado_probable" for finding in findings
         ),
         "hallazgos": len(findings),
         "limit": limit,
@@ -119,4 +142,3 @@ def auditar_eventos_fisicos(*, cliente_id, desde, hasta, limit=MAX_LIMIT):
         "solo_lectura": True,
     }
     return {"findings": findings, "summary": summary}
-

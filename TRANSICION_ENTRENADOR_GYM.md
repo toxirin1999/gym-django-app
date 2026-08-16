@@ -829,3 +829,18 @@ python manage.py auditar_eventos_fisicos_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+## Fase 5.9 — identidad Strava → evento canónico
+
+Cada actividad Strava procesada puede conservar un enlace uno-a-uno al
+`ActividadRealizada` que creó o enriqueció. `create_gym` lo asigna al crear el
+evento; `merge_gym` lo asigna al hub de la sesión; los flujos Hyrox lo asignan
+solo cuando ya existe una actividad realizada. Una sesión Hyrox todavía
+planificada conserva únicamente su enlace a `HyroxSession`, sin fingir que el
+esfuerzo ya ocurrió.
+
+La auditoría deja de presentar varias actividades Strava del mismo tipo y día
+como posibles duplicados. Solo eleva como probable una coincidencia entre
+fuentes con duraciones próximas o dos filas manuales con el mismo título. Los
+registros `created` anteriores al nuevo vínculo se clasifican como deuda de
+trazabilidad legacy, no como prueba de carga duplicada.

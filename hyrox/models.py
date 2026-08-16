@@ -774,6 +774,11 @@ class StravaActivityRaw(models.Model):
         'entrenos.EntrenoRealizado', null=True, blank=True,
         on_delete=models.SET_NULL, related_name='strava_sources'
     )
+    actividad_hub = models.OneToOneField(
+        'entrenos.ActividadRealizada', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='strava_source',
+        help_text='Evento físico canónico enriquecido o creado desde esta actividad.',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
