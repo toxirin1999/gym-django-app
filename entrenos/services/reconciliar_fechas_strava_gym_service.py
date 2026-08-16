@@ -13,7 +13,6 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
             fecha_actividad__range=(desde, hasta),
             estado="merged",
             entreno_gym__isnull=False,
-            actividad_hub__isnull=False,
         ).select_related("entreno_gym", "actividad_hub").order_by("fecha_actividad", "pk")
     )
     candidates = []
@@ -22,6 +21,18 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
     for raw in raws:
         workout = raw.entreno_gym
         activity = raw.actividad_hub
+        derived_legacy_hub = activity is None
+        if activity is None:
+            try:
+                activity = workout.hub_actividad
+            except ActividadRealizada.DoesNotExist:
+                ambiguous.append({
+                    "tipo_registro": "ambiguo",
+                    "code": "entreno_gym_sin_hub",
+                    "strava_raw_id": raw.pk,
+                    "entreno_gym_id": workout.pk,
+                })
+                continue
         workout_date = workout.fecha_ejecucion or workout.fecha
         activity_date = activity.fecha_realizado or activity.fecha
         if workout_date != activity_date:
@@ -33,10 +44,10 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
                 "actividad_hub_id": activity.pk,
             })
             continue
-        if workout_date == raw.fecha_actividad:
+        if workout_date == raw.fecha_actividad and not derived_legacy_hub:
             continue
         difference = abs((raw.fecha_actividad - workout_date).days)
-        if difference != 1:
+        if difference not in (0, 1):
             ambiguous.append({
                 "tipo_registro": "ambiguo",
                 "code": "salto_fecha_fuera_de_margen",
@@ -56,6 +67,8 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
             "fecha_actual": workout_date.isoformat(),
             "fecha_strava": raw.fecha_actividad.isoformat(),
             "dias_diferencia": difference,
+            "actualizar_fecha": difference == 1,
+            "vincular_hub_legacy": derived_legacy_hub,
         })
 
     applied = 0
@@ -65,17 +78,21 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
                 raw = StravaActivityRaw.objects.select_for_update().get(
                     pk=candidate["strava_raw_id"]
                 )
-                updated_workout = EntrenoRealizado.objects.filter(
-                    pk=candidate["entreno_gym_id"],
-                    fecha_ejecucion=candidate["fecha_actual"],
-                ).update(fecha_ejecucion=raw.fecha_actividad)
-                updated_activity = ActividadRealizada.objects.filter(
-                    pk=candidate["actividad_hub_id"],
-                    fecha_realizado=candidate["fecha_actual"],
-                ).update(fecha_realizado=raw.fecha_actividad)
-                if updated_workout != updated_activity:
-                    raise RuntimeError("No se pudo reconciliar Gym y hub de forma atómica")
-                applied += updated_workout
+                if candidate["actualizar_fecha"]:
+                    updated_workout = EntrenoRealizado.objects.filter(
+                        pk=candidate["entreno_gym_id"],
+                        fecha_ejecucion=candidate["fecha_actual"],
+                    ).update(fecha_ejecucion=raw.fecha_actividad)
+                    updated_activity = ActividadRealizada.objects.filter(
+                        pk=candidate["actividad_hub_id"],
+                        fecha_realizado=candidate["fecha_actual"],
+                    ).update(fecha_realizado=raw.fecha_actividad)
+                    if updated_workout != updated_activity or updated_workout != 1:
+                        raise RuntimeError("No se pudo reconciliar Gym y hub de forma atómica")
+                if candidate["vincular_hub_legacy"]:
+                    raw.actividad_hub_id = candidate["actividad_hub_id"]
+                    raw.save(update_fields=["actividad_hub"])
+                applied += 1
 
     summary = {
         "tipo_registro": "resumen",
@@ -90,4 +107,3 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
         "solo_lectura": not apply,
     }
     return {"candidates": candidates, "ambiguous": ambiguous, "summary": summary}
-

@@ -97,6 +97,23 @@ class ReconciliarFechasStravaGymTests(TestCase):
         self.workout.refresh_from_db()
         self.assertEqual(self.workout.fecha_ejecucion, self.wrong_date)
 
+    def test_legacy_deriva_hub_desde_entreno_y_lo_persiste_al_aplicar(self):
+        self.raw.actividad_hub = None
+        self.raw.save(update_fields=["actividad_hub"])
+
+        dry_run = self.execute()
+
+        self.assertEqual(dry_run["summary"]["evaluados"], 1)
+        self.assertEqual(dry_run["candidates"][0]["actividad_hub_id"], self.activity.pk)
+        self.raw.refresh_from_db()
+        self.assertIsNone(self.raw.actividad_hub_id)
+
+        applied = self.execute(apply=True)
+
+        self.raw.refresh_from_db()
+        self.assertEqual(self.raw.actividad_hub_id, self.activity.pk)
+        self.assertEqual(applied["summary"]["aplicados"], 1)
+
     def test_comando_jsonl(self):
         output = StringIO()
         call_command(
@@ -110,4 +127,3 @@ class ReconciliarFechasStravaGymTests(TestCase):
         records = [json.loads(line) for line in output.getvalue().splitlines()]
         self.assertEqual(records[0]["tipo_registro"], "candidato")
         self.assertEqual(records[-1]["modo"], "dry-run")
-

@@ -875,6 +875,11 @@ un día se propone en dry-run; diferencias mayores o desacuerdo previo entre Gym
 y hub quedan ambiguos. `--apply` actualiza ambas fechas efectivas en una sola
 transacción y repetir el comando es neutro.
 
+Los registros legacy que conservan `entreno_gym` pero no el vínculo nuevo al hub
+derivan este último mediante la relación uno-a-uno del entrenamiento. El dry-run
+lo declara y `--apply` persiste el enlace junto con la eventual corrección de
+fecha. Un entrenamiento sin hub nunca se reconstruye por semejanza.
+
 ```bash
 python manage.py reconciliar_fechas_strava_gym \
   --cliente <ID> \
