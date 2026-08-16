@@ -89,6 +89,18 @@ def _construir_snapshot_fisico(cliente, fecha):
     return deepcopy(snapshot), snapshot.get('fingerprint') or _fingerprint_snapshot_fisico(snapshot)
 
 
+def _snapshot_fisico_valido(snapshot, cliente, fecha) -> bool:
+    """Contrato mínimo V1 materializable; `unavailable` nunca se promociona."""
+    return bool(
+        isinstance(snapshot, dict)
+        and snapshot.get('status') != 'unavailable'
+        and snapshot.get('schema_version') == 1
+        and snapshot.get('cliente_id') == cliente.pk
+        and snapshot.get('as_of_date') == fecha.isoformat()
+        and isinstance(snapshot.get('signals'), dict)
+    )
+
+
 def _postura(estado: str) -> str:
     if estado in {'recuperar', 'posponer'}:
         return 'proteger'
@@ -167,11 +179,46 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
             and vigente.fingerprint == huella
         ):
             snapshot_vigente = vigente.snapshot or {}
-            if 'physical_snapshot' in snapshot_vigente:
+            physical_vigente = snapshot_vigente.get('physical_snapshot')
+            if _snapshot_fisico_valido(physical_vigente, cliente, fecha):
                 autoridad['physical_snapshot'] = deepcopy(snapshot_vigente['physical_snapshot'])
                 autoridad['physical_snapshot_fingerprint'] = snapshot_vigente.get(
                     'physical_snapshot_fingerprint'
                 ) or _fingerprint_snapshot_fisico(snapshot_vigente['physical_snapshot'])
+                autoridad['origen_decision'] = vigente.origen
+                autoridad['version_persistida'] = vigente.version
+                return autoridad
+
+            physical_nuevo = autoridad.get('physical_snapshot')
+            if _snapshot_fisico_valido(physical_nuevo, cliente, fecha):
+                # Upgrade contractual inmutable: la fila legacy se conserva y
+                # la sucesora mantiene la misma identidad ejecutiva.
+                versiones.filter(pk=vigente.pk, vigente=True).update(vigente=False)
+                ultima = versiones.order_by('-version').first()
+                numero = (ultima.version if ultima else 0) + 1
+                snapshot_upgrade = _serializable(autoridad)
+                snapshot_upgrade['contract_upgrade'] = 'physical_snapshot_v1'
+                creada = GymDecisionVersion.objects.create(
+                    cliente=cliente,
+                    fecha=fecha,
+                    version=numero,
+                    decision_id=vigente.decision_id,
+                    schema_version=vigente.schema_version,
+                    origen=GymDecisionVersion.ORIGEN_MOTOR,
+                    vigente=True,
+                    fingerprint=vigente.fingerprint,
+                    base_fingerprint=vigente.base_fingerprint,
+                    postura=vigente.postura,
+                    causa_principal=vigente.causa_principal,
+                    snapshot=snapshot_upgrade,
+                    reemplaza=vigente,
+                )
+                autoridad['origen_decision'] = creada.origen
+                autoridad['version_persistida'] = creada.version
+                return autoridad
+
+            # La captura nueva también falló: conservar la autoridad legacy,
+            # sin presentar el intento como una materialización correcta.
             autoridad['origen_decision'] = vigente.origen
             autoridad['version_persistida'] = vigente.version
             return autoridad
@@ -200,7 +247,13 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
         return autoridad
 
 
-def resolver_autoridad_diaria_gym(cliente, fecha=None, *, physical_snapshot=None) -> dict:
+def resolver_autoridad_diaria_gym(
+    cliente,
+    fecha=None,
+    *,
+    physical_snapshot=None,
+    force_refresh=False,
+) -> dict:
     """Devuelve la única decisión Gym preparada para presentar y ejecutar."""
     from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
 
@@ -222,7 +275,7 @@ def resolver_autoridad_diaria_gym(cliente, fecha=None, *, physical_snapshot=None
     huella = _fingerprint(decision_base, fecha)
     cache_key = f'autoridad_diaria_gym_v{SCHEMA_VERSION}_{cliente.pk}_{fecha.isoformat()}_{huella}'
     cached = cache.get(cache_key)
-    if cached is not None:
+    if cached is not None and not force_refresh:
         return deepcopy(cached)
 
     autoridad = deepcopy(decision_base)

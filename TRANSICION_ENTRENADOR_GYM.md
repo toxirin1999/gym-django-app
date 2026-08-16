@@ -772,3 +772,25 @@ python manage.py auditar_snapshot_fisico_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+### Promoción de una autoridad legacy del día actual
+
+Si la autoridad vigente se creó antes del contrato físico V1, el comando de
+materialización permite inspeccionarla en dry-run y promocionarla explícitamente:
+
+```bash
+python manage.py materializar_snapshot_fisico_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+
+python manage.py materializar_snapshot_fisico_gym \
+  --cliente <ID> \
+  --apply \
+  --settings=gymproject.settings
+```
+
+La promoción no modifica la fila legacy: crea una sucesora motor enlazada que
+mantiene `decision_id`, fingerprints, postura y causa, y añade el snapshot V1.
+Solo puede aplicarse a la fecha local actual, ocurre una vez y no atraviesa una
+corrección o reversión manual. El modo `--apply` omite de forma selectiva una
+posible respuesta ejecutiva antigua en caché y la actualiza al terminar.
