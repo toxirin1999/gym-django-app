@@ -810,3 +810,22 @@ con el formulario. Las rutas explícitas de intervención durante la sesión sig
 disponibles y deberán crear o registrar su propia decisión. Las sesiones legacy,
 listas mixtas y accesos directos sin autoridad materializada mantienen el flujo
 anterior como fallback de transición.
+
+## Fase 5.8 — auditoría de identidad del evento físico
+
+Antes de reconciliar carga se incorpora una auditoría estrictamente pasiva sobre
+`ActividadRealizada` y la bandeja procesada de Strava. Agrupa eventos del mismo
+cliente, fecha efectiva y modalidad, pero los etiqueta como ambiguos: dos
+sesiones Gym o dos carreras el mismo día pueden ser esfuerzos reales distintos
+y nunca deben fusionarse por una coincidencia superficial.
+
+También declara actividades Strava marcadas como procesadas que no conservan un
+vínculo al entrenamiento Gym o Hyrox. El comando no corrige, suma de nuevo ni
+modifica el histórico; aporta IDs, fuentes, duración y carga para diseñar la
+reconciliación con evidencia de producción.
+
+```bash
+python manage.py auditar_eventos_fisicos_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```
