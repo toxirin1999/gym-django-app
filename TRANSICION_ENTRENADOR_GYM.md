@@ -890,3 +890,17 @@ python manage.py reconciliar_fechas_strava_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+## Fase 5.12 — cumplimiento Gym por fecha efectiva
+
+La recomendación diaria y la reconciliación batch de sesiones programadas usan
+la fecha real del esfuerzo como autoridad. Para `EntrenoRealizado`, la fecha
+efectiva es `fecha_ejecucion` cuando existe y, solo para registros legacy sin
+ese dato, `fecha`. Para `ActividadRealizada` Gym se aplica el mismo contrato con
+`fecha_realizado` y el fallback `fecha`.
+
+El fallback es exclusivo: una sesión con fecha efectiva no cuenta también en
+su fecha planificada. Esto evita cerrar una prescripción histórica o impedir la
+sesión de hoy porque el entrenamiento pertenecía originalmente a otro día del
+plan. El cambio se limita a comprobar cumplimiento y a formar el conjunto batch
+de fechas completadas; no modifica carga, duración, RPE, estrategia ni JOI.

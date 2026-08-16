@@ -112,7 +112,9 @@ def _fecha_completada(cliente, fecha):
     ).exists():
         return True
     try:
-        if ActividadRealizada.objects.filter(cliente=cliente, tipo='gym', fecha=fecha).exists():
+        if ActividadRealizada.objects.filter(cliente=cliente, tipo='gym').filter(
+            Q(fecha_realizado=fecha) | Q(fecha_realizado__isnull=True, fecha=fecha)
+        ).exists():
             return True
     except Exception:
         pass
@@ -168,6 +170,7 @@ def _marcar_completadas(cliente, fecha_hoy):
     instead of 1-2 per pending session.
     """
     from collections import defaultdict
+    from django.db.models import Q
 
     fecha_inicio = fecha_hoy - timedelta(days=14)
 
@@ -181,22 +184,25 @@ def _marcar_completadas(cliente, fecha_hoy):
         return
 
     # Strategy 1 batch: dates with any completed gym session in the window
-    fechas_entrenos = set(
-        EntrenoRealizado.objects.filter(
-            cliente=cliente,
-            fecha__gte=fecha_inicio,
-            fecha__lt=fecha_hoy,
-        ).values_list('fecha', flat=True)
+    entrenos_en_ventana = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion__gte=fecha_inicio, fecha_ejecucion__lt=fecha_hoy)
+        | Q(fecha_ejecucion__isnull=True, fecha__gte=fecha_inicio, fecha__lt=fecha_hoy)
     )
+    fechas_entrenos = {
+        fecha_ejecucion if fecha_ejecucion is not None else fecha
+        for fecha, fecha_ejecucion in entrenos_en_ventana.values_list('fecha', 'fecha_ejecucion')
+    }
     fechas_actividades: set = set()
     try:
         fechas_actividades = set(
-            ActividadRealizada.objects.filter(
+            fecha_realizado if fecha_realizado is not None else fecha
+            for fecha, fecha_realizado in ActividadRealizada.objects.filter(
                 cliente=cliente,
                 tipo='gym',
-                fecha__gte=fecha_inicio,
-                fecha__lt=fecha_hoy,
-            ).values_list('fecha', flat=True)
+            ).filter(
+                Q(fecha_realizado__gte=fecha_inicio, fecha_realizado__lt=fecha_hoy)
+                | Q(fecha_realizado__isnull=True, fecha__gte=fecha_inicio, fecha__lt=fecha_hoy)
+            ).values_list('fecha', 'fecha_realizado')
         )
     except Exception:
         pass
@@ -206,10 +212,11 @@ def _marcar_completadas(cliente, fecha_hoy):
     entrenos_con_rutina = list(
         EntrenoRealizado.objects.filter(
             cliente=cliente,
-            fecha__gte=fecha_inicio,
-            fecha__lte=fecha_hoy,
             rutina__isnull=False,
-        ).select_related('rutina').order_by('fecha')
+        ).filter(
+            Q(fecha_ejecucion__gte=fecha_inicio, fecha_ejecucion__lte=fecha_hoy)
+            | Q(fecha_ejecucion__isnull=True, fecha__gte=fecha_inicio, fecha__lte=fecha_hoy)
+        ).select_related('rutina').order_by('fecha_ejecucion', 'fecha')
     )
     rutina_a_entrenos: dict = defaultdict(list)
     for e in entrenos_con_rutina:
@@ -231,12 +238,13 @@ def _marcar_completadas(cliente, fecha_hoy):
             nombre_lower = sp.nombre_sesion.lower()
             candidatos = [
                 e for e in rutina_a_entrenos.get(nombre_lower, [])
-                if fecha_desde <= e.fecha <= ventana_hasta
+                if fecha_desde <= (e.fecha_ejecucion or e.fecha) <= ventana_hasta
             ]
             if len(candidatos) == 1:
                 entreno = candidatos[0]
+                fecha_efectiva = entreno.fecha_ejecucion or entreno.fecha
                 sp.estado = SesionProgramada.ESTADO_COMPLETADA
-                sp.fecha_realizada = entreno.fecha
+                sp.fecha_realizada = fecha_efectiva
                 sp.entreno_realizado = entreno
                 sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
 
