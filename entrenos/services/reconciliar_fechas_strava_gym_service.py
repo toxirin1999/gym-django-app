@@ -1,5 +1,7 @@
 """Reconciliación explícita de fecha efectiva Gym desde evidencia Strava."""
 
+from collections import defaultdict
+
 from django.db import transaction
 
 from entrenos.models import ActividadRealizada, EntrenoRealizado
@@ -18,7 +20,32 @@ def reconciliar_fechas_strava_gym(*, cliente_id, desde, hasta, apply=False):
     candidates = []
     ambiguous = []
 
+    grouped_raws = defaultdict(list)
     for raw in raws:
+        grouped_raws[raw.entreno_gym_id].append(raw)
+    selected_raws = []
+    for workout_raws in grouped_raws.values():
+        if len(workout_raws) == 1:
+            selected_raws.extend(workout_raws)
+            continue
+        workout = workout_raws[0].entreno_gym
+        current_date = workout.fecha_ejecucion or workout.fecha
+        exact = [raw for raw in workout_raws if raw.fecha_actividad == current_date]
+        if len(exact) == 1:
+            selected_raws.append(exact[0])
+            discarded = [raw for raw in workout_raws if raw.pk != exact[0].pk]
+        else:
+            discarded = workout_raws
+        for raw in discarded:
+            ambiguous.append({
+                "tipo_registro": "ambiguo",
+                "code": "varios_strava_mismo_entreno",
+                "strava_raw_id": raw.pk,
+                "entreno_gym_id": workout.pk,
+                "fecha_strava": raw.fecha_actividad.isoformat(),
+            })
+
+    for raw in selected_raws:
         workout = raw.entreno_gym
         activity = raw.actividad_hub
         derived_legacy_hub = activity is None

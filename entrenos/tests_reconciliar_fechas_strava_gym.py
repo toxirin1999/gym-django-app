@@ -114,6 +114,41 @@ class ReconciliarFechasStravaGymTests(TestCase):
         self.assertEqual(self.raw.actividad_hub_id, self.activity.pk)
         self.assertEqual(applied["summary"]["aplicados"], 1)
 
+    def test_varios_strava_mismo_entreno_prioriza_el_que_coincide_con_fecha_actual(self):
+        self.raw.actividad_hub = None
+        self.raw.save(update_fields=["actividad_hub"])
+        matching = StravaActivityRaw.objects.create(
+            cliente=self.cliente,
+            strava_id=300002,
+            fecha_actividad=self.wrong_date,
+            tipo_strava="WeightTraining",
+            nombre_strava="Torso duplicado",
+            duracion_segundos=52 * 60,
+            raw_json={},
+            estado="merged",
+            entreno_gym=self.workout,
+        )
+
+        result = self.execute()
+
+        self.assertEqual(len(result["candidates"]), 1)
+        self.assertEqual(result["candidates"][0]["strava_raw_id"], matching.pk)
+        discarded = next(
+            row for row in result["ambiguous"]
+            if row["code"] == "varios_strava_mismo_entreno"
+        )
+        self.assertEqual(discarded["strava_raw_id"], self.raw.pk)
+
+        applied = self.execute(apply=True)
+
+        self.workout.refresh_from_db()
+        matching.refresh_from_db()
+        self.raw.refresh_from_db()
+        self.assertEqual(self.workout.fecha_ejecucion, self.wrong_date)
+        self.assertEqual(matching.actividad_hub_id, self.activity.pk)
+        self.assertIsNone(self.raw.actividad_hub_id)
+        self.assertEqual(applied["summary"]["aplicados"], 1)
+
     def test_comando_jsonl(self):
         output = StringIO()
         call_command(

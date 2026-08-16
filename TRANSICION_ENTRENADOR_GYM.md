@@ -880,6 +880,11 @@ derivan este último mediante la relación uno-a-uno del entrenamiento. El dry-r
 lo declara y `--apply` persiste el enlace junto con la eventual corrección de
 fecha. Un entrenamiento sin hub nunca se reconstruye por semejanza.
 
+Si varios registros Strava legacy apuntan al mismo entrenamiento, solo se acepta
+automáticamente uno cuando coincide de forma única con la fecha efectiva ya
+persistida. Los restantes se mantienen ambiguos; nunca compiten por el mismo
+enlace uno-a-uno ni desplazan una fecha basándose en el orden de procesamiento.
+
 ```bash
 python manage.py reconciliar_fechas_strava_gym \
   --cliente <ID> \
