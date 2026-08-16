@@ -928,3 +928,35 @@ python manage.py auditar_metricas_strava_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+## Fase 5.14 — partición de identidad Strava, Gym y hub
+
+`clasificar_identidad_strava_gym` produce una partición exhaustiva y disjunta
+de los raws Strava `merged` del cliente y rango. Ese estado es el alcance por
+defecto y cada raw candidato aparece exactamente una vez. La prioridad es: conflictos de cliente o
+FK; actividad no Gym; multiplicidad de raws; y finalmente identidad completa,
+hub canónico ausente o enlace al hub recuperable de forma inequívoca.
+
+Las actividades sin `entreno_gym` quedan fuera del alcance Gym y se
+subclasifican por estado, tipo normalizado y presencia de `hyrox_session`. No se
+interpretan como Gym incompleto. Para una sesión Gym sin enlace directo al hub,
+la recuperación solo se considera posible si existe su hub inverso canónico,
+del mismo cliente y tipo Gym, y hay un único raw para esa sesión. Además, las
+fechas efectivas Gym y hub deben coincidir y Strava debe quedar como máximo a un
+día de Gym. Si no se cumple, el raw queda en
+`gym_missing_hub_date_conflict`; la categoría de múltiples raws conserva mayor
+prioridad para que una divergencia temporal no oculte la ambigüedad estructural.
+Cada fila expone fechas planificadas y efectivas, además del delta absoluto en
+días entre Strava y Gym, para hacer auditable esta decisión.
+
+El comando selecciona `merged` por defecto; no mezcla pendientes, creados o
+ignorados con la deuda de identidad Gym. `--limit` solo trunca la presentación: `total` y
+`gym_raw_count` se calculan sobre todo el rango, de modo que nunca oculta una
+multiplicidad. El resumen prueba la partición mediante `partition_count` y
+`partition_complete`. Es estrictamente de solo lectura y no ofrece `--apply`.
+
+```bash
+python manage.py clasificar_identidad_strava_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```
