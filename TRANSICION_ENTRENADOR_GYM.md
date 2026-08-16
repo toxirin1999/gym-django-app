@@ -904,3 +904,27 @@ su fecha planificada. Esto evita cerrar una prescripción histórica o impedir l
 sesión de hoy porque el entrenamiento pertenecía originalmente a otro día del
 plan. El cambio se limita a comprobar cumplimiento y a formar el conjunto batch
 de fechas completadas; no modifica carga, duración, RPE, estrategia ni JOI.
+
+## Fase 5.13 — auditoría de métricas Strava, Gym y hub
+
+`auditar_metricas_strava_gym` comprueba, sin escribir, los raws Strava `merged`
+que conservan enlaces explícitos al entrenamiento Gym y a su evento canónico.
+Antes de comparar valida el mismo cliente, el mismo entrenamiento en el hub y
+la existencia de un único raw por sesión.
+
+Gym y hub deben tener idéntica duración. Strava se deriva de segundos y admite
+solo el truncado a minutos enteros (delta menor de un minuto); diferencias
+mayores quedan con procedencia desconocida. La carga se compara únicamente en
+el hub contra `rpe_medio × duracion_minutos`, con tolerancia de 0,1 UA. No se
+compara volumen kg. Una carga sin duración o sin RPE queda informativa como
+posible fallback, pero nunca se reconstruye.
+
+El resumen distingue los candidatos totales de los evaluados: `truncated`
+cuenta los registros omitidos por `--limit`. Las diferencias fraccionales de
+duración aceptadas se reportan aparte en `duration_truncations_tolerated`.
+
+```bash
+python manage.py auditar_metricas_strava_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```
