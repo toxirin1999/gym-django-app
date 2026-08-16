@@ -794,3 +794,19 @@ mantiene `decision_id`, fingerprints, postura y causa, y añade el snapshot V1.
 Solo puede aplicarse a la fecha local actual, ocurre una vez y no atraviesa una
 corrección o reversión manual. El modo `--apply` omite de forma selectiva una
 posible respuesta ejecutiva antigua en caché y la actualiza al terminar.
+
+## Fase 5.7 — autoridad única durante la ejecución
+
+La pantalla de entrenamiento activo reconoce una prescripción materializada
+cuando todos sus ejercicios llevan `_autoridad_gym_materializada=True`. En ese
+caso presenta exactamente la decisión ejecutiva ya resuelta: no vuelve a aplicar
+BioContext, hot-swap, límites de RPE, progresión por historial, topes ni deload.
+Estos factores ya fueron considerados al construir la autoridad y una segunda
+pasada podía alterar series, repeticiones, peso o incluso la identidad del
+ejercicio sin dejar una nueva versión trazable.
+
+La vista conserva únicamente enriquecimientos de interfaz y aliases compatibles
+con el formulario. Las rutas explícitas de intervención durante la sesión siguen
+disponibles y deberán crear o registrar su propia decisión. Las sesiones legacy,
+listas mixtas y accesos directos sin autoridad materializada mantienen el flujo
+anterior como fallback de transición.

@@ -291,6 +291,118 @@ class DeloadIdempotenteTransporteTests(_Base):
         self.assertTrue(ejercicios_sesion[0]['_deload_aplicado'])
 
 
+class AutoridadMaterializadaEnEjecucionTests(_Base):
+    """La vista activa consume la decisión diaria; no vuelve a decidirla."""
+
+    def _abrir(self, ejercicios, *, readiness=None, restricciones=None, deload=False):
+        url = reverse('entrenos:entrenamiento_activo', args=[self.cliente.id])
+        readiness = readiness or {
+            'volume_modifier': 0.5,
+            'volume_modifier_base': 0.5,
+            'volume_modifier_excl_lesion_fase': 0.5,
+            'max_rpe': 6,
+            'score': 0.5,
+        }
+        with patch(
+            'core.bio_context.BioContextProvider.get_readiness_score',
+            return_value=readiness,
+        ), patch(
+            'core.bio_context.BioContextProvider.get_current_restrictions',
+            return_value=restricciones or {'tags': set()},
+        ), patch(
+            'entrenos.services.briefing_service.necesita_deload_gym',
+            return_value=deload,
+        ):
+            return self.c.get(url, {
+                'fecha': self.fecha_str,
+                'rutina_nombre': 'Sesión materializada',
+                'ejercicios': json.dumps(ejercicios),
+            })
+
+    def test_canonica_preserva_inputs_identidad_y_enriquece_ui(self):
+        ejercicio = {
+            'nombre': 'Press Banca canónico',
+            'series': 4,
+            'repeticiones': '6-8',
+            'reps_objetivo': 7,
+            'peso_kg': 82.5,
+            'peso_recomendado_kg': 80.0,
+            'peso_inicial_kg': 77.5,
+            'rpe_objetivo': 9,
+            'tipo_ejercicio': 'compuesto_principal',
+            '_autoridad_gym_materializada': True,
+            '_autoridad_gym_decision_id': 'gym-decision-42',
+            '_deload_aplicado': True,
+        }
+
+        resp = self._abrir([ejercicio], deload=True)
+
+        self.assertEqual(resp.status_code, 200)
+        actual = resp.context['ejercicios_planificados'][0]
+        for campo in (
+            'nombre', 'series', 'repeticiones', 'reps_objetivo', 'peso_kg',
+            'peso_recomendado_kg', 'peso_inicial_kg', 'rpe_objetivo',
+            '_autoridad_gym_decision_id', '_deload_aplicado',
+        ):
+            self.assertEqual(actual[campo], ejercicio[campo], campo)
+        self.assertEqual(actual['form_id'], 'ejercicio_0')
+        self.assertTrue(actual['es_principal'])
+        self.assertIn('tempo', actual)
+
+    def test_canonica_con_aliases_ausentes_deriva_sin_pisar_autoridad(self):
+        resp = self._abrir([{
+            'nombre': 'Remo canónico',
+            'series': 4,
+            'repeticiones': '10-12',
+            'peso_kg': 70,
+            'rpe_objetivo': 8,
+            '_autoridad_gym_materializada': True,
+            '_autoridad_gym_decision_id': 'gym-decision-alias',
+        }])
+
+        actual = resp.context['ejercicios_planificados'][0]
+        self.assertEqual(actual['reps_objetivo'], 10)
+        self.assertEqual(actual['peso_recomendado_kg'], 70)
+        self.assertEqual(actual['peso_inicial_kg'], 70)
+
+    def test_canonica_no_intenta_un_segundo_hot_swap(self):
+        ejercicio = {
+            'nombre': 'Sentadilla segura materializada',
+            'series': 3,
+            'repeticiones': 8,
+            'peso_kg': 60,
+            'rpe_objetivo': 7,
+            '_autoridad_gym_materializada': True,
+        }
+        with patch(
+            'analytics.planificador_helms.utils.helpers.obtener_sustituto_en_caliente',
+        ) as sustituir:
+            resp = self._abrir(
+                [ejercicio], restricciones={'tags': {'flexion_rodilla_profunda'}},
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        sustituir.assert_not_called()
+        self.assertEqual(
+            resp.context['ejercicios_planificados'][0]['nombre'],
+            'Sentadilla segura materializada',
+        )
+
+    def test_lista_mixta_es_legacy_y_conserva_ajuste_existente(self):
+        ejercicios = [
+            {'nombre': 'Marcado', 'series': 4, 'repeticiones': 8,
+             'rpe_objetivo': 9, '_autoridad_gym_materializada': True},
+            {'nombre': 'Legacy', 'series': 4, 'repeticiones': 8,
+             'rpe_objetivo': 9},
+        ]
+
+        resp = self._abrir(ejercicios)
+
+        actuales = resp.context['ejercicios_planificados']
+        self.assertEqual([e['series'] for e in actuales], [2, 2])
+        self.assertEqual([e['rpe_objetivo'] for e in actuales], [6, 6])
+
+
 # ---------------------------------------------------------------------------
 # Test 4: _calcular_ejercicios_dia devuelve lista cuando hay plan en cache.
 # ---------------------------------------------------------------------------

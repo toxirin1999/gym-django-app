@@ -3627,6 +3627,14 @@ def vista_entrenamiento_activo(request, cliente_id):
         if ejercicios_planificados is None:
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
+        # Una lista solo es canónica cuando todos sus elementos pertenecen a la
+        # autoridad diaria materializada. Una lista vacía, mixta o sin marca
+        # conserva deliberadamente el flujo legacy completo.
+        es_sesion_canonica = bool(ejercicios_planificados) and all(
+            ejercicio.get('_autoridad_gym_materializada') is True
+            for ejercicio in ejercicios_planificados
+        )
+
         # --- BIO-BRIDGE: VALIDACIÓN EN TIEMPO REAL Y AJUSTE DE CARGA ---
         from core.bio_context import BioContextProvider
 
@@ -3647,8 +3655,11 @@ def vista_entrenamiento_activo(request, cliente_id):
             )
 
         # Phase Gym Peso 2 — calculado una vez para todo el bucle (no por ejercicio).
-        from entrenos.services.briefing_service import necesita_deload_gym as _necesita_deload_gym_hoy
-        _es_descarga_sesion = _necesita_deload_gym_hoy(cliente, fecha_obj)
+        if es_sesion_canonica:
+            _es_descarga_sesion = False
+        else:
+            from entrenos.services.briefing_service import necesita_deload_gym as _necesita_deload_gym_hoy
+            _es_descarga_sesion = _necesita_deload_gym_hoy(cliente, fecha_obj)
 
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
@@ -3662,13 +3673,99 @@ def vista_entrenamiento_activo(request, cliente_id):
                 else:
                     ejercicio['origen_opcional'] = 'modo_reducido'
 
+            if es_sesion_canonica:
+                # El snapshot ya resolvió Bio, lesión, progresión, fase, tope y
+                # deload. Aquí solo se completan aliases y metadatos de UI.
+                try:
+                    reps_str = str(ejercicio.get('repeticiones', '8'))
+                    reps_alias = int(reps_str.split('-')[0].strip())
+                except (ValueError, AttributeError):
+                    reps_alias = 8
+                ejercicio.setdefault('reps_objetivo', reps_alias)
+                ejercicio.setdefault('peso_recomendado_kg', ejercicio.get('peso_kg', 0.0))
+                ejercicio.setdefault('peso_inicial_kg', ejercicio.get('peso_recomendado_kg', 0.0))
+                ejercicio.setdefault('descanso_minutos', 2)
+                ejercicio.setdefault('tipo_progresion', 'peso_reps')
+                ejercicio.setdefault('usa_tiempo', ejercicio['tipo_progresion'] == 'progresion_tiempo')
+                ejercicio.setdefault('usa_distancia', ejercicio['tipo_progresion'] == 'progresion_distancia')
+                ejercicio.setdefault(
+                    'solo_reps',
+                    ejercicio['tipo_progresion'] in ('progresion_reps', 'progresion_variante'),
+                )
+                ejercicio.setdefault(
+                    'usa_peso',
+                    ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre'),
+                )
+
+                datos_anterior = obtener_ultimo_peso_ejercicio(
+                    cliente_id=cliente.id,
+                    nombre_ejercicio=ejercicio.get('nombre', ''),
+                    fecha_actual=fecha_obj,
+                )
+                tempo_registrado = datos_anterior.get('tempo') if datos_anterior else None
+                tempo, tempo_fuente = resolver_tempo_sesion(
+                    ejercicio.get('nombre', ''), tempo_registrado,
+                )
+                ejercicio.setdefault('tempo', tempo)
+                ejercicio.setdefault('tempo_fuente', tempo_fuente)
+                if datos_anterior:
+                    ejercicio['peso_anterior_kg'] = datos_anterior['peso']
+                    ejercicio['fecha_anterior'] = datos_anterior['fecha']
+                    ejercicio['series_anterior'] = datos_anterior['series']
+                    ejercicio['repeticiones_anterior'] = datos_anterior['repeticiones']
+                    ejercicio['volumen_anterior'] = datos_anterior['volumen']
+                    ejercicio['diferencia_peso'] = round(
+                        float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+                        - float(datos_anterior['peso'] or 0),
+                        2,
+                    )
+                else:
+                    ejercicio.setdefault('peso_anterior_kg', 0.0)
+                    ejercicio.setdefault('fecha_anterior', None)
+                    ejercicio.setdefault('series_anterior', 0)
+                    ejercicio.setdefault('repeticiones_anterior', 0)
+                    ejercicio.setdefault('volumen_anterior', 0.0)
+                    ejercicio.setdefault('diferencia_peso', 0.0)
+                try:
+                    from analytics.utils import estimar_1rm
+                    pr = RecordsService.obtener_mejor_marca(
+                        cliente, ejercicio.get('nombre', ''),
+                    )
+                    if pr:
+                        ejercicio.setdefault('pr_peso', float(pr.peso_kg))
+                        ejercicio.setdefault('pr_reps', pr.repeticiones)
+                        ejercicio.setdefault(
+                            'one_rm_estimado',
+                            estimar_1rm(float(pr.peso_kg), pr.repeticiones),
+                        )
+                except Exception:
+                    pass
+                ejercicio.setdefault('one_rm_estimado', 0.0)
+                ejercicio.setdefault('pr_peso', 0.0)
+                ejercicio.setdefault('pr_reps', 0)
+                ejercicio['estancado'] = detectar_estancamiento(
+                    cliente, ejercicio.get('nombre', ''), fecha_obj,
+                )
+                try:
+                    peso_trabajo = float(
+                        ejercicio.get('peso_inicial_kg')
+                        or ejercicio.get('peso_recomendado_kg')
+                        or 0
+                    )
+                except (TypeError, ValueError):
+                    peso_trabajo = 0
+                ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
+                    peso_trabajo, ejercicio.get('usa_peso', True),
+                )
+                continue
+
             # --- Validación en Tiempo Real (Bio-Safety) + Ajuste de Volumen ---
             ejercicio['is_bio_blocked'] = False
             ejercicio['bio_blocked_tag'] = ""
             ejercicio['is_hot_substituted'] = False
             _ej_conflicta_lesion = False
 
-            if tags_bloqueados:
+            if tags_bloqueados and not es_sesion_canonica:
                 nombre_ej = ejercicio.get('nombre', '')
                 from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre, \
                     obtener_sustituto_en_caliente
@@ -3693,24 +3790,25 @@ def vista_entrenamiento_activo(request, cliente_id):
             # La penalización de fase (AGUDA/SUB_AGUDA) solo debe reducir volumen
             # en ejercicios que realmente tocan la zona lesionada. Un press de hombro
             # no debe verse afectado por una lesión de rodilla.
-            try:
-                series_orig = int(ejercicio.get('series', 3))
-                if _hay_lesion_activa and not _ej_conflicta_lesion:
-                    # Usar modifier sin penalización de fase — fatiga/carga sí, lesión no
-                    _ej_vol = vol_mod_excl_lesion
-                    ejercicio['reduccion_fuente'] = 'carga' if vol_mod_excl_lesion < 1.0 else None
-                elif _is_in_transition and not _ej_conflicta_lesion:
-                    _ej_vol = vol_mod_base
-                    ejercicio['reduccion_fuente'] = 'transicion' if vol_mod_base < 1.0 else None
-                else:
-                    _ej_vol = vol_mod
-                    ejercicio['reduccion_fuente'] = 'lesion' if (_ej_conflicta_lesion and vol_mod < 1.0) else (
-                        'carga' if vol_mod < 1.0 else None
-                    )
-                series_adj = max(1, round(series_orig * _ej_vol))
-                ejercicio['series'] = series_adj
-            except ValueError:
-                pass
+            if not es_sesion_canonica:
+                try:
+                    series_orig = int(ejercicio.get('series', 3))
+                    if _hay_lesion_activa and not _ej_conflicta_lesion:
+                        # Usar modifier sin penalización de fase — fatiga/carga sí, lesión no
+                        _ej_vol = vol_mod_excl_lesion
+                        ejercicio['reduccion_fuente'] = 'carga' if vol_mod_excl_lesion < 1.0 else None
+                    elif _is_in_transition and not _ej_conflicta_lesion:
+                        _ej_vol = vol_mod_base
+                        ejercicio['reduccion_fuente'] = 'transicion' if vol_mod_base < 1.0 else None
+                    else:
+                        _ej_vol = vol_mod
+                        ejercicio['reduccion_fuente'] = 'lesion' if (_ej_conflicta_lesion and vol_mod < 1.0) else (
+                            'carga' if vol_mod < 1.0 else None
+                        )
+                    series_adj = max(1, round(series_orig * _ej_vol))
+                    ejercicio['series'] = series_adj
+                except ValueError:
+                    pass
 
             # ── Bio-Safe Substitute detection ──
             ejercicio['is_bio_substitute'] = ejercicio.get('was_bio_substituted', False)
@@ -4055,7 +4153,7 @@ def vista_entrenamiento_activo(request, cliente_id):
     from entrenos.services.deload_cycle_service import (
         aplicar_overlay_gym, abrir_ciclo_deload, obtener_ciclo_activo,
     )
-    if necesita_deload_gym(cliente, fecha_obj):
+    if not es_sesion_canonica and necesita_deload_gym(cliente, fecha_obj):
         if not obtener_ciclo_activo(cliente, fecha_obj):
             abrir_ciclo_deload(cliente, 'fatiga_gym', hoy=fecha_obj)
         ejercicios_planificados = aplicar_overlay_gym(
