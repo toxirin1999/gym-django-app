@@ -167,6 +167,27 @@ class TestCambiosRelevantes(CierreEntrenamientoBase):
         self.assertEqual(cambios[0]['tipo'], 'bajada')
         self.assertEqual(cambios[0]['detalle'], '-2.5 kg')
 
+    def test_carga_bajada_en_descarga_se_etiqueta_como_esperada(self):
+        """
+        Regresión reportada por el usuario: en fase de descarga, el plan
+        reduce carga a propósito (resolver_peso_objetivo caso D). El cierre
+        no debe marcar eso como 'bajada' (misma lectura visual que una
+        regresión no planeada) — debe distinguirse como 'bajada_descarga'.
+        """
+        rutina_descarga = Rutina.objects.create(nombre='Descarga Activa')
+        anterior = self._crear_entreno(date(2026, 5, 25))
+        self._crear_ejercicio(anterior, peso_kg=60.0)
+        entreno = self._crear_entreno(date(2026, 6, 1), rutina=rutina_descarga)
+        self._crear_ejercicio(entreno, peso_kg=52.5)
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        cambios = ctx['cambios_relevantes']
+        self.assertEqual(cambios[0]['tipo'], 'bajada_descarga')
+        self.assertIn('descarga', cambios[0]['detalle'])
+
     def test_tope_de_maquina(self):
         entreno = self._crear_entreno(date(2026, 6, 1))
         self._crear_ejercicio(entreno, es_tope_maquina=True)

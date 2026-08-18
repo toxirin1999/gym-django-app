@@ -151,7 +151,7 @@ def _resumen_sesion(entreno, ejercicios):
     }
 
 
-def _cambios_relevantes(cliente, entreno, ejercicios):
+def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
     cambios = []
     for ej in ejercicios:
         if ej.es_tope_maquina:
@@ -199,6 +199,13 @@ def _cambios_relevantes(cliente, entreno, ejercicios):
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'mantenida', 'detalle': 'carga mantenida'})
         elif diff > 0:
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'subida', 'detalle': f'+{diff:g} kg'})
+        elif es_descarga_hoy:
+            # La descarga reduce carga a propósito (ver resolver_peso_objetivo
+            # caso D) — no es una regresión que deba leerse como alarma.
+            cambios.append({
+                'nombre': ej.nombre_ejercicio, 'tipo': 'bajada_descarga',
+                'detalle': f'{diff:g} kg · descarga',
+            })
         else:
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'bajada', 'detalle': f'{diff:g} kg'})
     return cambios
@@ -247,6 +254,13 @@ def construir_contexto_cierre(cliente, entreno):
         entreno.ejercicios_realizados.filter(completado=True).order_by('orden', 'id')
     )
 
+    from entrenos.services.briefing_service import necesita_deload_gym
+    rutina_nombre = entreno.rutina.nombre if entreno.rutina_id else ''
+    es_descarga_hoy = (
+        'descarga' in rutina_nombre.lower()
+        or necesita_deload_gym(cliente, entreno.fecha)
+    )
+
     permiso = evaluar_permiso_progresion(cliente, entreno.fecha)
     motivo = permiso.get('motivo', 'ok')
     accion = permiso.get('accion', 'progresion_permitida')
@@ -272,7 +286,7 @@ def construir_contexto_cierre(cliente, entreno):
 
     return {
         'resumen': _resumen_sesion(entreno, ejercicios),
-        'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios),
+        'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy),
         'lectura_plan': lectura_plan,
         'proxima_vez': proxima_vez,
         'prs': prs,

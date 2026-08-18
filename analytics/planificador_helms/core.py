@@ -382,6 +382,7 @@ class PlanificadorHelms:
                     rpe_real_anterior = historial['rpe_real']
                     peso_real_anterior = historial['peso_real']
                     reps_real_anterior = historial['reps_real']
+                    peso_real_bruto_anterior = historial['peso_real_bruto']
 
                     es_descarga_hoy = (fase == 'descarga')
 
@@ -397,6 +398,7 @@ class PlanificadorHelms:
                         rpe_objetivo_hoy=rpe_objetivo_toque,
                         es_descarga_hoy=es_descarga_hoy,
                         redondear_fn=lambda p: CalculadorPeso.redondear_peso(p, nombre),
+                        peso_ultima_sesion=peso_real_bruto_anterior,
                     )
 
                     motivo_peso_tipo = 'sin_datos'
@@ -486,7 +488,7 @@ class PlanificadorHelms:
         Devuelve el peso y RPE de la última sesión del ejercicio.
         Usa la caché en memoria si está disponible (cargada por _precargar_historial_ejercicios).
         """
-        resultado = {'peso_real': None, 'rpe_real': None, 'reps_real': None}
+        resultado = {'peso_real': None, 'rpe_real': None, 'reps_real': None, 'peso_real_bruto': None}
         try:
             nombre_lower = nombre_ejercicio.lower()
 
@@ -501,6 +503,11 @@ class PlanificadorHelms:
                 ref = matches[0]
                 if ref['peso_kg']:
                     resultado['peso_real'] = float(ref['peso_kg'])
+                    # Snapshot sin suavizar: la última sesión real aislada, antes
+                    # de que el ancla de abajo pueda sustituir 'peso_real' por un
+                    # promedio ponderado de hasta 3 sesiones. Sirve como techo de
+                    # seguridad en descarga (ver resolver_peso_objetivo).
+                    resultado['peso_real_bruto'] = resultado['peso_real']
                 if ref['rpe'] is not None:
                     resultado['rpe_real'] = float(ref['rpe'])
                 if ref.get('repeticiones') is not None:
@@ -547,6 +554,7 @@ class PlanificadorHelms:
 
             if ej and ej.peso_kg:
                 resultado['peso_real'] = float(ej.peso_kg)
+                resultado['peso_real_bruto'] = resultado['peso_real']
             if ej and ej.repeticiones is not None:
                 resultado['reps_real'] = int(ej.repeticiones)
 

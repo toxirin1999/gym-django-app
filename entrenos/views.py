@@ -4049,6 +4049,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                     rep_range_hoy=ejercicio.get('repeticiones', '8-12'),
                     rpe_objetivo_hoy=ejercicio.get('rpe_objetivo', 8),
                     es_descarga_hoy=_es_descarga_hoy,
+                    # Techo de seguridad: el ancla suavizada (hasta 3 sesiones en
+                    # 42 días) puede quedar dominada por una sesión más pesada
+                    # que la última real. En descarga eso no puede traducirse en
+                    # más peso del que se levantó la última vez.
+                    peso_ultima_sesion=float(datos_anterior.get('peso') or 0) or None,
                 )
                 if _decision_fase['aplica']:
                     ejercicio['peso_inicial_kg'] = _decision_fase['peso']

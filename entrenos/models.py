@@ -1336,6 +1336,7 @@ class GymDecisionLog(models.Model):
             rep_range_hoy=rep_range_hoy,
             rpe_objetivo_hoy=rpe_objetivo_hoy,
             es_descarga_hoy=es_descarga_hoy,
+            peso_ultima_sesion=self.peso_anterior,
         )
         if decision['aplica']:
             return decision['peso'], decision['motivo_tipo']

@@ -287,3 +287,62 @@ class TestResolverPesoObjetivoX1GuardAlto(SimpleTestCase):
         )
         self.assertTrue(r['aplica'])
         self.assertEqual(r['motivo_tipo'], 'recalculado_alto')
+
+
+# ── Techo de seguridad en descarga (peso_ultima_sesion) ──────────────────────
+
+class TestTechoDescargaPesoUltimaSesion(SimpleTestCase):
+    """
+    Caso real reportado: "Remo con mancuerna a una mano" en descarga mostró
+    52.5kg cuando la última sesión real fue 30kg x12. El ancla suavizada
+    (hasta 3 sesiones en 42 días) había quedado dominada por una sesión más
+    pesada dentro de la misma ventana/bucket, empujando el e1RM muy por
+    encima de lo que la última sesión real sola habría dado (~44kg).
+
+    `peso_ultima_sesion` es el valor crudo (no suavizado) de esa última
+    sesión real; en descarga actúa como techo explícito.
+    """
+
+    def test_ancla_inflada_se_recorta_al_techo_de_ultima_sesion(self):
+        # peso_anterior=80 simula el e1RM-derivado del ancla suavizada
+        # (contaminado por una sesión más pesada reciente); la última sesión
+        # real aislada fue 30kg. Sin techo, el resultado sería ~52.5kg > 30kg,
+        # contradiciendo "peso reducido a propósito".
+        r = resolver_peso_objetivo(
+            peso_anterior=80.0, reps_anteriores=12, rpe_anterior=8.0,
+            rep_range_hoy='10-15', rpe_objetivo_hoy=6,
+            es_descarga_hoy=True,
+            peso_ultima_sesion=30.0,
+        )
+        self.assertTrue(r['aplica'])
+        self.assertLessEqual(r['peso'], 30.0)
+
+    def test_sin_techo_ancla_inflada_supera_ultima_sesion_real(self):
+        """Control: sin peso_ultima_sesion, se reproduce el bug original."""
+        r = resolver_peso_objetivo(
+            peso_anterior=80.0, reps_anteriores=12, rpe_anterior=8.0,
+            rep_range_hoy='10-15', rpe_objetivo_hoy=6,
+            es_descarga_hoy=True,
+        )
+        self.assertGreater(r['peso'], 30.0)
+
+    def test_techo_no_afecta_cuando_calculo_ya_esta_por_debajo(self):
+        """El techo solo recorta hacia abajo; nunca sube un resultado ya bajo."""
+        r = resolver_peso_objetivo(
+            peso_anterior=30.0, reps_anteriores=12, rpe_anterior=8.0,
+            rep_range_hoy='10-15', rpe_objetivo_hoy=6,
+            es_descarga_hoy=True,
+            peso_ultima_sesion=100.0,
+        )
+        self.assertLessEqual(r['peso'], 30.0)
+
+    def test_techo_no_aplica_fuera_de_descarga(self):
+        """El techo es una garantía específica de descarga (caso D), no de fase (caso C)."""
+        r = resolver_peso_objetivo(
+            peso_anterior=107.5, reps_anteriores=3, rpe_anterior=8.0,
+            rep_range_hoy='10-15', rpe_objetivo_hoy=8,
+            es_descarga_hoy=False,
+            peso_ultima_sesion=20.0,
+        )
+        self.assertTrue(r['aplica'])
+        self.assertGreater(r['peso'], 20.0)

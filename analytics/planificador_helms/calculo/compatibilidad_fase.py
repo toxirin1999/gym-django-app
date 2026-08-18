@@ -21,6 +21,7 @@ Suaviza la ancla de e1RM ponderando las sesiones dentro de una ventana de
 filtra por bucket; este módulo solo promedia lo que recibe.
 """
 
+import math
 from datetime import date as _date
 from typing import Optional
 
@@ -91,6 +92,7 @@ def resolver_peso_objetivo(
     rpe_objetivo_hoy: int,
     es_descarga_hoy: bool = False,
     redondear_fn=None,
+    peso_ultima_sesion: Optional[float] = None,
 ) -> dict:
     """
     Decide el peso de trabajo para HOY a partir de la evidencia disponible.
@@ -106,6 +108,14 @@ def resolver_peso_objetivo(
       D. Descarga                      → recalcula desde e1RM con reducción
                                           explícita de descarga (RPE objetivo
                                           bajo ya lo refleja en la fórmula).
+
+    `peso_anterior` puede venir suavizado (ancla de hasta 3 sesiones dentro de
+    42 días, Phase Gym Peso 2.2 X.0): si una sesión reciente pero más pesada
+    entra en el promedio, el e1RM resultante puede superar el de la última
+    sesión real aislada. En descarga eso rompe la promesa "peso reducido a
+    propósito": `peso_ultima_sesion` (si se pasa) es un techo explícito —
+    el peso final de descarga nunca puede superarlo, sin importar lo que
+    diga el ancla suavizada.
 
     Devuelve dict con:
       'aplica':       bool — True si esta función decidió el peso (casos C/D).
@@ -153,6 +163,13 @@ def resolver_peso_objetivo(
         peso_final = redondear_fn(peso_calculado)
     else:
         peso_final = round(round(peso_calculado / 2.5) * 2.5, 1)
+
+    # Techo de seguridad: en descarga, ninguna evidencia suavizada puede
+    # empujar el peso por encima de lo que la persona levantó de verdad la
+    # última vez. Redondea hacia abajo para garantizar el invariante incluso
+    # si el redondeo normal hubiera subido de múltiplo.
+    if es_descarga_hoy and peso_ultima_sesion and peso_final > peso_ultima_sesion:
+        peso_final = math.floor(peso_ultima_sesion / 2.5) * 2.5
 
     return {'aplica': True, 'peso': peso_final, 'motivo_tipo': motivo_tipo}
 
