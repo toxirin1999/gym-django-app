@@ -4069,7 +4069,12 @@ def vista_entrenamiento_activo(request, cliente_id):
 
             # --- Phase 62H: progresión ejecutiva — el peso sugerido por el
             # plan manda sobre el carry-forward de la sesión anterior ---
-            if ejercicio.get('progresion_aplicada'):
+            # Solo cuando la decisión aplicada fue realmente sobre peso
+            # (subir_peso/bajar_peso). 'subir_reps' nunca toca el peso — es
+            # el camino de tope de máquina ("mismo peso, una rep más") y
+            # peso_recomendado_kg del generador de plan no conoce el tope:
+            # pisarlo con ese valor rompía el freno de tope de máquina.
+            if ejercicio.get('progresion_aplicada') and ejercicio.get('progresion_accion') in ('subir_peso', 'bajar_peso'):
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
             elif not ejercicio.get('sugerencia_tope') and not ejercicio.get('motivo_peso', {}).get('tipo', '').startswith('recalculado'):
                 # El generador de plan también puede decidir sube/baja sin

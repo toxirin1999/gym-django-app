@@ -347,6 +347,41 @@ class TestCase10_VistaActivaUsaProgresion(ProgresionEjecutivaBase):
         self.assertEqual(ej['peso_anterior_kg'], 190.0)
         self.assertEqual(ej['peso_inicial_kg'], 192.5)
 
+    def test_tope_maquina_con_subir_reps_aplicada_no_pisa_el_peso(self):
+        """
+        Bug real: "Abducción de Cadera en Máquina" llegó al tope de la
+        máquina (60kg). El plan generó una decisión pendiente subir_reps
+        (mismo peso, una rep más) que sí se aplicó (progresion_aplicada=True,
+        progresion_accion='subir_reps'). Pero el generador de plan no conoce
+        el tope: su peso_recomendado_kg venía de un recálculo por e1RM en
+        descarga alimentado con 60kg x31 reps, que en el tramo de reps altas
+        daba 82.5kg. El override de progresion_aplicada pisaba peso_inicial_kg
+        con ese 82.5kg sin mirar qué tipo de decisión se aplicó — subir_reps
+        nunca debe tocar el peso, y menos aún saltarse un tope de máquina.
+        """
+        rutina = Rutina.objects.create(nombre='Rutina Test PE62H Tope')
+        entreno_anterior = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=rutina, fecha=date(2026, 6, 4),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno_anterior, nombre_ejercicio='Abducción de Cadera en Máquina',
+            peso_kg=60.0, series=4, repeticiones=31, completado=True,
+            es_tope_maquina=True,
+        )
+
+        ejercicio = self._ejercicio(nombre='Abducción de Cadera en Máquina', peso_kg=60.0)
+        ejercicio['peso_recomendado_kg'] = 82.5  # valor contaminado del generador de plan
+        ejercicio['progresion_aplicada'] = True
+        ejercicio['progresion_accion'] = 'subir_reps'
+        ejercicio['progresion_motivo'] = 'Tope de máquina: mismo peso, una rep más.'
+
+        response = self._get([ejercicio])
+        self.assertEqual(response.status_code, 200)
+
+        ej = response.context['ejercicios_planificados'][0]
+        self.assertTrue(ej.get('sugerencia_tope'))
+        self.assertEqual(ej['peso_inicial_kg'], 60.0)
+
 
 # ══════════════════════════════════════════════════════════════════════════
 # Phase 62K — Freno local por ejercicio para subir_peso
