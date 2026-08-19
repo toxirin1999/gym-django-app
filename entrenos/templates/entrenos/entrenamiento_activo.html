@@ -2428,6 +2428,11 @@ function playRestEndAlert(){
 }
 
 // ── 1RM ESTIMADO (Brzycki) ──────────────────────────────────────
+// Brzycki inverso (1RM = peso / (1.0278 - 0.0278*reps)) es fiable hasta
+// ~15 reps; el denominador se acerca a cero según sube reps y el resultado
+// se dispara (a 32 reps da ~7x el peso real). Mismo umbral que el backend
+// (UMBRAL_REPS_ALTO en compatibilidad_fase.py) — por encima, no se muestra
+// una cifra fabricada.
 function actualizarORM(fid,sn){
   const pesoInp=document.getElementById('peso-'+fid+'-'+sn);
   const repsInp=document.getElementById('reps-hid-'+fid+'-'+sn);
@@ -2435,7 +2440,7 @@ function actualizarORM(fid,sn){
   if(!ormEl)return;
   const peso=parseFloat(pesoInp?.value)||0;
   const reps=parseInt(repsInp?.value)||1;
-  if(peso<=0){ormEl.textContent='';return;}
+  if(peso<=0||reps>=15){ormEl.textContent='';return;}
   const factor=1.0278-0.0278*Math.max(1,reps);
   const orm=factor>0?Math.round(peso/factor):Math.round(peso);
   ormEl.textContent='1RM est.: '+orm+' kg';
