@@ -144,7 +144,7 @@ class CalculadoraEjerciciosTabla:
 
                     # Si no encontramos mapeo directo, lo saltamos
                     if not ejercicio_principal:
-                        print(f"⚠️ Ejercicio no mapeado: '{e['nombre']}'")
+                        logger.debug("Ejercicio no mapeado a movimiento principal: '%s'", e['nombre'])
                         continue
 
                     levantamientos_con_rm.append({
@@ -153,7 +153,7 @@ class CalculadoraEjerciciosTabla:
                         'nombre_original': e['nombre'],
                     })
             except (ValueError, TypeError) as err:
-                print(f"❌ Error procesando ejercicio: {e.get('nombre', 'desconocido')} - {err}")
+                logger.warning("Error procesando ejercicio '%s': %s", e.get('nombre', 'desconocido'), err)
                 continue
 
         # 4. Agrupamos por ejercicio principal y encontramos el RM máximo
@@ -169,16 +169,13 @@ class CalculadoraEjerciciosTabla:
         for ejercicio, rm in one_rm_finales.items():
             one_rm_finales[ejercicio] = round(rm, 2)
 
-        # 6. DEBUG: Imprimimos los resultados para verificar
-        print("\n" + "=" * 60)
-        print("🔍 1RMs CALCULADOS (VERSIÓN DEFINITIVA)")
-        print("=" * 60)
-        print(f"Total de ejercicios en mapeo: {len(mapeo_ejercicios_a_principal)}")
-        print(f"Total de levantamientos procesados: {len(levantamientos_con_rm)}")
-        print(f"\n1RMs finales calculados:")
-        for principal, rm in sorted(one_rm_finales.items()):
-            print(f"  ✅ {principal}: {rm} kg")
-        print("=" * 60 + "\n")
+        # 6. DEBUG: resultados para verificar (solo si el logger está en DEBUG)
+        if logger.isEnabledFor(logging.DEBUG):
+            resumen = ', '.join(f"{principal}: {rm} kg" for principal, rm in sorted(one_rm_finales.items()))
+            logger.debug(
+                "1RMs calculados — mapeo=%d levantamientos=%d → %s",
+                len(mapeo_ejercicios_a_principal), len(levantamientos_con_rm), resumen,
+            )
 
         return one_rm_finales
 
