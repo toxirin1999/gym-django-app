@@ -1225,3 +1225,28 @@ python manage.py etiquetar_catalogo_riesgo_gym_rehab \
 python manage.py previsualizar_freno_rehab_gym --cliente <ID> --fecha YYYY-MM-DD \
   --settings=gymproject.settings
 ```
+# Fase 7A — autoridad pasiva de campaña Hyrox
+
+Hyrox queda encapsulado por `ContratoCampanaHyrox`, un contrato append-only con
+estados `inactiva`, `exploracion`, `activa` y `finalizada`. En este corte no se
+conecta el contrato a vistas, signals, tareas, dashboard ni al motor: por tanto,
+no cambia ninguna sesión existente. Sin contrato, la autoridad resuelve como
+`inactiva_legacy`.
+
+La carga física, Strava y la seguridad permanecen siempre permitidas. Generar
+planes o programar sesiones solo se autoriza en estado `activa`, que exige un
+objetivo Hyrox futuro del mismo cliente y un bloque Gym activo o pausado. Gym
+continúa siendo autoridad soberana (`competir_con_gym=false`).
+
+`configurar_campana_hyrox` es dry-run por defecto y `--apply` solo añade una
+versión del contrato. La huella representa la semántica dentro de su transición
+(incluye el predecesor, no el número de versión): repetir la configuración
+vigente la reutiliza, pero volver a una configuración histórica crea sucesora.
+Las transiciones están cerradas y `finalizada` es terminal; el actor aprobado
+debe ser el usuario propietario del cliente. `auditar_campana_hyrox` es JSONL y solo lectura; publica
+un inventario estático explícito de superficies legacy (`views`, `signals`,
+`services`, `training_engine`, métodos de `HyroxObjective`, `decision_service`,
+`pulso_service` y `urls`) y detecta objetivos
+activos sin campaña, multiplicidad, objetivos vencidos, sesiones futuras sin
+campaña activa y divergencia del snapshot. La conexión ejecutiva de esas
+superficies queda para 7B.

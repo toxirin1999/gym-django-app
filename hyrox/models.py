@@ -1,6 +1,46 @@
 from django.db import models, transaction
 from django.utils import timezone
 from clientes.models import Cliente
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
+
+class ContratoCampanaHyrox(models.Model):
+    """Autoridad pasiva y versionada que delimita cuándo Hyrox puede gobernar."""
+
+    ESTADOS = [(x, x.title()) for x in ('inactiva', 'exploracion', 'activa', 'finalizada')]
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='contratos_campana_hyrox')
+    version = models.PositiveIntegerField()
+    predecesor = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='sucesores')
+    estado = models.CharField(max_length=16, choices=ESTADOS, db_index=True)
+    objetivo = models.ForeignKey('HyroxObjective', null=True, blank=True, on_delete=models.PROTECT, related_name='contratos_campana')
+    bloque_gym = models.ForeignKey('entrenos.ContratoBloqueGym', null=True, blank=True, on_delete=models.PROTECT, related_name='campanas_hyrox')
+    objetivo_snapshot = models.JSONField(default=dict)
+    bloque_gym_snapshot = models.JSONField(default=dict)
+    limites_snapshot = models.JSONField(default=dict)
+    fingerprint = models.CharField(max_length=64)
+    motivo = models.TextField(blank=True)
+    aprobado_por = models.ForeignKey(User, null=True, blank=True, on_delete=models.SET_NULL, related_name='campanas_hyrox_aprobadas')
+    aprobado_en = models.DateTimeField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['cliente_id', 'version']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'version'], name='uniq_campana_hyrox_cliente_version'),
+            models.UniqueConstraint(fields=['cliente', 'fingerprint'], name='uniq_campana_hyrox_cliente_fingerprint'),
+        ]
+
+    _SNAPSHOT = ('cliente_id', 'version', 'predecesor_id', 'estado', 'objetivo_id',
+                 'bloque_gym_id', 'objetivo_snapshot', 'bloque_gym_snapshot',
+                 'limites_snapshot', 'fingerprint', 'motivo')
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anterior = type(self).objects.get(pk=self.pk)
+            if any(getattr(anterior, x) != getattr(self, x) for x in self._SNAPSHOT):
+                raise ValidationError('Una campaña aprobada es inmutable; crea una versión sucesora.')
+        return super().save(*args, **kwargs)
 
 class HyroxObjective(models.Model):
     CATEGORIA_CHOICES = [
