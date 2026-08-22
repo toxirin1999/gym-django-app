@@ -1334,3 +1334,32 @@ superficies queda para 7B.
 - El encabezado solo declara `LIVE` cuando la campaña está activa. En archivo
   usa un indicador neutro `ARCHIVO`, sin pulso. La disponibilidad de Strava se
   expresa como `STRAVA DISPONIBLE`; no se afirma conexión sin evidencia fiable.
+
+# Fase 8.0-A — Registro epistemológico de solo lectura
+
+- `core.services.epistemic_registry` proyecta memoria legacy al contrato
+  determinista `EpistemicRecordV1` (`schema_version=1`). No crea modelos, no
+  corrige registros, no usa IA, caché ni backfill y no contiene gates de
+  ejecución.
+- Los adaptadores cubren preferencias Gym, decisiones y traces con evaluación,
+  perfiles de adaptación, ManualDavid, NarrativaActiva, RecuerdoEmocional,
+  cierres versionados y el puente corporal estructurado `SeguimientoVires`.
+- La procedencia usa referencias `app.model:pk`. Los textos libres de Diario,
+  recuerdos y narrativa no salen en la auditoría; una contradicción textual se
+  representa mediante huella SHA-256 y nunca se elige un ganador.
+- Los campos que el esquema legacy no puede sostener se enumeran en
+  `missing_fields`. En particular, no se inventan ventanas, evidencias,
+  consentimiento ni supersesión. El consentimiento de
+  `PreferenciaPlanAprendida` se marca `contract_asserted` porque es una
+  precondición documentada de creación; una negación explícita en metadata sí
+  produce hallazgo.
+- Un `GymDecisionLog` con `resultado=validada` sigue siendo conocimiento
+  provisional: el resultado individual solo lo convierte en candidato. La
+  consolidación exige una regla explícita y evaluaciones independientes, que el
+  modelo legacy no demuestra y quedan declaradas en `missing_fields`.
+- `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
+  orden estable y termina con un resumen. Es estrictamente de solo lectura y no
+  ofrece `--apply`.
+- Los hallazgos se basan solo en campos y relaciones estructuradas. Se omiten
+  `narrativa_usada_como_fuente` y `texto_diario_cruzado` cuando no hay una
+  relación demostrable; no se realizan coincidencias heurísticas de texto.
