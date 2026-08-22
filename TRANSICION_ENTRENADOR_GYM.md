@@ -1394,6 +1394,20 @@ superficies queda para 7B.
   queda entre 0 y +0.05 para mantener, exactamente -0.10 para debilitar y -0.20
   para cuestionar; descartar no admite delta. Esta fase no llama a ningún
   proveedor, no persiste propuestas, no cambia modelos y no ofrece `--apply`.
+- Fase 8.0-E lleva la supervisión read-only a `/joi/habitacion/` sin convertir
+  la presencia de JOI en un feed. Después de «Por qué este estado» aparece, solo
+  cuando existe cola, un único `<details>` cerrado con una memoria candidata,
+  clasificación humana, estado, antigüedad y ordinal. La navegación anterior/
+  siguiente es GET dentro de la propia habitación; una ID inválida o ajena cae
+  silenciosamente en la primera candidata propia.
+- `joi.services_memoria_habitacion` reutiliza la cola 8.0-C, carga exclusivamente
+  la `entrada` seleccionada del usuario y no expone notas ni contradicciones. No
+  usa IA o caché, no escribe `ManualDavid` y no ofrece acciones POST, propuestas
+  ni aplicación. La nota visual es neutral y no simula una nueva voz de JOI.
+- La habitación traduce los estados internos a lenguaje de interfaz (`En uso`,
+  `Cuestionada`, `Con reservas`; fallback `En revisión`) y limita visualmente
+  textos extensos mediante ajuste de línea y scroll local, evitando que una sola
+  memoria domine la presencia en pantallas móviles.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.

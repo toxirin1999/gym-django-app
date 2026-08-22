@@ -265,6 +265,14 @@ def habitacion_joi(request):
         except Exception:
             pass
 
+    # Supervisión epistemológica: una sola memoria, siempre read-only.
+    from joi.services_memoria_habitacion import construir_memoria_habitacion
+    memoria_revision = construir_memoria_habitacion(
+        cliente=cliente,
+        as_of=timezone.localdate(),
+        requested_id=request.GET.get('memoria'),
+    )
+
     return render(request, 'joi/habitacion.html', {
         'mensaje':             mensaje,
         'estado':              estado,
@@ -276,6 +284,7 @@ def habitacion_joi(request):
         'hay_sedimento':       hay_sedimento,
         'texto_vigilia':       texto_vigilia,
         'entrenos_totales':    entrenos_totales,
+        'memoria_revision':    memoria_revision,
     })
 
 

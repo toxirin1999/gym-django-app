@@ -574,10 +574,84 @@
       margin-bottom: 0;
       text-align: center;
     }
+
+    /* Supervisión de memoria: discreta, singular y sin tono de alerta. */
+    .memoria-review {
+      width: 100%; max-width: 440px;
+      margin-top: 1rem;
+      border: 1px solid rgba(0, 229, 255, 0.13);
+      border-radius: 6px;
+      background: rgba(4, 14, 20, 0.34);
+      color: var(--ink-soft);
+    }
+    .memoria-review > summary {
+      cursor: pointer;
+      padding: 0.78rem 0.9rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.11em;
+      color: rgba(0, 229, 255, 0.62);
+      list-style-position: inside;
+      user-select: none;
+    }
+    .memoria-review-contenido {
+      padding: 0.2rem 1rem 1rem;
+      border-top: 1px solid rgba(0, 229, 255, 0.08);
+    }
+    .memoria-review-clasificacion {
+      margin-top: 0.85rem;
+      font-size: 0.58rem;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: rgba(0, 229, 255, 0.58);
+    }
+    .memoria-review-texto {
+      margin-top: 0.65rem;
+      font-size: 0.94rem;
+      font-weight: 300;
+      line-height: 1.58;
+      color: rgba(232, 248, 255, 0.88);
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      max-height: min(13rem, 34svh);
+      overflow-y: auto;
+      scrollbar-color: rgba(0, 229, 255, 0.22) transparent;
+    }
+    .memoria-review-meta {
+      display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem;
+      margin-top: 0.85rem;
+      font-size: 0.58rem;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
+      color: rgba(0, 200, 232, 0.46);
+    }
+    .memoria-review-nota {
+      margin-top: 0.9rem;
+      font-size: 0.72rem;
+      line-height: 1.45;
+      color: rgba(232, 248, 255, 0.42);
+    }
+    .memoria-review-nav {
+      display: flex; justify-content: space-between; align-items: center;
+      min-height: 2rem; margin-top: 0.8rem;
+      border-top: 1px solid rgba(0, 229, 255, 0.07);
+      padding-top: 0.65rem;
+    }
+    .memoria-review-nav a {
+      color: rgba(0, 229, 255, 0.62);
+      text-decoration: none;
+      font-size: 0.68rem;
+      padding: 0.35rem 0;
+    }
+    .memoria-review-nav a:hover,
+    .memoria-review-nav a:focus-visible { color: var(--ink); }
+    @media (max-width: 520px) {
+      .memoria-review { max-width: calc(100vw - 2rem); }
+      .memoria-review-texto { font-size: 0.9rem; }
+    }
   </style>
 </head>
 <body>
-<div class="habitacion-wrap joi-estado-{{ joi_estado|lower }}" data-joi-estado="{{ joi_estado }}" aria-label="JOI Habitación estado {{ joi_estado }}"
+<div class="habitacion-wrap joi-estado-{{ joi_estado|lower }}" data-joi-estado="{{ joi_estado }}" aria-label="JOI Habitación estado {{ joi_estado }}">
 
   {% if hay_sedimento %}
   <div class="sedimento-shimmer" aria-hidden="true"></div>
@@ -687,6 +761,26 @@
         </button>
       </div>
       <p class="joi-feedback-confirmacion" id="joi-feedback-confirmacion"></p>
+    </div>
+  </details>
+  {% endif %}
+
+  {% if memoria_revision %}
+  <details class="memoria-review" data-testid="memoria-review">
+    <summary data-testid="memoria-review-summary">Memoria · {{ memoria_revision.count }} por revisar</summary>
+    <div class="memoria-review-contenido">
+      <p class="memoria-review-clasificacion">{{ memoria_revision.current.classification_label }}</p>
+      <p class="memoria-review-texto" data-testid="memoria-review-text">{{ memoria_revision.current.texto }}</p>
+      <div class="memoria-review-meta" aria-label="Contexto de la memoria">
+        <span>Estado {{ memoria_revision.current.estado_label }}</span>
+        <span>{{ memoria_revision.current.age_days }} días</span>
+        <span>{{ memoria_revision.current.ordinal }} / {{ memoria_revision.current.total }}</span>
+      </div>
+      <p class="memoria-review-nota">Solo lectura. Aquí puedes observar qué memoria necesita revisión.</p>
+      <nav class="memoria-review-nav" aria-label="Navegar memorias por revisar">
+        <span>{% if memoria_revision.previous_id %}<a data-testid="memoria-prev" href="{% url 'joi:joi_habitacion' %}?memoria={{ memoria_revision.previous_id }}">← anterior</a>{% endif %}</span>
+        <span>{% if memoria_revision.next_id %}<a data-testid="memoria-next" href="{% url 'joi:joi_habitacion' %}?memoria={{ memoria_revision.next_id }}">siguiente →</a>{% endif %}</span>
+      </nav>
     </div>
   </details>
   {% endif %}
