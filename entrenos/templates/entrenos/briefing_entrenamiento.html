@@ -607,7 +607,8 @@
 
 <!-- CTA FIJO -->
 <div class="cta-wrap">
-  <a href="{{ url_sesion }}" class="btn-comenzar">
+  {% if puede_iniciar_sesion %}
+  <a href="{{ url_sesion }}" class="btn-comenzar"{% if decision_id %} data-decision-id="{{ decision_id }}"{% endif %}>
     <svg viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5,3 19,12 5,21"/>
     </svg>
@@ -619,6 +620,10 @@
       Ignorar descarga y seguir el plan original
     </a>
   </div>
+  {% endif %}
+  {% else %}
+  <p style="text-align:center;color:rgba(240,238,232,0.8);">La sesión está protegida por la decisión vigente.</p>
+  <a href="/panel/" class="btn-comenzar">Volver al plan</a>
   {% endif %}
 </div>
 

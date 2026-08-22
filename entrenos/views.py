@@ -3586,12 +3586,13 @@ def _bio_score_label(score_pct: int) -> str:
     return readiness_etiqueta(score_pct)
 
 
+@login_required
 def vista_entrenamiento_activo(request, cliente_id):
     """
     Muestra el formulario interactivo para que el usuario registre su entrenamiento.
     VERSIÓN FINAL: Los cálculos de aproximación se hacen aquí.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
 
     try:
         fecha_str = request.GET.get('fecha')
@@ -3603,6 +3604,34 @@ def vista_entrenamiento_activo(request, cliente_id):
             fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d').date()
 
         fecha_para_template = fecha_obj.strftime('%Y-%m-%d')
+
+        # Fase 6.2: una URL emitida por la autoridad es una referencia
+        # optimista a esa versión, no un permiso para ejecutar eternamente el
+        # payload transportado. Se valida antes de leer cache/GET.
+        decision_id_recibida = request.GET.get('decision_id', '').strip()
+        if decision_id_recibida:
+            from django.http import HttpResponse
+            from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
+            try:
+                autoridad_vigente = resolver_autoridad_diaria_gym(cliente, fecha_obj)
+            except Exception:
+                return HttpResponse(
+                    'No se pudo verificar la decisión de entrenamiento. Recarga el plan.',
+                    status=503,
+                )
+            if autoridad_vigente.get('decision_id') != decision_id_recibida:
+                return HttpResponse(
+                    'La decisión de entrenamiento cambió. Recarga el briefing.',
+                    status=409,
+                )
+            if (
+                autoridad_vigente.get('postura') == 'proteger'
+                or autoridad_vigente.get('estado') in {'recuperar', 'descanso', 'posponer'}
+            ):
+                return HttpResponse(
+                    'La decisión vigente protege esta sesión. Vuelve al briefing.',
+                    status=409,
+                )
 
         rutina_nombre = request.GET.get('rutina_nombre') or ''
         sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
@@ -3626,6 +3655,19 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicios_planificados = None
         if ejercicios_planificados is None:
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
+
+        if decision_id_recibida:
+            ids_payload = {
+                ejercicio.get('_autoridad_gym_decision_id')
+                for ejercicio in (ejercicios_planificados or [])
+                if ejercicio.get('_autoridad_gym_decision_id')
+            }
+            if ids_payload and ids_payload != {decision_id_recibida}:
+                from django.http import HttpResponse
+                return HttpResponse(
+                    'El plan transportado no pertenece a la decisión vigente. Recarga el briefing.',
+                    status=409,
+                )
 
         # Una lista solo es canónica cuando todos sus elementos pertenecen a la
         # autoridad diaria materializada. Una lista vacía, mixta o sin marca
@@ -8688,13 +8730,37 @@ def api_apple_health(request):
 @login_required
 def briefing_entrenamiento(request, cliente_id):
     """Pantalla de briefing pre-sesión de gym — muestra plan, alertas y voz del entrenador."""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
 
     from datetime import datetime as _dt
     from django.utils import timezone
 
     fecha_str = request.GET.get('fecha')
     fecha_obj = _dt.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else timezone.now().date()
+
+    # Fase 6.2: el CTA puede referenciar una versión concreta. Antes de leer o
+    # transformar cualquier payload verificamos que continúa siendo vigente.
+    decision_id_recibida = request.GET.get('decision_id', '').strip()
+    puede_iniciar_sesion = True
+    if decision_id_recibida:
+        from django.http import HttpResponse
+        from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
+        try:
+            autoridad_vigente = resolver_autoridad_diaria_gym(cliente, fecha_obj)
+        except Exception:
+            return HttpResponse(
+                'No se pudo verificar la decisión de entrenamiento. Recarga el plan.',
+                status=503,
+            )
+        if autoridad_vigente.get('decision_id') != decision_id_recibida:
+            return HttpResponse(
+                'La decisión de entrenamiento cambió. Recarga el plan.',
+                status=409,
+            )
+        puede_iniciar_sesion = not (
+            autoridad_vigente.get('postura') == 'proteger'
+            or autoridad_vigente.get('estado') in {'recuperar', 'descanso', 'posponer'}
+        )
 
     # Phase Organismo 3: obtener estado del sistema para continuidad de postura
     try:
@@ -8721,6 +8787,19 @@ def briefing_entrenamiento(request, cliente_id):
         ejercicios = cache.get(_cache_key_dia)
     if ejercicios is None:
         ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
+
+    if decision_id_recibida:
+        ids_payload = {
+            ejercicio.get('_autoridad_gym_decision_id')
+            for ejercicio in (ejercicios or [])
+            if ejercicio.get('_autoridad_gym_decision_id')
+        }
+        if ids_payload and ids_payload != {decision_id_recibida}:
+            from django.http import HttpResponse
+            return HttpResponse(
+                'El plan recibido no pertenece a la decisión vigente. Recarga el plan.',
+                status=409,
+            )
 
     from entrenos.services.briefing_service import get_briefing_gym
 
@@ -8762,6 +8841,8 @@ def briefing_entrenamiento(request, cliente_id):
         'rutina_nombre': rutina_nombre,
         'ejercicios_token': _token,
     }
+    if decision_id_recibida:
+        params_dict['decision_id'] = decision_id_recibida
     sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
     if sesion_programada_id:
         params_dict['sesion_programada_id'] = sesion_programada_id
@@ -8798,6 +8879,8 @@ def briefing_entrenamiento(request, cliente_id):
         'cambios_plan': cambios_plan,
         'briefing': briefing,
         'url_sesion': url_sesion,
+        'decision_id': decision_id_recibida,
+        'puede_iniciar_sesion': puede_iniciar_sesion,
         'pausa_pregunta': pausa_pregunta,
         'motivo_choices': motivo_choices,
         'estado_sistema': estado_sistema,

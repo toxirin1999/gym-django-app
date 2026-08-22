@@ -832,6 +832,30 @@ impide relajar seguridad. Si cambia la evidencia y, por tanto, el
 `base_fingerprint`, la versión manual deja de ser compatible y el motor crea la
 nueva autoridad; nunca se arrastra una intervención de una base anterior.
 
+## Fase 6.2 — identidad ejecutiva entre CTA, briefing y sesión
+
+El CTA Gym emitido por el Organismo incluye el `decision_id` de la autoridad
+vigente. El briefing conserva esa identidad al construir el enlace hacia la
+sesión activa, de modo que los dos saltos forman una única intención ejecutiva
+trazable.
+
+Cuando existe `decision_id`, cada vista vuelve a resolver la autoridad para el
+usuario, cliente y fecha antes de leer o transformar el payload. Si una
+corrección o nueva evidencia cambió la versión entre pasos, la petición se
+rechaza con conflicto y pide recargar el plan; nunca ejecuta silenciosamente la
+prescripción anterior. También se comprueba que cualquier identidad embebida en
+los ejercicios coincida con la URL. Los enlaces legacy sin identidad conservan
+el fallback previo durante la transición. Briefing y sesión activa exigen que
+el cliente pertenezca al usuario autenticado.
+
+Cada corrección o reversión reestampa además el nuevo `decision_id` en todos los
+ejercicios materializados. El contenido ejecutivo sigue siendo una copia exacta
+del motor compatible; sólo cambian los metadatos de identidad y supervisión.
+Una autoridad vigente en `proteger`, `recuperar`, `descanso` o `posponer` puede
+abrirse como revisión en el briefing, pero no ofrece CTA de comienzo y la sesión
+activa la rechaza antes de recuperar el payload. El acceso legacy sin identidad
+mantiene su comportamiento histórico.
+
 ## Fase 5.8 — auditoría de identidad del evento físico
 
 Antes de reconciliar carga se incorpora una auditoría estrictamente pasiva sobre

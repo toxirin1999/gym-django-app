@@ -318,6 +318,16 @@ def resolver_autoridad_diaria_gym(
     return deepcopy(autoridad)
 
 
+def _reestampar_decision_id_ejercicios(autoridad: dict) -> None:
+    """Alinea la identidad embebida con la nueva versión supervisada."""
+    decision_id = autoridad.get('decision_id')
+    ejercicios = (autoridad.get('entrenamiento') or {}).get('ejercicios') or []
+    for ejercicio in ejercicios:
+        if isinstance(ejercicio, dict):
+            ejercicio['_autoridad_gym_materializada'] = True
+            ejercicio['_autoridad_gym_decision_id'] = decision_id
+
+
 def corregir_autoridad_diaria_gym(
     cliente,
     fecha,
@@ -391,6 +401,7 @@ def corregir_autoridad_diaria_gym(
             json.dumps(_serializable(ajustes), sort_keys=True).encode('utf-8')
         ).hexdigest()[:12]
         corregida['decision_id'] = f'gym-{fecha.isoformat()}-v{numero}-manual-{digest}'
+        _reestampar_decision_id_ejercicios(corregida)
         corregida['origen_decision'] = GymDecisionVersion.ORIGEN_CORRECCION
         corregida['version_persistida'] = numero
         corregida['motivo_correccion'] = motivo.strip()
@@ -485,6 +496,7 @@ def revertir_correccion_autoridad_diaria_gym(
             'version_persistida': numero,
             'motivo_correccion': motivo.strip(),
         })
+        _reestampar_decision_id_ejercicios(restaurada)
 
         versiones.filter(vigente=True).update(vigente=False)
         GymDecisionVersion.objects.create(

@@ -114,11 +114,19 @@ def _check_protegiendo(usuario, decision_gym=None):
     if decision_gym and decision_gym.get('postura') == 'proteger':
         cliente = getattr(usuario, 'cliente_perfil', None)
         causa = decision_gym.get('causa_principal') or 'autoridad_gym'
+        accion_url = None
+        if cliente:
+            from urllib.parse import urlencode
+            params = {'decision_id': decision_gym.get('decision_id', '')}
+            fecha_decision = decision_gym.get('fecha')
+            if fecha_decision:
+                params['fecha'] = fecha_decision
+            accion_url = f'/entrenos/cliente/{cliente.id}/briefing/?{urlencode(params)}'
         return _estado_dict(
             'PROTEGIENDO', f'gym_{causa}',
             decision_gym.get('mensaje') or 'El sistema protege la sesión de hoy.',
             'Revisar sesión',
-            f'/entrenos/cliente/{cliente.id}/briefing/' if cliente else None,
+            accion_url,
             'gym',
         )
 
@@ -372,6 +380,8 @@ def _check_en_margen(usuario, decision_gym=None):
             'ejercicios': json_module.dumps(ejercicios),
             'modo_reducido': modo_reducido,
         }
+        if decision.get('decision_id'):
+            params['decision_id'] = decision['decision_id']
 
         accion_url = '/entrenos/cliente/{}/briefing/?{}'.format(
             cliente.id,
