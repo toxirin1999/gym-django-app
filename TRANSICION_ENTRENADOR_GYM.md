@@ -1056,3 +1056,36 @@ python manage.py auditar_autoridad_lesion_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+# Fase 6.6 — observación Rehab dentro del snapshot físico
+
+- `physical_snapshot.signals.active_rehab` captura los episodios Rehab activos
+  conocidos en el momento de decidir, junto con su fase y la última observación
+  diaria o sesión cuya fecha no sea futura respecto al corte.
+- El contrato es factual y mínimo: no incorpora notas, texto clínico ni reglas
+  médicas. Cada episodio declara
+  `executive_capacity.can_derive_restrictions=false`, porque Rehab todavía no
+  dispone de un contrato de riesgo Gym capaz de sustituir a `UserInjury`.
+- La capability `active_rehab_v1` permite distinguir snapshots nuevos de los
+  V1 anteriores. Una autoridad motor vigente puede promocionarse mediante una
+  sucesora inmutable con `contract_upgrade=active_rehab_observation_v1`, sin
+  cambiar `decision_id`, fingerprint, postura ni causa. Correcciones y
+  reversiones manuales nunca se actualizan automáticamente. Esta promoción es
+  exclusivamente explícita mediante `materializar_snapshot_fisico_gym
+  --apply`: las lecturas normales del resolver y del dashboard reutilizan la
+  versión vigente y nunca crean una sucesora por faltar esta capability.
+- La señal es deliberadamente no ejecutiva: con o sin Rehab observado, el
+  estado, contexto, sesión y postura de la decisión son idénticos. Tampoco crea
+  o modifica episodios, lesiones, intervenciones ni sesiones Rehab.
+- La auditoría de lesión conserva `no_injury_in_snapshot` como clasificación de
+  autoridad y añade únicamente un inventario agregado
+  `rehab_observation_inventory` para evidenciar episodios observados sin
+  atribuirles poder de bloqueo.
+
+Para inspeccionar o materializar la capability en la autoridad motor de hoy:
+
+```bash
+python manage.py materializar_snapshot_fisico_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```

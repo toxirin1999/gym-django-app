@@ -6,7 +6,9 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from entrenos.models import GymDecisionVersion
-from entrenos.services.autoridad_diaria_gym_service import _snapshot_fisico_valido
+from entrenos.services.autoridad_diaria_gym_service import (
+    _snapshot_fisico_con_rehab_v1,
+)
 
 
 class Command(BaseCommand):
@@ -46,7 +48,12 @@ class Command(BaseCommand):
 
         from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
 
-        resolver_autoridad_diaria_gym(cliente, fecha, force_refresh=True)
+        resolver_autoridad_diaria_gym(
+            cliente,
+            fecha,
+            force_refresh=True,
+            allow_rehab_contract_upgrade=True,
+        )
         nueva = (
             GymDecisionVersion.objects.filter(
                 cliente=cliente,
@@ -56,7 +63,7 @@ class Command(BaseCommand):
             .order_by("-version", "-pk")
             .first()
         )
-        if nueva is not None and _snapshot_fisico_valido(
+        if nueva is not None and _snapshot_fisico_con_rehab_v1(
             (nueva.snapshot or {}).get("physical_snapshot"), cliente, fecha,
         ):
             estado = "materialized"
@@ -75,7 +82,7 @@ class Command(BaseCommand):
             if isinstance(vigente.snapshot, dict)
             else None
         )
-        if _snapshot_fisico_valido(physical, cliente, fecha):
+        if _snapshot_fisico_con_rehab_v1(physical, cliente, fecha):
             return "skip_already_materialized"
         return "candidate"
 

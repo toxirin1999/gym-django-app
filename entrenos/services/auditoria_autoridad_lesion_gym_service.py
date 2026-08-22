@@ -337,6 +337,39 @@ def _inventory(*, cliente_id, as_of):
     return {"total": sum(counts.values()), "by_status": dict(sorted(counts.items()))}
 
 
+def _rehab_observation_inventory(versions):
+    counts = Counter({"active_observed": 0, "active_unobserved": 0})
+    nonblocking = 0
+    for version in versions:
+        physical, error = _physical_contract(version)
+        if error:
+            continue
+        signal = (physical.get("signals") or {}).get("active_rehab")
+        if not isinstance(signal, dict) or signal.get("schema_version") != 1:
+            continue
+        items = signal.get("items")
+        if not isinstance(items, list):
+            continue
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            observation = item.get("observation_status")
+            capacity = item.get("executive_capacity")
+            if observation not in counts or not isinstance(capacity, dict):
+                continue
+            if (
+                capacity.get("can_derive_restrictions") is False
+                and capacity.get("reason") == "rehab_has_no_gym_risk_contract"
+            ):
+                counts[observation] += 1
+                nonblocking += 1
+    return {
+        "rehab_observed_nonblocking": nonblocking,
+        "active_observed": counts["active_observed"],
+        "active_unobserved": counts["active_unobserved"],
+    }
+
+
 def auditar_autoridad_lesion_gym(
     *, cliente_id=None, desde, hasta, limit=MAX_LIMIT, as_of=None,
 ):
@@ -379,6 +412,7 @@ def auditar_autoridad_lesion_gym(
             for (plane, classification), count in sorted(counts.items())
         },
         "intervention_inventory": _inventory(cliente_id=cliente_id, as_of=as_of),
+        "rehab_observation_inventory": _rehab_observation_inventory(versions),
         "solo_lectura": True,
     }
     return {"findings": findings, "summary": summary}

@@ -34,7 +34,8 @@ class MaterializarSnapshotFixture(TestCase):
             "schema_version": 1,
             "cliente_id": self.cliente.pk,
             "as_of_date": self.fecha.isoformat(),
-            "signals": {},
+            "signals": {"active_rehab": {"schema_version": 1, "status": "missing", "items": []}},
+            "capabilities": ["active_rehab_v1"],
             "fingerprint": "physical-v1",
         }
         value.update(changes)
@@ -108,6 +109,75 @@ class PersistenciaUpgradeSnapshotTests(MaterializarSnapshotFixture):
 
         self.assertEqual(GymDecisionVersion.objects.count(), 2)
         self.assertEqual(second["version_persistida"], 2)
+
+    def test_promueve_motor_con_snapshot_v1_sin_capability_rehab_y_es_idempotente(self):
+        legacy_physical = self.physical(capabilities=[])
+        legacy = self.version(snapshot={
+            **self.authority(physical=legacy_physical),
+            "physical_snapshot": legacy_physical,
+        })
+
+        first = _persistir_version_motor(
+            self.cliente, self.fecha, self.authority(), "same-fingerprint",
+            allow_rehab_contract_upgrade=True,
+        )
+        second = _persistir_version_motor(
+            self.cliente, self.fecha, self.authority(), "same-fingerprint",
+            allow_rehab_contract_upgrade=True,
+        )
+
+        legacy.refresh_from_db()
+        successor = GymDecisionVersion.objects.get(vigente=True)
+        self.assertFalse(legacy.vigente)
+        self.assertEqual(successor.decision_id, legacy.decision_id)
+        self.assertEqual(successor.fingerprint, legacy.fingerprint)
+        self.assertEqual(successor.base_fingerprint, legacy.base_fingerprint)
+        self.assertEqual(successor.postura, legacy.postura)
+        self.assertEqual(successor.causa_principal, legacy.causa_principal)
+        self.assertEqual(successor.reemplaza, legacy)
+        self.assertEqual(
+            successor.snapshot["contract_upgrade"],
+            "active_rehab_observation_v1",
+        )
+        self.assertIn(
+            "active_rehab_v1",
+            successor.snapshot["physical_snapshot"]["capabilities"],
+        )
+        self.assertEqual(first["version_persistida"], successor.version)
+        self.assertEqual(second["version_persistida"], successor.version)
+        self.assertEqual(GymDecisionVersion.objects.count(), 2)
+
+    def test_lectura_normal_reutiliza_motor_v1_sin_capability_y_no_crea_sucesora(self):
+        legacy_physical = self.physical(capabilities=[])
+        legacy = self.version(snapshot={
+            **self.authority(physical=legacy_physical),
+            "physical_snapshot": legacy_physical,
+        })
+
+        result = _persistir_version_motor(
+            self.cliente, self.fecha, self.authority(), "same-fingerprint",
+        )
+
+        legacy.refresh_from_db()
+        self.assertTrue(legacy.vigente)
+        self.assertEqual(GymDecisionVersion.objects.count(), 1)
+        self.assertEqual(result["version_persistida"], legacy.version)
+        self.assertEqual(result["physical_snapshot"], legacy_physical)
+
+    def test_manual_snapshot_without_rehab_capability_is_never_promoted(self):
+        manual = self.version(
+            origen=GymDecisionVersion.ORIGEN_CORRECCION,
+            snapshot={"physical_snapshot": self.physical(capabilities=[])},
+        )
+
+        result = _persistir_version_motor(
+            self.cliente, self.fecha, self.authority(), "same-fingerprint",
+        )
+
+        manual.refresh_from_db()
+        self.assertTrue(manual.vigente)
+        self.assertEqual(GymDecisionVersion.objects.count(), 1)
+        self.assertEqual(result["version_persistida"], manual.version)
 
     def test_snapshot_unavailable_no_promueve_legacy(self):
         legacy = self.version()
@@ -202,15 +272,32 @@ class MaterializarSnapshotCommandTests(MaterializarSnapshotFixture):
         ready = self.run_command(fecha=self.fecha.isoformat())
         self.assertEqual(ready["estado"], "skip_already_materialized")
 
+    def test_dry_run_detecta_snapshot_v1_sin_capability_rehab_como_candidato(self):
+        physical = self.physical(capabilities=[])
+        self.version(snapshot={"physical_snapshot": physical})
+
+        row = self.run_command(fecha=self.fecha.isoformat())
+
+        self.assertEqual(row["estado"], "candidate")
+        self.assertTrue(row["solo_lectura"])
+
     @patch("django.utils.timezone.localdate", return_value=date(2031, 4, 20))
     @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
     def test_apply_actual_promueve_y_verifica_snapshot(self, resolver, _localdate):
         self.version()
 
-        def resolve(cliente, fecha, *, force_refresh=False):
+        def resolve(
+            cliente,
+            fecha,
+            *,
+            force_refresh=False,
+            allow_rehab_contract_upgrade=False,
+        ):
             self.assertTrue(force_refresh)
+            self.assertTrue(allow_rehab_contract_upgrade)
             return _persistir_version_motor(
                 cliente, fecha, self.authority(), "same-fingerprint",
+                allow_rehab_contract_upgrade=True,
             )
 
         resolver.side_effect = resolve
@@ -219,7 +306,12 @@ class MaterializarSnapshotCommandTests(MaterializarSnapshotFixture):
         self.assertEqual(row["estado"], "materialized")
         self.assertFalse(row["solo_lectura"])
         self.assertEqual(GymDecisionVersion.objects.count(), 2)
-        resolver.assert_called_once_with(self.cliente, self.fecha, force_refresh=True)
+        resolver.assert_called_once_with(
+            self.cliente,
+            self.fecha,
+            force_refresh=True,
+            allow_rehab_contract_upgrade=True,
+        )
 
     @patch("django.utils.timezone.localdate", return_value=date(2031, 4, 20))
     def test_apply_historico_rechazado_y_cliente_fecha_validados(self, _localdate):

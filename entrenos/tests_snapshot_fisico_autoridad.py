@@ -36,7 +36,11 @@ class SnapshotFisicoAutoridadTests(TestCase):
             "cliente_id": self.cliente.pk,
             "as_of_date": self.fecha.isoformat(),
             "captured_at": "2026-08-15T08:00:00+00:00",
-            "signals": {"checkin": {"status": "missing"}},
+            "capabilities": ["active_rehab_v1"],
+            "signals": {
+                "checkin": {"status": "missing"},
+                "active_rehab": {"schema_version": 1, "status": "missing", "items": []},
+            },
             "fingerprint": "physical-a",
         }
 
@@ -68,6 +72,10 @@ class SnapshotFisicoAutoridadTests(TestCase):
         self.assertEqual(version.base_fingerprint, expected_base_fingerprint)
         self.assertEqual(version.snapshot["physical_snapshot"], self.physical)
         self.assertEqual(version.snapshot["physical_snapshot_fingerprint"], "physical-a")
+        self.assertIn(
+            "active_rehab_v1",
+            version.snapshot["physical_snapshot"]["capabilities"],
+        )
         build_snapshot.assert_called_once_with(self.cliente, self.fecha)
         obtener_base.assert_called_once_with(
             self.cliente,
@@ -94,6 +102,47 @@ class SnapshotFisicoAutoridadTests(TestCase):
         self.assertEqual(GymDecisionVersion.objects.filter(cliente=self.cliente, fecha=self.fecha).count(), 1)
         self.assertEqual(build_snapshot.call_count, 2)
         build_snapshot.assert_called_with(self.cliente, self.fecha)
+
+    @patch("core.services.physical_snapshot.build_physical_snapshot")
+    @patch("entrenos.services.plan_dinamico_service.aplicar_plan_dinamico")
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_resolver_normal_no_promueve_capability_rehab_en_version_motor_existente(
+        self, obtener_base, aplicar_plan, build_snapshot,
+    ):
+        huella = _fingerprint(self.base, self.fecha)
+        legacy_physical = {
+            **self.physical,
+            "capabilities": [],
+        }
+        GymDecisionVersion.objects.create(
+            cliente=self.cliente,
+            fecha=self.fecha,
+            version=1,
+            decision_id=f"gym-{self.fecha.isoformat()}-{huella}",
+            schema_version=1,
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            vigente=True,
+            fingerprint=huella,
+            base_fingerprint=huella,
+            postura="empujar",
+            causa_principal="sesion_hoy",
+            snapshot={
+                **self.base,
+                "physical_snapshot": legacy_physical,
+                "physical_snapshot_fingerprint": "legacy-physical",
+            },
+        )
+        obtener_base.return_value = self.base
+        aplicar_plan.return_value = (self.base["entrenamiento"]["ejercicios"], [])
+        build_snapshot.return_value = self.physical
+
+        result = resolver_autoridad_diaria_gym(
+            self.cliente, self.fecha, force_refresh=True,
+        )
+
+        self.assertEqual(GymDecisionVersion.objects.count(), 1)
+        self.assertEqual(result["version_persistida"], 1)
+        self.assertEqual(result["physical_snapshot"], legacy_physical)
 
     @patch("core.services.physical_snapshot.build_physical_snapshot")
     @patch("entrenos.services.plan_dinamico_service.aplicar_plan_dinamico")

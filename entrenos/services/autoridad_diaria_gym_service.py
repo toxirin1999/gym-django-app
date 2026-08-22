@@ -19,6 +19,7 @@ from django.utils import timezone
 
 SCHEMA_VERSION = 2
 _CACHE_TTL_SECONDS = 15 * 60
+_ACTIVE_REHAB_CAPABILITY = 'active_rehab_v1'
 
 
 class AutoridadGymCorreccionInvalida(ValueError):
@@ -101,6 +102,14 @@ def _snapshot_fisico_valido(snapshot, cliente, fecha) -> bool:
     )
 
 
+def _snapshot_fisico_con_rehab_v1(snapshot, cliente, fecha) -> bool:
+    return bool(
+        _snapshot_fisico_valido(snapshot, cliente, fecha)
+        and _ACTIVE_REHAB_CAPABILITY in (snapshot.get('capabilities') or [])
+        and isinstance((snapshot.get('signals') or {}).get('active_rehab'), dict)
+    )
+
+
 def _postura(estado: str) -> str:
     if estado in {'recuperar', 'posponer'}:
         return 'proteger'
@@ -151,7 +160,14 @@ def _aplicar_version_manual(autoridad: dict, version) -> dict:
     return resultado
 
 
-def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> dict:
+def _persistir_version_motor(
+    cliente,
+    fecha,
+    autoridad: dict,
+    huella: str,
+    *,
+    allow_rehab_contract_upgrade: bool = False,
+) -> dict:
     from clientes.models import Cliente
     from entrenos.models import GymDecisionVersion
 
@@ -180,7 +196,7 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
         ):
             snapshot_vigente = vigente.snapshot or {}
             physical_vigente = snapshot_vigente.get('physical_snapshot')
-            if _snapshot_fisico_valido(physical_vigente, cliente, fecha):
+            if _snapshot_fisico_con_rehab_v1(physical_vigente, cliente, fecha):
                 autoridad['physical_snapshot'] = deepcopy(snapshot_vigente['physical_snapshot'])
                 autoridad['physical_snapshot_fingerprint'] = snapshot_vigente.get(
                     'physical_snapshot_fingerprint'
@@ -190,6 +206,20 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
                 return autoridad
 
             physical_nuevo = autoridad.get('physical_snapshot')
+            if (
+                _snapshot_fisico_valido(physical_vigente, cliente, fecha)
+                and (
+                    not allow_rehab_contract_upgrade
+                    or not _snapshot_fisico_con_rehab_v1(physical_nuevo, cliente, fecha)
+                )
+            ):
+                autoridad['physical_snapshot'] = deepcopy(physical_vigente)
+                autoridad['physical_snapshot_fingerprint'] = snapshot_vigente.get(
+                    'physical_snapshot_fingerprint'
+                ) or _fingerprint_snapshot_fisico(physical_vigente)
+                autoridad['origen_decision'] = vigente.origen
+                autoridad['version_persistida'] = vigente.version
+                return autoridad
             if _snapshot_fisico_valido(physical_nuevo, cliente, fecha):
                 # Upgrade contractual inmutable: la fila legacy se conserva y
                 # la sucesora mantiene la misma identidad ejecutiva.
@@ -197,7 +227,11 @@ def _persistir_version_motor(cliente, fecha, autoridad: dict, huella: str) -> di
                 ultima = versiones.order_by('-version').first()
                 numero = (ultima.version if ultima else 0) + 1
                 snapshot_upgrade = _serializable(autoridad)
-                snapshot_upgrade['contract_upgrade'] = 'physical_snapshot_v1'
+                snapshot_upgrade['contract_upgrade'] = (
+                    'physical_snapshot_v1'
+                    if not _snapshot_fisico_valido(physical_vigente, cliente, fecha)
+                    else 'active_rehab_observation_v1'
+                )
                 creada = GymDecisionVersion.objects.create(
                     cliente=cliente,
                     fecha=fecha,
@@ -253,6 +287,7 @@ def resolver_autoridad_diaria_gym(
     *,
     physical_snapshot=None,
     force_refresh=False,
+    allow_rehab_contract_upgrade=False,
 ) -> dict:
     """Devuelve la única decisión Gym preparada para presentar y ejecutar."""
     from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
@@ -313,7 +348,13 @@ def resolver_autoridad_diaria_gym(
         ejercicio['_autoridad_gym_decision_id'] = autoridad['decision_id']
         if deload_materializado:
             ejercicio['_deload_aplicado'] = True
-    autoridad = _persistir_version_motor(cliente, fecha, autoridad, huella)
+    autoridad = _persistir_version_motor(
+        cliente,
+        fecha,
+        autoridad,
+        huella,
+        allow_rehab_contract_upgrade=allow_rehab_contract_upgrade,
+    )
     cache.set(cache_key, autoridad, _CACHE_TTL_SECONDS)
     return deepcopy(autoridad)
 

@@ -174,6 +174,33 @@ class AuthorityPropagationTests(AuditoriaAutoridadLesionFixture):
         self.version(physical=self.physical([]), exercises=[])
         self.assertEqual(self.classification()["classification"], "no_injury_in_snapshot")
 
+    def test_rehab_observed_is_only_summarized_and_does_not_replace_no_injury(self):
+        physical = self.physical([])
+        physical["capabilities"] = ["active_rehab_v1"]
+        physical["signals"]["active_rehab"] = {
+            "schema_version": 1,
+            "status": "available",
+            "temporal_basis": "current_state_at_capture",
+            "items": [{
+                "episode_id": 9,
+                "observation_status": "active_observed",
+                "executive_capacity": {
+                    "can_derive_restrictions": False,
+                    "reason": "rehab_has_no_gym_risk_contract",
+                },
+            }],
+        }
+        self.version(physical=physical, exercises=[])
+
+        result = self.audit()
+
+        self.assertEqual(self.classification()["classification"], "no_injury_in_snapshot")
+        self.assertEqual(result["summary"]["rehab_observation_inventory"], {
+            "rehab_observed_nonblocking": 1,
+            "active_observed": 1,
+            "active_unobserved": 0,
+        })
+
     def test_only_final_current_version_is_audited(self):
         self.version(version=1, vigente=True, postura="empujar")
         self.version(version=2, vigente=True, postura="proteger")

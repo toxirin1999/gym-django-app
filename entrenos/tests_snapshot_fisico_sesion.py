@@ -111,6 +111,44 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
         self.assertEqual(contexto["lesion_fase"], "SUB_AGUDA")
         self.assertEqual(contexto["_cliente"], self.cliente)
 
+    def test_rehab_observacional_no_cambia_contexto_ejecutivo_ni_decision(self):
+        without_rehab = self._snapshot()
+        with_rehab = self._snapshot()
+        with_rehab["capabilities"] = ["active_rehab_v1"]
+        with_rehab["signals"]["active_rehab"] = {
+            "schema_version": 1,
+            "status": "available",
+            "temporal_basis": "current_state_at_capture",
+            "items": [{
+                "episode_id": 7,
+                "protocol_zone": "rodilla",
+                "observation_status": "active_observed",
+                "executive_capacity": {
+                    "can_derive_restrictions": False,
+                    "reason": "rehab_has_no_gym_risk_contract",
+                },
+            }],
+        }
+
+        context_without = _obtener_contexto_fisico(
+            self.cliente, self.hoy, physical_snapshot=without_rehab,
+        )
+        context_with = _obtener_contexto_fisico(
+            self.cliente, self.hoy, physical_snapshot=with_rehab,
+        )
+        base = {
+            "tipo": "programada_hoy",
+            "estado": "entrenar",
+            "entrenamiento": None,
+            "mensaje": "base",
+        }
+
+        self.assertEqual(context_with, context_without)
+        self.assertEqual(
+            _aplicar_contexto(base, context_with, self.hoy),
+            _aplicar_contexto(base, context_without, self.hoy),
+        )
+
     @patch("entrenos.services.sesion_recomendada._detectar_riesgo_lesion")
     def test_lesion_snapshot_conserva_decision_segura_y_conflictiva(self, detectar_riesgo):
         contexto = _obtener_contexto_fisico(
@@ -201,7 +239,8 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
 
     @patch("core.services.physical_snapshot.build_physical_snapshot", side_effect=RuntimeError("source down"))
     def test_fallo_builder_degrada_a_consultas_legacy_sin_cambiar_decision(self, build_snapshot):
-        BitacoraDiaria.objects.create(cliente=self.cliente, energia_subjetiva=3)
+        bitacora = BitacoraDiaria.objects.create(cliente=self.cliente, energia_subjetiva=3)
+        BitacoraDiaria.objects.filter(pk=bitacora.pk).update(fecha=self.hoy)
         ActividadRealizada.objects.create(
             cliente=self.cliente,
             tipo="futbol",
