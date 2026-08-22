@@ -6,11 +6,19 @@ from django.test import TestCase
 
 from entrenos.models import (
     ActividadRealizada,
+    ContratoBloqueGym,
     EjercicioRealizado,
     EntrenoRealizado,
+    EstrategiaSemanalGym,
     RecordPersonal,
 )
-from hyrox.models import HyroxObjective, HyroxSession, HyroxActivity, StravaActivityRaw
+from hyrox.models import (
+    ContratoCampanaHyrox,
+    HyroxObjective,
+    HyroxSession,
+    HyroxActivity,
+    StravaActivityRaw,
+)
 from hyrox.training_engine import HyroxLoadManager
 from rutinas.models import Rutina
 
@@ -27,6 +35,52 @@ def _make_objetivo(user, fc_max=None, fc_reposo=None):
         fecha_evento=datetime.date(2027, 4, 1),
         fc_max_real=fc_max,
         fc_reposo=fc_reposo,
+    )
+
+
+def _activar_campana_test(objetivo):
+    """Fixture explícito: los tests de prescripción operan bajo campaña activa."""
+    cliente = objetivo.cliente
+    hoy = datetime.date.today()
+    estrategia, _ = EstrategiaSemanalGym.objects.get_or_create(
+        cliente=cliente,
+        version=1,
+        defaults={
+            'objetivo_sesiones': 5,
+            'minimo_valido': 3,
+            'vigente_desde': hoy,
+        },
+    )
+    bloque = ContratoBloqueGym.objects.filter(cliente=cliente).first()
+    if bloque is None:
+        bloque = ContratoBloqueGym.objects.create(
+            cliente=cliente,
+            version=1,
+            estado='activo',
+            semana_inicio=hoy,
+            semanas_previstas=4,
+            semana_fin_prevista=hoy + datetime.timedelta(days=27),
+            estrategia=estrategia,
+            objetivo_sesiones=5,
+            minimo_valido=3,
+            objetivo_principal='test',
+            objetivos_secundarios=[],
+            limites_snapshot={},
+            motor_nombre='test',
+            motor_version='1',
+            fingerprint=f'{cliente.pk:064x}'[-64:],
+        )
+    version = ContratoCampanaHyrox.objects.filter(cliente=cliente).count() + 1
+    return ContratoCampanaHyrox.objects.create(
+        cliente=cliente,
+        version=version,
+        estado='activa',
+        objetivo=objetivo,
+        bloque_gym=bloque,
+        objetivo_snapshot={'id': objetivo.pk, 'fecha_evento': str(objetivo.fecha_evento)},
+        bloque_gym_snapshot={'id': bloque.pk, 'estado': bloque.estado},
+        limites_snapshot={},
+        fingerprint=f'{cliente.pk:x}{version:x}'.ljust(64, 'f')[:64],
     )
 
 
@@ -1020,6 +1074,7 @@ class LesionLumbarPrescripcionFuerzaTests(TestCase):
             rm_sentadilla=100.0,
             rm_peso_muerto=120.0,
         )
+        _activar_campana_test(self.objetivo)
 
     def _actividades_fuerza_futuras(self):
         return HyroxActivity.objects.filter(
@@ -1270,6 +1325,7 @@ class CoberturaEstacionesMacrocicloTests(TestCase):
             rm_sentadilla=100.0,
             rm_peso_muerto=120.0,
         )
+        _activar_campana_test(self.objetivo)
 
     def _nombres_planificados(self):
         from hyrox.training_engine import HyroxTrainingEngine
@@ -1530,7 +1586,7 @@ class TaperTsbPlanRealTests(TestCase):
         self.cliente = self.user.cliente_perfil
 
     def _objetivo(self, dias_evento):
-        return HyroxObjective.objects.create(
+        objetivo = HyroxObjective.objects.create(
             cliente=self.cliente,
             fecha_evento=datetime.date.today() + datetime.timedelta(days=dias_evento),
             categoria='open_men',
@@ -1538,6 +1594,8 @@ class TaperTsbPlanRealTests(TestCase):
             rm_peso_muerto=120.0,
             nivel_experiencia='intermedio',
         )
+        _activar_campana_test(objetivo)
+        return objetivo
 
     def _crear_carga_real_alta(self, dias_atras=range(1, 15)):
         """
@@ -1666,6 +1724,7 @@ class SandbagLungesLumbarTagTests(TestCase):
             rm_sentadilla=100.0,
             rm_peso_muerto=120.0,
         )
+        _activar_campana_test(self.objetivo)
         self.client.force_login(self.user)
 
     def _nombres_estaciones_semana1(self):

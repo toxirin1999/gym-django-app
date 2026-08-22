@@ -684,20 +684,44 @@ class UserInjury(models.Model):
         """
         from .models import HyroxSession, HyroxObjective
         from .training_engine import HyroxTrainingEngine
+        from .campaign_authority import (
+            CampanaHyroxNoAutoriza,
+            exigir_prescripcion,
+            resolver_autoridad_campana,
+        )
         hoy = timezone.now().date()
 
+        autoridad = resolver_autoridad_campana(self.cliente, hoy)
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'),
+            cliente=self.cliente,
+        ).first()
+        try:
+            exigir_prescripcion(
+                self.cliente,
+                accion='generar_plan',
+                fecha=hoy,
+                objective=objetivo,
+            )
+        except CampanaHyroxNoAutoriza:
+            return
+
         with transaction.atomic():
+            exigir_prescripcion(
+                self.cliente,
+                accion='generar_plan',
+                fecha=hoy,
+                objective=objetivo,
+            )
             # Borramos TODAS las sesiones de Hyrox planificadas a partir de hoy
             HyroxSession.objects.filter(
-                objective__cliente=self.cliente,
+                objective=objetivo,
                 fecha__gte=hoy,
                 estado='planificado'
             ).delete()
 
             # Regeneramos el plan para rellenar los huecos filtrados
-            obj_activo = HyroxObjective.objects.filter(cliente=self.cliente, estado='activo').first()
-            if obj_activo:
-                HyroxTrainingEngine.generate_training_plan(obj_activo)
+            HyroxTrainingEngine.generate_training_plan(objetivo)
         
     def __str__(self):
         estado = "ACTIVA" if self.activa else "RESUELTA"

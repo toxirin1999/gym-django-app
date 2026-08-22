@@ -188,6 +188,20 @@ def _crear_hyrox_decision(current_score, resumen_semanal=None, lesion_activa=Non
     Prioridad: lesión > descanso global > fatiga (TSB) > carga (ACWR) > readiness > normal.
     """
     from . import decision_service
+    if cliente is not None:
+        from .campaign_authority import resolver_autoridad_campana
+        autoridad = resolver_autoridad_campana(cliente, timezone.localdate())
+        if autoridad['estado'] != 'activa':
+            return {
+                'estado': 'inactivo',
+                'causa': 'campana_inactiva',
+                'mensaje': 'Hyrox no tiene una campaña activa.',
+                'puede_ejecutar_plan': False,
+                'permitido': [],
+                'evitar': [],
+                'estaciones_bloqueadas': [],
+                'tags_restringidos': [],
+            }
     ciclo_deload = None
     if cliente is not None:
         from entrenos.services.deload_cycle_service import obtener_ciclo_activo
@@ -1757,10 +1771,26 @@ def crear_objetivo(request):
             objetivo.save()
 
             hoy = timezone.now().date()
-            HyroxSession.objects.filter(
-                objective=objetivo, estado='planificado', fecha__gte=hoy
-            ).delete()
-            HyroxTrainingEngine.generate_training_plan(objetivo)
+            from .campaign_authority import CampanaHyroxNoAutoriza, exigir_prescripcion
+            try:
+                exigir_prescripcion(
+                    cliente, accion='generar_plan', fecha=hoy, objective=objetivo
+                )
+                from django.db import transaction
+                with transaction.atomic():
+                    exigir_prescripcion(
+                        cliente, accion='generar_plan', fecha=hoy, objective=objetivo
+                    )
+                    HyroxSession.objects.filter(
+                        objective=objetivo, estado='planificado', fecha__gte=hoy
+                    ).delete()
+                    HyroxTrainingEngine.generate_training_plan(objetivo)
+            except CampanaHyroxNoAutoriza:
+                messages.warning(
+                    request,
+                    'Objetivo guardado. El plan no se ha regenerado porque no hay una campaña Hyrox activa.',
+                )
+                return redirect('hyrox:dashboard')
 
             if objetivo_existente:
                 messages.success(request, "Objetivo actualizado. El plan se ha regenerado desde hoy.")
@@ -1897,8 +1927,23 @@ def regenerar_plan(request, objective_id):
     """Elimina todas las sesiones planificadas futuras y regenera el plan completo."""
     objetivo = get_object_or_404(HyroxObjective, id=objective_id, cliente=request.user.cliente_perfil)
     hoy = timezone.now().date()
-    eliminadas = HyroxSession.objects.filter(objective=objetivo, estado='planificado', fecha__gte=hoy).delete()
-    HyroxTrainingEngine.generate_training_plan(objetivo)
+    from .campaign_authority import CampanaHyroxNoAutoriza, exigir_prescripcion
+    try:
+        exigir_prescripcion(
+            objetivo.cliente, accion='generar_plan', fecha=hoy, objective=objetivo
+        )
+    except CampanaHyroxNoAutoriza:
+        messages.warning(request, 'No hay una campaña Hyrox activa; el plan existente se conserva.')
+        return redirect('hyrox:dashboard')
+    from django.db import transaction
+    with transaction.atomic():
+        exigir_prescripcion(
+            objetivo.cliente, accion='generar_plan', fecha=hoy, objective=objetivo
+        )
+        HyroxSession.objects.filter(
+            objective=objetivo, estado='planificado', fecha__gte=hoy
+        ).delete()
+        HyroxTrainingEngine.generate_training_plan(objetivo)
     messages.success(request, "Plan regenerado correctamente con el nuevo motor de entrenamiento.")
     return redirect('hyrox:dashboard')
 
@@ -2781,8 +2826,10 @@ def reportar_lesion(request):
             request.session.modified = True
 
             # Bio-Purge: Limpiar sesiones Hyrox futuras para forzar re-evaluación
-            from core.bio_context import BioContextProvider
-            BioContextProvider.force_clean_future_workouts(cliente)
+            from .campaign_authority import resolver_autoridad_campana
+            if resolver_autoridad_campana(cliente, timezone.localdate())['estado'] == 'activa':
+                from core.bio_context import BioContextProvider
+                BioContextProvider.force_clean_future_workouts(cliente)
             
             bloqueos_str = ""
             if lesion.tags_restringidos:

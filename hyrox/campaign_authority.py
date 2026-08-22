@@ -25,17 +25,28 @@ PERMISOS = {
     'finalizada': _permisos(),
 }
 
-def _inventario(code, superficie, mutacion, permiso, siempre=False):
+
+class CampanaHyroxNoAutoriza(PermissionError):
+    """La campaña vigente no autoriza una mutación prescriptiva Hyrox."""
+
+    def __init__(self, *, accion, autoridad):
+        self.accion = accion
+        self.autoridad = autoridad
+        super().__init__(
+            f"La campaña Hyrox {autoridad['estado']} no autoriza {accion}."
+        )
+
+def _inventario(code, superficie, mutacion, permiso, siempre=False, cubierto=False):
     return {'code': code, 'superficie': superficie, 'mutacion': mutacion,
             'permiso_requerido': permiso, 'siempre_permitido': siempre,
-            'cubierto_7a': False}
+            'cubierto_7a': cubierto}
 
 
 INVENTARIO_AUTOMATIZACIONES = [
-    _inventario('plan_generacion', 'hyrox.views', 'crear sesiones futuras', 'generar_plan'),
-    _inventario('plan_regeneracion', 'hyrox.views', 'borrar/regenerar plan', 'generar_plan'),
-    _inventario('auto_adjust_override', 'hyrox.views', 'ajustar o sobrescribir sesión', 'autoajuste'),
-    _inventario('lesion_regeneracion', 'hyrox.models.UserInjury', 'invalidar/regenerar sesiones', 'seguridad', True),
+    _inventario('plan_generacion', 'hyrox.views', 'crear sesiones futuras', 'generar_plan', cubierto=True),
+    _inventario('plan_regeneracion', 'hyrox.views', 'borrar/regenerar plan', 'generar_plan', cubierto=True),
+    _inventario('auto_adjust_override', 'hyrox.views', 'ajustar o sobrescribir sesión', 'autoajuste', cubierto=True),
+    _inventario('lesion_regeneracion', 'hyrox.models.UserInjury', 'invalidar/regenerar sesiones', 'generar_plan', cubierto=True),
     _inventario('adaptacion_doble', 'hyrox.training_engine', 'adaptar sesión por dos motores', 'autoajuste'),
     _inventario('rm_pace', 'hyrox.signals', 'actualizar RM o ritmos', 'correctivos'),
     _inventario('correctivos', 'hyrox.services', 'crear sesiones correctivas', 'correctivos'),
@@ -78,7 +89,39 @@ def resolver_autoridad_campana(cliente, fecha):
         if hallazgos:
             estado = 'inactiva'
     return {'estado': estado, 'origen': 'contrato', 'contrato_id': contrato.pk,
-            'version': contrato.version, 'permisos': dict(PERMISOS[estado]), 'hallazgos': hallazgos}
+            'objetivo_id': contrato.objetivo_id, 'version': contrato.version,
+            'permisos': dict(PERMISOS[estado]), 'hallazgos': hallazgos}
+
+
+def exigir_prescripcion(cliente, *, accion='generar_plan', fecha=None, objective=None):
+    """Gate único para cualquier escritura que prescriba el futuro Hyrox."""
+    autoridad = resolver_autoridad_campana(
+        cliente,
+        fecha or timezone.localdate(),
+    )
+    if not autoridad['permisos'].get(accion, False):
+        raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
+    if accion in {'generar_plan', 'programar_sesiones', 'autoajuste'}:
+        contrato = ContratoCampanaHyrox.objects.filter(
+            pk=autoridad.get('contrato_id')
+        ).first()
+        if objective is None or contrato is None or contrato.objetivo_id != objective.pk:
+            autoridad['hallazgos'] = [*autoridad.get('hallazgos', []), 'objetivo_fuera_campana']
+            raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
+        snapshot = contrato.objetivo_snapshot or {}
+        snapshot_coherente = (
+            snapshot.get('id') == objective.pk
+            and snapshot.get('fecha_evento') == str(objective.fecha_evento)
+            and isinstance(contrato.fingerprint, str)
+            and len(contrato.fingerprint) == 64
+        )
+        if not snapshot_coherente:
+            autoridad['hallazgos'] = [
+                *autoridad.get('hallazgos', []),
+                'objetivo_snapshot_incoherente',
+            ]
+            raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
+    return autoridad
 
 
 def previsualizar(cliente, estado, objetivo=None, bloque=None, limites=None, fecha=None):

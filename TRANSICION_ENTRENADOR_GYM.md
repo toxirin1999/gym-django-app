@@ -1250,3 +1250,17 @@ un inventario estático explícito de superficies legacy (`views`, `signals`,
 activos sin campaña, multiplicidad, objetivos vencidos, sesiones futuras sin
 campaña activa y divergencia del snapshot. La conexión ejecutiva de esas
 superficies queda para 7B.
+# Fase 7B1 — Gate de prescripción Hyrox
+
+- Toda creación, regeneración o autoajuste de sesiones futuras pasa por
+  `hyrox.campaign_authority.exigir_prescripcion`.
+- Solo una campaña `activa` y válida permite prescribir. Los estados
+  `inactiva`, `exploracion` y `finalizada` conservan intactas las sesiones
+  legacy; no se borran ni migran.
+- Editar el objetivo sigue siendo posible sin campaña activa, pero se guarda
+  sin regenerar el plan y se informa al usuario.
+- Registrar/completar sesiones existentes, Strava, carga física y seguridad
+  permanecen disponibles. Registrar una lesión no autoriza por sí mismo a
+  reescribir un plan Hyrox inactivo.
+- El dashboard no autoajusta y devuelve una decisión Hyrox neutra cuando no
+  existe campaña activa. Gym conserva la autoridad soberana.

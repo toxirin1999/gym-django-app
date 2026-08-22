@@ -434,38 +434,57 @@ class BioContextProvider:
         Returns:
             int: Cantidad de sesiones planificadas que fueron eliminadas.
         """
+        from django.db import transaction
         from django.utils import timezone as tz
+        from hyrox.campaign_authority import (
+            CampanaHyroxNoAutoriza,
+            exigir_prescripcion,
+            resolver_autoridad_campana,
+        )
         from hyrox.models import HyroxSession, HyroxObjective
         from hyrox.training_engine import HyroxTrainingEngine
 
-        objetivo_activo = HyroxObjective.objects.filter(
-            cliente=cliente, estado__in=['activo', 'active']
-        ).first()
-
-        # Solo borramos las sesiones planificadas si el evento es futuro y
-        # generate_training_plan podrá recrearlas. Si no, solo rellenamos huecos.
         hoy = tz.now().date()
-        puede_regenerar = (
-            objetivo_activo is not None
-            and objetivo_activo.fecha_evento is not None
-            and objetivo_activo.fecha_evento >= hoy  # incluye evento hoy o futuro
-        )
+        autoridad = resolver_autoridad_campana(cliente, hoy)
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'),
+            cliente=cliente,
+        ).first()
+        try:
+            exigir_prescripcion(
+                cliente,
+                accion='generar_plan',
+                fecha=hoy,
+                objective=objetivo,
+            )
+        except CampanaHyroxNoAutoriza:
+            return 0
 
-        sesiones_futuras = HyroxSession.objects.filter(
-            objective__cliente=cliente,
-            estado='planificado'
-        )
-        count = sesiones_futuras.count()
-
-        if puede_regenerar and count > 0:
-            logger.info(f"Bio-Purge: Eliminando {count} sesiones planificadas para cliente {cliente.id} — se regenerarán con nuevos filtros.")
-            sesiones_futuras.delete()
-        elif not puede_regenerar:
-            logger.info(f"Bio-Purge: Evento pasado o sin objetivo activo para cliente {cliente.id} — se omite el borrado para conservar el plan.")
-
-        # Regenerar (o rellenar huecos si no se borró)
-        if objetivo_activo:
-            HyroxTrainingEngine.generate_training_plan(objetivo_activo)
-            logger.info(f"Bio-Purge: Plan regenerado para cliente {cliente.id}.")
-
-        return count
+        with transaction.atomic():
+            exigir_prescripcion(
+                cliente,
+                accion='generar_plan',
+                fecha=hoy,
+                objective=objetivo,
+            )
+            sesiones_futuras = HyroxSession.objects.filter(
+                objective=objetivo,
+                estado='planificado',
+            )
+            count = sesiones_futuras.count()
+            if count:
+                logger.info(
+                    "Bio-Purge: Eliminando %s sesiones planificadas del objetivo %s "
+                    "para cliente %s — se regenerarán con nuevos filtros.",
+                    count,
+                    objetivo.pk,
+                    cliente.id,
+                )
+                sesiones_futuras.delete()
+            HyroxTrainingEngine.generate_training_plan(objetivo)
+            logger.info(
+                "Bio-Purge: Plan del objetivo %s regenerado para cliente %s.",
+                objetivo.pk,
+                cliente.id,
+            )
+            return count

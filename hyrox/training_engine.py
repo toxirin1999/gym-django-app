@@ -896,6 +896,13 @@ class HyroxTrainingEngine:
         Se basa en la categoría, baselines del usuario y nivel de experiencia.
         Incluye semanas de deload cada 4 semanas y progresión lineal de carga.
         """
+        from .campaign_authority import exigir_prescripcion
+        exigir_prescripcion(
+            objective.cliente,
+            accion='generar_plan',
+            objective=objective,
+        )
+
         if not objective.fecha_evento:
             logger.warning("No se puede generar plan sin fecha de evento.")
             return
@@ -1065,6 +1072,16 @@ class HyroxTrainingEngine:
         Si la sesión saltada contiene carrera, la reprograma a hoy
         y empuja el resto de sesiones futuras para no perder el estímulo aeróbico clave.
         """
+        from .campaign_authority import CampanaHyroxNoAutoriza, exigir_prescripcion
+        try:
+            exigir_prescripcion(
+                objective.cliente,
+                accion='autoajuste',
+                objective=objective,
+            )
+        except CampanaHyroxNoAutoriza:
+            return
+
         if objective.estado != 'activo':
             return
 
