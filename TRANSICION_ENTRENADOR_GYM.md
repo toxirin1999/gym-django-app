@@ -1018,3 +1018,10 @@ python manage.py clasificar_identidad_strava_gym \
 - Un sello alterado, ajeno o incoherente se rechaza antes de crear datos.
 - El sello V1 caduca a las 24 horas y cualquier fallo tardío del guardado
   revierte atómicamente la sesión completa.
+# Fase 6.4B — cierre factual de supervisión diaria
+
+- Las correcciones y reversiones manuales vigentes se evalúan solo después de terminar el día.
+- Una ejecución favorable exige el vínculo causal exacto con `GymDecisionVersion`; los registros legacy no se reinterpretan por fecha.
+- `proteger` distingue protección cumplida, ejecución posterior incompatible y actividad previa no atribuible.
+- El cierre es explícito, auditable e idempotente mediante `cerrar_supervision_gym` (dry-run por defecto).
+- Esta fase no modifica estrategia, contratos, autoridad diaria ni JOI.

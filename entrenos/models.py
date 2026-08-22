@@ -1945,6 +1945,38 @@ class GymDecisionVersion(models.Model):
         return f'{self.cliente} — {self.fecha} — v{self.version} ({self.origen})'
 
 
+class EvaluacionSupervisionGym(models.Model):
+    """Cierre factual de una intervención manual diaria ya terminada."""
+
+    EJECUTADA_CONFORME = 'ejecutada_conforme'
+    PROTECCION_CUMPLIDA = 'proteccion_cumplida'
+    DESVIADA = 'desviada'
+    INCONCLUSA = 'inconclusa'
+    RESULTADO_CHOICES = [
+        (EJECUTADA_CONFORME, 'Ejecutada conforme'),
+        (PROTECCION_CUMPLIDA, 'Protección cumplida'),
+        (DESVIADA, 'Desviada'),
+        (INCONCLUSA, 'Inconclusa'),
+    ]
+
+    version_decision = models.OneToOneField(
+        GymDecisionVersion,
+        on_delete=models.PROTECT,
+        related_name='evaluacion_supervision',
+    )
+    resultado = models.CharField(max_length=24, choices=RESULTADO_CHOICES)
+    evidencia_snapshot = models.JSONField(default=dict)
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    calculo_version = models.PositiveSmallIntegerField(default=1)
+    evaluada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-evaluada_en', '-pk']
+
+    def __str__(self):
+        return f'{self.version_decision} — {self.resultado}'
+
+
 class GymDecisionTraceEvaluation(models.Model):
     """
     Phase 34 — Seguimiento posterior de decisiones.
