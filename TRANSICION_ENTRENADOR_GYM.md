@@ -266,10 +266,29 @@ de estrategia, umbrales 5/3, objetivos, límites y versión de Helms. Si no hay
 estrategia vigente falla explícitamente; nunca presenta como válida una
 propuesta que después no podría persistirse.
 
-El cierre multidimensional append-only (`EvaluacionBloqueGym`), su revisión
-humana y las transiciones a finalizado se reservan para la fase 3C. Hasta
-entonces no existe ningún cierre automático ni una inferencia causal del
-bloque: 3B solo establece identidad, alcance y deriva factual.
+### Fase 3C — cierre longitudinal supervisado
+
+`EvaluacionBloqueGym` conserva versiones append-only de la evidencia de cierre.
+Su única fuente son los `ContratoSemanalGym` enlazados y sus
+`EvaluacionSemanalGym` persistidas y aceptadas: no busca entrenamientos libres
+ni recalcula retrospectivamente una semana. El fingerprint de evidencia hace
+idempotente el mismo cierre; una evidencia distinta solo abre otra versión si
+la anterior no fue aceptada.
+
+El preview puede declarar evidencia insuficiente y enumerar semanas ausentes,
+no materializadas o sin revisión aceptada. `--apply` rechaza el cierre mientras
+el bloque siga abierto o falte cualquiera de esas puertas. Con evidencia
+completa clasifica `objetivo_sostenido`, `minimo_sostenido`,
+`deriva_observada` o `interrumpido_seguridad`. Las sesiones canceladas por
+lesión se conservan como protección y nunca se reinterpretan como fracaso de
+adherencia.
+
+La evaluación nace pendiente. Solo el propietario puede aceptarla o
+rechazarla; aceptar finaliza el bloque y congela su evidencia, mientras que
+rechazar mantiene el bloque abierto. Ninguna respuesta modifica estrategia,
+sesiones, autoridad diaria ni `dias_disponibles`, y nunca se crea
+automáticamente el bloque siguiente. `cerrar_bloque_gym` y
+`responder_evaluacion_bloque_gym` son dry-run por defecto y exigen `--apply`.
 
 ## 8. Fase 4 — Cerrar ciclos Gym
 

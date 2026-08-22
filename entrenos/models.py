@@ -1657,6 +1657,77 @@ class EvaluacionSemanalGym(models.Model):
         ordering = ['-contrato__semana', '-id']
 
 
+class EvaluacionBloqueGym(models.Model):
+    RESULTADO_OBJETIVO = 'objetivo_sostenido'
+    RESULTADO_MINIMO = 'minimo_sostenido'
+    RESULTADO_DERIVA = 'deriva_observada'
+    RESULTADO_SEGURIDAD = 'interrumpido_seguridad'
+    RESULTADO_EVIDENCIA_INSUFICIENTE = 'evidencia_insuficiente'
+    RESULTADOS = [
+        (RESULTADO_OBJETIVO, 'Objetivo sostenido'),
+        (RESULTADO_MINIMO, 'Mínimo sostenido'),
+        (RESULTADO_DERIVA, 'Deriva observada'),
+        (RESULTADO_SEGURIDAD, 'Interrumpido por seguridad'),
+        (RESULTADO_EVIDENCIA_INSUFICIENTE, 'Evidencia insuficiente'),
+    ]
+    REVISION_PENDIENTE = 'pendiente'
+    REVISION_ACEPTADA = 'aceptada'
+    REVISION_RECHAZADA = 'rechazada'
+    REVISIONES = [
+        (REVISION_PENDIENTE, 'Pendiente'),
+        (REVISION_ACEPTADA, 'Aceptada'),
+        (REVISION_RECHAZADA, 'Rechazada'),
+    ]
+
+    bloque = models.ForeignKey(
+        ContratoBloqueGym, on_delete=models.PROTECT,
+        related_name='evaluaciones',
+    )
+    version_calculo = models.PositiveIntegerField()
+    fingerprint_evidencia = models.CharField(max_length=64)
+    estado_resultado = models.CharField(max_length=28, choices=RESULTADOS)
+    evidencia_snapshot = models.JSONField(default=dict)
+    estado_revision = models.CharField(
+        max_length=10, choices=REVISIONES,
+        default=REVISION_PENDIENTE, db_index=True,
+    )
+    revisado_por = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='evaluaciones_bloque_gym_revisadas',
+    )
+    revisado_en = models.DateTimeField(null=True, blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['bloque_id', 'version_calculo']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['bloque', 'version_calculo'],
+                name='uniq_eval_bloque_gym_version',
+            ),
+            models.UniqueConstraint(
+                fields=['bloque', 'fingerprint_evidencia'],
+                name='uniq_eval_bloque_gym_fingerprint',
+            ),
+        ]
+
+    _CAMPOS_EVIDENCIA = (
+        'bloque_id', 'version_calculo', 'fingerprint_evidencia',
+        'estado_resultado', 'evidencia_snapshot',
+    )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anterior = type(self).objects.filter(pk=self.pk).first()
+            if anterior and any(
+                getattr(anterior, campo) != getattr(self, campo)
+                for campo in self._CAMPOS_EVIDENCIA
+            ):
+                raise ValidationError('La evidencia de cierre es append-only e inmutable.')
+        return super().save(*args, **kwargs)
+
+
 class SesionProgramada(models.Model):
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_COMPLETADA = "completada"

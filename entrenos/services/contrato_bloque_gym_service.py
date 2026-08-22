@@ -6,10 +6,14 @@ import json
 
 from django.db import transaction
 from django.db.models import Max, Q
+from django.core.exceptions import ObjectDoesNotExist
 from django.utils import timezone
 
 from clientes.models import Cliente
-from entrenos.models import ContratoBloqueGym, EstrategiaSemanalGym
+from entrenos.models import (
+    ContratoBloqueGym, EvaluacionBloqueGym, EstrategiaSemanalGym,
+    SesionProgramada,
+)
 
 
 class ConflictoVersionBloque(RuntimeError):
@@ -25,6 +29,18 @@ class TransicionBloqueInvalida(RuntimeError):
 
 
 class ActorBloqueNoAutorizado(PermissionError):
+    pass
+
+
+class BloqueAbierto(RuntimeError):
+    pass
+
+
+class EvidenciaBloqueIncompleta(RuntimeError):
+    pass
+
+
+class EvaluacionBloqueCongelada(RuntimeError):
     pass
 
 
@@ -226,3 +242,168 @@ def auditar_deriva_bloque_gym(bloque):
             'deuda_generada': 0,
         },
     }
+
+
+def previsualizar_cierre_bloque_gym(bloque, *, hoy=None):
+    """Construye evidencia solo desde contratos y evaluaciones semanales."""
+    hoy = hoy or timezone.localdate()
+    contratos = {
+        contrato.indice_semana_bloque: contrato
+        for contrato in bloque.contratos_semanales.select_related('evaluacion').prefetch_related('sesiones')
+    }
+    semanas = []
+    impedimentos = []
+    if hoy <= bloque.semana_fin_prevista:
+        impedimentos.append('bloque_abierto')
+
+    estados = []
+    seguridad_dominante = False
+    for indice in range(1, bloque.semanas_previstas + 1):
+        contrato = contratos.get(indice)
+        if contrato is None or contrato.sesiones.count() != bloque.objetivo_sesiones:
+            impedimentos.append(f'semana_no_materializada:{indice}')
+            semanas.append({
+                'indice': indice, 'contrato_semanal_id': contrato.pk if contrato else None,
+                'evaluacion_semanal_id': None, 'revision': None,
+                'cumplimiento': 'sin_evidencia', 'protegidas_seguridad': 0,
+            })
+            continue
+        try:
+            evaluacion = contrato.evaluacion
+        except ObjectDoesNotExist:
+            # No se importa ninguna fuente alternativa ni se recalcula la semana.
+            evaluacion = None
+        if evaluacion is None:
+            impedimentos.append(f'evaluacion_ausente:{indice}')
+            semanas.append({
+                'indice': indice, 'contrato_semanal_id': contrato.pk,
+                'evaluacion_semanal_id': None, 'revision': None,
+                'cumplimiento': 'sin_evidencia', 'protegidas_seguridad': 0,
+            })
+            continue
+        if evaluacion.estado_revision != evaluacion.ESTADO_ACEPTADA:
+            impedimentos.append(f'evaluacion_no_aceptada:{indice}')
+        snapshot = evaluacion.evidencia_snapshot or {}
+        conteos = snapshot.get('conteos_estado') or {}
+        protegidas = int(conteos.get(SesionProgramada.ESTADO_CANCELADA_LESION, 0) or 0)
+        completadas = int(evaluacion.sesiones_completadas or 0)
+        estado = evaluacion.estado_cumplimiento
+        if (
+            estado == evaluacion.CUMPLIMIENTO_INSUFICIENTE
+            and protegidas > 0
+            and completadas + protegidas >= bloque.minimo_valido
+        ):
+            seguridad_dominante = True
+        estados.append(estado)
+        semanas.append({
+            'indice': indice, 'contrato_semanal_id': contrato.pk,
+            'evaluacion_semanal_id': evaluacion.pk,
+            'revision': evaluacion.estado_revision,
+            'cumplimiento': estado,
+            'sesiones_completadas': completadas,
+            'protegidas_seguridad': protegidas,
+            'evidencia_semanal': snapshot,
+        })
+
+    faltantes = any(
+        codigo.startswith(('semana_no_materializada:', 'evaluacion_ausente:', 'evaluacion_no_aceptada:'))
+        for codigo in impedimentos
+    )
+    if faltantes:
+        resultado = EvaluacionBloqueGym.RESULTADO_EVIDENCIA_INSUFICIENTE
+    elif seguridad_dominante:
+        resultado = EvaluacionBloqueGym.RESULTADO_SEGURIDAD
+    elif estados and all(estado == 'objetivo' for estado in estados):
+        resultado = EvaluacionBloqueGym.RESULTADO_OBJETIVO
+    elif estados and all(estado in ('objetivo', 'minima_valida') for estado in estados):
+        resultado = EvaluacionBloqueGym.RESULTADO_MINIMO
+    else:
+        resultado = EvaluacionBloqueGym.RESULTADO_DERIVA
+
+    evidencia = {
+        'schema_version': 1,
+        'bloque_id': bloque.pk,
+        'bloque_version': bloque.version,
+        'bloque_fingerprint': bloque.fingerprint,
+        'semana_inicio': bloque.semana_inicio.isoformat(),
+        'semana_fin_prevista': bloque.semana_fin_prevista.isoformat(),
+        'semanas_previstas': bloque.semanas_previstas,
+        'objetivo_sesiones': bloque.objetivo_sesiones,
+        'minimo_valido': bloque.minimo_valido,
+        'semanas': semanas,
+    }
+    return {
+        'schema_version': 1,
+        'solo_lectura': True,
+        'bloque_id': bloque.pk,
+        'estado_resultado': resultado,
+        'fingerprint_evidencia': _fingerprint(evidencia),
+        'evidencia_snapshot': evidencia,
+        'impedimentos': impedimentos,
+        'cierre_persistible': not impedimentos,
+    }
+
+
+@transaction.atomic
+def cerrar_bloque_gym(bloque, *, hoy=None):
+    hoy = hoy or timezone.localdate()
+    Cliente.objects.select_for_update().get(pk=bloque.cliente_id)
+    bloque = ContratoBloqueGym.objects.select_for_update().get(pk=bloque.pk)
+    previo = previsualizar_cierre_bloque_gym(bloque, hoy=hoy)
+    if hoy <= bloque.semana_fin_prevista:
+        raise BloqueAbierto('El bloque todavía no ha alcanzado su fecha de fin.')
+    if previo['impedimentos']:
+        raise EvidenciaBloqueIncompleta(
+            'El cierre exige todas las semanas materializadas y sus evaluaciones aceptadas.'
+        )
+    existente = EvaluacionBloqueGym.objects.select_for_update().filter(
+        bloque=bloque, fingerprint_evidencia=previo['fingerprint_evidencia'],
+    ).first()
+    if existente:
+        return existente
+    ultima = EvaluacionBloqueGym.objects.select_for_update().filter(
+        bloque=bloque,
+    ).order_by('-version_calculo').first()
+    if ultima and ultima.estado_revision == EvaluacionBloqueGym.REVISION_ACEPTADA:
+        raise EvaluacionBloqueCongelada('El bloque ya tiene un cierre aceptado e inmutable.')
+    version = (ultima.version_calculo if ultima else 0) + 1
+    return EvaluacionBloqueGym.objects.create(
+        bloque=bloque, version_calculo=version,
+        fingerprint_evidencia=previo['fingerprint_evidencia'],
+        estado_resultado=previo['estado_resultado'],
+        evidencia_snapshot=previo['evidencia_snapshot'],
+    )
+
+
+@transaction.atomic
+def responder_evaluacion_bloque_gym(evaluacion, *, actor, aceptar):
+    evaluacion = EvaluacionBloqueGym.objects.select_for_update().select_related(
+        'bloque__cliente',
+    ).get(pk=evaluacion.pk)
+    if actor is None or actor.pk != evaluacion.bloque.cliente.user_id:
+        raise ActorBloqueNoAutorizado('Solo el propietario puede revisar el cierre.')
+    nuevo = (
+        EvaluacionBloqueGym.REVISION_ACEPTADA
+        if aceptar else EvaluacionBloqueGym.REVISION_RECHAZADA
+    )
+    if evaluacion.estado_revision == nuevo:
+        return evaluacion
+    if evaluacion.estado_revision != EvaluacionBloqueGym.REVISION_PENDIENTE:
+        raise EvaluacionBloqueCongelada('La evaluación ya tiene una respuesta distinta.')
+    evaluacion.estado_revision = nuevo
+    evaluacion.revisado_por = actor
+    evaluacion.revisado_en = timezone.now()
+    evaluacion.save(update_fields=[
+        'estado_revision', 'revisado_por', 'revisado_en', 'actualizado_en',
+    ])
+    if aceptar:
+        bloque = ContratoBloqueGym.objects.select_for_update().get(pk=evaluacion.bloque_id)
+        if bloque.estado not in (
+            ContratoBloqueGym.ESTADO_ACTIVO, ContratoBloqueGym.ESTADO_PAUSADO,
+            ContratoBloqueGym.ESTADO_FINALIZADO,
+        ):
+            raise TransicionBloqueInvalida('El bloque no admite un cierre aceptado.')
+        if bloque.estado != ContratoBloqueGym.ESTADO_FINALIZADO:
+            bloque.estado = ContratoBloqueGym.ESTADO_FINALIZADO
+            bloque.save(update_fields=['estado', 'actualizado_en'])
+    return evaluacion
