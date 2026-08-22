@@ -4,7 +4,11 @@ from datetime import date
 from django.core.management.base import BaseCommand, CommandError
 
 from clientes.models import Cliente
-from entrenos.services.contrato_bloque_gym_service import proponer_bloque_gym
+from entrenos.models import EstrategiaSemanalGym
+from entrenos.services.contrato_bloque_gym_service import (
+    previsualizar_propuesta_bloque_gym,
+    proponer_bloque_gym,
+)
 
 
 class Command(BaseCommand):
@@ -30,11 +34,19 @@ class Command(BaseCommand):
             raise CommandError('--semana-inicio debe usar YYYY-MM-DD') from exc
         if inicio.weekday() != 0 or options['semanas'] < 1:
             raise CommandError('El inicio debe ser lunes y --semanas debe ser positivo.')
-        payload = {
-            'cliente_id': cliente.pk, 'semana_inicio': inicio.isoformat(),
-            'semanas_previstas': options['semanas'],
-            'objetivo_principal': options['objetivo_principal'],
-        }
+        limites = {'sin_autoajustes': True}
+        try:
+            previo = previsualizar_propuesta_bloque_gym(
+                cliente, semana_inicio=inicio,
+                semanas_previstas=options['semanas'],
+                objetivo_principal=options['objetivo_principal'],
+                objetivos_secundarios=options['objetivo_secundario'],
+                limites_snapshot=limites, motor_nombre='Helms',
+                motor_version=options['motor_version'],
+            )
+        except (ValueError, EstrategiaSemanalGym.DoesNotExist) as exc:
+            raise CommandError(str(exc)) from exc
+        payload = {'cliente_id': cliente.pk, **previo}
         if not options['apply']:
             payload.update({'modo': 'dry-run', 'solo_lectura': True})
             self.stdout.write(json.dumps(payload, sort_keys=True))
@@ -43,7 +55,7 @@ class Command(BaseCommand):
             cliente, semana_inicio=inicio, semanas_previstas=options['semanas'],
             objetivo_principal=options['objetivo_principal'],
             objetivos_secundarios=options['objetivo_secundario'],
-            limites_snapshot={'sin_autoajustes': True},
+            limites_snapshot=limites,
             motor_nombre='Helms', motor_version=options['motor_version'],
             motivo=options['motivo'],
         )

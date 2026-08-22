@@ -4,6 +4,7 @@ import json
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
+from django.core.management.base import CommandError
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 
@@ -179,3 +180,61 @@ class ContratoBloqueGymTests(TestCase):
         call_command('auditar_bloque_gym', bloque=propuesta.pk, stdout=salida)
         lineas = [json.loads(linea) for linea in salida.getvalue().splitlines()]
         self.assertTrue(lineas[-1]['solo_lectura'])
+
+    def test_dry_run_configuracion_exige_estrategia_real_vigente(self):
+        self.estrategia.delete()
+        with self.assertRaisesMessage(
+            CommandError,
+            'No existe estrategia semanal aprobada al inicio del bloque.',
+        ):
+            call_command(
+                'configurar_bloque_gym', cliente=self.cliente.pk,
+                semana_inicio=self.inicio.isoformat(), semanas=4,
+                objetivo_principal='hipertrofia', stdout=StringIO(),
+            )
+
+    def test_dry_run_comparte_snapshot_y_fingerprint_exacto_con_apply(self):
+        salida = StringIO()
+        call_command(
+            'configurar_bloque_gym', cliente=self.cliente.pk,
+            semana_inicio=self.inicio.isoformat(), semanas=4,
+            objetivo_principal='hipertrofia',
+            objetivo_secundario=['gemelos'], motor_version='v-helms',
+            stdout=salida,
+        )
+        previo = json.loads(salida.getvalue())
+        self.assertEqual(ContratoBloqueGym.objects.count(), 0)
+        self.assertEqual(previo['semana_fin_prevista'], '2026-09-20')
+        self.assertEqual(previo['objetivo_sesiones'], 5)
+        self.assertEqual(previo['minimo_valido'], 3)
+        self.assertEqual(previo['estrategia_id'], self.estrategia.pk)
+        self.assertEqual(previo['estrategia_version'], 1)
+        self.assertEqual(previo['objetivos_secundarios'], ['gemelos'])
+        self.assertEqual(previo['limites_snapshot'], {'sin_autoajustes': True})
+        self.assertEqual(previo['motor'], {'nombre': 'Helms', 'version': 'v-helms'})
+        self.assertEqual(len(previo['fingerprint']), 64)
+        self.assertFalse(previo['propuesta_existente'])
+
+        salida = StringIO()
+        call_command(
+            'configurar_bloque_gym', cliente=self.cliente.pk,
+            semana_inicio=self.inicio.isoformat(), semanas=4,
+            objetivo_principal='hipertrofia',
+            objetivo_secundario=['gemelos'], motor_version='v-helms',
+            apply=True, stdout=salida,
+        )
+        aplicado = json.loads(salida.getvalue())
+        bloque = ContratoBloqueGym.objects.get()
+        self.assertEqual(aplicado['fingerprint'], previo['fingerprint'])
+        self.assertEqual(bloque.fingerprint, previo['fingerprint'])
+
+        salida = StringIO()
+        call_command(
+            'configurar_bloque_gym', cliente=self.cliente.pk,
+            semana_inicio=self.inicio.isoformat(), semanas=4,
+            objetivo_principal='hipertrofia',
+            objetivo_secundario=['gemelos'], motor_version='v-helms',
+            stdout=salida,
+        )
+        self.assertTrue(json.loads(salida.getvalue())['propuesta_existente'])
+        self.assertEqual(ContratoBloqueGym.objects.count(), 1)

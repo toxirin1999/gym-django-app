@@ -1,6 +1,6 @@
 """Contrato longitudinal Gym: gobierno del bloque, no planificación paralela."""
 
-from datetime import timedelta
+from datetime import date, timedelta
 import hashlib
 import json
 
@@ -46,38 +46,77 @@ def _estrategia_vigente(cliente, semana):
     )
 
 
+def previsualizar_propuesta_bloque_gym(
+    cliente, *, semana_inicio, semanas_previstas, objetivo_principal,
+    objetivos_secundarios=None, limites_snapshot=None, motor_nombre='Helms',
+    motor_version='actual', predecesor=None,
+):
+    """Calcula el contrato candidato completo sin adquirir locks ni escribir."""
+    if semana_inicio.weekday() != 0:
+        raise ValueError('El bloque debe comenzar en lunes.')
+    if semanas_previstas < 1:
+        raise ValueError('El bloque debe contener al menos una semana.')
+    estrategia = _estrategia_vigente(cliente, semana_inicio)
+    if estrategia is None:
+        raise EstrategiaSemanalGym.DoesNotExist(
+            'No existe estrategia semanal aprobada al inicio del bloque.'
+        )
+    if predecesor is not None and predecesor.cliente_id != cliente.pk:
+        raise ValueError('El predecesor debe pertenecer al mismo cliente.')
+    fin = semana_inicio + timedelta(weeks=semanas_previstas) - timedelta(days=1)
+    snapshot = {
+        'semana_inicio': semana_inicio.isoformat(),
+        'semanas_previstas': semanas_previstas,
+        'semana_fin_prevista': fin.isoformat(),
+        'estrategia_id': estrategia.pk,
+        'estrategia_version': estrategia.version,
+        'objetivo_sesiones': estrategia.objetivo_sesiones,
+        'minimo_valido': estrategia.minimo_valido,
+        'objetivo_principal': objetivo_principal,
+        'objetivos_secundarios': objetivos_secundarios or [],
+        'limites_snapshot': limites_snapshot or {},
+        'motor': {'nombre': motor_nombre, 'version': motor_version},
+        'predecesor_id': predecesor.pk if predecesor else None,
+    }
+    # La versión de la estrategia está presente para auditoría, pero la
+    # identidad relacional ya queda fijada por estrategia_id.
+    identidad = {
+        clave: valor for clave, valor in snapshot.items()
+        if clave != 'estrategia_version'
+    }
+    identidad['motor_nombre'] = identidad.pop('motor')['nombre']
+    identidad['motor_version'] = snapshot['motor']['version']
+    fingerprint = _fingerprint(identidad)
+    existente = ContratoBloqueGym.objects.filter(
+        cliente=cliente, fingerprint=fingerprint,
+    ).only('id').first()
+    return {
+        **snapshot,
+        'fingerprint': fingerprint,
+        'propuesta_existente': bool(existente),
+        'propuesta_existente_id': existente.pk if existente else None,
+    }
+
+
 @transaction.atomic
 def proponer_bloque_gym(
     cliente, *, semana_inicio, semanas_previstas, objetivo_principal,
     objetivos_secundarios=None, limites_snapshot=None, motor_nombre='Helms',
     motor_version='actual', motivo='', predecesor=None,
 ):
-    if semana_inicio.weekday() != 0:
-        raise ValueError('El bloque debe comenzar en lunes.')
-    if semanas_previstas < 1:
-        raise ValueError('El bloque debe contener al menos una semana.')
     Cliente.objects.select_for_update().get(pk=cliente.pk)
-    estrategia = _estrategia_vigente(cliente, semana_inicio)
-    if estrategia is None:
-        raise EstrategiaSemanalGym.DoesNotExist(
-            'No existe estrategia semanal aprobada al inicio del bloque.'
-        )
-    fin = semana_inicio + timedelta(weeks=semanas_previstas) - timedelta(days=1)
-    payload = {
-        'semana_inicio': semana_inicio.isoformat(),
-        'semanas_previstas': semanas_previstas,
-        'semana_fin_prevista': fin.isoformat(),
-        'estrategia_id': estrategia.pk,
-        'objetivo_sesiones': estrategia.objetivo_sesiones,
-        'minimo_valido': estrategia.minimo_valido,
-        'objetivo_principal': objetivo_principal,
-        'objetivos_secundarios': objetivos_secundarios or [],
-        'limites_snapshot': limites_snapshot or {},
-        'motor_nombre': motor_nombre,
-        'motor_version': motor_version,
-        'predecesor_id': predecesor.pk if predecesor else None,
-    }
-    fingerprint = _fingerprint(payload)
+    previo = previsualizar_propuesta_bloque_gym(
+        cliente, semana_inicio=semana_inicio,
+        semanas_previstas=semanas_previstas,
+        objetivo_principal=objetivo_principal,
+        objetivos_secundarios=objetivos_secundarios,
+        limites_snapshot=limites_snapshot,
+        motor_nombre=motor_nombre, motor_version=motor_version,
+        predecesor=predecesor,
+    )
+    estrategia = EstrategiaSemanalGym.objects.get(pk=previo['estrategia_id'])
+    fin = date.fromisoformat(previo['semana_fin_prevista'])
+    fingerprint = previo['fingerprint']
     existente = ContratoBloqueGym.objects.filter(
         cliente=cliente, fingerprint=fingerprint,
     ).first()

@@ -260,6 +260,12 @@ JSONL determinista de solo lectura. No arrastra sesiones, no genera deuda y no
 ajusta el plan. Los comandos de propuesta y activación son también dry-run por
 defecto y requieren `--apply` para escribir.
 
+El dry-run de `configurar_bloque_gym` resuelve la estrategia aprobada real y
+emite el mismo snapshot y `fingerprint` que consumirá `--apply`: rango, versión
+de estrategia, umbrales 5/3, objetivos, límites y versión de Helms. Si no hay
+estrategia vigente falla explícitamente; nunca presenta como válida una
+propuesta que después no podría persistirse.
+
 El cierre multidimensional append-only (`EvaluacionBloqueGym`), su revisión
 humana y las transiciones a finalizado se reservan para la fase 3C. Hasta
 entonces no existe ningún cierre automático ni una inferencia causal del
