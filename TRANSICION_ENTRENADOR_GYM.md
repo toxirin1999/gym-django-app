@@ -1118,3 +1118,38 @@ python manage.py auditar_cobertura_riesgo_gym_rehab \
   --today 2026-08-22 \
   --settings=gymproject.settings
 ```
+
+# Fase 6.7B — etiquetado curado y reversible del catálogo Gym
+
+- El catálogo V2 contiene exclusivamente los ocho nombres confirmados en
+  producción: sentadillas trasera, frontal, Hack y búlgara; prensa de piernas;
+  zancadas con mancuernas; extensiones de cuádriceps en máquina; y Sissy Squat.
+- La selección usa solo nombre exacto normalizado (mayúsculas, acentos y espacios).
+  Nunca infiere riesgo por grupo muscular, coincidencias parciales ni texto libre.
+- Abducción de cadera, Hip Thrust, patada de glúteo y peso muerto sumo quedan
+  explícitamente fuera de este catálogo.
+- El comando es `dry-run` por defecto. `--apply` añade
+  `carga_dominante_rodilla` sin alterar otros tags; `--revert` elimina solamente
+  ese tag de los mismos ocho ejercicios. Ambas operaciones son idempotentes,
+  transaccionales y mutuamente exclusivas.
+- Si falta cualquier nombre o una normalización produce más de un candidato, la
+  operación aborta completa sin escrituras. La salida JSONL conserva evidencia de
+  ID, nombre y estado `before`/`after` para cada candidato.
+- Esta fase sigue siendo preparatoria: `execution_enabled=false`. No modifica
+  decisiones, sesiones, UI, JOI ni la autoridad vigente de lesiones.
+
+```bash
+# Inspección sin escrituras
+python manage.py etiquetar_catalogo_riesgo_gym_rehab \
+  --settings=gymproject.settings
+
+# Aplicación curada
+python manage.py etiquetar_catalogo_riesgo_gym_rehab \
+  --apply \
+  --settings=gymproject.settings
+
+# Reversión segura
+python manage.py etiquetar_catalogo_riesgo_gym_rehab \
+  --revert \
+  --settings=gymproject.settings
+```

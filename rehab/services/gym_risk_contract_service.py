@@ -19,10 +19,91 @@ CATALOGO_RIESGO_GYM_V1 = {
     ),
 }
 
+CATALOGO_RIESGO_GYM_V2 = {
+    'schema_version': 2,
+    'risk_tag': 'carga_dominante_rodilla',
+    'exact_names': (
+        'Sentadilla Trasera con Barra',
+        'Sentadilla Frontal con Barra',
+        'Sentadilla Hack',
+        'Sentadilla Búlgara',
+        'Prensa de Piernas',
+        'Zancadas con Mancuernas',
+        'Extensiones de Cuádriceps en Máquina',
+        'Sissy Squat',
+    ),
+}
+
 
 def _normalize(value):
     value = unicodedata.normalize('NFKD', value.casefold())
     return ' '.join(''.join(c for c in value if not unicodedata.combining(c)).split())
+
+
+@transaction.atomic
+def etiquetar_catalogo(*, apply=False, revert=False):
+    """Proyecta o aplica el tag curado, sin habilitar decisiones Rehab→Gym."""
+    if apply and revert:
+        raise ValidationError('--apply y --revert son mutuamente exclusivos')
+
+    catalog = CATALOGO_RIESGO_GYM_V2
+    risk_tag = catalog['risk_tag']
+    exercises = list(EjercicioBase.objects.select_for_update().order_by('nombre', 'pk'))
+    grouped = {}
+    for exercise in exercises:
+        grouped.setdefault(_normalize(exercise.nombre), []).append(exercise)
+
+    missing = []
+    ambiguous = []
+    selected = []
+    for expected_name in catalog['exact_names']:
+        matches = grouped.get(_normalize(expected_name), [])
+        if not matches:
+            missing.append(expected_name)
+        elif len(matches) > 1:
+            ambiguous.append({
+                'expected_name': expected_name,
+                'matches': [
+                    {'exercise_id': item.pk, 'name': item.nombre}
+                    for item in sorted(matches, key=lambda item: (item.nombre, item.pk))
+                ],
+            })
+        else:
+            selected.append(matches[0])
+
+    if missing:
+        raise ValidationError(f'catálogo incompleto; faltan: {", ".join(missing)}')
+    if ambiguous:
+        names = ', '.join(row['expected_name'] for row in ambiguous)
+        raise ValidationError(f'matching ambiguo para: {names}')
+
+    candidates = []
+    should_write = apply or revert
+    for exercise in selected:
+        before = list(exercise.risk_tags or [])
+        if revert:
+            after = [tag for tag in before if tag != risk_tag]
+        else:
+            after = before if risk_tag in before else [*before, risk_tag]
+        candidates.append({
+            'exercise_id': exercise.pk,
+            'name': exercise.nombre,
+            'before': before,
+            'after': after,
+        })
+        if should_write and after != before:
+            exercise.risk_tags = after
+            exercise.save(update_fields=['risk_tags'])
+
+    return {
+        'schema_version': catalog['schema_version'],
+        'risk_tag': risk_tag,
+        'operation': 'revert' if revert else ('apply' if apply else 'dry_run'),
+        'candidates': candidates,
+        'applied': should_write,
+        'reversible': True,
+        'execution_enabled': False,
+    }
 
 
 @transaction.atomic
@@ -53,7 +134,7 @@ def publicar_sucesora(contract, **changes):
 def auditar_cobertura(today=None):
     today = today or date.today()
     exercises = list(EjercicioBase.objects.order_by('nombre', 'pk'))
-    expected = {_normalize(name) for name in CATALOGO_RIESGO_GYM_V1['exact_names']}
+    expected = {_normalize(name) for name in CATALOGO_RIESGO_GYM_V2['exact_names']}
     grouped = {}
     for exercise in exercises:
         grouped.setdefault(_normalize(exercise.nombre), []).append(exercise)
@@ -61,6 +142,7 @@ def auditar_cobertura(today=None):
     flattened_tags = set()
     for tags in ContratoRiesgoGymFaseRehab.objects.filter(activo=True).values_list('risk_tags', flat=True):
         flattened_tags.update(tags or [])
+    flattened_tags.add(CATALOGO_RIESGO_GYM_V2['risk_tag'])
     for normalized in sorted(expected):
         candidates = grouped.get(normalized, [])
         evidence = [
@@ -78,7 +160,7 @@ def auditar_cobertura(today=None):
                 'exercise_id': exercise.pk, 'name': exercise.nombre,
                 'matched_tags': sorted(set(exercise.risk_tags or []) & flattened_tags),
             })
-    absent = [name for name in CATALOGO_RIESGO_GYM_V1['exact_names']
+    absent = [name for name in CATALOGO_RIESGO_GYM_V2['exact_names']
               if _normalize(name) not in grouped]
 
     would_hold = []
@@ -94,8 +176,8 @@ def auditar_cobertura(today=None):
             would_hold.append({'episode_id': episode.pk, 'record_id': latest.pk,
                                'pain': latest.dolor_manana, 'age_days': (today-latest.fecha).days})
     return {
-        'schema_version': 1, 'catalog_version': CATALOGO_RIESGO_GYM_V1['schema_version'],
-        'proposed_risk_tag': CATALOGO_RIESGO_GYM_V1['risk_tag'],
+        'schema_version': 1, 'catalog_version': CATALOGO_RIESGO_GYM_V2['schema_version'],
+        'proposed_risk_tag': CATALOGO_RIESGO_GYM_V2['risk_tag'],
         'exact_matches': exact, 'ambiguous': ambiguous,
         'covered_by_existing_tags': sorted(covered, key=lambda row: (row['name'], row['exercise_id'])),
         'absent': sorted(absent),
