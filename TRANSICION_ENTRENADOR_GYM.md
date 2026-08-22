@@ -1361,6 +1361,14 @@ superficies queda para 7B.
   con los estados `activa`, `cuestionada` y `debilitada`; `activa=False` puede
   representar poda legítima. Solo `estado=descartada` junto con `activa=True`
   produce `manual_descartada_aun_incluida`.
+- La revisión temporal de hipótesis es semántica y reproducible. Una corrección
+  `feedback_error` es persistente; no caduca como un patrón automático. Para
+  `patron_detectado`, `ultima_evidencia=NULL` significa revisión contextual
+  pendiente: hasta 30 días se clasifica `pendiente_revision` y después
+  `revision_vencida`. Una revisión antigua vuelve a solicitar revisión y conserva
+  la distinción `activa`/`cuestionada`, sin declarar falsa la hipótesis. El corte
+  temporal es `--hasta`; sin él se deriva de las fechas del propio lote, nunca
+  del reloj del proceso.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.

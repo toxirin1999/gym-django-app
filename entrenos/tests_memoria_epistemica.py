@@ -321,7 +321,7 @@ class MemoriaEpistemicaTests(TestCase):
         }
 
         self.assertTrue({
-            'hipotesis_sin_vigencia', 'manual_descartada_aun_incluida',
+            'manual_descartada_aun_incluida',
             'preferencia_sin_consentimiento', 'preferencia_duplicada_manual_gym',
             'evidencia_count_divergente', 'promocion_sin_evidencia',
             'trace_version_no_identificable', 'revocacion_sin_trazabilidad',
@@ -372,6 +372,91 @@ class MemoriaEpistemicaTests(TestCase):
             'estado_flag': 'descartada',
             'activa_flag': True,
         })
+
+    def test_patron_automatico_sin_revision_se_clasifica_por_as_of(self):
+        manual = ManualDavid.objects.create(
+            user=self.user, entrada='Patrón pendiente', origen='patron_detectado',
+            tipo='hipotesis', estado='activa', activa=True,
+        )
+        creado = timezone.make_aware(datetime.datetime(2026, 1, 1, 10, 0))
+        ManualDavid.objects.filter(pk=manual.pk).update(
+            creado_en=creado, ultima_evidencia=None,
+        )
+        manual.refresh_from_db()
+        from core.services.epistemic_registry import adaptar_manual_david, auditar_registros
+
+        record = adaptar_manual_david(manual, operaciones_cierre=[])
+        reciente = auditar_registros([record], as_of=datetime.date(2026, 1, 20))
+        vencida = auditar_registros([record], as_of=datetime.date(2026, 2, 1))
+
+        self.assertEqual([x['code'] for x in reciente], ['pendiente_revision'])
+        self.assertEqual(reciente[0]['evidence'], {
+            'age_days': 19,
+            'estado_flag': 'activa',
+            'review_basis': 'creado_en',
+        })
+        self.assertEqual([x['code'] for x in vencida], ['revision_vencida'])
+        self.assertEqual(vencida[0]['evidence']['age_days'], 31)
+        self.assertNotIn('hipotesis_sin_vigencia', {x['code'] for x in reciente + vencida})
+
+    def test_feedback_error_es_correccion_persistente_sin_caducidad(self):
+        manual = ManualDavid.objects.create(
+            user=self.user, entrada='Corrección explícita', origen='feedback_error',
+            tipo='hipotesis', estado='activa', activa=True,
+        )
+        ManualDavid.objects.filter(pk=manual.pk).update(
+            creado_en=timezone.make_aware(datetime.datetime(2025, 1, 1, 10, 0)),
+            ultima_evidencia=None,
+        )
+        manual.refresh_from_db()
+        from core.services.epistemic_registry import adaptar_manual_david, auditar_registros
+
+        record = adaptar_manual_david(manual, operaciones_cierre=[])
+        findings = auditar_registros([record], as_of=datetime.date(2026, 8, 22))
+
+        self.assertEqual(record['conditions']['review_semantics'], 'correccion_explicita_persistente')
+        self.assertNotIn('revision_vencida', {x['code'] for x in findings})
+        self.assertNotIn('pendiente_revision', {x['code'] for x in findings})
+
+    def test_revision_vencida_distingue_activa_y_cuestionada_sin_declarar_falsedad(self):
+        from core.services.epistemic_registry import adaptar_manual_david, auditar_registros
+
+        for estado in ('activa', 'cuestionada'):
+            manual = ManualDavid.objects.create(
+                user=self.user, entrada=f'Revisada {estado}', origen='patron_detectado',
+                tipo='hipotesis', estado=estado, activa=True,
+            )
+            ManualDavid.objects.filter(pk=manual.pk).update(
+                ultima_evidencia=timezone.make_aware(datetime.datetime(2026, 1, 1, 10, 0)),
+            )
+            manual.refresh_from_db()
+            record = adaptar_manual_david(manual, operaciones_cierre=[])
+            findings = auditar_registros([record], as_of=datetime.date(2026, 2, 15))
+            vencida = next(x for x in findings if x['code'] == 'revision_vencida')
+            self.assertEqual(vencida['evidence']['classification'], f'revision_vencida_{estado}')
+            self.assertEqual(vencida['evidence']['estado_flag'], estado)
+            self.assertNotIn('false', json.dumps(vencida).lower())
+
+    def test_recopilar_usa_hasta_como_corte_reproducible_de_revision(self):
+        manual = ManualDavid.objects.create(
+            user=self.user, entrada='Patrón con corte', origen='patron_detectado',
+            tipo='hipotesis', estado='activa', activa=True,
+        )
+        ManualDavid.objects.filter(pk=manual.pk).update(
+            creado_en=timezone.make_aware(datetime.datetime(2026, 1, 1, 10, 0)),
+            ultima_evidencia=None,
+        )
+        from core.services.epistemic_registry import recopilar_memoria
+
+        reciente = recopilar_memoria(
+            self.cliente.pk, hasta=datetime.date(2026, 1, 20), limit=100,
+        )
+        vencida = recopilar_memoria(
+            self.cliente.pk, hasta=datetime.date(2026, 2, 1), limit=100,
+        )
+
+        self.assertIn('pendiente_revision', {x['code'] for x in reciente['findings']})
+        self.assertIn('revision_vencida', {x['code'] for x in vencida['findings']})
 
     def test_coleccion_es_determinista_sin_escrituras_ia_ni_cache(self):
         self._preferencia()

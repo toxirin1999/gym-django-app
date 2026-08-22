@@ -27,6 +27,16 @@ def _iso(value):
     return value
 
 
+def _as_date(value):
+    if isinstance(value, datetime):
+        return value.date()
+    if isinstance(value, date):
+        return value
+    if isinstance(value, str) and value:
+        return date.fromisoformat(value[:10])
+    return None
+
+
 def _record_id(instance) -> str:
     return f'{instance._meta.label_lower}:{instance.pk}'
 
@@ -269,6 +279,13 @@ def adaptar_manual_david(manual, *, operaciones_cierre=None) -> dict:
         refs.append(f'joi.mensajejoi:{manual.fuente_mensaje_id}')
     refs.extend(_record_id(op) for op in operaciones)
     automatic_synthesis = bool(operaciones)
+    review_semantics = (
+        'correccion_explicita_persistente'
+        if manual.origen == 'feedback_error'
+        else 'revision_contextual_de_patron'
+        if manual.origen == 'patron_detectado'
+        else 'no_clasificada'
+    )
     nivel = {
         'preferencia': 'preferencia', 'patron': 'patron',
         'hipotesis': 'hipotesis', 'contradiccion': 'hipotesis',
@@ -299,6 +316,10 @@ def adaptar_manual_david(manual, *, operaciones_cierre=None) -> dict:
             'correction_status': 'not_recorded' if automatic_synthesis else 'source_feedback_error',
             'activa_flag': manual.activa,
             'estado_flag': manual.estado,
+            'origen': manual.origen,
+            'creado_en': _iso(manual.creado_en),
+            'ultima_evidencia': _iso(manual.ultima_evidencia),
+            'review_semantics': review_semantics,
         },
         owner={'type': 'subject', 'id': _subject('user', manual.user_id)},
         contradictions=contradictions,
@@ -393,14 +414,51 @@ def _finding(code: str, record: dict, **evidence) -> dict:
     }
 
 
-def auditar_registros(records: Iterable[dict]) -> list[dict]:
+def auditar_registros(records: Iterable[dict], *, as_of=None) -> list[dict]:
+    records = list(records)
+    cutoff = _as_date(as_of)
+    if cutoff is None:
+        # Fallback reproducible: la fecha máxima contenida en el propio lote.
+        fechas = [
+            fecha for record in records
+            for fecha in (_as_date(record.get('observed_at')), _as_date(record.get('valid_from')))
+            if fecha is not None
+        ]
+        cutoff = max(fechas) if fechas else None
     findings = []
     for record in sorted(records, key=lambda item: item['record_id']):
         conditions = record.get('conditions') or {}
         if record['level'] == 'conocimiento_consolidado' and not record['evidence_refs']:
             findings.append(_finding('promocion_sin_evidencia', record))
-        if record['level'] == 'hipotesis' and record['valid_until'] is None:
-            findings.append(_finding('hipotesis_sin_vigencia', record))
+        if (
+            record['domain'] == 'joi.manual'
+            and record['level'] == 'hipotesis'
+            and conditions.get('origen') == 'patron_detectado'
+            and conditions.get('activa_flag') is True
+            and conditions.get('estado_flag') != 'descartada'
+            and cutoff is not None
+        ):
+            ultima_evidencia = _as_date(conditions.get('ultima_evidencia'))
+            base = ultima_evidencia or _as_date(conditions.get('creado_en'))
+            if base is not None and cutoff >= base:
+                age_days = (cutoff - base).days
+                review_basis = 'ultima_evidencia' if ultima_evidencia else 'creado_en'
+                if age_days > 30:
+                    estado = conditions.get('estado_flag')
+                    findings.append(_finding(
+                        'revision_vencida', record,
+                        age_days=age_days,
+                        estado_flag=estado,
+                        review_basis=review_basis,
+                        classification=f'revision_vencida_{estado}',
+                    ))
+                elif ultima_evidencia is None:
+                    findings.append(_finding(
+                        'pendiente_revision', record,
+                        age_days=age_days,
+                        estado_flag=conditions.get('estado_flag'),
+                        review_basis='creado_en',
+                    ))
         if record['level'] == 'preferencia' and record['consent']['status'] not in (
             'confirmed', 'contract_asserted', 'user_correction',
         ):
@@ -536,7 +594,7 @@ def recopilar_memoria(cliente_id: int, *, desde=None, hasta=None, limit: int = 5
     records.sort(key=lambda item: item['record_id'])
     total = len(records)
     limited = records[:max(0, limit)]
-    findings = auditar_registros(limited)
+    findings = auditar_registros(limited, as_of=hasta)
     return {
         'records': limited,
         'findings': findings,
