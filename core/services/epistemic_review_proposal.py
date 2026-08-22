@@ -15,6 +15,21 @@ ALLOWED_ACTIONS = {'mantener', 'debilitar', 'cuestionar', 'descartar'}
 MAX_REASON_LENGTH = 240
 
 
+def traducir_accion_a_revision_humana(action: str) -> str:
+    """Puente futuro explícito; no convierte debilitar en acción humana."""
+    mapping = {
+        'mantener': 'confirmar',
+        'cuestionar': 'cuestionar',
+        'descartar': 'descartar',
+    }
+    if action == 'debilitar':
+        raise ValueError('debilitar no es una acción humana del ledger')
+    try:
+        return mapping[action]
+    except KeyError as exc:
+        raise ValueError('acción de propuesta no traducible') from exc
+
+
 def _parse_ref(raw: str) -> tuple[int, str]:
     try:
         raw_id, fingerprint = raw.split(':', 1)

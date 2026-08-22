@@ -1408,6 +1408,26 @@ superficies queda para 7B.
   `Cuestionada`, `Con reservas`; fallback `En revisión`) y limita visualmente
   textos extensos mediante ajuste de línea y scroll local, evitando que una sola
   memoria domine la presencia en pantallas móviles.
+- Fase 8.0-F1 introduce `RevisionManualDavidOperacion`, ledger humano reversible
+  y MySQL-safe para `confirmar`, `cuestionar`, `descartar`, `posponer` y
+  `deshacer`. Cada operación conserva actor, clave idempotente, fingerprint
+  esperado y snapshots semánticos antes/después; no almacena una copia nueva de
+  notas privadas ni sobrescribe `notas_revision`.
+- `joi.services_revision_memoria` bloquea la memoria y revalida ownership,
+  elegibilidad y fingerprint dentro de una transacción. Confirmar suma hasta
+  +0.05 y registra evidencia; cuestionar resta 0.20 y aplaza 14 días; descartar
+  desactiva con confianza cero; posponer solo crea el recibo. Deshacer restaura
+  el snapshot previo únicamente si no hubo cambios posteriores. Repetir la misma
+  clave y payload devuelve el recibo; una colisión diferente se rechaza.
+- La cola omite cuestionamientos y aplazamientos humanos hasta el día 14 exacto
+  y vuelve a mostrarlos entonces; una reversión cancela ese efecto. Una
+  confirmación vigente aporta procedencia y consentimiento `user_confirmed` al
+  registro epistemológico, sin promoverlo a conocimiento consolidado.
+- El revisor legacy `revisar_manual_david` queda subordinado a la cola: excluye
+  correcciones `feedback_error`, evidencia reciente, decisiones humanas
+  aplazadas y elementos aún pendientes de primera revisión. La propuesta 8.0-D
+  conserva su vocabulario de proveedor; la traducción futura es explícita
+  `mantener → confirmar`, mientras `debilitar` no es acción humana del ledger.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.

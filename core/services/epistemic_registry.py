@@ -317,6 +317,11 @@ def adaptar_manual_david(manual, *, operaciones_cierre=None) -> dict:
         refs.append(f'joi.mensajejoi:{manual.fuente_mensaje_id}')
     refs.extend(_record_id(op) for op in operaciones)
     automatic_synthesis = bool(operaciones)
+    latest_human = manual.operaciones_revision.filter(
+        reversa_de__isnull=True, reversion__isnull=True,
+    ).exclude(accion='deshacer').order_by('-created_at', '-pk').first()
+    if latest_human:
+        refs.append(_record_id(latest_human))
     review_semantics = (
         'correccion_explicita_persistente'
         if manual.origen == 'feedback_error'
@@ -344,11 +349,22 @@ def adaptar_manual_david(manual, *, operaciones_cierre=None) -> dict:
         confidence_scale='0_1', confidence_source='ManualDavid.confianza',
         observed_at=manual.ultima_evidencia or manual.creado_en,
         valid_from=manual.creado_en, evidence_refs=refs,
-        derived_by='diario.cierre_nocturno' if automatic_synthesis else f'joi.ManualDavid.{manual.origen}',
-        consent={
-            'status': 'not_recorded' if manual.origen == 'patron_detectado' else 'user_correction',
-            'source': 'ManualDavid.origen',
-        },
+        derived_by=(
+            'joi.revision_manual_humana' if latest_human and latest_human.accion != 'posponer'
+            else 'diario.cierre_nocturno' if automatic_synthesis
+            else f'joi.ManualDavid.{manual.origen}'
+        ),
+        consent=(
+            {
+                'status': 'user_confirmed',
+                'source': f'joi.revisionmanualdavidoperacion:{latest_human.pk}',
+            }
+            if latest_human and latest_human.accion == 'confirmar'
+            else {
+                'status': 'not_recorded' if manual.origen == 'patron_detectado' else 'user_correction',
+                'source': 'ManualDavid.origen',
+            }
+        ),
         conditions={
             'automatic_synthesis': automatic_synthesis,
             'correction_status': 'not_recorded' if automatic_synthesis else 'source_feedback_error',
@@ -358,6 +374,7 @@ def adaptar_manual_david(manual, *, operaciones_cierre=None) -> dict:
             'creado_en': _iso(manual.creado_en),
             'ultima_evidencia': _iso(manual.ultima_evidencia),
             'review_semantics': review_semantics,
+            'latest_human_action': latest_human.accion if latest_human else None,
         },
         owner={'type': 'subject', 'id': _subject('user', manual.user_id)},
         contradictions=contradictions,

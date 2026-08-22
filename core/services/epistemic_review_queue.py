@@ -19,7 +19,7 @@ def _iso(value):
     return value
 
 
-def _fingerprint(manual) -> str:
+def fingerprint_manual(manual) -> str:
     # Los textos privados participan en la huella para detectar cambios, pero
     # nunca forman parte del registro emitido.
     payload = {
@@ -31,7 +31,7 @@ def _fingerprint(manual) -> str:
         'tipo': manual.tipo,
         'estado': manual.estado,
         'activa': manual.activa,
-        'confianza': manual.confianza,
+        'confianza': format(float(manual.confianza), '.6f'),
         'fuente_mensaje_id': manual.fuente_mensaje_id,
         'creado_en': _iso(manual.creado_en),
         'ultima_evidencia': _iso(manual.ultima_evidencia),
@@ -57,8 +57,26 @@ def planificar_revision_memoria(*, cliente_id: int, as_of, limit: int = 500) -> 
         tipo__in=('patron', 'hipotesis', 'contradiccion'),
     ).exclude(estado='descartada').order_by('pk'))
 
+    from joi.models import RevisionManualDavidOperacion
+    latest_operations = {}
+    operations = RevisionManualDavidOperacion.objects.filter(
+        manual_id__in=[manual.pk for manual in candidates],
+        reversa_de__isnull=True,
+        reversion__isnull=True,
+    ).exclude(accion='deshacer').order_by('created_at', 'pk')
+    for operation in operations:
+        latest_operations[operation.manual_id] = operation
+
     queued = []
     for manual in candidates:
+        latest = latest_operations.get(manual.pk)
+        if (
+            latest
+            and latest.accion in ('posponer', 'cuestionar')
+            and latest.aplazada_hasta
+            and cutoff < latest.aplazada_hasta
+        ):
+            continue
         revision = clasificar_revision_manual(
             origen=manual.origen, tipo=manual.tipo, estado=manual.estado,
             activa=manual.activa, creado_en=manual.creado_en,
@@ -91,7 +109,7 @@ def planificar_revision_memoria(*, cliente_id: int, as_of, limit: int = 500) -> 
             'has_opposing_hypothesis': bool(manual.hipotesis_contraria),
             'ordinal': ordinal,
             'as_of': cutoff.isoformat(),
-            'fingerprint': _fingerprint(manual),
+            'fingerprint': fingerprint_manual(manual),
         })
 
     safe_limit = max(0, limit)

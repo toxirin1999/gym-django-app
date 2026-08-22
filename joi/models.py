@@ -171,6 +171,46 @@ class ManualDavid(models.Model):
         return f"Manual [{self.tipo}/{self.estado}] {self.user.username}: {self.entrada[:60]} ({tag})"
 
 
+class RevisionManualDavidOperacion(models.Model):
+    ACCION_CHOICES = [
+        ('confirmar', 'Confirmar'),
+        ('cuestionar', 'Cuestionar'),
+        ('descartar', 'Descartar'),
+        ('posponer', 'Posponer'),
+        ('deshacer', 'Deshacer'),
+    ]
+
+    manual = models.ForeignKey(
+        ManualDavid, on_delete=models.PROTECT, related_name='operaciones_revision',
+    )
+    actor = models.ForeignKey(
+        User, on_delete=models.PROTECT, related_name='operaciones_revision_manual',
+    )
+    accion = models.CharField(max_length=12, choices=ACCION_CHOICES)
+    idempotency_key = models.UUIDField(unique=True, editable=False)
+    expected_fingerprint = models.CharField(max_length=64)
+    before_snapshot = models.JSONField(default=dict)
+    after_snapshot = models.JSONField(default=dict)
+    aplazada_hasta = models.DateField(null=True, blank=True)
+    motivo = models.CharField(max_length=240, blank=True)
+    reversa_de = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='reversion',
+    )
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'pk']
+        indexes = [
+            models.Index(fields=['manual', '-created_at'], name='joi_rev_manual_fecha_idx'),
+            models.Index(fields=['accion', 'aplazada_hasta'], name='joi_rev_accion_plazo_idx'),
+        ]
+
+    def __str__(self):
+        return f'Revisión Manual {self.manual_id} · {self.accion}'
+
+
 class NarrativaActiva(models.Model):
     """
     Postura interpretativa actual de JOI sobre el usuario.

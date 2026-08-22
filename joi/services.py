@@ -2092,7 +2092,7 @@ def _revision_antigua(ultima_revision, dias: int = 7) -> bool:
     return (ahora - ts).days >= dias
 
 
-def revisar_manual_david(cliente) -> dict:
+def revisar_manual_david(cliente, *, as_of=None) -> dict:
     """
     Motor de contradicción: revisa hipótesis y patrones activos del ManualDavid
     contra el contexto actual. Actualiza confianza y estado sin generar mensajes.
@@ -2107,12 +2107,23 @@ def revisar_manual_david(cliente) -> dict:
     from joi.models import ManualDavid, NarrativaActiva
     from django.utils import timezone
 
+    cutoff = as_of or timezone.localdate()
+    if hasattr(cutoff, 'date') and not isinstance(cutoff, date):
+        cutoff = cutoff.date()
+    from core.services.epistemic_review_queue import planificar_revision_memoria
+    cola = planificar_revision_memoria(
+        cliente_id=cliente.pk, as_of=cutoff, limit=100000,
+    )
+    ids_revisables = [
+        item['id'] for item in cola['items']
+        if item['classification'] == 'revision_vencida'
+    ]
+
     revisables = list(
         ManualDavid.objects.filter(
             user=cliente.user,
-            activa=True,
-            tipo__in=('patron', 'hipotesis', 'contradiccion'),
-        ).exclude(estado='descartada')
+            pk__in=ids_revisables,
+        )
     )
     if not revisables:
         return {'revisadas': 0, 'actualizadas': 0, 'cambio_significativo': False}
@@ -2185,7 +2196,7 @@ def revisar_manual_david(cliente) -> dict:
     actualizadas = 0
     confianza_antes_por_id = {e.id: e.confianza for e in revisables}
     hubo_estado_grave = False
-    hoy = date.today()
+    hoy = cutoff
 
     for linea in texto.splitlines():
         linea = linea.strip()
