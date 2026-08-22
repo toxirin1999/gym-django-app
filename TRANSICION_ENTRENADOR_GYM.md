@@ -1331,3 +1331,6 @@ superficies queda para 7B.
   técnica, además de un resumen factual de las sesiones históricas.
 - La campaña activa conserva el dashboard competitivo existente. El cambio es
   exclusivamente de proyección visual y no añade migraciones ni mutaciones GET.
+- El encabezado solo declara `LIVE` cuando la campaña está activa. En archivo
+  usa un indicador neutro `ARCHIVO`, sin pulso. La disponibilidad de Strava se
+  expresa como `STRAVA DISPONIBLE`; no se afirma conexión sin evidencia fiable.

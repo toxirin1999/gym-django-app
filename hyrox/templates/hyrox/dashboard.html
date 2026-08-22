@@ -111,6 +111,7 @@ body {
 }
 .rb-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent);
   animation: rb-blink 1.3s ease-in-out infinite; }
+.rb-archive-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--fg-mute); }
 
 /* ── SECTION EDITORIAL LAYOUT ──────────────────── */
 .rb-section-editorial {
@@ -1018,7 +1019,11 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     <div class="display" style="font-size:22px;color:var(--fg);">HYROX<span style="color:var(--accent);">/</span>OS</div>
   </div>
   <nav style="display:flex;align-items:center;gap:20px;">
+    {% if campana_hyrox_activa %}
     <div class="rb-live"><span class="rb-live-dot"></span>LIVE</div>
+    {% else %}
+    <div class="rb-live"><span class="rb-archive-dot"></span>ARCHIVO</div>
+    {% endif %}
     <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost rb-btn-sm"><i class="fas fa-home"></i> Panel</a>
   </nav>
 </header>
@@ -1036,7 +1041,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     </p>
     <div class="rb-archive-meta" aria-label="Estado del módulo">
       <span class="rb-archive-chip">Historial preservado</span>
-      <span class="rb-archive-chip">Strava conectado</span>
+      <span class="rb-archive-chip">STRAVA DISPONIBLE</span>
       <span class="rb-archive-chip">Seguridad activa</span>
       <span class="rb-archive-chip">Solo lectura</span>
     </div>
