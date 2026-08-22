@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>HYROX · Race Command</title>
+  <title>{% if campana_hyrox_activa %}HYROX · Race Command{% else %}HYROX · Archivo{% endif %}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -422,6 +422,32 @@ a.rb-dia:hover { background: var(--bg-3); text-decoration: none; }
 .rb-empty-eyebrow { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.14em; color: var(--fg-mute); text-transform: uppercase; margin-bottom: 8px; }
 .rb-empty-title { font-family: var(--font-body); font-size: 22px; color: var(--fg); text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 8px; }
 .rb-empty-sub { font-size: 13px; color: var(--fg-dim); line-height: 1.5; margin-bottom: 20px; }
+
+/* ── ARCHIVO / CAMPAÑA EN PAUSA ──────────────── */
+.rb-archive { padding: clamp(32px, 7vw, 76px) 40px 56px; max-width: 1180px; margin: 0 auto; }
+.rb-archive-hero { position: relative; overflow: hidden; border: 1px solid var(--line-2); background: linear-gradient(135deg, var(--bg-2), var(--bg)); padding: clamp(28px, 6vw, 64px); }
+.rb-archive-hero::after { content: "PAUSA"; position: absolute; right: -12px; bottom: -26px; font-family: var(--font-body); font-size: clamp(72px, 16vw, 180px); font-weight: 700; letter-spacing: -.08em; color: var(--fg); opacity: .025; pointer-events: none; }
+.rb-archive-status { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font: 700 10px/1 var(--font-mono); letter-spacing: .16em; text-transform: uppercase; margin-bottom: 30px; }
+.rb-archive-status::before { content: ""; width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; }
+.rb-archive-title { max-width: 760px; color: var(--fg); font-size: clamp(40px, 8vw, 88px); line-height: .9; }
+.rb-archive-copy { max-width: 660px; margin-top: 24px; color: var(--fg-dim); font-size: clamp(14px, 2vw, 17px); line-height: 1.65; }
+.rb-archive-copy strong { color: var(--fg); }
+.rb-archive-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 28px; }
+.rb-archive-chip { border: 1px solid var(--line); background: var(--bg-3); padding: 8px 10px; color: var(--fg-mute); font: 700 9px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.rb-archive-grid { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--line); border-top: 0; }
+.rb-archive-link { min-height: 108px; padding: 18px; color: var(--fg-dim); border-right: 1px solid var(--line); text-decoration: none; display: flex; flex-direction: column; justify-content: space-between; transition: color .2s, background .2s; }
+.rb-archive-link:last-child { border-right: 0; }
+.rb-archive-link:hover { color: var(--fg); background: var(--bg-2); text-decoration: none; }
+.rb-archive-link i { color: var(--accent); font-size: 15px; }
+.rb-archive-link span { font: 700 10px/1.2 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; }
+.rb-archive-history { margin-top: 44px; }
+.rb-archive-history-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.rb-archive-history-title { color: var(--fg); font-size: clamp(24px, 4vw, 38px); }
+.rb-archive-log { list-style: none; }
+.rb-archive-log li { display: grid; grid-template-columns: 110px minmax(0, 1fr) auto; gap: 18px; align-items: center; padding: 16px 0; border-bottom: 1px solid var(--line); }
+.rb-archive-date, .rb-archive-stat { color: var(--fg-mute); font: 500 9px/1.4 var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+.rb-archive-session { color: var(--fg); font-size: 13px; font-weight: 600; }
+.rb-archive-empty { padding: 24px 0; color: var(--fg-mute); font-size: 13px; border-bottom: 1px solid var(--line); }
 
 /* ── RUN EVOLUTION ───────────────────────────── */
 .rb-run-kpis { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 10px; }
@@ -955,6 +981,13 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 
   /* --- Section header: allow stacking when space is tight --- */
   .rb-section-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .rb-archive { padding: 24px 16px 44px; }
+  .rb-archive-hero { padding: 28px 22px; }
+  .rb-archive-grid { grid-template-columns: 1fr 1fr; }
+  .rb-archive-link:nth-child(2) { border-right: 0; }
+  .rb-archive-link:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .rb-archive-log li { grid-template-columns: 82px minmax(0, 1fr); gap: 10px; }
+  .rb-archive-stat { grid-column: 2; }
 }
 
 @media (max-width: 480px) {
@@ -986,16 +1019,61 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   </div>
   <nav style="display:flex;align-items:center;gap:20px;">
     <div class="rb-live"><span class="rb-live-dot"></span>LIVE</div>
-    {% if objetivo_activo %}
     <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost rb-btn-sm"><i class="fas fa-home"></i> Panel</a>
-    {% endif %}
   </nav>
 </header>
 
 <!-- MAIN -->
 <main>
 
-{% if not objetivo_activo %}
+{% if not campana_hyrox_activa %}
+<section class="rb-archive" aria-labelledby="hyrox-archive-title">
+  <div class="rb-archive-hero">
+    <div class="rb-archive-status">SIN CAMPAÑA ACTIVA</div>
+    <h1 id="hyrox-archive-title" class="display rb-archive-title">HYROX EN PAUSA</h1>
+    <p class="rb-archive-copy">
+      <strong>Gym dirige tu entrenamiento.</strong> Hyrox no genera sesiones, no reajusta el plan y no compite por la decisión del día. Tus datos, conexiones y resultados anteriores siguen preservados como contexto.
+    </p>
+    <div class="rb-archive-meta" aria-label="Estado del módulo">
+      <span class="rb-archive-chip">Historial preservado</span>
+      <span class="rb-archive-chip">Strava conectado</span>
+      <span class="rb-archive-chip">Seguridad activa</span>
+      <span class="rb-archive-chip">Solo lectura</span>
+    </div>
+  </div>
+
+  <nav class="rb-archive-grid" aria-label="Accesos disponibles en Hyrox">
+    <a href="{% url 'clientes:mockup_demo' %}" class="rb-archive-link"><i class="fas fa-arrow-left"></i><span>Panel principal</span></a>
+    <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-archive-link"><i class="fab fa-strava"></i><span>Strava</span></a>
+    <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-archive-link"><i class="fas fa-shield-heart"></i><span>Lesión y recuperación</span></a>
+    <a href="{% url 'hyrox:guia_tecnica' %}" class="rb-archive-link"><i class="fas fa-book-open"></i><span>Guía técnica</span></a>
+  </nav>
+
+  <section class="rb-archive-history" aria-labelledby="hyrox-history-title">
+    <div class="rb-archive-history-head">
+      <div>
+        <div class="rb-empty-eyebrow">Análisis histórico · solo lectura</div>
+        <h2 id="hyrox-history-title" class="display rb-archive-history-title">Últimas sesiones</h2>
+      </div>
+      <span class="rb-archive-chip">{{ sesiones|length }} registros</span>
+    </div>
+    {% if sesiones %}
+    <ol class="rb-archive-log">
+      {% for sesion in sesiones|slice:":8" %}
+      <li>
+        <time class="rb-archive-date" datetime="{{ sesion.fecha|date:'Y-m-d' }}">{{ sesion.fecha|date:"d M Y" }}</time>
+        <span class="rb-archive-session">{{ sesion.titulo|default:"Entrenamiento Hyrox" }}</span>
+        <span class="rb-archive-stat">{% if sesion.rpe_global %}RPE {{ sesion.rpe_global }}/10{% else %}Completada{% endif %}</span>
+      </li>
+      {% endfor %}
+    </ol>
+    {% else %}
+    <p class="rb-archive-empty">No hay sesiones históricas vinculadas al objetivo conservado.</p>
+    {% endif %}
+  </section>
+</section>
+
+{% elif not objetivo_activo %}
 <div class="rb-empty">
   <div class="rb-empty-icon"><i class="fas fa-flag-checkered"></i></div>
   <div class="rb-empty-eyebrow">Sin objetivo activo</div>
@@ -3058,6 +3136,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
   {% endif %}
   </div>
 
+  {% if campana_hyrox_activa %}
   <script>
   (function(){
     {% if objetivo_activo.fecha_evento %}
@@ -3486,6 +3565,7 @@ function updateDashboardFromSession(data) {
   }
 }
 </script>
+{% endif %}
 
 <!-- Contenedor de toasts para actualizaciones AJAX desde registrar_entrenamiento -->
 <div id="messages-container" style="position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;pointer-events:none;"></div>
@@ -3493,4 +3573,3 @@ function updateDashboardFromSession(data) {
 {% include 'includes/_joi_fab.html' with mensaje_banner=joi_mensaje_hyrox|default:joi_mensaje_pendiente %}
 </body>
 </html>
-

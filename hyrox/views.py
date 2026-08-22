@@ -1614,6 +1614,7 @@ def hyrox_dashboard(request):
         )
 
     context = {
+        'campana_hyrox_activa': _campana_activa,
         'competition_progress': competition_progress,
         'macro_data': macro_data,
         'cliente': cliente,

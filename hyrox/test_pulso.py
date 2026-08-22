@@ -143,10 +143,11 @@ class PulsoTemplateTest(TestCase):
             self.assertIn(b'pulso-route', response.content)
 
     def test_pulso_no_afecta_hyrox_decision(self):
-        """Pulso no reemplaza hyrox_decision, solo la traduce visualmente."""
+        """Sin campaña, la decisión existe como dato pero no prescribe en UI."""
         response = self.client.get('/hyrox/dashboard/')
         self.assertEqual(response.status_code, 200)
 
-        # Ambos pueden coexistir en la página
-        # Simplemente verificar que la página carga correctamente
-        self.assertIn(b'Estado de hoy', response.content)
+        self.assertIn('hyrox_decision', response.context)
+        self.assertEqual(response.context['hyrox_decision']['estado'], 'inactivo')
+        self.assertIn(b'HYROX EN PAUSA', response.content)
+        self.assertNotIn(b'Estado de hoy', response.content)

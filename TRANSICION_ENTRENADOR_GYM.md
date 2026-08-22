@@ -1315,3 +1315,19 @@ superficies queda para 7B.
   `puede_ejecutar_plan=false`.
 - `_crear_hyrox_decision` se conserva temporalmente para consumidores legacy,
   pero el dashboard Hyrox ya no depende de ella.
+
+# Fase 7B3 — Estado visual de archivo Hyrox
+
+- El template recibe `campana_hyrox_activa` de forma explícita; no deduce
+  autoridad de la existencia de un objetivo Hyrox legacy.
+- Una campaña inactiva presenta `HYROX EN PAUSA` como archivo de solo lectura.
+  Explica que Gym dirige el entrenamiento y que datos, conexiones e historial
+  permanecen conservados.
+- En pausa no se renderizan Race Bib, Race Command, readiness competitivo,
+  planes futuros, estaciones a reforzar, macrociclo, hitos ni mensajes de lo
+  que el plan aprenderá o reajustará. Tampoco existe CTA hacia la ejecución de
+  una sesión.
+- Se mantienen accesos seguros a Panel, Strava, lesión/recuperación y guía
+  técnica, además de un resumen factual de las sesiones históricas.
+- La campaña activa conserva el dashboard competitivo existente. El cambio es
+  exclusivamente de proyección visual y no añade migraciones ni mutaciones GET.
