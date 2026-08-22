@@ -238,6 +238,33 @@ estado o reubicación, y enlaza entrenamientos reales inequívocos que ya se
 hubieran completado. El comando `materializar_contrato_semanal_gym` funciona en
 modo de lectura por defecto y exige `--apply` para escribir.
 
+### Fase 3B — contrato longitudinal de bloque
+
+`ContratoBloqueGym` añade el horizonte longitudinal sin sustituir al
+planificador Helms. Una propuesta captura de forma inmutable el objetivo Gym,
+los objetivos secundarios, límites, versión del motor y la estrategia semanal
+5/3 vigente. Su `fingerprint` hace idempotente la misma propuesta y toda
+corrección posterior debe publicarse como una versión sucesora.
+
+La activación es explícita, transaccional y exige la versión que el usuario
+está viendo. Solo puede existir un bloque activo o pausado por cliente y no se
+permiten rangos abiertos solapados. Al abrir una semana dentro de un bloque
+activo, `ContratoSemanalGym` queda vinculado con un índice 1..N únicamente si
+estrategia y umbrales coinciden exactamente con el snapshot. Una divergencia
+aborta la apertura; un bloque pausado no captura nuevas semanas y los contratos
+legacy continúan siendo válidos con bloque nulo.
+
+`auditar_bloque_gym` recorre exclusivamente sus contratos semanales enlazados,
+clasifica objetivo, mínimo válido, insuficiente o aún no materializada y emite
+JSONL determinista de solo lectura. No arrastra sesiones, no genera deuda y no
+ajusta el plan. Los comandos de propuesta y activación son también dry-run por
+defecto y requieren `--apply` para escribir.
+
+El cierre multidimensional append-only (`EvaluacionBloqueGym`), su revisión
+humana y las transiciones a finalizado se reservan para la fase 3C. Hasta
+entonces no existe ningún cierre automático ni una inferencia causal del
+bloque: 3B solo establece identidad, alcance y deriva factual.
+
 ## 8. Fase 4 — Cerrar ciclos Gym
 
 ### Objetivo

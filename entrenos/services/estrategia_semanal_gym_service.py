@@ -8,6 +8,7 @@ from django.db.models import F, Max, Q
 
 from clientes.models import Cliente
 from entrenos.models import (
+    ContratoBloqueGym,
     ContratoSemanalGym,
     EntrenoRealizado,
     EstrategiaSemanalGym,
@@ -16,6 +17,10 @@ from entrenos.models import (
 
 
 class ContratoSemanalIncompleto(ValueError):
+    pass
+
+
+class DivergenciaBloqueSemanal(ValueError):
     pass
 
 
@@ -148,9 +153,28 @@ def abrir_contrato_semanal_gym(cliente, semana):
         raise EstrategiaSemanalGym.DoesNotExist(
             'No existe una estrategia Gym aprobada y vigente para esta semana.'
         )
+    bloque = ContratoBloqueGym.objects.filter(
+        cliente=cliente,
+        estado=ContratoBloqueGym.ESTADO_ACTIVO,
+        semana_inicio__lte=semana,
+        semana_fin_prevista__gte=semana,
+    ).select_related('estrategia').first()
+    indice_semana = None
+    if bloque is not None:
+        if (
+            bloque.estrategia_id != estrategia.pk
+            or bloque.objetivo_sesiones != estrategia.objetivo_sesiones
+            or bloque.minimo_valido != estrategia.minimo_valido
+        ):
+            raise DivergenciaBloqueSemanal(
+                'La estrategia semanal vigente diverge del snapshot aprobado del bloque.'
+            )
+        indice_semana = ((semana - bloque.semana_inicio).days // 7) + 1
     return ContratoSemanalGym.objects.create(
         cliente=cliente,
         estrategia=estrategia,
+        bloque=bloque,
+        indice_semana_bloque=indice_semana,
         semana=semana,
         objetivo_sesiones=estrategia.objetivo_sesiones,
         minimo_valido=estrategia.minimo_valido,

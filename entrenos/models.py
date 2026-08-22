@@ -4,6 +4,7 @@ from django.db import models
 from clientes.models import Cliente
 from rutinas.models import Rutina
 from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
 from django.utils import timezone
 from decimal import Decimal
 from django.utils import timezone
@@ -1493,11 +1494,103 @@ class EstrategiaSemanalGym(models.Model):
         ]
 
 
+class ContratoBloqueGym(models.Model):
+    """Acuerdo longitudinal aprobado; Helms sigue siendo el único planificador."""
+
+    ESTADO_PROPUESTO = 'propuesto'
+    ESTADO_ACTIVO = 'activo'
+    ESTADO_PAUSADO = 'pausado'
+    ESTADO_FINALIZADO = 'finalizado'
+    ESTADO_RETIRADO = 'retirado'
+    ESTADOS = [
+        (ESTADO_PROPUESTO, 'Propuesto'),
+        (ESTADO_ACTIVO, 'Activo'),
+        (ESTADO_PAUSADO, 'Pausado'),
+        (ESTADO_FINALIZADO, 'Finalizado'),
+        (ESTADO_RETIRADO, 'Retirado'),
+    ]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE,
+        related_name='contratos_bloque_gym',
+    )
+    version = models.PositiveIntegerField()
+    predecesor = models.ForeignKey(
+        'self', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='sucesores',
+    )
+    estado = models.CharField(max_length=12, choices=ESTADOS, default=ESTADO_PROPUESTO, db_index=True)
+    semana_inicio = models.DateField(db_index=True)
+    semanas_previstas = models.PositiveSmallIntegerField()
+    semana_fin_prevista = models.DateField(db_index=True)
+    estrategia = models.ForeignKey(
+        EstrategiaSemanalGym, on_delete=models.PROTECT,
+        related_name='bloques',
+    )
+    objetivo_sesiones = models.PositiveSmallIntegerField()
+    minimo_valido = models.PositiveSmallIntegerField()
+    objetivo_principal = models.CharField(max_length=80)
+    objetivos_secundarios = models.JSONField(default=list)
+    limites_snapshot = models.JSONField(default=dict)
+    motor_nombre = models.CharField(max_length=80)
+    motor_version = models.CharField(max_length=40)
+    fingerprint = models.CharField(max_length=64)
+    aprobado_por = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='bloques_gym_aprobados',
+    )
+    aprobado_en = models.DateTimeField(null=True, blank=True)
+    motivo = models.TextField(blank=True)
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['cliente_id', 'version']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'version'], name='uniq_bloque_gym_cliente_version'),
+            models.UniqueConstraint(fields=['cliente', 'fingerprint'], name='uniq_bloque_gym_cliente_fingerprint'),
+            models.UniqueConstraint(
+                fields=['cliente'],
+                condition=models.Q(estado__in=['activo', 'pausado']),
+                name='uniq_bloque_gym_abierto_cliente',
+            ),
+            models.CheckConstraint(condition=models.Q(semanas_previstas__gte=1), name='bloque_gym_semanas_positivas'),
+            models.CheckConstraint(condition=models.Q(minimo_valido__lte=models.F('objetivo_sesiones')), name='bloque_gym_minimo_lte_objetivo'),
+        ]
+
+    _CAMPOS_SNAPSHOT = (
+        'cliente_id', 'version', 'predecesor_id', 'semana_inicio',
+        'semanas_previstas', 'semana_fin_prevista', 'estrategia_id',
+        'objetivo_sesiones', 'minimo_valido', 'objetivo_principal',
+        'objetivos_secundarios', 'limites_snapshot', 'motor_nombre',
+        'motor_version', 'fingerprint', 'motivo',
+    )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anterior = type(self).objects.filter(pk=self.pk).first()
+            if anterior and anterior.estado != self.ESTADO_PROPUESTO:
+                modificados = [
+                    campo for campo in self._CAMPOS_SNAPSHOT
+                    if getattr(anterior, campo) != getattr(self, campo)
+                ]
+                if modificados:
+                    raise ValidationError(
+                        'Un bloque aprobado es inmutable; crea una propuesta sucesora.'
+                    )
+        return super().save(*args, **kwargs)
+
+
 class ContratoSemanalGym(models.Model):
     """Snapshot del acuerdo aplicable a una semana natural concreta."""
 
     cliente = models.ForeignKey('clientes.Cliente', on_delete=models.CASCADE, related_name='contratos_semanales_gym')
     estrategia = models.ForeignKey(EstrategiaSemanalGym, on_delete=models.PROTECT, related_name='contratos')
+    bloque = models.ForeignKey(
+        ContratoBloqueGym, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='contratos_semanales',
+    )
+    indice_semana_bloque = models.PositiveSmallIntegerField(null=True, blank=True)
     semana = models.DateField(db_index=True)
     objetivo_sesiones = models.PositiveSmallIntegerField()
     minimo_valido = models.PositiveSmallIntegerField()
@@ -1507,6 +1600,7 @@ class ContratoSemanalGym(models.Model):
         ordering = ['semana', 'id']
         constraints = [
             models.UniqueConstraint(fields=['cliente', 'semana'], name='uniq_contrato_gym_cliente_semana'),
+            models.UniqueConstraint(fields=['bloque', 'indice_semana_bloque'], name='uniq_contrato_gym_bloque_indice'),
             models.CheckConstraint(condition=models.Q(minimo_valido__lte=models.F('objetivo_sesiones')), name='contrato_gym_minimo_lte_objetivo'),
         ]
 
