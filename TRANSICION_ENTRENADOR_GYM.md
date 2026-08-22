@@ -1381,6 +1381,19 @@ superficies queda para 7B.
   contenidos internamente, junto con los campos de control, para detectar
   cambios sin revelar memoria privada. No ofrece `--apply`, no usa IA ni caché
   y no escribe en base de datos.
+- Fase 8.0-D añade `preparar_lote_revision_memoria --cliente --as-of --item
+  id:fingerprint` para preparar, sin ejecutar, un lote explícito de 1 a 8
+  elementos. Cada referencia se vuelve a validar contra la cola actual; se
+  rechazan duplicados, elementos no elegibles y huellas obsoletas. El manifiesto
+  JSONL es público, mantiene `execution_enabled=false` y nunca incorpora textos
+  privados. La carga privada existe como función interna separada y no participa
+  en la salida del comando.
+- El validador puro de una futura propuesta exige cobertura exacta 1:1, IDs y
+  fingerprints del manifiesto, motivo de 1 a 240 caracteres y solo las acciones
+  `mantener`, `debilitar`, `cuestionar` o `descartar`. El delta es obligatorio y
+  queda entre 0 y +0.05 para mantener, exactamente -0.10 para debilitar y -0.20
+  para cuestionar; descartar no admite delta. Esta fase no llama a ningún
+  proveedor, no persiste propuestas, no cambia modelos y no ofrece `--apply`.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.
