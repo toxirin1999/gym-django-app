@@ -1299,3 +1299,19 @@ superficies queda para 7B.
   la sesión cuando la campaña autoriza JOI. No se genera ningún mensaje del tipo
   «Hyrox apagado».
 - El dashboard continúa pendiente de 7B2-C.
+
+# Fase 7B2-C — Dashboard Hyrox como proyección de Gym
+
+- `/hyrox/dashboard/` deja de invocar `_crear_hyrox_decision` como autoridad.
+  La identidad ejecutiva procede de `GymDecisionVersion` y el payload declara
+  `source=gym_decision_version`, `hyrox_es_proyeccion=true`, `decision_id` y
+  `gym_decision_version`.
+- Con campaña activa se usa `resolver_autoridad_diaria_gym`, el servicio
+  canónico. La proyección Hyrox hereda postura y restricciones; lesión,
+  readiness o carga solo pueden aumentar protección, nunca elevar `proteger` o
+  `sostener` a `empujar`.
+- Sin campaña activa, el dashboard solo lee una versión Gym ya materializada.
+  No crea autoridad, readiness ni overrides, ofrece `Explorar Hyrox` y mantiene
+  `puede_ejecutar_plan=false`.
+- `_crear_hyrox_decision` se conserva temporalmente para consumidores legacy,
+  pero el dashboard Hyrox ya no depende de ella.

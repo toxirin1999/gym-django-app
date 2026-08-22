@@ -58,7 +58,7 @@ INVENTARIO_AUTOMATIZACIONES = [
     _inventario('joi_post', 'joi.services', 'generar voz post sesión', 'joi_hyrox', cubierto=True),
     _inventario('joi_readiness', 'joi.services', 'verbalizar readiness', 'joi_hyrox', cubierto=True),
     _inventario('joi_estancamiento', 'joi.services', 'verbalizar estancamiento', 'joi_hyrox', cubierto=True),
-    _inventario('dashboard_gym_no_canonico', 'clientes.views', 'mostrar autoridad Hyrox paralela', 'lecturas_exploracion'),
+    _inventario('dashboard_gym_no_canonico', 'hyrox.views', 'mostrar autoridad Hyrox paralela', 'lecturas_exploracion', cubierto=True),
 ]
 
 TRANSICIONES = {

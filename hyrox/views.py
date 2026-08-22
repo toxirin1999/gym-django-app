@@ -228,7 +228,17 @@ def hyrox_dashboard(request):
         messages.error(request, "Necesitas configurar tu perfil de cliente primero.")
         return redirect('/') # O_AQUI redirigir a donde sea adecuado
         
-    objetivo_activo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+    hoy = timezone.localdate()
+    from .campaign_authority import objetivo_autorizado_campana
+    _objetivo_campana = objetivo_autorizado_campana(
+        cliente, accion='joi_hyrox', fecha=hoy
+    )
+    objetivo_activo = _objetivo_campana or HyroxObjective.objects.filter(
+        cliente=cliente, estado='activo'
+    ).first()
+    _campana_activa = bool(
+        _objetivo_campana and objetivo_activo.pk == _objetivo_campana.pk
+    )
     
     sesiones_completadas = []
     sesiones_planificadas = []
@@ -360,12 +370,13 @@ def hyrox_dashboard(request):
 
             _recovery_delta = max(_recovery_delta + _gym_delta, -25)  # cap total
             current_score = max(0, min(100, round(current_score + _recovery_delta)))
-            HyroxReadinessLog.objects.create(
-                objective=objetivo_activo,
-                fecha=hoy,
-                score=current_score,
-                **_bitacora_fields,
-            )
+            if _campana_activa:
+                HyroxReadinessLog.objects.create(
+                    objective=objetivo_activo,
+                    fecha=hoy,
+                    score=current_score,
+                    **_bitacora_fields,
+                )
 
         # Generar puntos SVG para el mini-gráfico (ancho=100, alto=30)
         logs_list = list(HyroxReadinessLog.objects.filter(objective=objetivo_activo).order_by('fecha'))
@@ -379,7 +390,8 @@ def hyrox_dashboard(request):
         readiness_svg_points = " ".join(svg_points)
 
         # Auto-ajuste de calendario (reprogramar sesiones perdidas críticas)
-        HyroxTrainingEngine.auto_adjust(objetivo_activo)
+        if _campana_activa:
+            HyroxTrainingEngine.auto_adjust(objetivo_activo)
         
         sesiones_completadas = list(
             HyroxSession.objects.filter(objective=objetivo_activo, estado='completado')
@@ -1424,7 +1436,7 @@ def hyrox_dashboard(request):
             race_briefing = None
 
     # Guardar tiempo estimado en el log de hoy para poder calcular tendencia mañana
-    if race_briefing and race_briefing.get('tiempo_estimado_seg'):
+    if _campana_activa and race_briefing and race_briefing.get('tiempo_estimado_seg'):
         try:
             from .models import HyroxReadinessLog
             HyroxReadinessLog.objects.filter(
@@ -1435,7 +1447,7 @@ def hyrox_dashboard(request):
 
     # ── SESSION OVERRIDE ENGINE ───────────────────────────────────────────────
     sesion_override = None
-    if objetivo_activo and race_briefing:
+    if _campana_activa and objetivo_activo and race_briefing:
         from .services import HyroxSessionOverrideEngine
         try:
             sesion_override = HyroxSessionOverrideEngine.apply_today_override(
@@ -1652,34 +1664,29 @@ def hyrox_dashboard(request):
         race_goal_delta = _build_race_goal_delta(objetivo_activo, estimacion)
     context['race_goal_delta'] = race_goal_delta
 
-    # ── Estado global del plan gym (descanso heredado) ────────────
-    _es_descanso_plan = False
-    _estado_entreno = None
-    try:
-        from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
-        from django.utils import timezone as _tz
-        _decision_gym = obtener_sesion_recomendada_hoy(cliente, _tz.now().date())
-        _estado_entreno = (_decision_gym or {}).get('estado', 'entrenar')
-        _es_descanso_plan = _estado_entreno == 'descanso'
-    except Exception:
-        pass
+    # ── Proyección Hyrox de la autoridad Gym canónica ─────────────
+    # Activa: resolver y, si procede, materializar la versión soberana Gym.
+    # Inactiva: lectura pura de una versión ya existente; el GET no escribe.
+    from .dashboard_projection import (
+        leer_autoridad_gym_vigente,
+        proyectar_decision_hyrox,
+    )
+    if _campana_activa:
+        from entrenos.services.autoridad_diaria_gym_service import (
+            resolver_autoridad_diaria_gym,
+        )
+        _decision_gym = resolver_autoridad_diaria_gym(cliente, hoy)
+    else:
+        _decision_gym = leer_autoridad_gym_vigente(cliente, hoy)
 
-    # ── Señales secundarias del diario (tier 3) ──────────────────
-    _senales_secundarias = None
-    try:
-        _senales_secundarias = _leer_senales_secundarias(cliente)
-    except Exception:
-        pass
-
-    # ── Decisión soberana Hyrox ───────────────────────────────────
-    hyrox_decision = _crear_hyrox_decision(
-        current_score=context.get('readiness_score_hoy'),
-        resumen_semanal=context.get('resumen_semanal'),
+    _estado_entreno = (_decision_gym or {}).get('estado')
+    _es_descanso_plan = _estado_entreno == 'descanso'
+    hyrox_decision = proyectar_decision_hyrox(
+        _decision_gym,
+        campana_activa=_campana_activa,
+        readiness=context.get('readiness_score_hoy'),
+        resumen_carga=context.get('resumen_semanal'),
         lesion_activa=context.get('lesion_activa'),
-        es_descanso_plan=_es_descanso_plan,
-        estado_entreno=_estado_entreno,
-        senales_secundarias=_senales_secundarias,
-        cliente=cliente,
     )
     # ── Verificar si ya hay sesión completada hoy (app viva) ──────
     sesion_completada_hoy = None
