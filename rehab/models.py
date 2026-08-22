@@ -1,5 +1,8 @@
-from django.db import models
+from django.core.exceptions import ValidationError
+from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models, transaction
 from django.db.models import Q
+from django.utils import timezone
 
 from clientes.models import Cliente
 
@@ -36,6 +39,67 @@ class FaseProtocolo(models.Model):
 
     def __str__(self):
         return f"{self.protocolo.nombre} · {self.nombre}"
+
+
+def validar_risk_tags(value):
+    if not isinstance(value, list) or not value or any(
+        not isinstance(tag, str) or not tag.strip() or tag != tag.strip().lower()
+        for tag in value
+    ):
+        raise ValidationError('risk_tags debe ser una lista no vacía de tokens normalizados.')
+    if len(value) != len(set(value)):
+        raise ValidationError('risk_tags no admite duplicados.')
+
+
+class ContratoRiesgoGymFaseRehab(models.Model):
+    """Contrato declarativo publicado. Fase 6.7A no lo ejecuta sobre Gym."""
+
+    ACTION_CHOICES = [('sostener', 'Sostener')]
+    SCOPE_CHOICES = [('matching_exercises', 'Ejercicios coincidentes')]
+    RED_FLAG_ACTION_CHOICES = [('proteger', 'Proteger')]
+
+    fase = models.ForeignKey(FaseProtocolo, on_delete=models.PROTECT, related_name='contratos_riesgo_gym')
+    version = models.PositiveIntegerField(validators=[MinValueValidator(1)])
+    schema_version = models.PositiveIntegerField(default=1, validators=[MinValueValidator(1)])
+    risk_tags = models.JSONField(validators=[validar_risk_tags])
+    pain_hold_min = models.PositiveSmallIntegerField(
+        default=5, validators=[MinValueValidator(0), MaxValueValidator(10)]
+    )
+    freshness_days = models.PositiveSmallIntegerField(default=3, validators=[MinValueValidator(1)])
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES, default='sostener')
+    scope = models.CharField(max_length=30, choices=SCOPE_CHOICES, default='matching_exercises')
+    red_flag_action = models.CharField(max_length=20, choices=RED_FLAG_ACTION_CHOICES, default='proteger')
+    activo = models.BooleanField(default=True)
+    vigente_desde = models.DateTimeField(default=timezone.now)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['fase', 'version'], name='rehab_contrato_fase_version_unico'),
+        ]
+
+    def clean(self):
+        super().clean()
+        if self.activo and self.fase_id:
+            conflict = type(self).objects.filter(fase_id=self.fase_id, activo=True)
+            if self.pk:
+                conflict = conflict.exclude(pk=self.pk)
+            if conflict.exists():
+                raise ValidationError({'activo': 'Solo puede existir un contrato activo por fase.'})
+
+    def save(self, *args, **kwargs):
+        with transaction.atomic():
+            if self.fase_id:
+                FaseProtocolo.objects.select_for_update().get(pk=self.fase_id)
+            if self.pk and type(self).objects.filter(pk=self.pk).exists():
+                persisted = type(self).objects.get(pk=self.pk)
+                editable = ('fase_id', 'version', 'schema_version', 'risk_tags', 'pain_hold_min',
+                            'freshness_days', 'action', 'scope', 'red_flag_action', 'activo',
+                            'vigente_desde')
+                if any(getattr(self, field) != getattr(persisted, field) for field in editable):
+                    raise ValidationError('Un contrato publicado es inmutable; publique una sucesora.')
+            self.full_clean()
+            return super().save(*args, **kwargs)
 
 
 class EjercicioRehab(models.Model):

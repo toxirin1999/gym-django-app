@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from .models import (
     EjercicioRehab,
+    ContratoRiesgoGymFaseRehab,
     EjercicioSesionRehab,
     EpisodioRehab,
     FaseProtocolo,
@@ -21,3 +22,10 @@ admin.site.register(RegistroDiarioRehab)
 admin.site.register(SesionRehab)
 admin.site.register(EjercicioSesionRehab)
 admin.site.register(TransicionFase)
+
+
+@admin.register(ContratoRiesgoGymFaseRehab)
+class ContratoRiesgoGymFaseRehabAdmin(admin.ModelAdmin):
+    list_display = ('fase', 'version', 'schema_version', 'action', 'scope', 'activo', 'vigente_desde')
+    list_filter = ('activo', 'action', 'scope', 'schema_version')
+    readonly_fields = ('creado_en',)

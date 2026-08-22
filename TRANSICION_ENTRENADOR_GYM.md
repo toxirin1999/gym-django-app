@@ -1089,3 +1089,32 @@ python manage.py materializar_snapshot_fisico_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+
+# Fase 6.7A — contrato Rehab→Gym y auditoría pasiva
+
+- `ContratoRiesgoGymFaseRehab` publica, por fase y versión, un contrato tipado
+  e inmutable: tags de riesgo, umbral de dolor, frescura, acción, alcance y
+  acción explícita ante bandera roja. Solo puede haber uno activo por fase.
+- Una actualización se publica como sucesora; la versión anterior se conserva
+  inmutable y pasa a inactiva. El contrato inicial de la Fase 1 de tendinopatía
+  rotuliana propone el tag curado `carga_dominante_rodilla`.
+- El seed es seguro por defecto y solo escribe con `--apply`:
+
+```bash
+python manage.py sembrar_contrato_riesgo_gym_rehab --settings=gymproject.settings
+python manage.py sembrar_contrato_riesgo_gym_rehab --apply --settings=gymproject.settings
+```
+
+- `auditar_cobertura_riesgo_gym_rehab` emite JSONL determinista y de solo
+  lectura. Usa un catálogo versionado de nombres exactos normalizados; informa
+  coincidencias, ausencias, ambigüedades, cobertura preexistente y episodios
+  que cumplirían el caso conceptual de `sostener` (dolor >= 5 y edad <= 3 días).
+  No deduce categorías desde texto libre ni modifica `EjercicioBase`.
+- La ejecución permanece desactivada (`execution_enabled=false`): esta fase no
+  cambia decisiones, sesiones, snapshots, UI, JOI ni la autoridad de lesión.
+
+```bash
+python manage.py auditar_cobertura_riesgo_gym_rehab \
+  --today 2026-08-22 \
+  --settings=gymproject.settings
+```
