@@ -496,6 +496,9 @@ class HyroxLoadManager:
     @classmethod
     def actualizar_5k_si_pr(cls, objetivo, tiempo_seg):
         """Actualiza tiempo_5k_base si tiempo_seg mejora el actual. Retorna True si actualizó."""
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(objetivo, accion='correctivos'):
+            return False
         if not tiempo_seg or tiempo_seg <= 0:
             return False
         actual_seg = cls._segundos_desde_str(objetivo.tiempo_5k_base) if objetivo.tiempo_5k_base else None
@@ -1143,6 +1146,11 @@ class HyroxTrainingEngine:
         Phase 8 & 9: Bucle de Feedback Continuo Avanzado.
         Retorna una lista de strings con los mensajes de alertas para el UI.
         """
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(
+            sesion_completada.objective, accion='autoajuste'
+        ):
+            return []
         mensajes_ui = []
         rpe    = sesion_completada.rpe_global
         hr_max = sesion_completada.hr_maxima or 0
@@ -1519,6 +1527,9 @@ class HyroxTrainingEngine:
             return False
 
         is_mutated = False
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(sesion.objective, accion='autoajuste'):
+            return None
         energia = sesion.nivel_energia_pre
 
         # Carga externa gym (últimos 3 días)
@@ -2126,6 +2137,9 @@ class PostMilestoneEngine:
         Punto de entrada principal. Llama al adaptador correcto según el hito.
         Devuelve lista de mensajes para mostrar al usuario.
         """
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(sesion.objective, accion='correctivos'):
+            return []
         objetivo = sesion.objective
         hoy = timezone.now().date()
 
@@ -2401,6 +2415,9 @@ class RMAutoUpdater:
         Analiza las actividades de fuerza de la sesión.
         Devuelve lista de mensajes para el usuario si detecta mejoras.
         """
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(sesion.objective, accion='correctivos'):
+            return []
         objetivo = sesion.objective
         mensajes = []
         nuevos_valores = {}  # campo → nuevo_rm estimado
@@ -2610,6 +2627,9 @@ class PaceAutoUpdater:
         Analiza las actividades de carrera de la sesión completada.
         Devuelve mensajes si detecta un nuevo mejor ritmo 5K.
         """
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(sesion.objective, accion='correctivos'):
+            return []
         objetivo = sesion.objective
         mensajes = []
 
@@ -2803,7 +2823,10 @@ class RPECalibrator:
         notificar al usuario. Solo alerta cuando el nivel es 'severo'.
         Devuelve lista de mensajes para el UI.
         """
+        from .campaign_authority import autoriza_efectos_campana
         objetivo = sesion.objetivo if hasattr(sesion, 'objetivo') else sesion.objective
+        if not autoriza_efectos_campana(objetivo, accion='autoajuste'):
+            return []
         mensajes = []
 
         # Solo revisar si esta sesión tiene ambos datos
@@ -2863,6 +2886,9 @@ class DeloadAutoTrigger:
         Aplica deload a las próximas 5 sesiones planificadas si TSB < -25.
         Devuelve mensajes para el usuario.
         """
+        from .campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(sesion.objective, accion='autoajuste'):
+            return []
         objetivo = sesion.objective
         mensajes = []
         hoy = timezone.now().date()

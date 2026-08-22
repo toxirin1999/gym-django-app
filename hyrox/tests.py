@@ -631,6 +631,7 @@ class Recalibrar5KDesdeMetricasTests(TestCase):
         self.objetivo = _make_objetivo(self.user)
         self.objetivo.tiempo_5k_base = '25:00'
         self.objetivo.save(update_fields=['tiempo_5k_base'])
+        _activar_campana_test(self.objetivo)
 
     def test_recalibra_si_mejora_el_tiempo(self):
         # 23:00 < 25:00 → debe recalibrar
@@ -716,6 +717,7 @@ class StravaProcesarRecalibracion5KTests(TestCase):
             fecha_evento=datetime.date(2027, 4, 1),
             tiempo_5k_base='25:00',
         )
+        _activar_campana_test(self.objetivo)
 
     def _crear_strava_run(self, distancia_metros=5000, duracion_segundos=23 * 60, strava_id=1):
         return StravaActivityRaw.objects.create(
@@ -1435,6 +1437,7 @@ class RegistrarEntrenamientoIaViewTests(TestCase):
             rm_sentadilla=100.0,
             rm_peso_muerto=120.0,
         )
+        _activar_campana_test(self.objetivo)
         self.sesion = HyroxSession.objects.create(
             objective=self.objetivo,
             fecha=datetime.date.today(),

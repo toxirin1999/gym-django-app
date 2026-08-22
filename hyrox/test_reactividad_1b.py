@@ -103,7 +103,9 @@ class GuardarSesionHyroxServiceTest(TestCase):
         form_data = {'notas_raw': '', 'sustituir_material': False}
 
         with patch('hyrox.training_engine.HyroxTrainingEngine.scale_volume_by_energy',
-                   side_effect=RuntimeError('fallo simulado')):
+                   side_effect=RuntimeError('fallo simulado')), patch(
+                       'hyrox.campaign_authority.autoriza_efectos_campana', return_value=True
+                   ):
             resultado = guardar_sesion_hyrox_service(self.objetivo, self.sesion, form_data)
 
         self.assertTrue(resultado['success'],

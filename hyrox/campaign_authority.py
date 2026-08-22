@@ -47,13 +47,13 @@ INVENTARIO_AUTOMATIZACIONES = [
     _inventario('plan_regeneracion', 'hyrox.views', 'borrar/regenerar plan', 'generar_plan', cubierto=True),
     _inventario('auto_adjust_override', 'hyrox.views', 'ajustar o sobrescribir sesión', 'autoajuste', cubierto=True),
     _inventario('lesion_regeneracion', 'hyrox.models.UserInjury', 'invalidar/regenerar sesiones', 'generar_plan', cubierto=True),
-    _inventario('adaptacion_doble', 'hyrox.training_engine', 'adaptar sesión por dos motores', 'autoajuste'),
-    _inventario('rm_pace', 'hyrox.signals', 'actualizar RM o ritmos', 'correctivos'),
-    _inventario('correctivos', 'hyrox.services', 'crear sesiones correctivas', 'correctivos'),
-    _inventario('deload', 'hyrox.training_engine.DeloadAutoTrigger', 'crear deload', 'autoajuste'),
-    _inventario('bitacora_fatiga', 'hyrox.signals', 'actualizar fatiga desde bitácora', 'autoajuste'),
-    _inventario('gym_fatiga_rm', 'entrenos.signals', 'actualizar fatiga/RM Hyrox desde Gym', 'autoajuste'),
-    _inventario('cinco_k', 'hyrox.signals', 'recalibrar ritmos desde 5K', 'correctivos'),
+    _inventario('adaptacion_doble', 'hyrox.training_engine', 'adaptar sesión por dos motores', 'autoajuste', cubierto=True),
+    _inventario('rm_pace', 'hyrox.signals', 'actualizar RM o ritmos', 'correctivos', cubierto=True),
+    _inventario('correctivos', 'hyrox.services', 'crear sesiones correctivas', 'correctivos', cubierto=True),
+    _inventario('deload', 'hyrox.training_engine.DeloadAutoTrigger', 'crear deload', 'autoajuste', cubierto=True),
+    _inventario('bitacora_fatiga', 'hyrox.signals', 'actualizar fatiga desde bitácora', 'autoajuste', cubierto=True),
+    _inventario('gym_fatiga_rm', 'entrenos.signals', 'actualizar fatiga/RM Hyrox desde Gym', 'autoajuste', cubierto=True),
+    _inventario('cinco_k', 'hyrox.signals', 'recalibrar ritmos desde 5K', 'correctivos', cubierto=True),
     _inventario('joi_countdown', 'joi.services', 'generar voz countdown', 'joi_hyrox'),
     _inventario('joi_post', 'joi.services', 'generar voz post sesión', 'joi_hyrox'),
     _inventario('joi_readiness', 'joi.services', 'verbalizar readiness', 'joi_hyrox'),
@@ -101,7 +101,7 @@ def exigir_prescripcion(cliente, *, accion='generar_plan', fecha=None, objective
     )
     if not autoridad['permisos'].get(accion, False):
         raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
-    if accion in {'generar_plan', 'programar_sesiones', 'autoajuste'}:
+    if accion in {'generar_plan', 'programar_sesiones', 'autoajuste', 'correctivos'}:
         contrato = ContratoCampanaHyrox.objects.filter(
             pk=autoridad.get('contrato_id')
         ).first()
@@ -122,6 +122,22 @@ def exigir_prescripcion(cliente, *, accion='generar_plan', fecha=None, objective
             ]
             raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
     return autoridad
+
+
+def autoriza_efectos_campana(objective, *, accion='autoajuste', fecha=None):
+    """Booleano seguro para signals: una denegación equivale a no-op factual."""
+    if objective is None:
+        return False
+    try:
+        exigir_prescripcion(
+            objective.cliente,
+            accion=accion,
+            fecha=fecha,
+            objective=objective,
+        )
+    except CampanaHyroxNoAutoriza:
+        return False
+    return True
 
 
 def previsualizar(cliente, estado, objetivo=None, bloque=None, limites=None, fecha=None):

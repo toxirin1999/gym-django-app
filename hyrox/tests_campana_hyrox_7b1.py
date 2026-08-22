@@ -13,11 +13,21 @@ from hyrox.models import (
     HyroxActivity,
     HyroxObjective,
     HyroxSession,
+    HyroxReadinessLog,
     UserInjury,
 )
 from hyrox.training_engine import HyroxTrainingEngine
 from hyrox.views import _crear_hyrox_decision
 from core.bio_context import BioContextProvider
+from hyrox.services import guardar_sesion_hyrox_service
+from hyrox.training_engine import (
+    DeloadAutoTrigger,
+    HyroxLoadManager,
+    PaceAutoUpdater,
+    PostMilestoneEngine,
+    RMAutoUpdater,
+    RPECalibrator,
+)
 
 
 class CampanaHyrox7B1Tests(TestCase):
@@ -306,6 +316,245 @@ class CampanaHyrox7B1Tests(TestCase):
         self.assertEqual(eliminadas, 0)
         self.assertTrue(HyroxSession.objects.filter(pk=sesion.pk).exists())
         generar.assert_not_called()
+
+    def test_guardar_sesion_inactiva_conserva_hechos_y_hub_sin_efectos(self):
+        from entrenos.models import ActividadRealizada
+
+        self._contrato('inactiva')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='Sesión factual',
+        )
+        with (
+            patch.object(HyroxTrainingEngine, 'scale_volume_by_energy') as escala,
+            patch.object(HyroxTrainingEngine, 'apply_continuous_adaptation') as adapta,
+            patch.object(RMAutoUpdater, 'update_from_session') as rm,
+            patch.object(PaceAutoUpdater, 'update_from_session') as pace,
+            patch.object(RPECalibrator, 'check_and_notify') as rpe,
+            patch.object(DeloadAutoTrigger, 'check_and_apply') as deload,
+            patch.object(PostMilestoneEngine, 'adapt_after_milestone') as hito,
+        ):
+            resultado = guardar_sesion_hyrox_service(self.objetivo, sesion, {
+                'rpe_global': 8,
+                'tiempo_total_minutos': 40,
+            })
+        self.assertTrue(resultado['success'])
+        sesion.refresh_from_db()
+        self.assertEqual(sesion.estado, 'completado')
+        self.assertTrue(ActividadRealizada.objects.filter(sesion_hyrox=sesion).exists())
+        for motor in (escala, adapta, rm, pace, rpe, deload, hito):
+            motor.assert_not_called()
+
+    def test_campana_activa_adapta_una_sola_vez_desde_orquestador(self):
+        self._contrato('activa')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='Sesión activa',
+        )
+        with (
+            patch.object(HyroxTrainingEngine, 'scale_volume_by_energy', return_value=None),
+            patch.object(HyroxTrainingEngine, 'apply_continuous_adaptation', return_value=[]) as adapta,
+            patch.object(RMAutoUpdater, 'update_from_session', return_value=[]),
+            patch.object(PaceAutoUpdater, 'update_from_session', return_value=[]),
+            patch.object(RPECalibrator, 'check_and_notify', return_value=[]),
+            patch.object(DeloadAutoTrigger, 'check_and_apply', return_value=[]),
+        ):
+            resultado = guardar_sesion_hyrox_service(self.objetivo, sesion, {
+                'rpe_global': 8,
+                'tiempo_total_minutos': 40,
+            })
+        self.assertTrue(resultado['success'])
+        adapta.assert_called_once_with(sesion)
+
+    def test_signal_activo_propaga_fatiga_tsb_sin_adaptacion_continua(self):
+        from hyrox.signals import autorregular_plan_futuro
+
+        self._contrato('activa')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='TSB factual',
+            estado='planificado',
+            rpe_global=8,
+        )
+        futura = self._sesion_futura('Futura por TSB')
+        sesion.estado = 'completado'
+
+        with (
+            patch('hyrox.signals._calcular_y_guardar_carga', return_value={'tsb': -30}),
+            patch.object(HyroxTrainingEngine, 'apply_continuous_adaptation') as adapta,
+            patch('joi.services.generar_mensaje_joi'),
+        ):
+            autorregular_plan_futuro(HyroxSession, sesion, False)
+
+        futura.refresh_from_db()
+        self.assertEqual(futura.muscle_fatigue_index, 'Alta')
+        adapta.assert_not_called()
+
+    def test_signal_inactivo_con_tsb_no_muta_sesion_futura(self):
+        from hyrox.signals import autorregular_plan_futuro
+
+        self._contrato('inactiva')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='TSB sin autoridad',
+            estado='planificado',
+            rpe_global=9,
+        )
+        futura = self._sesion_futura('Futura intacta por campaña')
+        sesion.estado = 'completado'
+
+        with (
+            patch('hyrox.signals._calcular_y_guardar_carga', return_value={'tsb': -30}),
+            patch('joi.services.generar_mensaje_joi'),
+        ):
+            autorregular_plan_futuro(HyroxSession, sesion, False)
+
+        futura.refresh_from_db()
+        self.assertIsNone(futura.muscle_fatigue_index)
+
+    def test_signal_activo_propaga_fc_reposo_elevada(self):
+        from hyrox.signals import autorregular_plan_futuro
+
+        self._contrato('activa')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='FC factual',
+            estado='planificado',
+            rpe_global=7,
+        )
+        futura = self._sesion_futura('Futura por FC')
+        HyroxReadinessLog.objects.create(
+            objective=self.objetivo,
+            score=70,
+            fc_reposo=70,
+        )
+        sesion.estado = 'completado'
+
+        with (
+            patch('hyrox.signals._calcular_y_guardar_carga', return_value={'tsb': 0}),
+            patch.object(HyroxLoadManager, 'get_fc_reposo_basal', return_value=55),
+            patch('joi.services.generar_mensaje_joi'),
+        ):
+            autorregular_plan_futuro(HyroxSession, sesion, False)
+
+        futura.refresh_from_db()
+        self.assertEqual(futura.muscle_fatigue_index, 'Media')
+
+    def test_bitacora_inactiva_no_inyecta_fatiga_en_futuro(self):
+        from clientes.models import BitacoraDiaria
+
+        self._contrato('inactiva')
+        futura = self._sesion_futura('Futura intacta')
+        BitacoraDiaria.objects.create(
+            cliente=self.cliente,
+            horas_sueno=4,
+            energia_subjetiva=2,
+        )
+        futura.refresh_from_db()
+        self.assertIsNone(futura.muscle_fatigue_index)
+
+    def test_bitacora_activa_inyecta_fatiga_solo_en_objetivo_contractual(self):
+        from clientes.models import BitacoraDiaria
+
+        self._contrato('activa')
+        objetivo_b = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=self.hoy + datetime.timedelta(days=90),
+        )
+        futura_a = self._sesion_futura('A futura')
+        futura_b = HyroxSession.objects.create(
+            objective=objetivo_b,
+            fecha=self.hoy + datetime.timedelta(days=2),
+            titulo='B futura',
+        )
+        BitacoraDiaria.objects.create(
+            cliente=self.cliente,
+            horas_sueno=4,
+            energia_subjetiva=2,
+        )
+        futura_a.refresh_from_db()
+        futura_b.refresh_from_db()
+        self.assertEqual(futura_a.muscle_fatigue_index, 'Alta')
+        self.assertIsNone(futura_b.muscle_fatigue_index)
+
+    def test_5k_inactivo_es_hecho_permitido_sin_recalibrar_objetivo(self):
+        self._contrato('inactiva')
+        self.objetivo.tiempo_5k_base = '25:00'
+        self.objetivo.save(update_fields=['tiempo_5k_base'])
+
+        actualizado = HyroxLoadManager.actualizar_5k_si_pr(self.objetivo, 23 * 60)
+
+        self.objetivo.refresh_from_db()
+        self.assertFalse(actualizado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '25:00')
+
+    def test_5k_activo_recalibra_solo_objetivo_contractual(self):
+        self._contrato('activa')
+        self.objetivo.tiempo_5k_base = '25:00'
+        self.objetivo.save(update_fields=['tiempo_5k_base'])
+
+        objetivo_ajeno = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=self.hoy + datetime.timedelta(days=90),
+            tiempo_5k_base='26:00',
+        )
+
+        actualizado = HyroxLoadManager.actualizar_5k_si_pr(self.objetivo, 23 * 60)
+        ajeno_actualizado = HyroxLoadManager.actualizar_5k_si_pr(
+            objetivo_ajeno, 22 * 60
+        )
+
+        self.objetivo.refresh_from_db()
+        objetivo_ajeno.refresh_from_db()
+        self.assertTrue(actualizado)
+        self.assertFalse(ajeno_actualizado)
+        self.assertEqual(self.objetivo.tiempo_5k_base, '23:00')
+        self.assertEqual(objetivo_ajeno.tiempo_5k_base, '26:00')
+
+    def test_rm_y_deload_inactivos_no_mutan_objetivo_ni_ciclo(self):
+        from entrenos.models import CicloDeload
+
+        self._contrato('inactiva')
+        self.objetivo.rm_sentadilla = 100
+        self.objetivo.save(update_fields=['rm_sentadilla'])
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='Fuerza factual',
+            estado='completado',
+        )
+        HyroxActivity.objects.create(
+            sesion=sesion,
+            tipo_actividad='fuerza',
+            nombre_ejercicio='Sentadilla',
+            data_metricas={'series': [{'peso_kg': 120, 'reps': 5}]},
+        )
+
+        with patch.object(HyroxLoadManager, 'calcular_ctl_atl_tsb', return_value={'tsb': -30}):
+            self.assertEqual(RMAutoUpdater.update_from_session(sesion), [])
+            self.assertEqual(DeloadAutoTrigger.check_and_apply(sesion), [])
+
+        self.objetivo.refresh_from_db()
+        self.assertEqual(self.objetivo.rm_sentadilla, 100)
+        self.assertFalse(CicloDeload.objects.filter(cliente=self.cliente).exists())
+
+    def test_correctivos_inactivos_no_ejecutan_adaptador_de_hito(self):
+        self._contrato('inactiva')
+        sesion = HyroxSession.objects.create(
+            objective=self.objetivo,
+            fecha=self.hoy,
+            titulo='Hito factual',
+            estado='completado',
+        )
+        with patch.object(PostMilestoneEngine, '_adapt_after_simulation') as adaptar:
+            mensajes = PostMilestoneEngine.adapt_after_milestone(sesion, 'sim_completa')
+        self.assertEqual(mensajes, [])
+        adaptar.assert_not_called()
 
     def test_crear_objetivo_guarda_datos_pero_no_borra_plan_inactivo(self):
         self.client.force_login(self.user)

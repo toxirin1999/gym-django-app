@@ -42,8 +42,19 @@ def sueno_to_hyrox_fatiga(sender, instance, created, update_fields=None, **kwarg
         if not cliente:
             return
 
-        objetivo = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        from hyrox.campaign_authority import (
+            autoriza_efectos_campana,
+            resolver_autoridad_campana,
+        )
+        autoridad = resolver_autoridad_campana(cliente, instance.fecha)
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'), cliente=cliente
+        ).first()
         if not objetivo:
+            return
+        if not autoriza_efectos_campana(
+            objetivo, accion='autoajuste', fecha=instance.fecha
+        ):
             return
 
         proxima = HyroxSession.objects.filter(
@@ -203,10 +214,8 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
     carga = _calcular_y_guardar_carga(instance)
     tsb_actual = carga.get('tsb')
 
-    # ── 2. ADAPTACIÓN CONTINUA ─────────────────────────────────────────────
-    HyroxTrainingEngine.apply_continuous_adaptation(instance)
-
-    # ── 3. RACE READINESS ──────────────────────────────────────────────────
+    # ── 2. RACE READINESS FACTUAL ──────────────────────────────────────────
+    # La adaptación futura tiene un único orquestador: guardar_sesion_hyrox_service.
     if instance.objective:
         current_score = instance.objective.get_race_readiness_score()
         HyroxReadinessLog.objects.update_or_create(
@@ -215,75 +224,82 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
             defaults={'score': current_score}
         )
 
-    # ── 4. FATIGA EN PRÓXIMA SESIÓN ────────────────────────────────────────
-    proxima = HyroxSession.objects.filter(
-        objective=instance.objective,
-        fecha__gt=instance.fecha,
-        estado='planificado'
-    ).order_by('fecha').first()
-
-    if proxima:
-        # Umbral FC máxima personalizado por edad
-        hr_umbral = HyroxLoadManager.get_fc_max(instance.objective)
-
-        nueva_fatiga = None
-
-        # A. TSB muy negativo → alta fatiga objetiva
-        if tsb_actual is not None and tsb_actual < -20:
-            nueva_fatiga = 'Alta'
-
-        # B. Sobreesfuerzo por RPE o FC máxima
-        elif instance.rpe_global >= 9 or (instance.hr_maxima and instance.hr_maxima > hr_umbral * 0.95):
-            nueva_fatiga = 'Alta'
-
-        # C. Zona cardíaca en Z4/Z5 con duración significativa → fatiga moderada-alta
-        elif (instance.zona_cardiaca_predominante in ('Z4', 'Z5')
-              and instance.tiempo_total_minutos
-              and instance.tiempo_total_minutos >= 30):
-            nueva_fatiga = 'Alta'
-
-        # D. Progreso fluido: RPE bajo Y zona Z1/Z2
-        elif (instance.rpe_global <= 5
-              and instance.zona_cardiaca_predominante in ('Z1', 'Z2', None)):
-            nueva_fatiga = 'Baja'
-
-        if nueva_fatiga:
-            proxima.muscle_fatigue_index = nueva_fatiga
-            proxima.fatiga_updated_at    = timezone.now()
-            proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
-
-    # ── 5. FC REPOSO ELEVADA ──────────────────────────────────────────────────
-    # Si la FC de reposo de hoy supera la basal +7 lpm → posible enfermedad/fatiga
-    # no detectada por RPE subjetivo → inyectar fatiga Media en próxima sesión.
-    try:
-        hoy_readiness = HyroxReadinessLog.objects.filter(
+    # ── 3. EFECTOS FUTUROS AUTORIZADOS ─────────────────────────────────────
+    # El signal conserva la propagación de fatiga, pero nunca ejecuta la
+    # adaptación continua: esa tiene un único orquestador en el servicio.
+    from hyrox.campaign_authority import autoriza_efectos_campana
+    efectos_autorizados = autoriza_efectos_campana(
+        instance.objective,
+        accion='autoajuste',
+        fecha=instance.fecha,
+    )
+    proxima = None
+    if efectos_autorizados:
+        proxima = HyroxSession.objects.filter(
             objective=instance.objective,
-            fecha=timezone.now().date(),
-            fc_reposo__isnull=False,
-        ).order_by('-fecha').first()
+            fecha__gt=instance.fecha,
+            estado='planificado'
+        ).order_by('fecha').first()
 
-        if hoy_readiness and hoy_readiness.fc_reposo:
-            fc_hoy = hoy_readiness.fc_reposo
-            fc_basal = HyroxLoadManager.get_fc_reposo_basal(instance.objective, dias=14)
-            if fc_hoy > fc_basal + 7:
-                if not proxima:
-                    proxima = HyroxSession.objects.filter(
-                        objective=instance.objective,
-                        fecha__gt=instance.fecha,
-                        estado='planificado'
-                    ).order_by('fecha').first()
-                if proxima and proxima.muscle_fatigue_index != 'Alta':
-                    proxima.muscle_fatigue_index = 'Media'
-                    proxima.fatiga_updated_at = timezone.now()
-                    proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
-                    logger.info(
-                        f"[HYROX FC Reposo] FC hoy {fc_hoy} lpm vs basal {fc_basal} lpm "
-                        f"(+{fc_hoy - fc_basal} lpm). Fatiga Media inyectada en sesión {proxima.id}."
-                    )
-    except Exception as e:
-        logger.error(f"[HYROX FC Reposo check] Error: {e}")
+        if proxima:
+            hr_umbral = HyroxLoadManager.get_fc_max(instance.objective)
+            nueva_fatiga = None
+            if tsb_actual is not None and tsb_actual < -20:
+                nueva_fatiga = 'Alta'
+            elif instance.rpe_global >= 9 or (
+                instance.hr_maxima and instance.hr_maxima > hr_umbral * 0.95
+            ):
+                nueva_fatiga = 'Alta'
+            elif (
+                instance.zona_cardiaca_predominante in ('Z4', 'Z5')
+                and instance.tiempo_total_minutos
+                and instance.tiempo_total_minutos >= 30
+            ):
+                nueva_fatiga = 'Alta'
+            elif (
+                instance.rpe_global <= 5
+                and instance.zona_cardiaca_predominante in ('Z1', 'Z2', None)
+            ):
+                nueva_fatiga = 'Baja'
 
-    # ── 6. JOI — mensaje proactivo post-sesión Hyrox ────────────────────────
+            if nueva_fatiga:
+                proxima.muscle_fatigue_index = nueva_fatiga
+                proxima.fatiga_updated_at = timezone.now()
+                proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+
+        # FC de reposo elevada: efecto sobre la próxima sesión, también sujeto
+        # a la autoridad de campaña exacta.
+        try:
+            hoy_readiness = HyroxReadinessLog.objects.filter(
+                objective=instance.objective,
+                fecha=timezone.now().date(),
+                fc_reposo__isnull=False,
+            ).order_by('-fecha').first()
+            if hoy_readiness and hoy_readiness.fc_reposo:
+                fc_hoy = hoy_readiness.fc_reposo
+                fc_basal = HyroxLoadManager.get_fc_reposo_basal(
+                    instance.objective, dias=14
+                )
+                if fc_hoy > fc_basal + 7:
+                    if not proxima:
+                        proxima = HyroxSession.objects.filter(
+                            objective=instance.objective,
+                            fecha__gt=instance.fecha,
+                            estado='planificado'
+                        ).order_by('fecha').first()
+                    if proxima and proxima.muscle_fatigue_index != 'Alta':
+                        proxima.muscle_fatigue_index = 'Media'
+                        proxima.fatiga_updated_at = timezone.now()
+                        proxima.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+                        logger.info(
+                            f"[HYROX FC Reposo] FC hoy {fc_hoy} lpm vs basal "
+                            f"{fc_basal} lpm (+{fc_hoy - fc_basal} lpm). "
+                            f"Fatiga Media inyectada en sesión {proxima.id}."
+                        )
+        except Exception as e:
+            logger.error(f"[HYROX FC Reposo check] Error: {e}")
+
+    # ── 4. JOI — mensaje proactivo post-sesión Hyrox ────────────────────────
     try:
         from joi.services import generar_mensaje_joi
         import datetime
@@ -369,8 +385,19 @@ def sync_gym_impact_to_hyrox(sender, instance, created, raw=False, **kwargs):
     if raw:
         return
     try:
-        objetivo = HyroxObjective.objects.filter(cliente=instance.cliente, estado='activo').first()
+        from hyrox.campaign_authority import (
+            autoriza_efectos_campana,
+            resolver_autoridad_campana,
+        )
+        autoridad = resolver_autoridad_campana(instance.cliente, instance.fecha)
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'), cliente=instance.cliente
+        ).first()
         if not objetivo:
+            return
+        if not autoriza_efectos_campana(
+            objetivo, accion='autoajuste', fecha=instance.fecha
+        ):
             return
 
         from entrenos.services.services import MAPEO_EJERCICIOS_A_PRINCIPAL, MAPEO_MUSCULAR
@@ -509,8 +536,19 @@ def revert_gym_impact_on_hyrox(sender, instance, **kwargs):
      priorizar la integridad de la fatiga para evitar Coach feedback erróneos.*
     """
     try:
-        objetivo = HyroxObjective.objects.filter(cliente=instance.cliente, estado='activo').first()
+        from hyrox.campaign_authority import (
+            autoriza_efectos_campana,
+            resolver_autoridad_campana,
+        )
+        autoridad = resolver_autoridad_campana(instance.cliente, instance.fecha)
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'), cliente=instance.cliente
+        ).first()
         if not objetivo:
+            return
+        if not autoriza_efectos_campana(
+            objetivo, accion='autoajuste', fecha=instance.fecha
+        ):
             return
 
         # Buscar la próxima sesión que haya sido afectada
@@ -544,6 +582,9 @@ def detectar_5k_desde_hyrox_session(sender, instance, created, raw=False, update
         return
     try:
         objetivo = instance.objective
+        from hyrox.campaign_authority import autoriza_efectos_campana
+        if not autoriza_efectos_campana(objetivo, accion='correctivos'):
+            return
         for act in instance.activities.filter(tipo_actividad='carrera'):
             if HyroxLoadManager.recalibrar_5k_desde_metricas(objetivo, act.data_metricas or {}):
                 print(f"✅ tiempo_5k_base actualizado → {objetivo.tiempo_5k_base} (HyroxSession {instance.id})")
@@ -563,10 +604,19 @@ def detectar_5k_desde_actividad_libre(sender, instance, created, raw=False, **kw
         return
     try:
         from hyrox.models import HyroxObjective
+        from hyrox.campaign_authority import (
+            autoriza_efectos_campana,
+            resolver_autoridad_campana,
+        )
+        autoridad = resolver_autoridad_campana(instance.cliente, instance.fecha)
         objetivo = HyroxObjective.objects.filter(
-            cliente=instance.cliente, estado='activo'
+            pk=autoridad.get('objetivo_id'), cliente=instance.cliente
         ).first()
         if not objetivo:
+            return
+        if not autoriza_efectos_campana(
+            objetivo, accion='correctivos', fecha=instance.fecha
+        ):
             return
 
         dist_m = instance.distancia_metros or 0

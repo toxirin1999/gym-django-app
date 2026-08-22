@@ -331,16 +331,25 @@ def sincronizar_rm_con_hyrox(sender, instance, created, raw=False, **kwargs):
 
     try:
         from hyrox.models import HyroxObjective
+        from hyrox.campaign_authority import (
+            autoriza_efectos_campana,
+            resolver_autoridad_campana,
+        )
         from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio, sync_rm_to_hyrox
 
         campo = campo_rm_para_ejercicio(instance.ejercicio_nombre)
         if not campo:
             return
 
+        autoridad = resolver_autoridad_campana(instance.cliente, instance.fecha_logrado)
         objetivo = HyroxObjective.objects.filter(
-            cliente=instance.cliente, estado='activo',
+            pk=autoridad.get('objetivo_id'), cliente=instance.cliente,
         ).first()
         if not objetivo:
+            return
+        if not autoriza_efectos_campana(
+            objetivo, accion='correctivos', fecha=instance.fecha_logrado
+        ):
             return
 
         sync_rm_to_hyrox(objetivo, campo, float(instance.valor))

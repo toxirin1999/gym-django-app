@@ -526,18 +526,22 @@ class HyroxParserService:
                                 f"El sistema ha ajustado la carga de tu próxima sesión."
                             )
                             activity.save()
-                            # Inyectar fatiga extra en la próxima sesión planificada
-                            from .models import HyroxSession
-                            prox = HyroxSession.objects.filter(
-                                objective=session.objective,
-                                estado='planificado',
-                                fecha__gt=session.fecha
-                            ).order_by('fecha').first()
-                            if prox and prox.muscle_fatigue_index != 'Alta':
-                                prox.muscle_fatigue_index = 'Media' if diferencia_seg < 45 else 'Alta'
-                                from django.utils import timezone
-                                prox.fatiga_updated_at = timezone.now()
-                                prox.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
+                            # Inyectar fatiga solo si la campaña autoriza efectos futuros.
+                            from .campaign_authority import autoriza_efectos_campana
+                            if autoriza_efectos_campana(
+                                session.objective, accion='autoajuste'
+                            ):
+                                from .models import HyroxSession
+                                prox = HyroxSession.objects.filter(
+                                    objective=session.objective,
+                                    estado='planificado',
+                                    fecha__gt=session.fecha
+                                ).order_by('fecha').first()
+                                if prox and prox.muscle_fatigue_index != 'Alta':
+                                    prox.muscle_fatigue_index = 'Media' if diferencia_seg < 45 else 'Alta'
+                                    from django.utils import timezone
+                                    prox.fatiga_updated_at = timezone.now()
+                                    prox.save(update_fields=['muscle_fatigue_index', 'fatiga_updated_at'])
                     except Exception:
                         pass
 
@@ -546,6 +550,9 @@ class HyroxParserService:
             # Gym (entrenos.services.hyrox_bridge.sync_rm_to_hyrox), con guardas
             # de lesión/deload/RPE/idempotencia. No es un sistema de RM paralelo.
             if tipo == 'fuerza' and objetivo:
+                from .campaign_authority import autoriza_efectos_campana
+                if not autoriza_efectos_campana(objetivo, accion='correctivos'):
+                    continue
                 from entrenos.services.hyrox_bridge import campo_rm_para_ejercicio
                 campo = campo_rm_para_ejercicio(nombre)
                 if campo:
@@ -3518,6 +3525,18 @@ def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
     # ── Motores post-guardado (fuera del atomic para no revertir la sesión) ──
     # Clasificación: accesorios → fallo no cancela; críticos → advertencia y continuar.
     from .training_engine import HyroxTrainingEngine
+    from .campaign_authority import autoriza_efectos_campana
+
+    if not autoriza_efectos_campana(objetivo, accion='autoajuste'):
+        return {
+            'success': True,
+            'error': None,
+            'sesion_id': sesion.id,
+            'readiness_score_antes': readiness_score_antes,
+            'eventos': eventos,
+            'warnings': warnings,
+            'messages': mensajes,
+        }
 
     # Motor 1 — accesorio: ajuste de volumen por energía pre-entreno
     try:

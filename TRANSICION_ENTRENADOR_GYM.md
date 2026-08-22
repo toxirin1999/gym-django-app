@@ -1264,3 +1264,21 @@ superficies queda para 7B.
   reescribir un plan Hyrox inactivo.
 - El dashboard no autoajusta y devuelve una decisión Hyrox neutra cuando no
   existe campaña activa. Gym conserva la autoridad soberana.
+
+# Fase 7B2-A — Separación entre hechos y efectos de campaña
+
+- Completar una sesión y persistir sus actividades, carga unificada, TRIMP o
+  importación Strava/manual son hechos y siguen disponibles con la campaña
+  inactiva.
+- Escalar volumen, adaptar sesiones futuras, actualizar RM o ritmos, recalibrar
+  el 5K, abrir un deload y crear correctivos requieren una campaña `activa`
+  cuyo objetivo sea exactamente el objetivo contractual vigente.
+- El guardado de sesión es el único orquestador de la adaptación continua. El
+  signal factual ya no repite el ajuste, de modo que una sesión activa adapta
+  el plan una sola vez.
+- La bitácora y el puente Gym → Hyrox no pueden alterar fatiga futura ni RM del
+  objetivo sin esa autoridad exacta. En estado inactivo realizan un no-op
+  silencioso sobre la prescripción, sin impedir el registro de evidencia.
+- Las restricciones de lesión y seguridad no quedan subordinadas a la campaña.
+  Las superficies JOI y la presentación de autoridad en dashboards permanecen
+  pendientes para 7B2-B/7B2-C.
