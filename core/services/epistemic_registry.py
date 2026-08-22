@@ -37,6 +37,44 @@ def _as_date(value):
     return None
 
 
+def clasificar_revision_manual(
+    *, origen, tipo, estado, activa, creado_en, ultima_evidencia, as_of,
+):
+    """Clasifica una posible revisión sin leer texto ni consultar el reloj."""
+    cutoff = _as_date(as_of)
+    creado = _as_date(creado_en)
+    evidencia = _as_date(ultima_evidencia)
+    if (
+        cutoff is None
+        or origen != 'patron_detectado'
+        or tipo not in ('patron', 'hipotesis', 'contradiccion')
+        or activa is not True
+        or estado == 'descartada'
+    ):
+        return None
+    base = evidencia or creado
+    if base is None or cutoff < base:
+        return None
+    age_days = (cutoff - base).days
+    if age_days > 30:
+        return {
+            'classification': 'revision_vencida',
+            'classification_detail': f'revision_vencida_{estado}',
+            'age_days': age_days,
+            'review_basis': 'ultima_evidencia' if evidencia else 'creado_en',
+            'base_date': base,
+        }
+    if evidencia is None:
+        return {
+            'classification': 'pendiente_revision',
+            'classification_detail': 'pendiente_revision_contextual',
+            'age_days': age_days,
+            'review_basis': 'creado_en',
+            'base_date': base,
+        }
+    return None
+
+
 def _record_id(instance) -> str:
     return f'{instance._meta.label_lower}:{instance.pk}'
 
@@ -430,35 +468,22 @@ def auditar_registros(records: Iterable[dict], *, as_of=None) -> list[dict]:
         conditions = record.get('conditions') or {}
         if record['level'] == 'conocimiento_consolidado' and not record['evidence_refs']:
             findings.append(_finding('promocion_sin_evidencia', record))
-        if (
-            record['domain'] == 'joi.manual'
-            and record['level'] == 'hipotesis'
-            and conditions.get('origen') == 'patron_detectado'
-            and conditions.get('activa_flag') is True
-            and conditions.get('estado_flag') != 'descartada'
-            and cutoff is not None
-        ):
-            ultima_evidencia = _as_date(conditions.get('ultima_evidencia'))
-            base = ultima_evidencia or _as_date(conditions.get('creado_en'))
-            if base is not None and cutoff >= base:
-                age_days = (cutoff - base).days
-                review_basis = 'ultima_evidencia' if ultima_evidencia else 'creado_en'
-                if age_days > 30:
-                    estado = conditions.get('estado_flag')
-                    findings.append(_finding(
-                        'revision_vencida', record,
-                        age_days=age_days,
-                        estado_flag=estado,
-                        review_basis=review_basis,
-                        classification=f'revision_vencida_{estado}',
-                    ))
-                elif ultima_evidencia is None:
-                    findings.append(_finding(
-                        'pendiente_revision', record,
-                        age_days=age_days,
-                        estado_flag=conditions.get('estado_flag'),
-                        review_basis='creado_en',
-                    ))
+        if record['domain'] == 'joi.manual' and record['level'] == 'hipotesis':
+            revision = clasificar_revision_manual(
+                origen=conditions.get('origen'), tipo=record.get('claim_code'),
+                estado=conditions.get('estado_flag'), activa=conditions.get('activa_flag'),
+                creado_en=conditions.get('creado_en'),
+                ultima_evidencia=conditions.get('ultima_evidencia'), as_of=cutoff,
+            )
+            if revision:
+                evidence = {
+                    'age_days': revision['age_days'],
+                    'estado_flag': conditions.get('estado_flag'),
+                    'review_basis': revision['review_basis'],
+                }
+                if revision['classification'] == 'revision_vencida':
+                    evidence['classification'] = revision['classification_detail']
+                findings.append(_finding(revision['classification'], record, **evidence))
         if record['level'] == 'preferencia' and record['consent']['status'] not in (
             'confirmed', 'contract_asserted', 'user_correction',
         ):

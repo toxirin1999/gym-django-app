@@ -1369,6 +1369,18 @@ superficies queda para 7B.
   la distinción `activa`/`cuestionada`, sin declarar falsa la hipótesis. El corte
   temporal es `--hasta`; sin él se deriva de las fechas del propio lote, nunca
   del reloj del proceso.
+- Fase 8.0-C añade `planificar_revision_memoria --cliente --as-of --limit`, una
+  cola JSONL estrictamente read-only. Solo considera entradas activas de
+  `ManualDavid` originadas como patrón y de tipo patrón, hipótesis o
+  contradicción; excluye correcciones `feedback_error`, descartadas, podadas y
+  revisiones recientes. Ordena primero revisiones vencidas cuestionadas,
+  después las demás vencidas y finalmente las pendientes, conservando orden
+  temporal y PK.
+- La cola no emite `entrada`, `notas_revision` ni `hipotesis_contraria`. Solo
+  publica indicadores booleanos y una huella SHA-256 que sí incorpora esos
+  contenidos internamente, junto con los campos de control, para detectar
+  cambios sin revelar memoria privada. No ofrece `--apply`, no usa IA ni caché
+  y no escribe en base de datos.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.
