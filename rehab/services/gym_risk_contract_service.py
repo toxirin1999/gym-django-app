@@ -113,7 +113,7 @@ def publicar_sucesora(contract, **changes):
     if active and active.pk != current.pk:
         return active
     fields = ('schema_version', 'risk_tags', 'pain_hold_min', 'freshness_days',
-              'action', 'scope', 'red_flag_action')
+              'action', 'scope', 'red_flag_action', 'execution_enabled')
     data = {field: deepcopy(getattr(current, field)) for field in fields}
     data.update(changes)
     next_version = current.version + 1

@@ -31,7 +31,8 @@ class Command(BaseCommand):
                 fase=phase, version=1,
                 defaults=dict(schema_version=1, risk_tags=['carga_dominante_rodilla'],
                               pain_hold_min=5, freshness_days=3, action='sostener',
-                              scope='matching_exercises', red_flag_action='proteger', activo=True),
+                              scope='matching_exercises', red_flag_action='proteger', activo=True,
+                              execution_enabled=False),
             )
             payload['created'] = created
         self.stdout.write(json.dumps(payload, sort_keys=True, ensure_ascii=False))

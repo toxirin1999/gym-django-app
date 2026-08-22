@@ -14,7 +14,7 @@ from django.utils import timezone
 from clientes.models import BitacoraDiaria
 from entrenos.models import ActividadRealizada
 from hyrox.models import HyroxObjective, HyroxReadinessLog, UserInjury
-from rehab.models import EpisodioRehab
+from rehab.models import ContratoRiesgoGymFaseRehab, EpisodioRehab
 
 
 SCHEMA_VERSION = 1
@@ -173,7 +173,48 @@ def _active_rehab_signal(cliente, as_of_date):
             .first()
         )
         phase = episode.fase_actual
-        items.append({
+        contract = (ContratoRiesgoGymFaseRehab.objects.filter(
+            fase=phase, activo=True).order_by('-version', '-pk').first() if phase else None)
+        contract_payload = None
+        assessment = None
+        capacity = {
+            'can_derive_restrictions': False,
+            'reason': 'rehab_has_no_gym_risk_contract',
+        }
+        if contract:
+            contract_payload = {
+                'id': contract.pk, 'version': contract.version,
+                'schema_version': contract.schema_version,
+                'risk_tags': list(contract.risk_tags or []),
+                'pain_hold_min': contract.pain_hold_min,
+                'freshness_days': contract.freshness_days,
+                'action': contract.action, 'scope': contract.scope,
+                'red_flag_action': contract.red_flag_action,
+                'execution_enabled': contract.execution_enabled,
+            }
+            if latest_daily is not None:
+                age = (as_of_date - latest_daily.fecha).days
+                red = bool(latest_daily.bandera_roja)
+                pain = latest_daily.dolor_manana
+                pain_known = pain is not None
+                would_hold = (pain_known and 0 <= age <= contract.freshness_days
+                              and pain >= contract.pain_hold_min and not red)
+                reason = ('red_flag_reported' if red else 'stale_daily_record'
+                          if age > contract.freshness_days else 'pain_data_missing'
+                          if not pain_known else 'pain_below_hold_threshold'
+                          if pain < contract.pain_hold_min else 'rehab_recent_pain_hold')
+                assessment = {'reason': reason, 'record_id': latest_daily.pk,
+                              'pain': pain, 'age_days': age, 'red_flag': red,
+                              'would_hold': would_hold}
+            if not contract.execution_enabled:
+                capacity = {'can_derive_restrictions': False,
+                            'reason': 'contract_execution_disabled'}
+            elif latest_daily is None:
+                capacity = {'can_derive_restrictions': False, 'reason': 'no_daily_record'}
+            else:
+                capacity = {'can_derive_restrictions': would_hold,
+                            'reason': reason}
+        item = {
             "episode_id": episode.pk,
             "protocol_id": episode.protocolo_id,
             "protocol_slug": episode.protocolo.slug,
@@ -207,11 +248,17 @@ def _active_rehab_signal(cliente, as_of_date):
                 "pain_during": latest_session.dolor_durante,
                 "pain_post_24h": latest_session.dolor_post_24h,
             } if latest_session else None),
-            "executive_capacity": {
-                "can_derive_restrictions": False,
-                "reason": "rehab_has_no_gym_risk_contract",
-            },
-        })
+            "executive_capacity": capacity,
+        }
+        if contract:
+            item["gym_risk_contract"] = contract_payload
+            item["executive_assessment"] = assessment
+            item["red_flag_report"] = ({
+                "reported": True, "record_id": latest_daily.pk,
+                "action": contract.red_flag_action,
+                "executed_by_rehab_gym_hold": False,
+            } if latest_daily and latest_daily.bandera_roja else None)
+        items.append(item)
     return {
         "schema_version": 1,
         "status": "available" if items else "missing",

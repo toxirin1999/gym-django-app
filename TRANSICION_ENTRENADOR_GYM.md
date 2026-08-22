@@ -1153,3 +1153,23 @@ python manage.py etiquetar_catalogo_riesgo_gym_rehab \
   --revert \
   --settings=gymproject.settings
 ```
+
+# Fase 6.7C — motor selectivo Rehab post-plan y preview
+
+- Cada contrato incorpora `execution_enabled`, desactivado por defecto y preservado
+  por publicaciones sucesoras. Solo contratos activos y habilitados pueden derivar
+  un freno desde un registro diario fresco, sin bandera roja y sobre el umbral.
+- El snapshot físico embebe el contrato exacto y su evaluación ejecutiva. El overlay
+  final consume exclusivamente ese snapshot, después del plan dinámico, y limita solo
+  ejercicios cuyos `risk_tags` intersectan con el contrato. Nunca eleva carga ni
+  revierte una sustitución protectora.
+- El techo es la última ejecución efectiva anterior identificable. Sin baseline se
+  conserva el plan y se declara evidencia insuficiente.
+- La postura Gym global no cambia; una sesión puede declarar postura local `mixed`.
+  No se activa ninguna superficie de UI, JOI ni ejecución de producción.
+- El preview es JSONL y de solo lectura:
+
+```bash
+python manage.py previsualizar_freno_rehab_gym --cliente <ID> --fecha YYYY-MM-DD \
+  --settings=gymproject.settings
+```

@@ -70,6 +70,7 @@ class ContratoRiesgoGymFaseRehab(models.Model):
     scope = models.CharField(max_length=30, choices=SCOPE_CHOICES, default='matching_exercises')
     red_flag_action = models.CharField(max_length=20, choices=RED_FLAG_ACTION_CHOICES, default='proteger')
     activo = models.BooleanField(default=True)
+    execution_enabled = models.BooleanField(default=False)
     vigente_desde = models.DateTimeField(default=timezone.now)
     creado_en = models.DateTimeField(auto_now_add=True)
 
@@ -95,7 +96,7 @@ class ContratoRiesgoGymFaseRehab(models.Model):
                 persisted = type(self).objects.get(pk=self.pk)
                 editable = ('fase_id', 'version', 'schema_version', 'risk_tags', 'pain_hold_min',
                             'freshness_days', 'action', 'scope', 'red_flag_action', 'activo',
-                            'vigente_desde')
+                            'vigente_desde', 'execution_enabled')
                 if any(getattr(self, field) != getattr(persisted, field) for field in editable):
                     raise ValidationError('Un contrato publicado es inmutable; publique una sucesora.')
             self.full_clean()

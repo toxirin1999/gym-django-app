@@ -324,6 +324,11 @@ def resolver_autoridad_diaria_gym(
             from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
 
             ejercicios, cambios = aplicar_plan_dinamico(cliente, ejercicios, fecha)
+            from entrenos.services.freno_rehab_gym_service import aplicar_freno_rehab_gym
+            ejercicios, cambios_rehab = aplicar_freno_rehab_gym(
+                cliente, ejercicios, physical_snapshot, fecha,
+            )
+            cambios.extend(cambios_rehab)
             entrenamiento = deepcopy(entrenamiento)
             entrenamiento['ejercicios'] = ejercicios
             autoridad['entrenamiento'] = entrenamiento
@@ -342,6 +347,15 @@ def resolver_autoridad_diaria_gym(
     })
     autoridad['physical_snapshot'] = physical_snapshot
     autoridad['physical_snapshot_fingerprint'] = huella_fisica
+    ejercicios_finales = (autoridad.get('entrenamiento') or {}).get('ejercicios') or []
+    local_holds = sum(1 for item in ejercicios_finales if item.get('postura_local') == 'sostener')
+    autoridad['conteos_postura_local'] = {
+        'sostener': local_holds, 'sin_overlay_rehab': len(ejercicios_finales) - local_holds,
+    }
+    autoridad['sesion_postura_local'] = (
+        'mixed' if local_holds and local_holds < len(ejercicios_finales)
+        else 'sostener' if local_holds else 'sin_overlay_rehab'
+    )
     deload_materializado = any(cambio.get('tipo') == 'deload' for cambio in cambios)
     for ejercicio in (autoridad.get('entrenamiento') or {}).get('ejercicios', []):
         ejercicio['_autoridad_gym_materializada'] = True
