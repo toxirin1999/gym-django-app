@@ -1025,3 +1025,34 @@ python manage.py clasificar_identidad_strava_gym \
 - `proteger` distingue protección cumplida, ejecución posterior incompatible y actividad previa no atribuible.
 - El cierre es explícito, auditable e idempotente mediante `cerrar_supervision_gym` (dry-run por defecto).
 - Esta fase no modifica estrategia, contratos, autoridad diaria ni JOI.
+
+# Fase 6.5 — auditoría pasiva de autoridad de lesión Gym
+
+- `auditar_autoridad_lesion_gym` revisa dos planos independientes y nunca
+  escribe: la propagación de la lesión capturada dentro de la decisión diaria
+  y la alineación actual entre `EpisodioRehab` y `UserInjury`.
+- El plano histórico usa exclusivamente la `GymDecisionVersion` final y
+  vigente y su `physical_snapshot` persistido. No reconstruye el pasado desde
+  lesiones vivas, no resuelve una autoridad nueva y no consulta etiquetas de
+  ejercicios en la base de datos.
+- Las restricciones AGUDA/SUB_AGUDA y los avisos RETORNO quedan clasificados
+  de forma exclusiva, incluyendo contratos inválidos, etiquetas no
+  verificables, protección incumplida, advertencia ausente y ausencia real de
+  conflicto con la sesión.
+- La alineación de fuentes es conservadora y se emite por episodio Rehab:
+  zona y lateralidad normalizadas producen `aligned`, `probable_alignment`,
+  `ambiguous_alignment`, `rehab_without_injury` o `unmatchable_zone`. Las
+  lesiones Hyrox sin episodio compatible aparecen aparte como
+  `injury_without_rehab`. No crea enlaces ni declara que ambos modelos
+  representen necesariamente la misma lesión.
+- Cada episodio incorpora como evidencia su última sesión hasta la fecha de
+  corte y distingue respuesta a 24 horas presente, ausente o no disponible.
+  Los episodios futuros y las lesiones ya resueltas quedan fuera del corte.
+- `IntervencionMolestiaGym` aparece solo como inventario por estado. No se usa
+  para completar ni corregir ninguna de las dos autoridades.
+
+```bash
+python manage.py auditar_autoridad_lesion_gym \
+  --cliente <ID> \
+  --settings=gymproject.settings
+```
