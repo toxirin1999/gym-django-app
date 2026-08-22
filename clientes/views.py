@@ -1798,6 +1798,15 @@ def mockup_demo(request):
         aprendizajes=_aprendizajes_portada,
     )
 
+    # Recibo factual de la supervisión vigente; no recalcula autoridad.
+    from clientes.recibo_supervision_gym_service import construir_recibo_supervision_gym
+    context['recibo_supervision_gym'] = construir_recibo_supervision_gym(
+        cliente=cliente,
+        fecha=_hoy,
+        portada_hoy=context['portada_hoy'],
+        autoridad_gym=context.get('autoridad_gym'),
+    )
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 

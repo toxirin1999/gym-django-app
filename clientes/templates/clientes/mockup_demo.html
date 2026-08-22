@@ -432,6 +432,39 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 }
 .rb-gym-correction-btn:hover { border-color: var(--warn); color: var(--warn); }
 .rb-gym-correction-status { min-height: 14px; color: var(--fg-mute); font-size: 10px; }
+.rb-gym-receipt {
+  margin: 4px 0 10px; padding: 10px 12px;
+  border-left: 2px solid var(--warn); background: var(--bg-3);
+}
+.rb-gym-receipt-head {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 12px;
+  margin-bottom: 8px;
+}
+.rb-gym-receipt-title {
+  color: var(--fg); font: 700 10px var(--font-mono);
+  letter-spacing: .1em; text-transform: uppercase;
+}
+.rb-gym-receipt-version {
+  color: var(--warn); font: 700 9px var(--font-mono); letter-spacing: .08em;
+}
+.rb-gym-receipt-state {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-left: auto; font: 700 9px var(--font-mono);
+  letter-spacing: .08em; text-transform: uppercase;
+}
+.rb-gym-receipt-state::before {
+  content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+}
+.rb-gym-receipt-state--ok { color: var(--ok); }
+.rb-gym-receipt-state--warn { color: var(--warn); }
+.rb-gym-receipt-flow {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 7px;
+  margin: 0 0 8px; color: var(--fg-dim);
+  font: 700 9px var(--font-mono); letter-spacing: .08em; text-transform: uppercase;
+}
+.rb-gym-receipt-arrow { color: var(--warn); }
+.rb-gym-receipt-copy { margin: 0; color: var(--fg-dim); font-size: 11px; line-height: 1.5; }
+.rb-gym-receipt-copy + .rb-gym-receipt-copy { margin-top: 4px; color: var(--fg-mute); }
 @media (max-width: 640px) {
   .rb-organismo-body { flex-direction: column; align-items: flex-start; }
   .rb-organismo-estado { min-width: auto; }
@@ -687,15 +720,38 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     </details>
     {% endif %}
-    {% if autoridad_gym and portada_hoy.sesion_dominante.modulo == 'gym' and autoridad_gym.postura != 'proteger' %}
-    <details data-gym-correction class="rb-gym-correction">
+    {% if autoridad_gym and portada_hoy.sesion_dominante.modulo == 'gym' %}
+    <details data-gym-correction class="rb-gym-correction"{% if recibo_supervision_gym %} open{% endif %}>
       <summary class="rb-collapse-summary" style="min-height:44px;">
-        {% if autoridad_gym.origen_decision == 'correccion_manual' %}
-          Ajuste supervisado · v{{ autoridad_gym.version_persistida }}
+        {% if recibo_supervision_gym %}
+          {{ recibo_supervision_gym.titulo }} · v{{ recibo_supervision_gym.version }}
         {% else %}
           Ajustar decisión
         {% endif %}
       </summary>
+      {% if recibo_supervision_gym %}
+      <section class="rb-gym-receipt" data-gym-supervision-receipt
+               data-receipt-executable="{{ recibo_supervision_gym.ejecutable|yesno:'true,false' }}"
+               aria-label="Recibo de supervisión Gym">
+        <div class="rb-gym-receipt-head">
+          <strong class="rb-gym-receipt-title">{{ recibo_supervision_gym.titulo }}</strong>
+          {% if recibo_supervision_gym.ejecutable %}
+          <span class="rb-gym-receipt-state rb-gym-receipt-state--ok">Ejecutable</span>
+          {% else %}
+          <span class="rb-gym-receipt-state rb-gym-receipt-state--warn">No ejecutable</span>
+          {% endif %}
+          <span class="rb-gym-receipt-version">V{{ recibo_supervision_gym.version }}</span>
+        </div>
+        <p class="rb-gym-receipt-flow" aria-label="Cambio de postura">
+          <span>{{ recibo_supervision_gym.postura_anterior }}</span>
+          <span class="rb-gym-receipt-arrow" aria-hidden="true">→</span>
+          <span>{{ recibo_supervision_gym.postura_actual }}</span>
+        </p>
+        <p class="rb-gym-receipt-copy"><strong>Motivo:</strong> {{ recibo_supervision_gym.motivo }}</p>
+        <p class="rb-gym-receipt-copy">{{ recibo_supervision_gym.conservacion }}</p>
+      </section>
+      {% endif %}
+      {% if autoridad_gym.postura != 'proteger' %}
       <form class="rb-gym-correction-form"
             data-url="{% url 'entrenos:corregir_autoridad_gym' cliente.id %}"
             data-revert-url="{% url 'entrenos:revertir_autoridad_gym' cliente.id %}"
@@ -722,6 +778,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </div>
         <div class="rb-gym-correction-status" role="status" aria-live="polite"></div>
       </form>
+      {% endif %}
     </details>
     {% endif %}
     {% if portada_hoy.sesion_dominante %}
