@@ -385,13 +385,17 @@ class CampanaHyrox7B1Tests(TestCase):
         with (
             patch('hyrox.signals._calcular_y_guardar_carga', return_value={'tsb': -30}),
             patch.object(HyroxTrainingEngine, 'apply_continuous_adaptation') as adapta,
-            patch('joi.services.generar_mensaje_joi'),
+            patch('joi.services.generar_mensaje_joi') as joi,
         ):
             autorregular_plan_futuro(HyroxSession, sesion, False)
 
         futura.refresh_from_db()
         self.assertEqual(futura.muscle_fatigue_index, 'Alta')
         adapta.assert_not_called()
+        self.assertTrue(any(
+            llamada.args[1] == 'hyrox_sesion_completada'
+            for llamada in joi.call_args_list
+        ))
 
     def test_signal_inactivo_con_tsb_no_muta_sesion_futura(self):
         from hyrox.signals import autorregular_plan_futuro
@@ -409,12 +413,13 @@ class CampanaHyrox7B1Tests(TestCase):
 
         with (
             patch('hyrox.signals._calcular_y_guardar_carga', return_value={'tsb': -30}),
-            patch('joi.services.generar_mensaje_joi'),
+            patch('joi.services.generar_mensaje_joi') as joi,
         ):
             autorregular_plan_futuro(HyroxSession, sesion, False)
 
         futura.refresh_from_db()
         self.assertIsNone(futura.muscle_fatigue_index)
+        joi.assert_not_called()
 
     def test_signal_activo_propaga_fc_reposo_elevada(self):
         from hyrox.signals import autorregular_plan_futuro

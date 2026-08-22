@@ -300,6 +300,10 @@ def autorregular_plan_futuro(sender, instance, created, update_fields=None, **kw
             logger.error(f"[HYROX FC Reposo check] Error: {e}")
 
     # ── 4. JOI — mensaje proactivo post-sesión Hyrox ────────────────────────
+    # La carga y el readiness ya quedaron registrados. Sin autoridad de
+    # campaña no existe voz Hyrox, ni siquiera aunque haya mensajes históricos.
+    if not efectos_autorizados:
+        return
     try:
         from joi.services import generar_mensaje_joi
         import datetime

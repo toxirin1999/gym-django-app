@@ -1282,3 +1282,20 @@ superficies queda para 7B.
 - Las restricciones de lesión y seguridad no quedan subordinadas a la campaña.
   Las superficies JOI y la presentación de autoridad en dashboards permanecen
   pendientes para 7B2-B/7B2-C.
+
+# Fase 7B2-B — Voz JOI subordinada a campaña Hyrox
+
+- Los triggers específicamente Hyrox pasan por una defensa central en
+  `generar_mensaje_joi`: sin campaña activa y objetivo contractual exacto no se
+  llama al modelo ni se persiste `MensajeJOI`.
+- Esta defensa usa una allowlist explícita. Los triggers generales, Gym,
+  decisiones del plan, lesión y carga conservan su voz aunque su evidencia
+  incluya actividad Hyrox.
+- Las tareas de cuenta regresiva y ausencia recorren exclusivamente la campaña
+  activa vigente; dejan de inferir autoridad desde un `HyroxObjective` legacy.
+- El contexto Hyrox desaparece cuando la campaña está inactiva y el context
+  processor no muestra mensajes Hyrox históricos, pero tampoco los elimina.
+- El signal post-sesión conserva carga y readiness como hechos. Solo verbaliza
+  la sesión cuando la campaña autoriza JOI. No se genera ningún mensaje del tipo
+  «Hyrox apagado».
+- El dashboard continúa pendiente de 7B2-C.

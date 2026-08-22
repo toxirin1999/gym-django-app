@@ -87,6 +87,14 @@ def _get_mensaje_hyrox(user):
     Excluye hyrox_ausencia: pertenece a la habitación, no debe aparecer fuera.
     No genera on-demand — los mensajes Hyrox los crean signals y tareas Celery.
     """
+    from hyrox.campaign_authority import objetivo_autorizado_campana
+    try:
+        cliente = user.cliente_perfil
+    except Exception:
+        return None
+    if objetivo_autorizado_campana(cliente, accion='joi_hyrox') is None:
+        return None
+
     from joi.models import MensajeJOI
     hyrox_solo_habitacion = [t for t in TRIGGERS_SOLO_HABITACION if t.startswith('hyrox_')]
     return (

@@ -8,12 +8,16 @@ from datetime import date, timedelta
 def build_hyrox_context(cliente, hoy: date, semana_reciente: date) -> dict:
     ctx = {}
 
+    from hyrox.campaign_authority import objetivo_autorizado_campana
+    objetivo_hyrox = objetivo_autorizado_campana(
+        cliente, accion='joi_hyrox', fecha=hoy
+    )
+    if objetivo_hyrox is None:
+        return ctx
+
     # ── 9. HYROX ─────────────────────────────────────────────────────────────
     try:
-        from hyrox.models import HyroxObjective, HyroxSession, HyroxReadinessLog
-        objetivo_hyrox = HyroxObjective.objects.filter(
-            cliente=cliente, estado='activo'
-        ).first()
+        from hyrox.models import HyroxSession, HyroxReadinessLog
         if objetivo_hyrox:
             ctx['dias_hasta_carrera'] = (objetivo_hyrox.fecha_evento - hoy).days
 
@@ -128,8 +132,8 @@ def build_hyrox_context(cliente, hoy: date, semana_reciente: date) -> dict:
 
     # ── 14. COMPARATIVA TEMPORAL (estaciones Hyrox) ───────────────────────────
     try:
-        from hyrox.models import HyroxActivity, HyroxObjective
-        _obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        from hyrox.models import HyroxActivity
+        _obj = objetivo_hyrox
         if _obj:
             _ESTACIONES = ['Sled Push', 'Sled Pull', 'Farmers Carry',
                            'Sandbag Lunges', 'Wall Balls', 'Burpees Broad Jump']

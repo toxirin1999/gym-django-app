@@ -1596,6 +1596,20 @@ def _prompt_lectura_plan(ctx: dict, datos_extra: dict) -> str:
 _PROMPT_BUILDERS['lectura_plan'] = _prompt_lectura_plan
 
 
+TRIGGERS_HYROX_CAMPANA = frozenset({
+    'hyrox_sesion_completada',
+    'hyrox_readiness_bajo',
+    'hyrox_readiness_alto',
+    'hyrox_cuenta_regresiva',
+    'hyrox_simulacion_completada',
+    'hyrox_ausencia',
+    'hyrox_estancamiento_estacion',
+    'hyrox_deload_automatico',
+    'hyrox_sesion_protegida',
+    'hyrox_ejecutar_con_margen',
+})
+
+
 # ── Public API ───────────────────────────────────────────────────────────────
 
 def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) -> "MensajeJOI | None":
@@ -1603,6 +1617,11 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
     Genera y persiste un MensajeJOI para el trigger dado.
     Devuelve el objeto creado o None si algo falla.
     """
+    if trigger in TRIGGERS_HYROX_CAMPANA:
+        from hyrox.campaign_authority import objetivo_autorizado_campana
+        if objetivo_autorizado_campana(cliente, accion='joi_hyrox') is None:
+            return None
+
     from joi.models import MensajeJOI
 
     datos_extra = datos_extra or {}

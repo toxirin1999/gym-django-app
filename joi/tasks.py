@@ -104,8 +104,11 @@ def verificar_cuenta_regresiva_hyrox(self):
     y genera un mensaje JOI de cuenta regresiva.
     """
     import datetime
-    from clientes.models import Cliente
-    from hyrox.models import HyroxObjective
+    from hyrox.models import ContratoCampanaHyrox
+    from hyrox.campaign_authority import (
+        objetivo_autorizado_campana,
+        resolver_autoridad_campana,
+    )
     from joi.services import generar_mensaje_joi
     from joi.models import MensajeJOI
 
@@ -113,7 +116,18 @@ def verificar_cuenta_regresiva_hyrox(self):
     hitos = {30, 14, 7}
     generados = 0
 
-    for objetivo in HyroxObjective.objects.filter(estado='activo', fecha_evento__gte=hoy):
+    contratos = ContratoCampanaHyrox.objects.filter(
+        estado='activa', objetivo__fecha_evento__gte=hoy
+    ).select_related('cliente__user', 'objetivo')
+    for contrato in contratos:
+        autoridad = resolver_autoridad_campana(contrato.cliente, hoy)
+        if autoridad.get('contrato_id') != contrato.pk:
+            continue
+        objetivo = objetivo_autorizado_campana(
+            contrato.cliente, accion='joi_hyrox', fecha=hoy
+        )
+        if objetivo is None or objetivo.pk != contrato.objetivo_id:
+            continue
         dias_restantes = (objetivo.fecha_evento - hoy).days
         if dias_restantes not in hitos:
             continue
@@ -170,7 +184,11 @@ def verificar_ausencia_hyrox(self):
     Solo genera si no hay ya un mensaje de ausencia hyrox en las últimas 48h.
     """
     import datetime
-    from hyrox.models import HyroxObjective, HyroxSession
+    from hyrox.models import ContratoCampanaHyrox, HyroxSession
+    from hyrox.campaign_authority import (
+        objetivo_autorizado_campana,
+        resolver_autoridad_campana,
+    )
     from joi.services import generar_mensaje_joi
     from joi.models import MensajeJOI
 
@@ -179,7 +197,18 @@ def verificar_ausencia_hyrox(self):
     hace_48h = datetime.datetime.now() - datetime.timedelta(hours=48)
     generados = 0
 
-    for objetivo in HyroxObjective.objects.filter(estado='activo').select_related('cliente__user'):
+    contratos = ContratoCampanaHyrox.objects.filter(
+        estado='activa'
+    ).select_related('cliente__user', 'objetivo')
+    for contrato in contratos:
+        autoridad = resolver_autoridad_campana(contrato.cliente, hoy)
+        if autoridad.get('contrato_id') != contrato.pk:
+            continue
+        objetivo = objetivo_autorizado_campana(
+            contrato.cliente, accion='joi_hyrox', fecha=hoy
+        )
+        if objetivo is None or objetivo.pk != contrato.objetivo_id:
+            continue
         cliente = objetivo.cliente
 
         # Un objetivo recién creado no ha tenido ni la oportunidad de acumular

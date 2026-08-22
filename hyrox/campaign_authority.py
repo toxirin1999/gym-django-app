@@ -54,10 +54,10 @@ INVENTARIO_AUTOMATIZACIONES = [
     _inventario('bitacora_fatiga', 'hyrox.signals', 'actualizar fatiga desde bitácora', 'autoajuste', cubierto=True),
     _inventario('gym_fatiga_rm', 'entrenos.signals', 'actualizar fatiga/RM Hyrox desde Gym', 'autoajuste', cubierto=True),
     _inventario('cinco_k', 'hyrox.signals', 'recalibrar ritmos desde 5K', 'correctivos', cubierto=True),
-    _inventario('joi_countdown', 'joi.services', 'generar voz countdown', 'joi_hyrox'),
-    _inventario('joi_post', 'joi.services', 'generar voz post sesión', 'joi_hyrox'),
-    _inventario('joi_readiness', 'joi.services', 'verbalizar readiness', 'joi_hyrox'),
-    _inventario('joi_estancamiento', 'joi.services', 'verbalizar estancamiento', 'joi_hyrox'),
+    _inventario('joi_countdown', 'joi.services', 'generar voz countdown', 'joi_hyrox', cubierto=True),
+    _inventario('joi_post', 'joi.services', 'generar voz post sesión', 'joi_hyrox', cubierto=True),
+    _inventario('joi_readiness', 'joi.services', 'verbalizar readiness', 'joi_hyrox', cubierto=True),
+    _inventario('joi_estancamiento', 'joi.services', 'verbalizar estancamiento', 'joi_hyrox', cubierto=True),
     _inventario('dashboard_gym_no_canonico', 'clientes.views', 'mostrar autoridad Hyrox paralela', 'lecturas_exploracion'),
 ]
 
@@ -101,7 +101,10 @@ def exigir_prescripcion(cliente, *, accion='generar_plan', fecha=None, objective
     )
     if not autoridad['permisos'].get(accion, False):
         raise CampanaHyroxNoAutoriza(accion=accion, autoridad=autoridad)
-    if accion in {'generar_plan', 'programar_sesiones', 'autoajuste', 'correctivos'}:
+    if accion in {
+        'generar_plan', 'programar_sesiones', 'autoajuste', 'correctivos',
+        'joi_hyrox',
+    }:
         contrato = ContratoCampanaHyrox.objects.filter(
             pk=autoridad.get('contrato_id')
         ).first()
@@ -138,6 +141,21 @@ def autoriza_efectos_campana(objective, *, accion='autoajuste', fecha=None):
     except CampanaHyroxNoAutoriza:
         return False
     return True
+
+
+def objetivo_autorizado_campana(cliente, *, accion='joi_hyrox', fecha=None):
+    """Devuelve únicamente el objetivo exacto de la campaña vigente autorizada."""
+    autoridad = resolver_autoridad_campana(
+        cliente, fecha or timezone.localdate()
+    )
+    objetivo = HyroxObjective.objects.filter(
+        pk=autoridad.get('objetivo_id'), cliente=cliente
+    ).first()
+    if not autoriza_efectos_campana(
+        objetivo, accion=accion, fecha=fecha
+    ):
+        return None
+    return objetivo
 
 
 def previsualizar(cliente, estado, objetivo=None, bloque=None, limites=None, fecha=None):
