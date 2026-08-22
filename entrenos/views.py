@@ -3609,6 +3609,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         # optimista a esa versión, no un permiso para ejecutar eternamente el
         # payload transportado. Se valida antes de leer cache/GET.
         decision_id_recibida = request.GET.get('decision_id', '').strip()
+        sello_autoridad_gym = ''
         if decision_id_recibida:
             from django.http import HttpResponse
             from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
@@ -3631,6 +3632,26 @@ def vista_entrenamiento_activo(request, cliente_id):
                 return HttpResponse(
                     'La decisión vigente protege esta sesión. Vuelve al briefing.',
                     status=409,
+                )
+            try:
+                from entrenos.models import GymDecisionVersion
+                from entrenos.services.sello_ejecucion_gym_service import (
+                    emitir_sello_ejecucion_gym,
+                )
+                version_autoridad = GymDecisionVersion.objects.get(
+                    cliente=cliente,
+                    fecha=fecha_obj,
+                    decision_id=decision_id_recibida,
+                    vigente=True,
+                )
+                sello_autoridad_gym = emitir_sello_ejecucion_gym(
+                    version=version_autoridad,
+                    user=request.user,
+                )
+            except Exception:
+                return HttpResponse(
+                    'No se pudo sellar la autoridad de esta sesión. Recarga el briefing.',
+                    status=503,
                 )
 
         rutina_nombre = request.GET.get('rutina_nombre') or ''
@@ -4290,6 +4311,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         ),
         'deload_activo': bool(obtener_ciclo_activo(cliente, fecha_obj)),
         'sesion_programada_id': sesion_programada_id,
+        'sello_autoridad_gym': sello_autoridad_gym,
         'modo_reducido': modo_reducido,
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
         'permiso_progresion': _permiso_prog_template,
@@ -4321,6 +4343,7 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 # ... (importaciones)
 
 
+@transaction.atomic
 def guardar_entrenamiento_activo(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -4328,6 +4351,23 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
         # --- PASO 1: Crear el EntrenoRealizado ---
         fecha = datetime.strptime(request.POST.get('fecha'), '%Y-%m-%d').date()
+        sello_autoridad = request.POST.get('sello_autoridad_gym', '').strip()
+        autoridad_ejecucion = None
+        if sello_autoridad:
+            from django.http import HttpResponse
+            from entrenos.services.sello_ejecucion_gym_service import (
+                SelloEjecucionGymInvalido,
+                validar_sello_ejecucion_gym,
+            )
+            try:
+                autoridad_ejecucion = validar_sello_ejecucion_gym(
+                    sello=sello_autoridad,
+                    user=request.user,
+                    cliente=cliente,
+                    fecha_autoridad=fecha,
+                )
+            except SelloEjecucionGymInvalido as exc:
+                return HttpResponse(str(exc), status=409)
         rutina_nombre = request.POST.get('rutina_nombre')
         rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
@@ -4338,7 +4378,16 @@ def guardar_entrenamiento_activo(request, cliente_id):
             cliente=cliente, fecha=fecha, fecha_ejecucion=timezone.localdate(), rutina=rutina_obj, fuente_datos='manual',
             duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
-            notas_liftin=request.POST.get('notas_liftin', '').strip()
+            notas_liftin=request.POST.get('notas_liftin', '').strip(),
+            gym_decision_version=(
+                autoridad_ejecucion.version if autoridad_ejecucion else None
+            ),
+            gym_decision_emitida_en=(
+                autoridad_ejecucion.emitida_en if autoridad_ejecucion else None
+            ),
+            gym_decision_estado_causal=(
+                autoridad_ejecucion.estado_causal if autoridad_ejecucion else None
+            ),
         )
         # Los post_save intermedios no deben observar una sesión a medio construir.
         entreno._defer_cierre_aprendizaje_gym = True
@@ -4799,6 +4848,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
     except Exception as e:
         # ... (manejo de errores sin cambios) ...
+        # La vista completa es atómica. Como este bloque convierte la excepción
+        # en una respuesta HTTP, debemos marcar explícitamente el rollback para
+        # no confirmar una sesión o hijos creados antes del fallo tardío.
+        transaction.set_rollback(True)
         messages.error(request, f"Hubo un error crítico al guardar: {e}")
         return redirect('clientes:panel_cliente')
 

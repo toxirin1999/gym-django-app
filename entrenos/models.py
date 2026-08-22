@@ -302,6 +302,24 @@ class EntrenoRealizado(models.Model):
         null=True, blank=True, db_index=True,
         help_text="Día real en que se guardó la sesión (timezone.localdate() en el momento del guardado), distinto de 'fecha' que es el día del plan al que pertenece la rutina.",
     )
+    gym_decision_version = models.ForeignKey(
+        'entrenos.GymDecisionVersion',
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name='entrenos_ejecutados',
+        help_text='Versión exacta de autoridad supervisada mostrada al iniciar la sesión.',
+    )
+    gym_decision_emitida_en = models.DateTimeField(null=True, blank=True)
+    gym_decision_estado_causal = models.CharField(
+        max_length=32,
+        null=True,
+        blank=True,
+        choices=[
+            ('exacta', 'Exacta'),
+            ('superada_durante_ejecucion', 'Superada durante la ejecución'),
+        ],
+    )
     procesado_gamificacion = models.BooleanField(default=False)
 
     # Campos adicionales opcionales

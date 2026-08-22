@@ -1005,3 +1005,16 @@ python manage.py clasificar_identidad_strava_gym \
   --cliente <ID> \
   --settings=gymproject.settings
 ```
+# Fase 6.4A — sello causal de ejecución supervisada
+
+- La sesión activa emite un sello firmado de la `GymDecisionVersion` exacta
+  que fue validada y mostrada al usuario.
+- El cierre persiste esa versión en `EntrenoRealizado`, junto con la hora de
+  emisión y el estado causal `exacta` o `superada_durante_ejecucion`.
+- Una corrección creada mientras el usuario entrena no invalida ni reasigna la
+  sesión: se conserva la versión que realmente guio la ejecución.
+- Los flujos históricos sin sello siguen siendo válidos y mantienen los tres
+  campos causales a `NULL`; no se hace backfill inferido por fecha.
+- Un sello alterado, ajeno o incoherente se rechaza antes de crear datos.
+- El sello V1 caduca a las 24 horas y cualquier fallo tardío del guardado
+  revierte atómicamente la sesión completa.

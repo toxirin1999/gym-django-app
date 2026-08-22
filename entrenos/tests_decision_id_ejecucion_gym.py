@@ -12,6 +12,7 @@ from django.urls import reverse
 
 from clientes.models import Cliente
 from core.organismo import resolver_estado_sistema_hoy
+from entrenos.models import GymDecisionVersion
 
 
 class DecisionIdEjecucionGymTests(TestCase):
@@ -94,6 +95,18 @@ class DecisionIdEjecucionGymTests(TestCase):
     @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
     def test_sesion_activa_acepta_id_vigente(self, resolver):
         resolver.return_value = self._autoridad()
+        GymDecisionVersion.objects.create(
+            cliente=self.cliente,
+            fecha=self.fecha,
+            version=1,
+            decision_id="gym-vigente",
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            vigente=True,
+            fingerprint="fingerprint-vigente",
+            base_fingerprint="base-vigente",
+            postura="avanzar",
+            snapshot=resolver.return_value,
+        )
         token = "payload-vigente"
         cache.set(f"transporte_ejercicios_mod_{token}", self.ejercicios, 900)
         url = reverse("entrenos:entrenamiento_activo", args=[self.cliente.id])
