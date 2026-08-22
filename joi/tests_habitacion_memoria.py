@@ -131,7 +131,7 @@ class HabitacionMemoriaTests(TestCase):
             for query in queries.captured_queries
         ))
 
-    def test_template_escapa_texto_y_solo_ofrece_navegacion_get(self):
+    def test_template_escapa_texto_y_ofrece_acciones_post(self):
         context = {
             'estado': 'calla', 'joi_estado': 'SILENCIO', 'hay_sedimento': False,
             'texto_vigilia': 'Presente.', 'joi_texto_motivo': 'Sin señales.',
@@ -144,6 +144,13 @@ class HabitacionMemoriaTests(TestCase):
                     'estado_label': 'En uso',
                     'classification_label': 'Necesita una nueva mirada',
                     'age_days': 45, 'ordinal': 1, 'total': 2,
+                    'expected_fingerprint': 'a' * 64,
+                    'action_keys': {
+                        action: f'00000000-0000-0000-0000-00000000000{index}'
+                        for index, action in enumerate(
+                            ('confirmar', 'cuestionar', 'descartar', 'posponer'), start=1,
+                        )
+                    },
                 },
                 'previous_id': None, 'next_id': 8,
             },
@@ -156,9 +163,9 @@ class HabitacionMemoriaTests(TestCase):
         self.assertIn('&lt;script&gt;privado&lt;/script&gt;', html)
         self.assertNotIn('<script>privado</script>', html)
         self.assertIn('?memoria=8', block)
-        self.assertNotIn('<form', block)
-        self.assertNotIn('<button', block)
-        self.assertNotIn('method="post"', block.lower())
+        self.assertEqual(block.count('<form'), 4)
+        self.assertEqual(block.count('<button'), 4)
+        self.assertIn('method="post"', block.lower())
         self.assertNotIn('--apply', block)
         self.assertNotIn(' open', block.split('>', 1)[0])
         self.assertIn('Estado En uso', block)
@@ -206,6 +213,8 @@ class HabitacionMemoriaTests(TestCase):
                     'estado_label': 'En uso',
                     'classification_label': 'Pendiente de primera revisión',
                     'age_days': 10, 'ordinal': 1, 'total': 1,
+                    'expected_fingerprint': 'a' * 64,
+                    'action_keys': {},
                 },
                 'previous_id': None, 'next_id': None,
             },

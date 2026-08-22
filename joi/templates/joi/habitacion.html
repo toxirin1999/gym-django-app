@@ -630,6 +630,59 @@
       line-height: 1.45;
       color: rgba(232, 248, 255, 0.42);
     }
+    .memoria-review-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.55rem;
+      margin-top: 1rem;
+    }
+    .memoria-review-actions form { margin: 0; }
+    .memoria-action {
+      width: 100%;
+      min-height: 44px;
+      padding: 0.65rem 0.7rem;
+      border: 1px solid rgba(0, 229, 255, 0.16);
+      border-radius: 4px;
+      background: transparent;
+      color: rgba(232, 248, 255, 0.66);
+      font: inherit;
+      font-size: 0.7rem;
+      letter-spacing: 0.025em;
+      cursor: pointer;
+      transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+    }
+    .memoria-action:hover,
+    .memoria-action:focus-visible {
+      border-color: rgba(0, 229, 255, 0.5);
+      color: var(--ink);
+      outline: none;
+    }
+    .memoria-action-primary {
+      background: rgba(0, 229, 255, 0.09);
+      border-color: rgba(0, 229, 255, 0.32);
+      color: rgba(232, 248, 255, 0.9);
+    }
+    .memoria-action-discard {
+      border-color: rgba(232, 248, 255, 0.08);
+      color: rgba(232, 248, 255, 0.46);
+    }
+    .memoria-review-feedback,
+    .memoria-review-message {
+      width: 100%; max-width: 440px;
+      margin-top: 0.75rem;
+      padding: 0.72rem 0.9rem;
+      border-left: 1px solid rgba(0, 229, 255, 0.34);
+      color: rgba(232, 248, 255, 0.62);
+      font-size: 0.72rem;
+      line-height: 1.45;
+    }
+    .memoria-undo-form { display: inline; margin-left: 0.55rem; }
+    .memoria-undo {
+      min-height: 44px;
+      border: 0; background: transparent; padding: 0 0.25rem;
+      color: rgba(0, 229, 255, 0.72); text-decoration: underline;
+      text-underline-offset: 0.2rem; cursor: pointer; font: inherit;
+    }
     .memoria-review-nav {
       display: flex; justify-content: space-between; align-items: center;
       min-height: 2rem; margin-top: 0.8rem;
@@ -647,6 +700,7 @@
     @media (max-width: 520px) {
       .memoria-review { max-width: calc(100vw - 2rem); }
       .memoria-review-texto { font-size: 0.9rem; }
+      .memoria-review-actions { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -765,6 +819,25 @@
   </details>
   {% endif %}
 
+  {% if messages %}
+    {% for message in messages %}
+    <p class="memoria-review-message" role="status">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+
+  {% if revision_feedback %}
+  <div class="memoria-review-feedback" role="status" data-testid="memoria-review-feedback">
+    {{ revision_feedback.texto }}
+    {% if revision_feedback.undo_operation_id %}
+    <form class="memoria-undo-form" method="post" action="{% url 'joi:joi_deshacer_revision_memoria' revision_feedback.undo_operation_id %}">
+      {% csrf_token %}
+      <input type="hidden" name="idempotency_key" value="{{ revision_feedback.undo_idempotency_key }}">
+      <button class="memoria-undo" type="submit">Deshacer</button>
+    </form>
+    {% endif %}
+  </div>
+  {% endif %}
+
   {% if memoria_revision %}
   <details class="memoria-review" data-testid="memoria-review">
     <summary data-testid="memoria-review-summary">Memoria · {{ memoria_revision.count }} por revisar</summary>
@@ -776,7 +849,33 @@
         <span>{{ memoria_revision.current.age_days }} días</span>
         <span>{{ memoria_revision.current.ordinal }} / {{ memoria_revision.current.total }}</span>
       </div>
-      <p class="memoria-review-nota">Solo lectura. Aquí puedes observar qué memoria necesita revisión.</p>
+      <p class="memoria-review-nota">¿Cómo encaja hoy esta memoria contigo?</p>
+      <div class="memoria-review-actions" aria-label="Revisar esta memoria">
+        <form method="post" action="{% url 'joi:joi_revision_memoria' memoria_revision.current.id 'confirmar' %}">
+          {% csrf_token %}
+          <input type="hidden" name="expected_fingerprint" value="{{ memoria_revision.current.expected_fingerprint }}">
+          <input type="hidden" name="idempotency_key" value="{{ memoria_revision.current.action_keys.confirmar }}">
+          <button class="memoria-action memoria-action-primary" type="submit">Sigue siendo cierto</button>
+        </form>
+        <form method="post" action="{% url 'joi:joi_revision_memoria' memoria_revision.current.id 'cuestionar' %}">
+          {% csrf_token %}
+          <input type="hidden" name="expected_fingerprint" value="{{ memoria_revision.current.expected_fingerprint }}">
+          <input type="hidden" name="idempotency_key" value="{{ memoria_revision.current.action_keys.cuestionar }}">
+          <button class="memoria-action" type="submit">No estoy seguro</button>
+        </form>
+        <form method="post" action="{% url 'joi:joi_revision_memoria' memoria_revision.current.id 'posponer' %}">
+          {% csrf_token %}
+          <input type="hidden" name="expected_fingerprint" value="{{ memoria_revision.current.expected_fingerprint }}">
+          <input type="hidden" name="idempotency_key" value="{{ memoria_revision.current.action_keys.posponer }}">
+          <button class="memoria-action" type="submit">Ahora no</button>
+        </form>
+        <form method="post" action="{% url 'joi:joi_revision_memoria' memoria_revision.current.id 'descartar' %}">
+          {% csrf_token %}
+          <input type="hidden" name="expected_fingerprint" value="{{ memoria_revision.current.expected_fingerprint }}">
+          <input type="hidden" name="idempotency_key" value="{{ memoria_revision.current.action_keys.descartar }}">
+          <button class="memoria-action memoria-action-discard" type="submit">Ya no encaja</button>
+        </form>
+      </div>
       <nav class="memoria-review-nav" aria-label="Navegar memorias por revisar">
         <span>{% if memoria_revision.previous_id %}<a data-testid="memoria-prev" href="{% url 'joi:joi_habitacion' %}?memoria={{ memoria_revision.previous_id }}">← anterior</a>{% endif %}</span>
         <span>{% if memoria_revision.next_id %}<a data-testid="memoria-next" href="{% url 'joi:joi_habitacion' %}?memoria={{ memoria_revision.next_id }}">siguiente →</a>{% endif %}</span>

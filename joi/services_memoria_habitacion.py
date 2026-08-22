@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+import uuid
 
-from core.services.epistemic_review_queue import planificar_revision_memoria
+from core.services.epistemic_review_queue import fingerprint_manual, planificar_revision_memoria
 
 
 _LABELS = {
@@ -61,6 +62,11 @@ def construir_memoria_habitacion(*, cliente, as_of, requested_id=None):
         'age_days': age_days,
         'ordinal': index + 1,
         'total': len(items),
+        'expected_fingerprint': fingerprint_manual(manual),
+        'action_keys': {
+            action: str(uuid.uuid4())
+            for action in ('confirmar', 'cuestionar', 'descartar', 'posponer')
+        },
     }
     return {
         'count': len(items),

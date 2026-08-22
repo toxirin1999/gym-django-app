@@ -6,6 +6,16 @@ app_name = 'joi'
 urlpatterns = [
     path('mensaje/<int:mensaje_id>/leido/', views.marcar_mensaje_leido, name='joi_marcar_leido'),
     path('habitacion/', views.habitacion_joi, name='joi_habitacion'),
+    path(
+        'habitacion/memoria/<int:manual_id>/<str:accion>/',
+        views.revision_memoria,
+        name='joi_revision_memoria',
+    ),
+    path(
+        'habitacion/memoria/operacion/<int:operacion_id>/deshacer/',
+        views.deshacer_revision_memoria_view,
+        name='joi_deshacer_revision_memoria',
+    ),
     path('mensaje/<int:mensaje_id>/feedback/', views.feedback_joi, name='joi_feedback'),
     path('manual/', views.poda_manual_joi, name='joi_manual'),
     path('manual/<int:entrada_id>/desactivar/', views.desactivar_entrada_manual, name='joi_desactivar_entrada'),

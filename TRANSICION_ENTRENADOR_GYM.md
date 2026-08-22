@@ -1434,3 +1434,17 @@ superficies queda para 7B.
 - Los hallazgos se basan solo en campos y relaciones estructuradas. Se omiten
   `narrativa_usada_como_fuente` y `texto_diario_cruzado` cuando no hay una
   relación demostrable; no se realizan coincidencias heurísticas de texto.
+- Fase 8.0-F2 convierte la única memoria abierta de `/joi/habitacion/` en una
+  supervisión humana accionable, sin añadir feed ni una voz JOI simulada. Las
+  decisiones visibles son exactamente «Sigue siendo cierto», «No estoy
+  seguro», «Ya no encaja» y «Ahora no»; usan formularios POST con CSRF y no
+  requieren JavaScript.
+- Los endpoints derivan siempre `Cliente` del usuario autenticado y delegan toda
+  mutación en el servicio transaccional F1. Validan UUID y fingerprint, aplican
+  Post/Redirect/Get y traducen ownership, stale, cooldown o payload inválido a
+  feedback neutral que no revela si una memoria u operación ajena existe.
+- Tras una operación correcta se ofrece una sola reversión efímera, ligada en
+  sesión al recibo propio recién creado. No se expone historial de operaciones;
+  un deshacer ajeno, doble u obsoleto se rechaza de forma neutral. Confirmar y
+  descartar sacan la memoria de la cola; cuestionar y posponer respetan el
+  aplazamiento de 14 días definido por F1.

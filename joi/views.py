@@ -1,8 +1,12 @@
 import logging
-from django.shortcuts import render, get_object_or_404
+import uuid
+
+from django.contrib import messages
+from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST, require_http_methods
+from django.utils import timezone
 from datetime import timedelta
 
 logger = logging.getLogger(__name__)
@@ -130,7 +134,6 @@ def desactivar_entrada_manual(request, entrada_id):
 @login_required
 def habitacion_joi(request):
     from clientes.models import Cliente
-    from django.utils import timezone
     from .models import MensajeJOI
     from core.daily_decision import DailyDecisionEngine
     from entrenos.models import ActividadRealizada
@@ -272,6 +275,7 @@ def habitacion_joi(request):
         as_of=timezone.localdate(),
         requested_id=request.GET.get('memoria'),
     )
+    revision_feedback = request.session.pop('joi_revision_feedback', None)
 
     return render(request, 'joi/habitacion.html', {
         'mensaje':             mensaje,
@@ -285,7 +289,74 @@ def habitacion_joi(request):
         'texto_vigilia':       texto_vigilia,
         'entrenos_totales':    entrenos_totales,
         'memoria_revision':    memoria_revision,
+        'revision_feedback':   revision_feedback,
     })
+
+
+def _uuid_post(request, field='idempotency_key'):
+    try:
+        return uuid.UUID(request.POST.get(field, ''))
+    except (TypeError, ValueError, AttributeError) as exc:
+        raise ValueError('solicitud inválida') from exc
+
+
+@login_required
+@require_POST
+def revision_memoria(request, manual_id, accion):
+    """Aplica una decisión humana y vuelve a la Habitación mediante PRG."""
+    from clientes.models import Cliente
+    from joi.services_revision_memoria import aplicar_revision_memoria
+
+    try:
+        cliente = Cliente.objects.get(user=request.user)
+        receipt = aplicar_revision_memoria(
+            cliente=cliente,
+            actor=request.user,
+            manual_id=manual_id,
+            accion=accion,
+            expected_fingerprint=request.POST.get('expected_fingerprint', ''),
+            idempotency_key=_uuid_post(request),
+            as_of=timezone.localdate(),
+        )
+    except (Cliente.DoesNotExist, ValueError):
+        messages.info(request, 'No se pudo aplicar esa revisión.')
+        return redirect('joi:joi_habitacion')
+
+    request.session['joi_revision_undo_operation'] = receipt.pk
+    request.session['joi_revision_feedback'] = {
+        'texto': 'Revisión guardada.',
+        'undo_operation_id': receipt.pk,
+        'undo_idempotency_key': str(uuid.uuid4()),
+    }
+    return redirect('joi:joi_habitacion')
+
+
+@login_required
+@require_POST
+def deshacer_revision_memoria_view(request, operacion_id):
+    """Deshace únicamente el recibo propio ofrecido por el último PRG."""
+    from clientes.models import Cliente
+    from joi.services_revision_memoria import deshacer_revision_memoria
+
+    if request.session.get('joi_revision_undo_operation') != operacion_id:
+        messages.info(request, 'No se pudo deshacer esa revisión.')
+        return redirect('joi:joi_habitacion')
+    try:
+        cliente = Cliente.objects.get(user=request.user)
+        deshacer_revision_memoria(
+            cliente=cliente,
+            actor=request.user,
+            operacion_id=operacion_id,
+            idempotency_key=_uuid_post(request),
+            as_of=timezone.localdate(),
+        )
+    except (Cliente.DoesNotExist, ValueError):
+        messages.info(request, 'No se pudo deshacer esa revisión.')
+        return redirect('joi:joi_habitacion')
+
+    request.session.pop('joi_revision_undo_operation', None)
+    request.session['joi_revision_feedback'] = {'texto': 'Revisión deshecha.'}
+    return redirect('joi:joi_habitacion')
 
 
 @login_required
