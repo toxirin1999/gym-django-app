@@ -281,7 +281,7 @@ class MemoriaEpistemicaTests(TestCase):
     def test_hallazgos_estructurados_no_dependenden_del_texto(self):
         manual = ManualDavid.objects.create(
             user=self.user, entrada='No debe inspeccionarse', origen='patron_detectado',
-            tipo='hipotesis', estado='debilitada', activa=True,
+            tipo='hipotesis', estado='descartada', activa=True,
         )
         preferencia = self._preferencia(metadata={
             'consentimiento': False,
@@ -321,12 +321,57 @@ class MemoriaEpistemicaTests(TestCase):
         }
 
         self.assertTrue({
-            'hipotesis_sin_vigencia', 'manual_estado_activa_divergente',
+            'hipotesis_sin_vigencia', 'manual_descartada_aun_incluida',
             'preferencia_sin_consentimiento', 'preferencia_duplicada_manual_gym',
             'evidencia_count_divergente', 'promocion_sin_evidencia',
             'trace_version_no_identificable', 'revocacion_sin_trazabilidad',
             'registro_sin_owner',
         }.issubset(codes))
+
+    def test_manual_debilitada_o_cuestionada_puede_seguir_activa(self):
+        from core.services.epistemic_registry import adaptar_manual_david, auditar_registros
+
+        for estado in ('debilitada', 'cuestionada', 'activa'):
+            manual = ManualDavid.objects.create(
+                user=self.user, entrada=f'Hipótesis {estado}',
+                origen='patron_detectado', tipo='hipotesis',
+                estado=estado, activa=True,
+            )
+            codes = {
+                item['code']
+                for item in auditar_registros([adaptar_manual_david(manual)])
+            }
+            self.assertNotIn('manual_descartada_aun_incluida', codes)
+            self.assertNotIn('manual_estado_activa_divergente', codes)
+
+        podada = ManualDavid.objects.create(
+            user=self.user, entrada='Hipótesis podada', origen='patron_detectado',
+            tipo='hipotesis', estado='activa', activa=False,
+        )
+        codes_poda = {
+            item['code']
+            for item in auditar_registros([adaptar_manual_david(podada)])
+        }
+        self.assertNotIn('manual_descartada_aun_incluida', codes_poda)
+        self.assertNotIn('manual_estado_activa_divergente', codes_poda)
+
+    def test_manual_descartada_pero_incluida_es_anomalia_operativa(self):
+        manual = ManualDavid.objects.create(
+            user=self.user, entrada='Hipótesis descartada',
+            origen='patron_detectado', tipo='hipotesis',
+            estado='descartada', activa=True,
+        )
+        from core.services.epistemic_registry import adaptar_manual_david, auditar_registros
+
+        findings = auditar_registros([adaptar_manual_david(manual)])
+        hallazgo = next(
+            item for item in findings
+            if item['code'] == 'manual_descartada_aun_incluida'
+        )
+        self.assertEqual(hallazgo['evidence'], {
+            'estado_flag': 'descartada',
+            'activa_flag': True,
+        })
 
     def test_coleccion_es_determinista_sin_escrituras_ia_ni_cache(self):
         self._preferencia()

@@ -410,10 +410,15 @@ def auditar_registros(records: Iterable[dict]) -> list[dict]:
                 'preferencia_duplicada_manual_gym', record,
                 manual_david_id=conditions['manual_david_id'],
             ))
-        if record['domain'] == 'joi.manual' and (
-            conditions.get('activa_flag') != (conditions.get('estado_flag') == 'activa')
+        if (
+            record['domain'] == 'joi.manual'
+            and conditions.get('estado_flag') == 'descartada'
+            and conditions.get('activa_flag') is True
         ):
-            findings.append(_finding('manual_estado_activa_divergente', record))
+            findings.append(_finding(
+                'manual_descartada_aun_incluida', record,
+                estado_flag='descartada', activa_flag=True,
+            ))
         if record['domain'] == 'gym.autoridad_diaria' and record['level'] == 'senal' and not conditions.get('trace_version_identifiable'):
             findings.append(_finding('trace_version_no_identificable', record))
         if record['domain'] == 'gym.adaptacion' and (

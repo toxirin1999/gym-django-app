@@ -1357,6 +1357,10 @@ superficies queda para 7B.
   provisional: el resultado individual solo lo convierte en candidato. La
   consolidación exige una regla explícita y evaluaciones independientes, que el
   modelo legacy no demuestra y quedan declaradas en `missing_fields`.
+- En `ManualDavid`, `activa=True` significa inclusión operativa y es compatible
+  con los estados `activa`, `cuestionada` y `debilitada`; `activa=False` puede
+  representar poda legítima. Solo `estado=descartada` junto con `activa=True`
+  produce `manual_descartada_aun_incluida`.
 - `auditar_memoria_epistemica --cliente --desde --hasta --limit` emite JSONL en
   orden estable y termina con un resumen. Es estrictamente de solo lectura y no
   ofrece `--apply`.
