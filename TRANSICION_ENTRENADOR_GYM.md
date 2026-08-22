@@ -811,6 +811,27 @@ disponibles y deberán crear o registrar su propia decisión. Las sesiones legac
 listas mixtas y accesos directos sin autoridad materializada mantienen el flujo
 anterior como fallback de transición.
 
+## Fase 6.1 — supervisión manual sobre base inmutable
+
+Una corrección manual se construye siempre desde el snapshot completo de la
+versión `motor` que comparte el `base_fingerprint` de la autoridad vigente. No
+encadena el contenido de una corrección anterior: únicamente aplica los campos
+supervisables permitidos y conserva sin reinterpretar el snapshot físico, la
+base, el entrenamiento y los cambios ejecutivos materializados por el motor.
+
+La supervisión sólo puede mantener o aumentar seguridad. `sostener` materializa
+`estado=version_reducida` y `modo_reducido=true`; `proteger` materializa
+`estado=recuperar`, `postura=proteger` y queda no ejecutable por ese estado, sin
+inventar otra propuesta ni borrar la evidencia del entrenamiento original.
+
+La reversión tampoco parchea la corrección vigente: copia íntegramente el
+snapshot motor compatible y sólo añade la identidad y metadatos de una nueva
+versión con origen `reversion_manual`. Correcciones y reversiones mantienen el
+historial inmutable, el control optimista mediante `decision_id` y el guard que
+impide relajar seguridad. Si cambia la evidencia y, por tanto, el
+`base_fingerprint`, la versión manual deja de ser compatible y el motor crea la
+nueva autoridad; nunca se arrastra una intervención de una base anterior.
+
 ## Fase 5.8 — auditoría de identidad del evento físico
 
 Antes de reconciliar carga se incorpora una auditoría estrictamente pasiva sobre

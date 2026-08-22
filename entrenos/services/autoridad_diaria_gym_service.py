@@ -341,7 +341,10 @@ def corregir_autoridad_diaria_gym(
         .order_by('-version')
         .first()
     )
-    snapshot_previo = (vigente_previa.snapshot or {}).get('physical_snapshot') if vigente_previa else None
+    snapshot_previo = (
+        (vigente_previa.snapshot or {}).get('physical_snapshot')
+        if vigente_previa else None
+    )
     actual = resolver_autoridad_diaria_gym(
         cliente,
         fecha,
@@ -349,12 +352,6 @@ def corregir_autoridad_diaria_gym(
     )
     if actual.get('decision_id') != decision_id_esperada:
         raise AutoridadGymCorreccionInvalida('La decisión cambió; revisa la versión vigente.')
-
-    postura_actual = actual.get('postura') or 'empujar'
-    postura_nueva = ajustes.get('postura', postura_actual)
-    rango = {'proteger': 0, 'sostener': 1, 'empujar': 2}
-    if postura_nueva not in rango or rango[postura_nueva] > rango[postura_actual]:
-        raise AutoridadGymCorreccionInvalida('Una corrección no puede relajar la seguridad.')
 
     with transaction.atomic():
         Cliente.objects.select_for_update().get(pk=cliente.pk)
@@ -366,14 +363,30 @@ def corregir_autoridad_diaria_gym(
         if not vigente or vigente.decision_id != decision_id_esperada:
             raise AutoridadGymCorreccionInvalida('La decisión cambió; revisa la versión vigente.')
 
+        postura_actual = vigente.postura or 'empujar'
+        postura_nueva = ajustes.get('postura', postura_actual)
+        rango = {'proteger': 0, 'sostener': 1, 'empujar': 2}
+        if postura_nueva not in rango or rango[postura_nueva] > rango[postura_actual]:
+            raise AutoridadGymCorreccionInvalida('Una corrección no puede relajar la seguridad.')
+
+        motor = versiones.filter(
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            base_fingerprint=vigente.base_fingerprint,
+        ).order_by('-version').first()
+        if not motor:
+            raise AutoridadGymCorreccionInvalida('No existe una propuesta motora compatible.')
+
         numero = vigente.version + 1
-        corregida = deepcopy(actual)
+        corregida = deepcopy(motor.snapshot)
         corregida.update(ajustes)
+        corregida['postura'] = postura_nueva
         if postura_nueva == 'sostener':
             corregida['estado'] = 'version_reducida'
             corregida['modo_reducido'] = True
         elif postura_nueva == 'proteger':
             corregida['estado'] = 'recuperar'
+            corregida['postura'] = 'proteger'
+            corregida['modo_reducido'] = False
         digest = hashlib.sha256(
             json.dumps(_serializable(ajustes), sort_keys=True).encode('utf-8')
         ).hexdigest()[:12]
@@ -427,7 +440,10 @@ def revertir_correccion_autoridad_diaria_gym(
         .order_by('-version')
         .first()
     )
-    snapshot_previo = (vigente_previa.snapshot or {}).get('physical_snapshot') if vigente_previa else None
+    snapshot_previo = (
+        (vigente_previa.snapshot or {}).get('physical_snapshot')
+        if vigente_previa else None
+    )
     actual = resolver_autoridad_diaria_gym(
         cliente,
         fecha,
@@ -458,14 +474,8 @@ def revertir_correccion_autoridad_diaria_gym(
             raise AutoridadGymCorreccionInvalida('No existe una propuesta motora compatible.')
 
         numero = vigente.version + 1
-        restaurada = deepcopy(actual)
-        campos_restaurables = ('postura', 'estado', 'modo_reducido', 'mensaje')
-        ajustes = {
-            campo: motor.snapshot.get(campo)
-            for campo in campos_restaurables
-            if campo in motor.snapshot
-        }
-        restaurada.update(ajustes)
+        restaurada = deepcopy(motor.snapshot)
+        ajustes = {}
         digest = hashlib.sha256(
             f'{vigente.decision_id}:{numero}:reversion'.encode('utf-8')
         ).hexdigest()[:12]
