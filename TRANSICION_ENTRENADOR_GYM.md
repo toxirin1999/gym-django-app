@@ -290,6 +290,45 @@ sesiones, autoridad diaria ni `dias_disponibles`, y nunca se crea
 automáticamente el bloque siguiente. `cerrar_bloque_gym` y
 `responder_evaluacion_bloque_gym` son dry-run por defecto y exigen `--apply`.
 
+### Fase 3D — apertura semanal operativa
+
+`preparar_semana_gym` calcula una única semana objetivo: si la fecha de
+referencia es lunes usa ese mismo lunes; de martes a domingo usa el siguiente.
+La fecha se puede fijar con `--fecha-referencia YYYY-MM-DD` y, si se omite, se
+obtiene con `timezone.localdate()`.
+
+Solo participan bloques `activo` cuyo rango aprobado incluye ese lunes. Un
+bloque propuesto, pausado, finalizado o fuera de rango no abre semanas, y un
+cliente sin bloque activo nunca recibe un contrato por este flujo. Antes de
+invocar Helms se comprueba que estrategia, umbrales y snapshot del bloque sean
+coherentes. Una divergencia queda aislada y explicada en el resultado del
+cliente, sin escritura.
+
+El comando es dry-run por defecto: previsualiza mediante el materializador
+semanal existente y emite JSON determinista. `--apply` es la única vía de
+escritura. Si el contrato `cliente + semana` ya existe, se declara
+`ya_materializada` sin volver a llamar al motor ni actualizar timestamps. La
+apertura aplica un bloqueo transaccional al bloque para que una pausa
+concurrente no pueda dejar un contrato semanal sin vínculo; una carrera de
+unicidad se reconoce como idempotencia cuando la identidad persistida es
+coherente, o se informa como error controlado.
+
+Cada cliente produce su propio resultado, por lo que una divergencia, una
+semana incompleta o un error de integridad no bloquea a los demás. Este es un
+workflow operativo explícito: no se conecta a GET, signals, JOI, Celery ni a
+generación implícita del plan.
+
+```bash
+python manage.py preparar_semana_gym \
+  --fecha-referencia 2026-08-23 \
+  --settings=gymproject.settings
+
+python manage.py preparar_semana_gym \
+  --fecha-referencia 2026-08-23 \
+  --apply \
+  --settings=gymproject.settings
+```
+
 ### Fase 11B — revisión del cierre de bloque en el Centro
 
 El Centro de decisiones muestra, dentro de «Activo ahora», una única tarjeta
