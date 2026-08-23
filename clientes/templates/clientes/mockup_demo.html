@@ -500,6 +500,97 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 .rb-modal-zone-range { font-family: var(--font-mono); font-size: 11px; font-weight: 700; min-width: 64px; letter-spacing: 0.05em; }
 .rb-modal-zone-text { font-size: 12px; color: var(--ink-2); line-height: 1.4; }
 
+/* ── PORTADA · CINCO CAPÍTULOS ──────────────────
+   Una sola lectura vertical: ahora → entreno → plan → memoria → vida.
+   La navegación no sustituye acciones; únicamente orienta la página larga. */
+.rb-chapter-nav {
+  position: sticky;
+  top: 57px;
+  z-index: 90;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0 -2px;
+  background: rgba(5, 8, 12, .96);
+  border-bottom: 1px solid var(--line-2);
+  backdrop-filter: blur(12px);
+}
+.rb-chapter-nav a {
+  min-width: 0;
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-bottom: 2px solid transparent;
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-align: center;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.rb-chapter-nav a:hover {
+  color: var(--ink);
+  background: var(--paper);
+}
+.rb-chapter-nav a:focus-visible {
+  color: var(--ink);
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.rb-chapter {
+  scroll-margin-top: 112px;
+  padding-top: 26px;
+}
+.rb-chapter:first-of-type { padding-top: 14px; }
+.rb-chapter-heading {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-bottom: 13px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--line);
+}
+.rb-chapter-index,
+.rb-chapter-context {
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.rb-chapter-title {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--font-disp);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .035em;
+  line-height: .95;
+  text-transform: uppercase;
+}
+.rb-chapter-context { text-align: right; }
+.rb-chapter--now .rb-chapter-index,
+.rb-chapter--training .rb-chapter-index { color: var(--accent); }
+.rb-chapter--plan .rb-chapter-index { color: rgba(226, 178, 62, .9); }
+.rb-chapter--memory .rb-chapter-index { color: rgba(180, 140, 255, .9); }
+.rb-chapter--life .rb-chapter-index { color: rgba(45, 190, 150, .85); }
+.rb-chapter--plan,
+.rb-chapter--memory { padding-top: 30px; }
+.rb-chapter--memory > a > div { border-left: 2px solid rgba(180, 140, 255, .5) !important; }
+
+@media (max-width: 390px) {
+  .rb-chapter-nav a { font-size: 7px; letter-spacing: .055em; }
+  .rb-chapter-context { display: none; }
+  .rb-chapter-heading { grid-template-columns: 24px minmax(0, 1fr); }
+}
+
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 640px) {
   .rb-nav { padding: 12px 16px; gap: 10px; }
@@ -509,6 +600,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+  html { scroll-behavior: auto !important; }
 }
   </style>
 </head>
@@ -570,6 +662,21 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
 <!-- ── MAIN ─────────────────────────────────────── -->
 <div class="rb-container">
+
+  <nav class="rb-chapter-nav" aria-label="Secciones del panel">
+    <a href="#chapter-ahora">Ahora</a>
+    <a href="#chapter-entrenamiento">Entreno</a>
+    <a href="#chapter-plan" data-gym-chapter>Plan</a>
+    <a href="#chapter-memoria" data-gym-chapter>Memoria</a>
+    <a href="#chapter-vida">Vida</a>
+  </nav>
+
+  <section id="chapter-ahora" class="rb-chapter rb-chapter--now" aria-labelledby="chapter-ahora-title">
+    <header class="rb-chapter-heading">
+      <span class="rb-chapter-index">01</span>
+      <h2 class="rb-chapter-title" id="chapter-ahora-title">Ahora</h2>
+      <span class="rb-chapter-context">Decidir el día</span>
+    </header>
 
   <!-- ── CHECK-IN BADGE ────────────────────────── -->
   <div style="display:flex;justify-content:flex-end;padding:8px 0 0;">
@@ -812,6 +919,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
   </div>
   {% endif %}
+
+  </section><!-- #chapter-ahora -->
+
+  <section id="chapter-entrenamiento" class="rb-chapter rb-chapter--training" aria-labelledby="chapter-entrenamiento-title">
+    <header class="rb-chapter-heading">
+      <span class="rb-chapter-index">02</span>
+      <h2 class="rb-chapter-title" id="chapter-entrenamiento-title">Entrenamiento</h2>
+      <span class="rb-chapter-context">Ejecutar</span>
+    </header>
 
   <!-- ── TOGGLE GYM / HYROX ──────────────────── -->
   {% if hyrox_objetivo %}
@@ -1258,6 +1374,13 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     {% if portada_hoy %}</details>{% endif %}
     {% endif %}
+
+    <section id="chapter-plan" class="rb-chapter rb-chapter--plan" aria-labelledby="chapter-plan-title">
+      <header class="rb-chapter-heading">
+        <span class="rb-chapter-index">03</span>
+        <h2 class="rb-chapter-title" id="chapter-plan-title">Plan</h2>
+        <span class="rb-chapter-context">Dirección y ajustes</span>
+      </header>
 
     {# ── BLOQUE DE APRENDIZAJE — colapsado por defecto (densidad) ── #}
     <details class="rb-plan-detalle">
@@ -1798,6 +1921,16 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </details>
     {% endif %}
 
+    </details>
+    </section><!-- #chapter-plan -->
+
+    <section id="chapter-memoria" class="rb-chapter rb-chapter--memory" aria-labelledby="chapter-memoria-title">
+      <header class="rb-chapter-heading">
+        <span class="rb-chapter-index">04</span>
+        <h2 class="rb-chapter-title" id="chapter-memoria-title">Memoria</h2>
+        <span class="rb-chapter-context">Lo que permanece</span>
+      </header>
+
     <!-- Lo que sé de ti -->
     <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="display:block;text-decoration:none;">
       <div style="margin-bottom:12px;padding:14px 16px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;display:flex;align-items:center;gap:14px;">
@@ -1812,7 +1945,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
     <!-- Recent sessions -->
     {% if actividades_recientes_focus %}
-    <details class="rb-section">
+    <details class="rb-section" data-recent-sessions>
       <summary class="rb-collapse-summary" style="margin-bottom:12px;">
         <div class="rb-section-num">LOG</div>
         <h3 class="rb-section-title">Últimas Sesiones</h3>
@@ -1846,7 +1979,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </details>
     {% endif %}
 
-    </details>
+    </section><!-- #chapter-memoria -->
   </div><!-- #rbGymContent -->
 
   <!-- ── HYROX CONTENT ────────────────────────── -->
@@ -1898,6 +2031,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
   </div>
   {% endif %}
+
+  </section><!-- #chapter-entrenamiento -->
+
+  <section id="chapter-vida" class="rb-chapter rb-chapter--life" aria-labelledby="chapter-vida-title">
+    <header class="rb-chapter-heading">
+      <span class="rb-chapter-index">05</span>
+      <h2 class="rb-chapter-title" id="chapter-vida-title">Vida</h2>
+      <span class="rb-chapter-context">Contexto y herramientas</span>
+    </header>
 
   <!-- ── DIARIO ─────────────────────────────────── -->
   <div class="rb-section">
@@ -2047,7 +2189,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   </div>
 
   <!-- ── ACWR WIDGET (colapsado por defecto) ──── -->
-  <details class="rb-section" style="margin-top:20px;">
+  <details class="rb-section" data-acwr-detail style="margin-top:20px;">
     <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
       <div class="rb-section-num">CARGA</div>
       <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
@@ -2128,6 +2270,8 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;">Por qué el plan decide así</span>
     <span style="margin-left:auto;font-size:9px;font-family:var(--font-mono);color:rgba(20,184,166,0.55);font-weight:700;letter-spacing:0.1em;">→</span>
   </a>
+
+  </section><!-- #chapter-vida -->
 
 </div><!-- .rb-container -->
 
