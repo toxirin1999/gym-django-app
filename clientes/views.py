@@ -4389,7 +4389,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
     - Usa el modelo correcto 'EjercicioRealizado'.
     - Pasa los argumentos correctos al crear el objeto.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
     # print(f"\n--- [VISTA FINAL v3] Iniciando guardado para {cliente.nombre} ---")
 
     try:
@@ -4463,6 +4466,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
         entreno.volumen_total_kg = volumen_total_entreno
         entreno.numero_ejercicios = ejercicios_procesados_count
         entreno.save(update_fields=['volumen_total_kg', 'numero_ejercicios'])
+        from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
+        finalizar_gamificacion_entreno(entreno)
         # print(f"-> Entrenamiento ID {entreno.id} finalizado. Volumen: {volumen_total_entreno} kg.")
 
         messages.success(request, "¡Entrenamiento guardado con éxito! Tu progreso ha sido analizado.")

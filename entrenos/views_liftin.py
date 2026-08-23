@@ -5,6 +5,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.db.models import Q, Count, Sum, Avg
 from django.utils import timezone
 from django.core.paginator import Paginator
@@ -83,6 +84,7 @@ from django.utils.safestring import mark_safe
 import json
 
 
+@login_required
 @csrf_protect
 @require_http_methods(["GET", "POST"])
 def importar_liftin_completo(request):
@@ -91,6 +93,8 @@ def importar_liftin_completo(request):
     from rutinas.models import Rutina
 
     if request.method == 'GET':
+        if not (request.user.is_staff or request.user.is_superuser):
+            raise PermissionDenied
         clientes = Cliente.objects.all().order_by('nombre')
         rutinas = Rutina.objects.all().order_by('nombre')
         ejercicios_disponibles = EjercicioBase.objects.all().order_by('nombre')
@@ -110,13 +114,16 @@ def importar_liftin_completo(request):
         return render(request, 'entrenos/importar_liftin_completo.html', context)
 
     elif request.method == 'POST':
+        cliente_id = request.POST.get('cliente')
+        clientes = Cliente.objects.all()
+        if not (request.user.is_staff or request.user.is_superuser):
+            clientes = clientes.filter(user=request.user)
+        cliente = get_object_or_404(clientes, id=cliente_id)
         try:
-            cliente_id = request.POST.get('cliente')
             fecha_str = request.POST.get('fecha')
             rutina_id = request.POST.get('rutina')
             fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
 
-            cliente = Cliente.objects.get(id=cliente_id)
             rutina = Rutina.objects.get(id=rutina_id) if rutina_id else Rutina.objects.first()
 
             datos_entrenamiento = {
@@ -231,8 +238,8 @@ def importar_liftin_completo(request):
             entrenamiento.save()
 
             try:
-                from logros.services import CodiceService
-                CodiceService.procesar_entreno_completo(entrenamiento)
+                from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
+                finalizar_gamificacion_entreno(entrenamiento)
                 print("✅ GAMIFICACIÓN PROCESADA")
 
             except Exception as e:
@@ -240,7 +247,7 @@ def importar_liftin_completo(request):
 
             messages.success(request,
                              f"Entrenamiento de Liftin guardado correctamente con {len(ejercicios_texto)} ejercicios.")
-            return redirect('entrenos:dashboard_liftin')
+            return redirect('entrenos:dashboard_liftin', cliente_id=cliente.pk)
 
 
         except Exception as e:

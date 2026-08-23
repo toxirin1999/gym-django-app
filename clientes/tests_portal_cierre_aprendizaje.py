@@ -30,8 +30,8 @@ class PortalGuardarEntrenamientoCierreAprendizajeTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         entreno = EntrenoRealizado.objects.get(cliente=self.cliente)
+        self.assertTrue(entreno.procesado_gamificacion)
         self.assertEqual(ActividadRealizada.objects.filter(entreno_gym=entreno).count(), 1)
         decisiones = GymDecisionLog.objects.filter(entreno_origen=entreno)
         self.assertEqual(decisiones.count(), 1)
         self.assertIsNone(decisiones.get().resultado)
-

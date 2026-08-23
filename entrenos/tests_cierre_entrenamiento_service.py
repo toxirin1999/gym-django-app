@@ -74,16 +74,19 @@ class TestResumenSesion(CierreEntrenamientoBase):
     def test_resumen_usa_sesion_detalle_si_existe(self):
         entreno = self._crear_entreno(date(2026, 6, 1))
         self._crear_ejercicio(entreno)
-        # La señal de gamificación ya creó sesion_detalle con ceros al guardar
-        # el entreno; la actualizamos como lo haría guardar_entrenamiento_activo.
-        SesionEntrenamiento.objects.filter(entreno=entreno).update(
-            duracion_minutos=55,
-            series_completadas=16,
-            series_totales=16,
-            ejercicios_completados=4,
-            ejercicios_totales=4,
-            rpe_medio=7.5,
-            volumen_sesion=1920,
+        # El padre ya no produce gamificación ni sesión detalle por post_save;
+        # materializamos la métrica como lo hace el cierre activo.
+        SesionEntrenamiento.objects.update_or_create(
+            entreno=entreno,
+            defaults={
+                'duracion_minutos': 55,
+                'series_completadas': 16,
+                'series_totales': 16,
+                'ejercicios_completados': 4,
+                'ejercicios_totales': 4,
+                'rpe_medio': 7.5,
+                'volumen_sesion': 1920,
+            },
         )
         entreno = EntrenoRealizado.objects.get(pk=entreno.pk)
 

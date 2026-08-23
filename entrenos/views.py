@@ -4343,9 +4343,14 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 # ... (importaciones)
 
 
+@login_required
+@require_http_methods(["POST"])
 @transaction.atomic
 def guardar_entrenamiento_activo(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
 
     try:
 
@@ -4828,6 +4833,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # Cierre causal único: aquí ya existen hijos, métricas y modo reducido.
         from entrenos.services.decision_log_service import cerrar_aprendizaje_gym
         cerrar_aprendizaje_gym(entreno)
+
+        from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
+        finalizar_gamificacion_entreno(entreno)
 
         # El productor contractual se registra únicamente cuando la sesión ya
         # está completa. Nunca vive en post_save ni en un GET.

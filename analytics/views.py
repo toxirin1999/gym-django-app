@@ -3581,8 +3581,11 @@ def api_marcar_entreno_completado(request, cliente_id):
     API para marcar una rutina del plan como completada.
     VERSIÓN CORREGIDA que procesa los datos de repeticiones.
     """
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
     try:
-        cliente = get_object_or_404(Cliente, id=cliente_id)
         data = json.loads(request.body)
 
         fecha_str = data.get('fecha')
@@ -3634,6 +3637,9 @@ def api_marcar_entreno_completado(request, cliente_id):
         # Punto causal único: el entrenamiento ya está completamente construido.
         from entrenos.services.decision_log_service import cerrar_aprendizaje_gym
         cerrar_aprendizaje_gym(entreno)
+
+        from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
+        finalizar_gamificacion_entreno(entreno)
 
         return JsonResponse({
             'success': True,

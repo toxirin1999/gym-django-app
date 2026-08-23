@@ -51,6 +51,7 @@ class ApiMarcarCompletadoCierreAprendizajeTests(TestCase):
 
         self.assertEqual(response.status_code, 200, response.content.decode())
         entreno = EntrenoRealizado.objects.get(cliente=self.cliente, fecha=date(2026, 8, 9))
+        self.assertTrue(entreno.procesado_gamificacion)
         self.assertEqual(ActividadRealizada.objects.filter(entreno_gym=entreno).count(), 1)
         previa.refresh_from_db()
         self.assertIsNotNone(previa.resultado)

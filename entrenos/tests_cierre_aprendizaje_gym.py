@@ -98,6 +98,7 @@ class GuardarEntrenamientoActivoCierreE2ETests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(EntrenoRealizado.objects.filter(cliente=self.cliente).count(), 1)
         entreno = EntrenoRealizado.objects.get(cliente=self.cliente)
+        self.assertTrue(entreno.procesado_gamificacion)
         self.assertTrue(entreno.modo_reducido)
         self.assertEqual(ActividadRealizada.objects.filter(entreno_gym=entreno).count(), 1)
         previa.refresh_from_db()

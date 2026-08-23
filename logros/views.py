@@ -2,7 +2,7 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
 from datetime import timedelta
@@ -272,27 +272,8 @@ def ranking_clientes(request):
 
 @login_required
 def procesar_entreno(request, entreno_id):
-    """Procesa manualmente la gamificación de un entrenamiento"""
-    from entrenos.models import EntrenoRealizado
-
-    entreno = get_object_or_404(EntrenoRealizado, id=entreno_id)
-
-    try:
-        resultado = CodiceService.procesar_entreno_completo(entreno)
-
-        mensaje = f"Entrenamiento procesado exitosamente. "
-        if resultado['pruebas_completadas']:
-            mensaje += f"Pruebas completadas: {len(resultado['pruebas_completadas'])}. "
-        if resultado['nivel_subido']:
-            mensaje += "¡Nivel subido! "
-        mensaje += f"Puntos totales: {resultado['puntos_totales']}"
-
-        messages.success(request, mensaje)
-
-    except Exception as e:
-        messages.error(request, f"Error al procesar el entrenamiento: {str(e)}")
-
-    return redirect('logros:perfil_gamificacion', cliente_id=entreno.cliente.id)
+    """Ruta legacy retirada: la gamificación solo se cierra en el flujo causal."""
+    raise Http404
 
 
 # --------------------------------------------------------------------------
@@ -360,7 +341,10 @@ def analisis_global(request):
 @login_required
 def listar_notificaciones(request, cliente_id):
     """Lista las notificaciones de un cliente"""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
 
     try:
         perfil = PerfilGamificacion.objects.get(cliente=cliente)
@@ -390,7 +374,10 @@ def listar_notificaciones(request, cliente_id):
 def marcar_notificacion_leida(request, notificacion_id):
     """Marca una notificación como leída"""
     if request.method == 'POST':
-        notificacion = get_object_or_404(Notificacion, id=notificacion_id)
+        notificaciones = Notificacion.objects.all()
+        if not (request.user.is_staff or request.user.is_superuser):
+            notificaciones = notificaciones.filter(perfil__cliente__user=request.user)
+        notificacion = get_object_or_404(notificaciones, id=notificacion_id)
         notificacion.leida = True
         notificacion.save()
 
@@ -402,7 +389,10 @@ def marcar_notificacion_leida(request, notificacion_id):
 @login_required
 def obtener_notificaciones_ajax(request, cliente_id):
     """Obtiene las notificaciones no leídas de un cliente vía AJAX"""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
 
     try:
         perfil = PerfilGamificacion.objects.get(cliente=cliente)

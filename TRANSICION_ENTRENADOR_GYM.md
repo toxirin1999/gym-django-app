@@ -1680,3 +1680,17 @@ python manage.py auditar_revision_memoria \
   inexistentes, y el propietario no ve el enlace de edición.
 - Se preservan las rutas personales y demos fuera de este corte. No se cambia
   la lógica legacy de asignación de rutina ni se introduce esquema nuevo.
+
+### Fase 12.4.1 — cierre único de gamificación
+
+- Crear el padre ya no puntúa: se retiró el receiver productor de
+  `logros.services`.
+- Los cierres Gym, portal, analytics y Liftin llaman al finalizador canónico
+  solo después de guardar hijos y métricas.
+- `procesado_gamificacion`, protegido con `select_for_update`, es el latch
+  transaccional. Un retry es lectura idempotente y un fallo deja el latch en
+  `False` por rollback.
+- El endpoint manual legacy responde 404 sin mutar. No se ejecuta backfill, no
+  se toca histórico, no hay migración y `RecordsService` conserva su papel.
+- Propietario o staff/superusuario delimitan cierres y notificaciones para
+  impedir acceso o mutación cruzada.

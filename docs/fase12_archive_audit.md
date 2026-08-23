@@ -1,4 +1,22 @@
-# Fase 12.1–12.3 — auditoría y archivado reversible de superficies legacy
+# Fase 12.1–12.4.1 — auditoría, archivo y cierre causal
+
+## Fase 12.4.1 — finalización causal de gamificación
+
+La creación de `EntrenoRealizado` ya no concede puntos. El productor
+`post_save` se retiró y la autoridad canónica es
+`finalizar_gamificacion_entreno`, invocada explícitamente cuando ejercicios y
+métricas ya están persistidos. El servicio bloquea el padre con
+`select_for_update` y usa `procesado_gamificacion` como latch: una primera
+ejecución concede premios y marca el latch en la misma transacción; un retry
+devuelve `already_processed` sin tocar perfil, ledger o notificaciones; un
+fallo revierte todas las mutaciones y conserva el latch abierto.
+
+El cierre está conectado a Gym activo, portal, API analytics y al importador
+Liftin conservado bajo su flag de archivo. La ruta manual
+`logros/procesar-entreno` permanece registrada por compatibilidad, pero responde
+404 y no puede reproducir premios. No se reinterpreta ni reprocesa historia y
+no hay cambio de esquema. Las rutas activas de cierre y notificaciones aplican
+propietario exacto o staff/superusuario; un tercero obtiene 404 conservador.
 
 ## Fase 12.3 — Liftin archivado en UX
 

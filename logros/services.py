@@ -4,8 +4,6 @@ import logging
 from datetime import datetime, timedelta
 from django.db import transaction
 from django.db.models import Sum, Count, Q
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
 from .models import (
     PerfilGamificacion, Arquetipo, PruebaLegendaria, PruebaUsuario,
@@ -14,15 +12,6 @@ from .models import (
 from entrenos.models import EntrenoRealizado, SerieRealizada, SesionEntrenamiento
 
 logger = logging.getLogger('gamificacion')
-
-
-@receiver(post_save, sender=EntrenoRealizado)
-def procesar_gamificacion_post_entreno(sender, instance, created, raw=False, **kwargs):
-    """Signal que se ejecuta automáticamente después de crear un EntrenoRealizado"""
-    if raw or not created:
-        return
-    logger.info(f"SIGNAL: Detectado nuevo entreno {instance.id}. Iniciando procesamiento.")
-    CodiceService.procesar_entreno_completo(instance)
 
 
 class CodiceService:
