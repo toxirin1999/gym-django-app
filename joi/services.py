@@ -181,6 +181,14 @@ def construir_contexto(cliente) -> dict:
     except Exception as e:
         logger.error('[construir_contexto] continuidad_pausa falló: %s', e)
 
+    try:
+        from joi.services_manual_authority import construir_contexto_autoridad_manual
+        ctx['manual_authority'] = construir_contexto_autoridad_manual(
+            cliente.user, as_of=hoy,
+        )
+    except Exception as e:
+        logger.error('[construir_contexto] autoridad ManualDavid falló: %s', e)
+
     return ctx
 
 
@@ -1736,7 +1744,7 @@ def generar_lectura_plan(cliente) -> "MensajeJOI | None":
 
 # ── Manual de David ──────────────────────────────────────────────────────────
 
-def _bloque_manual(user, incluir_narrativa=True) -> str:
+def _bloque_manual(user, incluir_narrativa=True, *, as_of=None) -> str:
     """
     Formatea las entradas activas del Manual de David para incluir en prompts.
     Separa por tipo para que JOI calibre el peso de cada entrada:
@@ -1745,47 +1753,16 @@ def _bloque_manual(user, incluir_narrativa=True) -> str:
     - Hipótesis activas: revisables, con confianza
     - Hipótesis cuestionadas: visibles pero marcadas
     """
-    from joi.models import ManualDavid, NarrativaActiva
-
-    entradas = list(
-        ManualDavid.objects.filter(user=user, activa=True)
-        .exclude(estado='descartada')
-        .order_by('tipo', 'creado_en')
-        .values('entrada', 'tipo', 'confianza', 'estado', 'hipotesis_contraria')
+    from joi.services_manual_authority import (
+        formatear_manual_para_prompt,
+        resolver_autoridad_manual,
     )
+
+    entradas = resolver_autoridad_manual(user, as_of=as_of)
     if not entradas:
         return _bloque_narrativa(user) if incluir_narrativa else ''
 
-    TIPOS_ESTABLES  = {'dato_usuario', 'preferencia', 'limite'}
-    TIPOS_REVISABLE = {'patron', 'hipotesis', 'contradiccion'}
-
-    estables  = [e for e in entradas if e['tipo'] in TIPOS_ESTABLES]
-    revisables = [e for e in entradas if e['tipo'] in TIPOS_REVISABLE and e['estado'] == 'activa']
-    cuestionadas = [e for e in entradas if e['tipo'] in TIPOS_REVISABLE and e['estado'] in ('debilitada', 'cuestionada')]
-
-    lineas = ['MANUAL DE DAVID (lo que has aprendido sobre cómo leerle):']
-
-    if estables:
-        lineas.append('  Hechos y preferencias:')
-        for e in estables:
-            lineas.append(f'  - {e["entrada"]}')
-
-    if revisables:
-        lineas.append('  Hipótesis activas (confianza indicada):')
-        for e in revisables:
-            pct = int(e['confianza'] * 100)
-            linea = f'  - [{pct}%] {e["entrada"]}'
-            if e['hipotesis_contraria']:
-                linea += f' (alternativa posible: {e["hipotesis_contraria"]})'
-            lineas.append(linea)
-
-    if cuestionadas:
-        lineas.append('  Hipótesis en duda (mantén distancia crítica):')
-        for e in cuestionadas:
-            lineas.append(f'  - [?] {e["entrada"]}')
-
-    lineas.append('')
-    bloque = '\n'.join(lineas) + '\n'
+    bloque = formatear_manual_para_prompt(entradas)
 
     narrativa_bloque = _bloque_narrativa(user) if incluir_narrativa else ''
     return bloque + narrativa_bloque
@@ -2303,17 +2280,16 @@ def _actualizar_narrativa_activa(cliente, ctx: dict, cambio_significativo: bool 
 
     Una sola llamada a Haiku genera solo las capas necesarias (formato prefijado).
     """
-    from joi.models import ManualDavid, NarrativaActiva
+    from joi.models import NarrativaActiva
+    from joi.services_manual_authority import resolver_autoridad_manual
 
-    hipotesis = list(
-        ManualDavid.objects.filter(
-            user=cliente.user,
-            activa=True,
-            tipo__in=('hipotesis', 'patron'),
-            estado='activa',
-            confianza__gte=0.5,
-        ).order_by('-confianza').values_list('entrada', flat=True)[:5]
-    )
+    autorizadas = resolver_autoridad_manual(cliente.user)
+    hipotesis = [
+        item['entrada'] for item in autorizadas
+        if item['tipo'] in {'hipotesis', 'patron'}
+        and item['authority'] != 'uncertain_hypothesis'
+        and item['confidence'] >= 0.5
+    ][:5]
     if not hipotesis:
         return
 
@@ -3872,7 +3848,7 @@ def generar_narrativa_bloque(cliente, fase_cliente) -> "MensajeJOI | None":
     2. Qué aprendió el sistema que no sabía antes
     3. Qué pregunta abre el siguiente bloque
     """
-    from joi.models import MensajeJOI, ManualDavid, NarrativaActiva, JoiSintesisLog
+    from joi.models import MensajeJOI, NarrativaActiva, JoiSintesisLog
     from entrenos.models import EntrenoRealizado, GymDecisionLog
     from datetime import timedelta
 
@@ -3906,13 +3882,17 @@ def generar_narrativa_bloque(cliente, fase_cliente) -> "MensajeJOI | None":
     )
 
     # Hipótesis de ManualDavid que evolucionaron durante el bloque
-    manual_evolucionado = list(
-        ManualDavid.objects.filter(
-            user=cliente.user,
-            ultima_evidencia__range=(fecha_inicio, fecha_fin),
-            activa=True,
-        ).order_by('-confianza').values('entrada', 'estado', 'confianza')[:4]
-    )
+    from joi.services_manual_authority import resolver_autoridad_manual
+    manual_evolucionado = [
+        {
+            'entrada': item['entrada'],
+            'estado': item['estado'],
+            'confianza': item['confidence'],
+        }
+        for item in resolver_autoridad_manual(cliente.user, as_of=fecha_fin)
+        if item.get('ultima_evidencia')
+        and fecha_inicio <= item['ultima_evidencia'] <= fecha_fin
+    ][:4]
 
     # NarrativaActiva al cierre del bloque
     narrativa_txt = ''

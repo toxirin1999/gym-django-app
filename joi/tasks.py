@@ -443,19 +443,19 @@ def generar_poda_mensual(self):
     Solo genera el mensaje si hay entradas activas en el manual.
     """
     from clientes.models import Cliente
-    from joi.models import MensajeJOI, ManualDavid
+    from joi.models import MensajeJOI
     from joi.services import generar_mensaje_joi
+    from joi.services_manual_authority import resolver_autoridad_manual
 
     hoy = datetime.date.today()
     generados = 0
 
     for cliente in Cliente.objects.select_related('user').all():
         try:
-            entradas = list(
-                ManualDavid.objects
-                .filter(user=cliente.user, activa=True)
-                .values_list('entrada', flat=True)
-            )
+            entradas = [
+                item['entrada']
+                for item in resolver_autoridad_manual(cliente.user, as_of=hoy)
+            ]
             if not entradas:
                 continue
 

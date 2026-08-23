@@ -40,6 +40,7 @@ def registrar_mood(request):
 @login_required
 def narrativa_joi_view(request):
     from .models import NarrativaActiva, ManualDavid, JoiSintesisLog
+    from joi.services_manual_authority import resolver_autoridad_manual
 
     narrativa = None
     try:
@@ -49,12 +50,18 @@ def narrativa_joi_view(request):
     except NarrativaActiva.DoesNotExist:
         pass
 
-    manual_activo = list(
-        ManualDavid.objects
-        .filter(user=request.user, activa=True)
-        .exclude(estado='descartada')
-        .order_by('-confianza', 'creado_en')[:8]
-    )
+    autoridad_manual = resolver_autoridad_manual(request.user)[:8]
+    manual_by_id = {
+        item.pk: item
+        for item in ManualDavid.objects.filter(
+            pk__in=[entry['id'] for entry in autoridad_manual],
+        )
+    }
+    manual_activo = [
+        manual_by_id[entry['id']]
+        for entry in autoridad_manual
+        if entry['id'] in manual_by_id
+    ]
 
     ultimo_log = (
         JoiSintesisLog.objects

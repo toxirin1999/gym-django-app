@@ -1448,3 +1448,27 @@ superficies queda para 7B.
   un deshacer ajeno, doble u obsoleto se rechaza de forma neutral. Confirmar y
   descartar sacan la memoria de la cola; cuestionar y posponer respetan el
   aplazamiento de 14 días definido por F1.
+- Fase 8.0-G centraliza en `joi.services_manual_authority` qué memoria puede
+  alimentar contexto, prompts y narrativa. La selección excluye siempre
+  `activa=False` y `estado=descartada`, resuelve la última operación humana
+  efectiva no revertida en una segunda consulta única y evita N+1.
+- La prioridad determinista es: corrección explícita `feedback_error`,
+  confirmación humana, datos/preferencias/límites en uso, hipótesis automáticas
+  e hipótesis inciertas. Una confirmación se etiqueta como procedencia humana y
+  gana a patrones automáticos, pero el prompt declara que no es verdad absoluta
+  ni conocimiento consolidado. Las cuestionadas solo aparecen como hipótesis
+  explícitamente inciertas y nunca como hecho o instrucción.
+- `cuestionar` y `posponer` silencian esa memoria para generación durante los
+  primeros 13 días; el día 14 reaparece con su semántica correspondiente. Una
+  reversión elimina el efecto de la operación y recupera exactamente la
+  autoridad derivada del estado anterior. Las correcciones explícitas conservan
+  máxima prioridad.
+- `construir_contexto` incorpora únicamente provenance estructurada mínima
+  (`manual_id`, autoridad, fuente y, cuando existe, ID de operación). No incluye
+  texto, snapshots, motivo ni notas. `_bloque_manual`, actualización narrativa,
+  narrativa de cierre de bloque, razón legible y poda mensual reutilizan la
+  política; no se crean triggers, mensajes, apariciones ni llamadas IA nuevas.
+- Gap previo no abordado en esta fase: la rama Paradoja B de
+  `_prompt_apertura_manana` intenta leer `cliente.user` fuera de ámbito y atrapa
+  silenciosamente el error. Se mantiene sin cambios para no mezclar un bugfix de
+  apertura con el contrato de autoridad 8.0-G.
