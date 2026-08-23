@@ -72,9 +72,21 @@ def _materializar_desde_bloque(bloque, estrategia, semana):
     return contrato
 
 
-def preparar_semana_gym(*, fecha_referencia=None, aplicar=False):
+def preparar_semana_gym(*, fecha_referencia=None, aplicar=False, solo_domingo=False):
     """Previsualiza o materializa la semana de todos los bloques elegibles."""
-    semana = semana_objetivo(fecha_referencia)
+    referencia = fecha_referencia or timezone.localdate()
+    semana = semana_objetivo(referencia)
+    if solo_domingo and referencia.weekday() != 6:
+        return {
+            'estado': 'omitida_programacion',
+            'fecha_referencia': referencia.isoformat(),
+            'modo': 'apply' if aplicar else 'dry-run',
+            'resultados': [],
+            'semana': semana.isoformat(),
+            'solo_domingo': True,
+            'solo_lectura': True,
+        }
+
     bloques = list(
         ContratoBloqueGym.objects.filter(
             estado=ContratoBloqueGym.ESTADO_ACTIVO,

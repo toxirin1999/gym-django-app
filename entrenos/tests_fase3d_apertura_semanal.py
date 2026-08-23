@@ -46,6 +46,88 @@ class AperturaSemanalGymTests(TestCase):
         self.assertEqual(semana_objetivo(date(2026, 8, 24)), date(2026, 8, 24))
         self.assertEqual(semana_objetivo(date(2026, 8, 23)), date(2026, 8, 24))
 
+    @patch('entrenos.services.apertura_semanal_gym_service.materializar_contrato_semanal_gym')
+    @patch('entrenos.services.apertura_semanal_gym_service.previsualizar_contrato_semanal_gym')
+    def test_solo_domingo_omite_sabado_y_lunes_sin_consultas_ni_motor(
+        self, preview, materializar,
+    ):
+        from entrenos.services.apertura_semanal_gym_service import preparar_semana_gym
+
+        for referencia in (date(2026, 8, 22), date(2026, 8, 24)):
+            with self.subTest(referencia=referencia), self.assertNumQueries(0):
+                resultado = preparar_semana_gym(
+                    fecha_referencia=referencia,
+                    aplicar=True,
+                    solo_domingo=True,
+                )
+
+            self.assertEqual(resultado['estado'], 'omitida_programacion')
+            self.assertEqual(resultado['resultados'], [])
+            self.assertEqual(resultado['fecha_referencia'], referencia.isoformat())
+            self.assertTrue(resultado['solo_domingo'])
+
+        preview.assert_not_called()
+        materializar.assert_not_called()
+
+    @patch('entrenos.services.apertura_semanal_gym_service.timezone.localdate',
+           return_value=date(2026, 8, 24))
+    def test_solo_domingo_sin_referencia_usa_localdate_de_django(self, localdate):
+        from entrenos.services.apertura_semanal_gym_service import preparar_semana_gym
+
+        with self.assertNumQueries(0):
+            resultado = preparar_semana_gym(solo_domingo=True)
+
+        self.assertEqual(resultado['estado'], 'omitida_programacion')
+        self.assertEqual(resultado['fecha_referencia'], '2026-08-24')
+        localdate.assert_called_once_with()
+
+    @patch('entrenos.services.apertura_semanal_gym_service.previsualizar_contrato_semanal_gym')
+    def test_solo_domingo_previsualiza_la_semana_del_lunes_siguiente(self, preview):
+        cliente, _, _ = self._cliente('domingo_preview')
+        preview.return_value = [(self.lunes, {'dia': 1, 'rutina_nombre': 'A'})]
+
+        from entrenos.services.apertura_semanal_gym_service import preparar_semana_gym
+        resultado = preparar_semana_gym(
+            fecha_referencia=date(2026, 8, 23), solo_domingo=True,
+        )
+
+        self.assertEqual(resultado['semana'], '2026-08-24')
+        self.assertEqual(resultado['resultados'][0]['estado'], 'previsualizada')
+        preview.assert_called_once_with(cliente, self.lunes)
+
+    @patch('entrenos.services.apertura_semanal_gym_service.materializar_contrato_semanal_gym')
+    def test_solo_domingo_apply_materializa_la_semana_del_lunes_siguiente(self, materializar):
+        cliente, estrategia, bloque = self._cliente('domingo_apply')
+
+        def crear(*_args):
+            return ContratoSemanalGym.objects.create(
+                cliente=cliente, estrategia=estrategia, bloque=bloque,
+                indice_semana_bloque=1, semana=self.lunes,
+                objetivo_sesiones=1, minimo_valido=1,
+            )
+
+        materializar.side_effect = crear
+        from entrenos.services.apertura_semanal_gym_service import preparar_semana_gym
+        resultado = preparar_semana_gym(
+            fecha_referencia=date(2026, 8, 23), aplicar=True, solo_domingo=True,
+        )
+
+        self.assertEqual(resultado['semana'], '2026-08-24')
+        self.assertEqual(resultado['resultados'][0]['estado'], 'materializada')
+        materializar.assert_called_once_with(cliente, self.lunes)
+
+    @patch('entrenos.services.apertura_semanal_gym_service.previsualizar_contrato_semanal_gym')
+    def test_sin_guard_conserva_ejecucion_manual_cualquier_dia(self, preview):
+        cliente, _, _ = self._cliente('manual_martes')
+        preview.return_value = []
+
+        from entrenos.services.apertura_semanal_gym_service import preparar_semana_gym
+        resultado = preparar_semana_gym(fecha_referencia=date(2026, 8, 25))
+
+        self.assertEqual(resultado['semana'], '2026-08-31')
+        self.assertEqual(resultado['resultados'][0]['estado'], 'previsualizada')
+        preview.assert_called_once_with(cliente, date(2026, 8, 31))
+
     @patch('entrenos.services.apertura_semanal_gym_service.previsualizar_contrato_semanal_gym')
     def test_dry_run_previsualiza_sin_escribir(self, preview):
         cliente, _, _ = self._cliente('a')
@@ -167,3 +249,19 @@ class AperturaSemanalGymTests(TestCase):
         self.assertEqual(payload['semana'], '2026-08-24')
         self.assertEqual(payload['modo'], 'dry-run')
         self.assertIn('"modo":"dry-run"', salida.getvalue())
+
+    @patch('entrenos.services.apertura_semanal_gym_service.previsualizar_contrato_semanal_gym')
+    def test_comando_solo_domingo_emite_json_determinista_y_omite_lunes(self, preview):
+        salida = StringIO()
+        call_command(
+            'preparar_semana_gym', fecha_referencia='2026-08-24',
+            solo_domingo=True, apply=True, stdout=salida,
+        )
+
+        self.assertEqual(
+            salida.getvalue(),
+            '{"estado":"omitida_programacion","fecha_referencia":"2026-08-24",'
+            '"modo":"apply","resultados":[],"semana":"2026-08-24",'
+            '"solo_domingo":true,"solo_lectura":true}\n',
+        )
+        preview.assert_not_called()

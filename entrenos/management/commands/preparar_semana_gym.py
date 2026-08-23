@@ -15,6 +15,11 @@ class Command(BaseCommand):
             help='Fecha ISO YYYY-MM-DD; por defecto usa timezone.localdate().',
         )
         parser.add_argument('--apply', action='store_true')
+        parser.add_argument(
+            '--solo-domingo',
+            action='store_true',
+            help='Omite la ejecución salvo cuando la fecha local de referencia sea domingo.',
+        )
 
     def handle(self, *args, **options):
         referencia = None
@@ -26,6 +31,7 @@ class Command(BaseCommand):
         payload = preparar_semana_gym(
             fecha_referencia=referencia,
             aplicar=options['apply'],
+            solo_domingo=options['solo_domingo'],
         )
         self.stdout.write(json.dumps(
             payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False,

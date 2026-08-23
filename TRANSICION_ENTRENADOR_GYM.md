@@ -313,6 +313,13 @@ concurrente no pueda dejar un contrato semanal sin vínculo; una carrera de
 unicidad se reconoce como idempotencia cuando la identidad persistida es
 coherente, o se informa como error controlado.
 
+El flag explícito `--solo-domingo` permite usar el mismo comando desde una
+programación frecuente: toma `--fecha-referencia` o `timezone.localdate()` y,
+si esa fecha no es domingo, responde globalmente `omitida_programacion` sin
+consultar bloques, invocar Helms, materializar ni escribir. En domingo conserva
+la apertura de la semana cuyo lunes es el día siguiente, tanto en preview como
+con `--apply`. Sin el flag, la ejecución manual sigue disponible cualquier día.
+
 Cada cliente produce su propio resultado, por lo que una divergencia, una
 semana incompleta o un error de integridad no bloquea a los demás. Este es un
 workflow operativo explícito: no se conecta a GET, signals, JOI, Celery ni a
@@ -325,6 +332,7 @@ python manage.py preparar_semana_gym \
 
 python manage.py preparar_semana_gym \
   --fecha-referencia 2026-08-23 \
+  --solo-domingo \
   --apply \
   --settings=gymproject.settings
 ```
