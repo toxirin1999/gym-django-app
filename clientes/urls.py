@@ -128,6 +128,8 @@ urlpatterns = [
     path('plan/decisiones/', views.plan_decisiones_view, name='plan_decisiones'),
     path('plan/cierre-semanal/<int:evaluacion_id>/aceptar/', views.aceptar_cierre_semanal_view, name='aceptar_cierre_semanal'),
     path('plan/cierre-semanal/<int:evaluacion_id>/rechazar/', views.rechazar_cierre_semanal_view, name='rechazar_cierre_semanal'),
+    path('plan/cierre-bloque/<int:evaluacion_id>/aceptar/', views.aceptar_cierre_bloque_view, name='aceptar_cierre_bloque'),
+    path('plan/cierre-bloque/<int:evaluacion_id>/rechazar/', views.rechazar_cierre_bloque_view, name='rechazar_cierre_bloque'),
 
     # Phase 62G.0 — Decision center 2.0 mockup (datos dummy, solo visual)
     path('plan/decisiones/mockup/', views.plan_decisiones_mockup_view, name='plan_decisiones_mockup'),

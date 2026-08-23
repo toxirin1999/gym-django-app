@@ -5340,7 +5340,7 @@ def plan_decisiones_view(request):
     multiweek pattern, recent load decisions, and essential-mode sessions.
     """
     from entrenos.models import (
-        EvaluacionSemanalGym, IntervencionPlan, GymDecisionLog, EntrenoRealizado,
+        EvaluacionBloqueGym, EvaluacionSemanalGym, IntervencionPlan, GymDecisionLog, EntrenoRealizado,
         PreferenciaPlanAprendida,
     )
     from entrenos.services.centro_decisiones_service import (
@@ -5369,6 +5369,27 @@ def plan_decisiones_view(request):
         for clave in ('volumen_total_kg', 'energia_pre_sesion_media', 'rpe_medio'):
             valor = metricas_cierre.get(clave)
             cierre_metricas_ui[clave] = str(valor).replace('.', ',') if valor is not None else None
+
+    # Fase 11B: consulta pura de la última evaluación longitudinal pendiente.
+    # El resumen UI usa una lista blanca; nunca expone texto libre del snapshot.
+    cierre_bloque = (
+        EvaluacionBloqueGym.objects.filter(
+            bloque__cliente=cliente,
+            estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+        )
+        .select_related('bloque')
+        .order_by('-creado_en', '-id')
+        .first()
+    )
+    cierre_bloque_semanas_ui = []
+    if cierre_bloque:
+        for semana in (cierre_bloque.evidencia_snapshot or {}).get('semanas', []):
+            cierre_bloque_semanas_ui.append({
+                'indice': semana.get('indice'),
+                'cumplimiento': semana.get('cumplimiento'),
+                'sesiones_completadas': semana.get('sesiones_completadas', 0),
+                'protegidas_seguridad': semana.get('protegidas_seguridad', 0),
+            })
 
     # Una sola propuesta ordinaria, elegida con una consulta pura. Las
     # hipótesis usan su flujo separado y nunca compiten por este espacio.
@@ -5548,6 +5569,8 @@ def plan_decisiones_view(request):
         'decisiones_agrupadas': decisiones_agrupadas,
         'cierre_semanal': cierre_semanal,
         'cierre_metricas_ui': cierre_metricas_ui,
+        'cierre_bloque': cierre_bloque,
+        'cierre_bloque_semanas_ui': cierre_bloque_semanas_ui,
     })
 
 
@@ -5584,6 +5607,42 @@ def rechazar_cierre_semanal_view(request, evaluacion_id):
     )
     responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=False)
     messages.info(request, 'La lectura queda marcada como no representativa.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def aceptar_cierre_bloque_view(request, evaluacion_id):
+    """Finaliza el bloque propio al aceptar su evaluación longitudinal pendiente."""
+    from entrenos.models import EvaluacionBloqueGym
+    from entrenos.services.contrato_bloque_gym_service import responder_evaluacion_bloque_gym
+
+    evaluacion = get_object_or_404(
+        EvaluacionBloqueGym,
+        pk=evaluacion_id,
+        bloque__cliente__user=request.user,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    )
+    responder_evaluacion_bloque_gym(evaluacion, actor=request.user, aceptar=True)
+    messages.success(request, 'Bloque finalizado y evidencia congelada.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def rechazar_cierre_bloque_view(request, evaluacion_id):
+    """Rechaza la lectura longitudinal propia y mantiene el bloque abierto."""
+    from entrenos.models import EvaluacionBloqueGym
+    from entrenos.services.contrato_bloque_gym_service import responder_evaluacion_bloque_gym
+
+    evaluacion = get_object_or_404(
+        EvaluacionBloqueGym,
+        pk=evaluacion_id,
+        bloque__cliente__user=request.user,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    )
+    responder_evaluacion_bloque_gym(evaluacion, actor=request.user, aceptar=False)
+    messages.info(request, 'El bloque permanece abierto.')
     return redirect('clientes:plan_decisiones')
 
 

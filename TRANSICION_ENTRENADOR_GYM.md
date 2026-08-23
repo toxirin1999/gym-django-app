@@ -290,6 +290,20 @@ sesiones, autoridad diaria ni `dias_disponibles`, y nunca se crea
 automáticamente el bloque siguiente. `cerrar_bloque_gym` y
 `responder_evaluacion_bloque_gym` son dry-run por defecto y exigen `--apply`.
 
+### Fase 11B — revisión del cierre de bloque en el Centro
+
+El Centro de decisiones muestra, dentro de «Activo ahora», una única tarjeta
+para la evaluación longitudinal pendiente más reciente del propietario. El GET
+es estrictamente de consulta: no previsualiza, recalcula, crea ni cierra nada.
+La tarjeta puede coexistir con el cierre semanal y limita su contenido al
+objetivo, rango, versión, resultado y conteos estructurados ya persistidos en
+`evidencia_snapshot`; no presenta notas privadas, texto libre ni voz de JOI.
+
+Aceptar o rechazar exige sesión, propiedad y estado pendiente. Ambos flujos
+delegan la transición en `responder_evaluacion_bloque_gym` y vuelven al Centro
+mediante PRG. Aceptar finaliza y congela el bloque; rechazar lo mantiene abierto.
+Una evaluación ajena o ya revisada responde 404 sin mutaciones.
+
 ## 8. Fase 4 — Cerrar ciclos Gym
 
 ### Objetivo

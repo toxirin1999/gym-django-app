@@ -1047,6 +1047,47 @@
         <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
       </header>
 
+      {% if cierre_bloque %}
+      <article class="dc-card is-weekly-close" aria-labelledby="cierre-bloque-titulo">
+        <div class="dc-close-head">
+          <h3 class="dc-close-title" id="cierre-bloque-titulo">Cierre del bloque</h3>
+          <span class="dc-pill is-learned">Requiere tu revisión</span>
+        </div>
+        <p class="dc-card-meta">
+          {{ cierre_bloque.bloque.semana_inicio|date:"d/m/Y" }}–{{ cierre_bloque.bloque.semana_fin_prevista|date:"d/m/Y" }}
+          · Versión {{ cierre_bloque.bloque.version }}
+        </p>
+        <p class="dc-close-score">{{ cierre_bloque.get_estado_resultado_display }}</p>
+        <p class="dc-card-text">{{ cierre_bloque.bloque.objetivo_principal }}</p>
+        <p class="dc-card-meta">
+          Objetivo semanal: {{ cierre_bloque.bloque.objetivo_sesiones }} · mínimo válido: {{ cierre_bloque.bloque.minimo_valido }}
+          · cálculo {{ cierre_bloque.version_calculo }}
+        </p>
+        {% if cierre_bloque_semanas_ui %}
+        <ul class="dc-close-metrics" aria-label="Evidencia factual por semana">
+          {% for semana in cierre_bloque_semanas_ui %}
+          <li>
+            Semana {{ semana.indice }}:
+            {% if semana.cumplimiento == 'objetivo' %}objetivo{% elif semana.cumplimiento == 'minima_valida' %}mínima válida{% elif semana.cumplimiento == 'insuficiente' %}insuficiente{% else %}sin evidencia{% endif %}
+            · {{ semana.sesiones_completadas }} sesiones · {{ semana.protegidas_seguridad }} protegida{{ semana.protegidas_seguridad|pluralize:"s" }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        <p class="dc-card-note">Aceptar finaliza y congela el bloque. Rechazar mantiene el bloque abierto.</p>
+        <div class="dc-actions" aria-label="Revisar cierre del bloque">
+          <form method="post" action="{% url 'clientes:aceptar_cierre_bloque' cierre_bloque.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-primary" type="submit">Aceptar y finalizar bloque</button>
+          </form>
+          <form method="post" action="{% url 'clientes:rechazar_cierre_bloque' cierre_bloque.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-quiet" type="submit">Rechazar y mantener abierto</button>
+          </form>
+        </div>
+      </article>
+      {% endif %}
+
       {% if cierre_semanal %}
       {% with datos=cierre_semanal.evidencia_snapshot metricas=cierre_semanal.evidencia_snapshot.metricas cobertura=cierre_semanal.evidencia_snapshot.metricas.cobertura %}
       <article class="dc-card is-weekly-close" aria-labelledby="cierre-semanal-titulo">
@@ -1179,7 +1220,7 @@
       </article>
       {% endif %}
 
-      {% if not cierre_semanal and not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+      {% if not cierre_bloque and not cierre_semanal and not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
       <div class="dc-empty">
         <strong>El plan no necesita ninguna decisión tuya ahora.</strong>
         Seguirá observando tus sesiones y te avisará cuando exista evidencia suficiente para proponer un cambio.
