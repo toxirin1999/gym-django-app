@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.db import IntegrityError
 from django.db.models import Avg, Count, ExpressionWrapper, F, FloatField, Max, Prefetch, Q, Sum
 from django.db.models.functions import Coalesce
-from django.http import HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -19,11 +19,29 @@ from django.core.cache import cache
 import json
 import logging
 import random
+from functools import wraps
 from calendar import monthrange
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Dict
+
+
+def _es_gestor_clientes(user):
+    """Política única de gestión, alineada con ``redirigir_usuario``."""
+    return user.is_staff or user.is_superuser
+
+
+def gestor_clientes_required(view_func):
+    """Redirige anónimos al login y responde 403 a usuarios sin rol gestor."""
+    @login_required
+    @wraps(view_func)
+    def _wrapped(request, *args, **kwargs):
+        if not _es_gestor_clientes(request.user):
+            return HttpResponseForbidden("Acceso solo para entrenadores.")
+        return view_func(request, *args, **kwargs)
+
+    return _wrapped
 
 # Project-specific (App ) Imports
 from analytics.analytics_predictivos import predecir_riesgo_abandono
@@ -2940,7 +2958,7 @@ def api_lista_clientes(request):
     """
     API que devuelve la lista de clientes en formato JSON o como un fragmento HTML.
     """
-    if not request.user.is_staff:
+    if not _es_gestor_clientes(request.user):
         return JsonResponse({'error': 'Acceso no autorizado'}, status=403)
 
     search_query = request.GET.get('q', '')
@@ -3000,7 +3018,10 @@ from decimal import Decimal, ROUND_HALF_UP
 @login_required
 def detalle_cliente(request, cliente_id):
     # --- 1. OBTENCIÓN DE DATOS PRINCIPALES ---
-    cliente = get_object_or_404(Cliente, pk=cliente_id)
+    clientes_visibles = Cliente.objects.all()
+    if not _es_gestor_clientes(request.user):
+        clientes_visibles = clientes_visibles.filter(user=request.user)
+    cliente = get_object_or_404(clientes_visibles, pk=cliente_id)
     revisiones = RevisionProgreso.objects.filter(cliente=cliente).order_by('fecha')
     ultima_revision = revisiones.last()
 
@@ -3380,6 +3401,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 
 
+@gestor_clientes_required
 @require_POST  # Solo permite peticiones POST
 def asignar_programa(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -3398,6 +3420,7 @@ def asignar_programa(request, cliente_id):
     return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
 
 
+@gestor_clientes_required
 @require_POST
 def asignar_rutina(request, cliente_id):
     cliente = get_object_or_404(Cliente, pk=cliente_id)
@@ -3423,7 +3446,7 @@ from .forms import ClienteForm
 from .models import Cliente
 
 
-@login_required
+@gestor_clientes_required
 def agregar_cliente(request):
     if request.method == 'POST':
         form = ClienteForm(request.POST, request.FILES)
@@ -3454,7 +3477,7 @@ def agregar_cliente(request):
 from django.contrib.auth.models import User
 
 
-@login_required
+@gestor_clientes_required
 def editar_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
 
@@ -3488,7 +3511,7 @@ def editar_cliente(request, cliente_id):
 
 
 # Vista eliminar cliente
-@login_required
+@gestor_clientes_required
 def eliminar_cliente(request, cliente_id):
     cliente = get_object_or_404(Cliente, id=cliente_id)
     if request.method == 'POST':
@@ -3550,11 +3573,8 @@ from analytics.analisis_intensidad import AnalisisIntensidadAvanzado
 logger = logging.getLogger(__name__)
 
 
-@login_required
+@gestor_clientes_required
 def panel_entrenador(request):
-    if not request.user.is_staff:
-        return HttpResponseForbidden("Acceso solo para entrenadores.")
-
     # --- 1. OBTENER PARÁMETROS ---
     search_query = request.GET.get('q', '')
     filtro_estado = request.GET.get('filtro', 'todos')
@@ -3693,11 +3713,8 @@ def panel_entrenador(request):
     return render(request, 'clientes/panel_entrenador.html', context)
 
 
-@login_required
+@gestor_clientes_required
 def lista_clientes(request):
-    if not request.user.is_staff:
-        return HttpResponseForbidden("Acceso solo para entrenadores.")
-
     clientes = Cliente.objects.all()
     for cliente in clientes:
         cliente.ultima_revision = cliente.revisiones.order_by('-fecha').first()
@@ -3710,7 +3727,7 @@ def lista_clientes(request):
     })
 
 
-@login_required
+@gestor_clientes_required
 def asignar_programa_a_cliente(request, programa_id):
     if request.method == 'POST':
         cliente_id = request.POST.get('cliente_id')

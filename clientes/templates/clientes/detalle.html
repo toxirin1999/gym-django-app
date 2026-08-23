@@ -293,7 +293,9 @@ a:focus-visible, button:focus-visible {
     <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="cc-btn cc-btn-sm"><i class="fas fa-plus"></i>Actividad</a>
     {% if hyrox_objetivo %}<a href="{% url 'hyrox:dashboard' %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-flag-checkered"></i>Hyrox</a>{% endif %}
     <a href="{% url 'entrenos:dashboard_ejercicios' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-chart-line"></i>Analytics</a>
+    {% if request.user.is_staff or request.user.is_superuser %}
     <a href="{% url 'clientes:editar_cliente' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm"><i class="fas fa-pencil-alt"></i>Editar</a>
+    {% endif %}
   </div>
 </div>
 

@@ -50,3 +50,27 @@ tokens, identificadores externos, lesiones ni biometría. El auditor usa ORM y
 
 Las clasificaciones v1 son conservadoras: `core_active`, `active_support`,
 `historical_required`, `security_exposed`, `protected_integration` y `unknown`.
+
+## Fase 12.2 — cierre de autorización de gestión multi-cliente
+
+La superficie inventariada como gestión multi-cliente queda protegida por una
+política común: puede operar un usuario con `is_staff` **o** `is_superuser`.
+Una petición anónima conserva el contrato de Django y redirige al login; una
+sesión autenticada sin ese rol recibe 403 antes de consultar formularios o
+ejecutar escrituras.
+
+El guard cubre listado, panel de entrenador, API de listado, alta, edición,
+eliminación y las tres rutas de asignación de programa/rutina. Los POST
+rechazados no crean usuarios o clientes, no cambian credenciales y no asignan
+programas ni rutinas. La fase no corrige la semántica legacy de
+`asignar_rutina`: únicamente garantiza que el bloqueo ocurre antes de ella.
+
+`detalle_cliente` mantiene una excepción mínima para autoservicio: un cliente
+puede consultar exactamente el perfil cuyo `user` coincide con la sesión. El
+staff/superusuario puede consultar cualquier cliente. Para otra sesión se usa
+un queryset ya restringido y se devuelve 404 tanto si el ID existe como si no,
+evitando convertir la ruta en un oráculo de existencia. El enlace «Editar» se
+muestra únicamente a staff/superusuarios.
+
+No se han extendido estos permisos a `mockup_demo`, `panel_cliente` ni a rutas
+personales de entrenamiento. No hay cambios de modelos o migraciones.

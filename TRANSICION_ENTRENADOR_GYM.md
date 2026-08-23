@@ -1653,3 +1653,17 @@ python manage.py auditar_revision_memoria \
   entrenamiento.
 - Se mantienen sin cambios el estado del bloque, su rango, semana, versión y
   progreso contractual.
+
+### Fase 12.2 — autorización de gestión multi-cliente
+
+- La administración de clientes usa una sola política coherente con la
+  redirección de entrada: `is_staff OR is_superuser`. Anónimos van al login y
+  usuarios autenticados sin rol reciben 403 antes de cualquier mutación.
+- Alta, edición, eliminación, asignaciones, listado, panel del entrenador y API
+  de listado comparten el guard. Los rechazos no alteran usuarios, clientes,
+  programas ni rutinas.
+- El detalle admite al gestor o al propietario exacto ligado por
+  `Cliente.user`. Un tercero obtiene el mismo 404 conservador para IDs reales o
+  inexistentes, y el propietario no ve el enlace de edición.
+- Se preservan las rutas personales y demos fuera de este corte. No se cambia
+  la lógica legacy de asignación de rutina ni se introduce esquema nuevo.
