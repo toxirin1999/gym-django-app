@@ -741,6 +741,26 @@ auditoría.
 - Fallo, RPE extremo, técnica comprometida, reducción y deload conservan prioridad.
 - El modo API `solo_alternativas` es una previsualización sin mutaciones clínicas.
 
+# Ciclo 13 — distribución semanal contractual V1
+
+La lectura de distribución semanal usa exclusivamente semanas cerradas por un
+`ContratoSemanalGym` y una `EvaluacionSemanalGym` aceptada. Exige al menos tres
+semanas aceptadas; antes de ese umbral declara `evidencia_insuficiente` y no
+interpreta entrenamientos libres, evaluaciones pendientes o rechazadas.
+
+Cada identidad de `SesionProgramada` conserva su semántica real. Una completada
+en la fecha prescrita se presenta como `completada`; si `fecha_realizada`
+difiere de `fecha_prevista`, como `reubicada`. `saltada_usuario` y
+`omitida_sistema` se agrupan como `omitida`, manteniendo respectivamente la
+causa `usuario` o `sistema`; `cancelada_lesion` se declara `protegida` y nunca se
+reinterpreta como fallo de adherencia.
+
+`auditar_distribucion_semanal_contractual --cliente <ID> [--hasta AAAA-MM-DD]`
+emite un único JSON determinista y explicable. La consulta está acotada al
+cliente, es idempotente y estrictamente de solo lectura: no modifica
+`EstrategiaSemanalGym`, no crea deuda, preferencias ni sugerencias, y no usa IA
+ni caché.
+
 # Fase 5.1–5.2 — snapshot físico canónico V1
 
 La evidencia física diaria dispone de un contrato de solo lectura común en
