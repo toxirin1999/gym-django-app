@@ -535,6 +535,23 @@ Reducir superficie sin destrucción prematura.
 - medir dependencias antes de eliminar código o modelos;
 - decidir más adelante qué merece borrado físico.
 
+### Fase 12.1 — auditoría pasiva de superficies legacy
+
+- `auditar_superficies_archivo` genera un inventario JSON determinista,
+  estrictamente read-only y limitado a un único cliente y una ventana inclusiva.
+- La evidencia usa ORM y rutas `reverse()` allowlisted para Liftin,
+  gamificación, gestión multi-cliente, `ExperimentoVarianteGym` y Strava. Una
+  ausencia solo se expresa como cero tras una consulta correcta; fallos de
+  configuración quedan como `unknown` y limitación explícita.
+- El documento no contiene PII, texto libre, tokens, IDs externos, lesión ni
+  biometría. Strava permanece como `protected_integration` y solo aporta
+  agregados cuyo ownership por cliente es demostrable.
+- La v1 mide productores, consumidores, rutas y actividad reciente sin importar
+  callbacks ni inspeccionar source en runtime. No desactiva superficies, no
+  escribe datos y nunca genera candidatos automáticos de archivo.
+- La huella SHA-256 cubre el payload canónico y excluye cualquier tiempo de
+  generación, por lo que sirve para comparar auditorías equivalentes.
+
 ## 17. Orden de riesgo
 
 ### Bajo riesgo
