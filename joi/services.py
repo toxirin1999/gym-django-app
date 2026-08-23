@@ -355,6 +355,23 @@ def _prompt_entreno_completado(ctx: dict, datos_extra: dict) -> str:
     )
 
 
+def _seleccionar_memoria_paradoja_b(user, *, as_of=None):
+    """Elige una sola memoria vigente mediante la autoridad central 8.0-G."""
+    from joi.services_manual_authority import resolver_autoridad_manual
+
+    for item in resolver_autoridad_manual(user, as_of=as_of):
+        if item['authority'] == 'uncertain_hypothesis':
+            continue
+        if 'resistencia psicológica' in item.get('entrada', '').casefold():
+            return {
+                'entrada': item['entrada'],
+                'authority': item['authority'],
+                'manual_id': item['id'],
+                'operation_id': item['provenance'].get('operation_id'),
+            }
+    return None
+
+
 def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
     hechos = []
 
@@ -372,31 +389,29 @@ def _prompt_apertura_manana(ctx: dict, datos_extra: dict) -> str:
                 f"({raw.get('energia')}/10). La cabeza quiere seguir; el cuerpo necesita parar."
             )
         elif paradoja == 'B':
-            # Buscar si hay patrón de resistencia ya registrado en el Manual
-            patron_previo = None
-            try:
-                from joi.models import ManualDavid
-                patron_previo = (
-                    ManualDavid.objects
-                    .filter(
-                        user=cliente.user,
-                        origen='patron_detectado',
-                        entrada__contains='resistencia psicológica',
-                        activa=True,
-                    )
-                    .order_by('-creado_en')
-                    .values_list('entrada', flat=True)
-                    .first()
-                )
-            except Exception:
-                pass
-
-            if patron_previo:
+            memoria = datos_extra.get('_paradoja_b_memoria')
+            if memoria and memoria['authority'] == 'explicit_correction':
                 hechos.append(
-                    f"PARADOJA B CON PATRÓN CONFIRMADO — métricas en VERDE, energía "
+                    f"PARADOJA B CON CORRECCIÓN EXPLÍCITA DEL USUARIO — métricas en VERDE, energía "
                     f"subjetiva {raw.get('energia')}/10. El Manual ya registró este patrón: "
-                    f"\"{patron_previo[:120]}\". "
-                    f"JOI debe confrontar citando el patrón por su nombre, no consolarlo."
+                    f"\"{memoria['entrada'][:120]}\". "
+                    f"La corrección tiene prioridad, pero no es verdad absoluta ni conocimiento consolidado. "
+                    f"JOI debe respetar su sentido y describir solo lo observable."
+                )
+            elif memoria and memoria['authority'] == 'user_confirmed':
+                hechos.append(
+                    f"PARADOJA B CON PATRÓN REVISADO POR EL USUARIO — métricas en VERDE, energía "
+                    f"subjetiva {raw.get('energia')}/10. Memoria revisada: "
+                    f"\"{memoria['entrada'][:120]}\". "
+                    f"Es evidencia prioritaria, pero no es verdad absoluta ni conocimiento consolidado. "
+                    f"JOI puede nombrar el patrón sin diagnosticar ni atribuir estados mentales."
+                )
+            elif memoria:
+                hechos.append(
+                    f"PARADOJA B CON HIPÓTESIS AUTOMÁTICA VIGENTE — métricas en VERDE, energía "
+                    f"subjetiva {raw.get('energia')}/10. Hipótesis del Manual: "
+                    f"\"{memoria['entrada'][:120]}\". "
+                    f"Usa lenguaje provisional: puede ser un patrón, no un hecho confirmado."
                 )
             else:
                 hechos.append(
@@ -1641,6 +1656,19 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         ctx = construir_contexto(cliente)
         ctx_temporal = resolver_contexto_temporal(trigger)
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
+        datos_builder = datos_extra
+        semaforo = ctx.get('semaforo') or {}
+        if trigger == 'apertura_manana' and semaforo.get('paradoja') == 'B':
+            memoria_paradoja_b = _seleccionar_memoria_paradoja_b(
+                cliente.user, as_of=timezone.localdate(),
+            )
+            if memoria_paradoja_b:
+                # Solo existe durante la construcción del prompt. El contenido
+                # privado no se mezcla en ``contexto`` ni se persiste.
+                datos_builder = {
+                    **datos_extra,
+                    '_paradoja_b_memoria': memoria_paradoja_b,
+                }
         continuidad_ctx = build_continuidad_context(cliente)
         bloque_cont = _bloque_continuidad(continuidad_ctx)
         bloque_fisico = ''
@@ -1658,7 +1686,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                 _bloque_temporal(ctx_temporal),
                 bloque_cont,
                 bloque_fisico,
-                builder(ctx, datos_extra),
+                builder(ctx, datos_builder),
             ]
         else:
             bloques = [
@@ -1668,7 +1696,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                 _bloque_temporal(ctx_temporal),
                 bloque_cont,
                 bloque_fisico,
-                builder(ctx, datos_extra),
+                builder(ctx, datos_builder),
             ]
         prompt = "\n\n".join(b for b in bloques if b)
         texto = _llamar_haiku(prompt, max_tokens=400)

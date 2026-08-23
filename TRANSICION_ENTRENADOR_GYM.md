@@ -1468,10 +1468,9 @@ superficies queda para 7B.
   texto, snapshots, motivo ni notas. `_bloque_manual`, actualización narrativa,
   narrativa de cierre de bloque, razón legible y poda mensual reutilizan la
   política; no se crean triggers, mensajes, apariciones ni llamadas IA nuevas.
-- Gap previo no abordado en esta fase: la rama Paradoja B de
-  `_prompt_apertura_manana` intenta leer `cliente.user` fuera de ámbito y atrapa
-  silenciosamente el error. Se mantiene sin cambios para no mezclar un bugfix de
-  apertura con el contrato de autoridad 8.0-G.
+- Gap identificado al cerrar 8.0-G: la rama Paradoja B de
+  `_prompt_apertura_manana` intentaba leer `cliente.user` fuera de ámbito y
+  atrapaba silenciosamente el error. Queda resuelto de forma acotada en 8.0-I.
 - Fase 8.0-H retira la segunda vía humana de mutación que sobrevivía en
   `/joi/manual/`. El manual conserva su función de inventario informativo y
   enlaza a la Habitación, pero ya no ofrece descarte directo, JavaScript de
@@ -1485,3 +1484,15 @@ superficies queda para 7B.
   método o propietario. No se migra ni reinterpreta ninguna poda histórica, no
   se añade voz JOI, trigger o llamada a IA y la Paradoja B continúa fuera de
   alcance.
+- Fase 8.0-I corrige la rama Paradoja B de la apertura sin reintroducir acceso
+  ORM directo a `ManualDavid`. Solo cuando el semáforo ya declara esa paradoja,
+  una selección efímera reutiliza `resolver_autoridad_manual`, busca una memoria
+  relevante y entrega al builder una única entrada según la prioridad 8.0-G.
+- Correcciones explícitas y confirmaciones humanas se describen como evidencia
+  prioritaria, nunca como verdad absoluta o conocimiento consolidado. Una
+  hipótesis automática vigente usa lenguaje provisional. Hipótesis inciertas,
+  memorias en cooldown, descartadas o inactivas no se emplean como evidencia de
+  Paradoja B; deshacer una confirmación recupera la semántica automática previa.
+- El contenido seleccionado solo vive durante la construcción del prompt: no se
+  incorpora a `ctx`, no se persiste en el contexto de `MensajeJOI` y no altera
+  la rama A. La fase no añade llamadas IA, triggers, mensajes ni frecuencia.
