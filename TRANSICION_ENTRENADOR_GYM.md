@@ -1577,3 +1577,15 @@ python manage.py auditar_revision_memoria \
   pendiente; la portada no evalúa, cierra, materializa, genera, cachea ni muta.
 - La lectura vive como tarjeta compacta dentro de «El plan en detalle». No añade
   una decisión diaria, CTA principal ni voz JOI, y no se renderiza sin bloque.
+
+### Fase 11C — Semántica contractual de la portada Gym
+
+- La tarjeta rotula `objetivo_principal` como «Objetivo general» para no
+  confundirlo con una fase del plan Helms. La proyección contractual no contiene
+  una fase Helms y la portada no la infiere ni la afirma.
+- `objetivos_secundarios` permanece en el snapshot inmutable y en la proyección
+  backend, pero no se muestra en portada mientras no tenga un consumidor
+  prescriptivo. Así se conserva la metadata sin presentarla como autoridad del
+  entrenamiento.
+- Se mantienen sin cambios el estado del bloque, su rango, semana, versión y
+  progreso contractual.

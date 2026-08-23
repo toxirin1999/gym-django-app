@@ -228,9 +228,13 @@ class PortadaBloqueGymViewTests(TestCase):
             EvaluacionSemanalGym.objects.count(), EvaluacionBloqueGym.objects.count(),
         ))
         self.assertContains(response, 'Bloque Gym', count=1)
+        self.assertContains(response, 'Objetivo general')
+        self.assertContains(response, 'Construir fuerza útil')
         self.assertContains(response, 'Semana 3 de 4')
         self.assertContains(response, '1 / 5')
-        self.assertContains(response, 'Mejorar sentadilla · Sostener técnica')
+        self.assertNotContains(response, 'Mejorar sentadilla')
+        self.assertNotContains(response, 'Sostener técnica')
+        self.assertNotContains(response, 'Fase Helms')
         self.assertContains(response, '03/08/2026—30/08/2026')
         self.assertNotContains(response, 'Abrir Centro →')
 
