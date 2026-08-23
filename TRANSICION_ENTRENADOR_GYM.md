@@ -1496,3 +1496,31 @@ superficies queda para 7B.
 - El contenido seleccionado solo vive durante la construcción del prompt: no se
   incorpora a `ctx`, no se persiste en el contexto de `MensajeJOI` y no altera
   la rama A. La fase no añade llamadas IA, triggers, mensajes ni frecuencia.
+- Fase 8.0-J cierra el corte con `auditar_revision_memoria`, una auditoría JSONL
+  determinista y estrictamente read-only del ledger F1, su estado materializado,
+  la cola 8.0-C y la autoridad 8.0-G. Solo emite códigos, IDs, campos de control
+  y conteos; nunca expone entrada, notas, motivo, snapshots ni texto privado.
+- El auditor verifica ownership, versión de esquema, huellas SHA-256, transición
+  semántica de cada acción, referencias y unicidad de undo. Una operación
+  revertida deja de contar como efectiva. Si la última operación efectiva ya no
+  coincide con el registro actual, lo clasifica como cambio externo stale y no
+  afirma corrupción.
+- Confirmar debe desaparecer de la cola y proyectar autoridad
+  `user_confirmed`; descartar debe quedar inactivo y ausente; posponer no puede
+  mutar el snapshot semántico y cuestionar conserva `ultima_evidencia`. El borde
+  de cooldown se compara en el `as_of`: día 13 permanece fuera y día 14 recupera
+  la cola y la autoridad calibrada.
+- `--limit` solo acota la salida de hallazgos. El resumen conserva totales
+  completos de memorias, operaciones, operaciones efectivas, cola y autoridad,
+  junto con `counts_by_code`, emitidos y truncados. No existe `--apply`, ni se
+  usa IA o caché, y el comando no repara datos.
+
+Auditoría exacta para producción después de desplegar y migrar F1:
+
+```bash
+python manage.py auditar_revision_memoria \
+  --cliente 2 \
+  --as-of 2026-08-23 \
+  --limit 500 \
+  --settings=gymproject.settings
+```
