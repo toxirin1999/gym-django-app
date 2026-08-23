@@ -149,6 +149,33 @@ class TestCase2_SinPendientesDescansoHoy(SesionProgramadaBase):
         self.assertIsNone(decision['sesion_programada'])
 
 
+class TestSesionFuturaNoEclipsaDescanso(SesionProgramadaBase):
+    """Una sesión materializada para mañana no adquiere autoridad hoy."""
+
+    def test_domingo_descansa_y_lunes_recibe_la_sesion_programada(self):
+        domingo = date(2026, 8, 23)
+        lunes = domingo + timedelta(days=1)
+        sesion_lunes = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=lunes,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Día 1 - Hipertrofia',
+        )
+        mock_plan = make_mock_planificador({lunes: TRAINING_DAY})
+
+        with patch(
+            'entrenos.services.sesion_recomendada._build_planificador',
+            return_value=mock_plan,
+        ):
+            decision_domingo = obtener_sesion_recomendada_hoy(self.cliente, domingo)
+            decision_lunes = obtener_sesion_recomendada_hoy(self.cliente, lunes)
+
+        self.assertEqual(decision_domingo['tipo'], 'descanso')
+        self.assertIsNone(decision_domingo['sesion_programada'])
+        self.assertEqual(decision_lunes['tipo'], 'pendiente')
+        self.assertEqual(decision_lunes['sesion_programada'].id, sesion_lunes.id)
+
+
 class TestCase3_HoyNoPuedoPosponeTodas(SesionProgramadaBase):
     """Case 3: "Hoy no puedo" postpones ALL visible pending sessions to tomorrow."""
 

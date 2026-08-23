@@ -1224,7 +1224,11 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
     from django.db.models import Q
     pendiente = (
         SesionProgramada.objects
-        .filter(cliente=cliente, estado=SesionProgramada.ESTADO_PENDIENTE)
+        .filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            fecha_prevista__lte=fecha_hoy,
+        )
         .filter(Q(pospuesta_hasta__isnull=True) | Q(pospuesta_hasta__lte=fecha_hoy))
         .order_by('fecha_prevista', 'id')
         .first()
