@@ -1,4 +1,33 @@
-# Fase 12.1–12.4.1 — auditoría, archivo y cierre causal
+# Fase 12.1–12.4.2 — auditoría, archivo y cierre causal
+
+## Fase 12.4.2 — auditoría de integridad histórica de gamificación
+
+La auditoría histórica es deliberadamente pasiva: compara los entrenos reales
+del cliente, el latch `procesado_gamificacion`, el perfil y el ledger
+`HistorialPuntos`, pero no ejecuta `save`, `update`, `delete`, backfill ni el
+finalizador. No existe opción `--apply`.
+
+```bash
+python manage.py auditar_integridad_gamificacion \
+  --cliente 2 \
+  --limit 1000 \
+  --settings=gymproject.settings
+```
+
+`--cliente` es obligatorio y solo admite un cliente. `--limit` (1–10.000)
+limita las filas `hallazgo`, no el análisis: el `resumen` final conserva los
+conteos globales en `counts_by_code`, los agregados en `totals` y declara
+`truncados`. La salida es JSON Lines canónico, ordenado y reproducible, con
+`schema_version=1`, `solo_lectura=true` y fingerprint SHA-256.
+
+Se clasifican de forma independiente: totales de entrenos y puntos divergentes,
+múltiples eventos base para un entreno, enlaces entre clientes, latch cerrado
+sin ledger propio, latch abierto con ledger, historiales sin entreno, perfiles
+ausentes/múltiples y duplicados de `PruebaUsuario` si un esquema legacy los
+permite. Un historial sin entreno puede proceder de pruebas, quests o de un
+enlace perdido por `SET_NULL`; se informa como origen desconocido y nunca se
+etiqueta automáticamente como duplicado. Las divergencias tampoco constituyen
+una propuesta de reparación.
 
 ## Fase 12.4.1 — finalización causal de gamificación
 

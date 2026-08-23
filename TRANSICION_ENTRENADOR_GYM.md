@@ -1694,3 +1694,14 @@ python manage.py auditar_revision_memoria \
   se toca histórico, no hay migración y `RecordsService` conserva su papel.
 - Propietario o staff/superusuario delimitan cierres y notificaciones para
   impedir acceso o mutación cruzada.
+
+### Fase 12.4.2 — auditoría histórica de gamificación
+
+- `auditar_integridad_gamificacion --cliente ID --limit N` emite JSON Lines
+  determinista con hallazgos limitados y un resumen global versionado.
+- Contrasta entrenos, latch, perfil, suma del ledger y enlaces causales, e
+  identifica cruces de cliente, eventos base múltiples y estados legacy.
+- Los historiales sin entreno quedan separados como origen no demostrable:
+  pueden corresponder a pruebas/quests o a `SET_NULL`, no a un duplicado.
+- Es un instrumento exclusivamente diagnóstico: no contiene `--apply`, no
+  invoca el finalizador y no modifica ni reinterpreta datos históricos.
