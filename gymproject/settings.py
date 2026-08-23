@@ -28,6 +28,10 @@ SECRET_KEY = os.environ['SECRET_KEY']
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
+# Liftin se conserva como fuente histórica, pero su superficie operativa queda
+# archivada. El flag permite una reversión explícita sin renombrar URLs.
+LIFTIN_UI_ENABLED = os.environ.get('LIFTIN_UI_ENABLED', 'False') == 'True'
+
 _allowed_hosts_env = os.environ.get('ALLOWED_HOSTS', '')
 ALLOWED_HOSTS = [h.strip() for h in _allowed_hosts_env.split(',') if h.strip()] or [
     'toxirin.pythonanywhere.com',
@@ -146,6 +150,7 @@ TEMPLATES = [
                 'joi.context_processors.utility_functions',
                 'estoico.context_processors.estoico_context',
                 'core.bio_context_processor.bio_context',
+                'core.services.archive_audit_service.liftin_archive_context',
 
             ],
         },

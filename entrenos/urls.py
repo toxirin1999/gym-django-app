@@ -1,5 +1,9 @@
 # entrenos/urls.py
 
+from functools import wraps
+
+from django.conf import settings
+from django.http import Http404
 from django.urls import path
 from . import views
 from . import views_liftin
@@ -8,6 +12,17 @@ from clientes import views as vistas_clientes
 from .views import evaluacion_profesional_view
 
 app_name = 'entrenos'
+
+
+def liftin_ui_required(view_func):
+    """Impide ejecutar una vista Liftin mientras su UX esté archivada."""
+    @wraps(view_func)
+    def guarded_view(request, *args, **kwargs):
+        if not getattr(settings, 'LIFTIN_UI_ENABLED', False):
+            raise Http404("La interfaz Liftin está archivada")
+        return view_func(request, *args, **kwargs)
+
+    return guarded_view
 
 urlpatterns = [
     # ============================================================================
@@ -65,26 +80,26 @@ urlpatterns = [
     # ============================================================================
     # URLs DE LIFTIN (Se mantienen)
     # ============================================================================
-    path('dashboard/<int:cliente_id>/', views.dashboard_liftin, name='dashboard_liftin'),
-    path('liftin/cliente/<int:cliente_id>/', views_liftin.dashboard_liftin_cliente, name='dashboard_liftin_cliente'),
-    path('liftin/importar/', views_liftin.importar_liftin, name='importar_liftin'),
-    path('liftin/importar-completo/', views_liftin.importar_liftin_completo, name='importar_liftin_completo'),
-    path('liftin/estadisticas/', views_liftin.estadisticas_liftin, name='estadisticas_liftin'),
-    path('liftin/exportar/', views_liftin.exportar_datos_liftin, name='exportar_datos_liftin'),
-    path('liftin/ejercicios/<int:entreno_id>/', views_liftin.detalle_ejercicios_liftin,
+    path('dashboard/<int:cliente_id>/', liftin_ui_required(views.dashboard_liftin), name='dashboard_liftin'),
+    path('liftin/cliente/<int:cliente_id>/', liftin_ui_required(views_liftin.dashboard_liftin_cliente), name='dashboard_liftin_cliente'),
+    path('liftin/importar/', liftin_ui_required(views_liftin.importar_liftin), name='importar_liftin'),
+    path('liftin/importar-completo/', liftin_ui_required(views_liftin.importar_liftin_completo), name='importar_liftin_completo'),
+    path('liftin/estadisticas/', liftin_ui_required(views_liftin.estadisticas_liftin), name='estadisticas_liftin'),
+    path('liftin/exportar/', liftin_ui_required(views_liftin.exportar_datos_liftin), name='exportar_datos_liftin'),
+    path('liftin/ejercicios/<int:entreno_id>/', liftin_ui_required(views_liftin.detalle_ejercicios_liftin),
          name='detalle_ejercicios_liftin'),
-    path('liftin/editar/<int:entrenamiento_id>/', views_liftin.editar_entrenamiento_liftin,
+    path('liftin/editar/<int:entrenamiento_id>/', liftin_ui_required(views_liftin.editar_entrenamiento_liftin),
          name='editar_entrenamiento_liftin'),
-    path('liftin/eliminar/<int:entrenamiento_id>/', views_liftin.eliminar_entrenamiento_liftin,
+    path('liftin/eliminar/<int:entrenamiento_id>/', liftin_ui_required(views_liftin.eliminar_entrenamiento_liftin),
          name='eliminar_entrenamiento_liftin'),
-    path('liftin/buscar/', views_liftin.buscar_entrenamientos_liftin, name='buscar_entrenamientos_liftin'),
-    path('liftin/comparar/', views_liftin.comparar_liftin_manual, name='comparar_liftin_manual'),
+    path('liftin/buscar/', liftin_ui_required(views_liftin.buscar_entrenamientos_liftin), name='buscar_entrenamientos_liftin'),
+    path('liftin/comparar/', liftin_ui_required(views_liftin.comparar_liftin_manual), name='comparar_liftin_manual'),
 
     # ============================================================================
     # APIs (Se mantienen)
     # ============================================================================
-    path('api/liftin/stats/', views_liftin.api_stats_liftin, name='api_stats_liftin'),
-    path('api/liftin/ejercicios/<int:entrenamiento_id>/', views_liftin.api_ejercicios_liftin,
+    path('api/liftin/stats/', liftin_ui_required(views_liftin.api_stats_liftin), name='api_stats_liftin'),
+    path('api/liftin/ejercicios/<int:entrenamiento_id>/', liftin_ui_required(views_liftin.api_ejercicios_liftin),
          name='api_ejercicios_liftin'),
     path('api/cliente/<int:cliente_id>/regenerar-plan/', views.api_regenerar_plan_helms, name='api_regenerar_plan'),
 

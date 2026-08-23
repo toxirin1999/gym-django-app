@@ -543,7 +543,7 @@
     <div class="action-buttons">
         
 
-        {% if entrenamiento.fuente_datos == 'liftin' %}
+        {% if entrenamiento.fuente_datos == 'liftin' and LIFTIN_UI_ENABLED %}
         <a href="{% url 'entrenos:editar_entrenamiento_liftin' entrenamiento.id %}" class="btn-action btn-edit">
             <i class="fas fa-edit"></i>
             Editar Entrenamiento

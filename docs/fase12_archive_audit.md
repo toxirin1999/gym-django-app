@@ -1,4 +1,19 @@
-# Fase 12.1 — auditoría pasiva de superficies legacy
+# Fase 12.1–12.3 — auditoría y archivado reversible de superficies legacy
+
+## Fase 12.3 — Liftin archivado en UX
+
+Liftin conserva su valor histórico: modelos, filas, detalle general, listado,
+analytics, signals, consumidores, admin y comandos siguen intactos. Solo se
+archiva la superficie operativa mediante `LIFTIN_UI_ENABLED`, desactivado por
+defecto. Las 13 URLs conservan path y nombre para permitir `reverse()`, pero el
+guard de URL responde 404 antes de ejecutar la vista, incluidos los POST de
+importación, edición y eliminación y las APIs internas.
+
+La auditoría mantiene `classification=historical_required` y añade una dimensión
+independiente: `ux_status=archived`, `ui_enabled=false`, las 13
+`registered_routes` y `reachable_route_count=0`. Esto evita confundir una UX
+retirada con datos candidatos a eliminación. Para una reversión controlada se
+puede definir `LIFTIN_UI_ENABLED=True`; no requiere restaurar rutas ni migrar BD.
 
 Este primer corte inventaría dependencias sin ocultar, desactivar, archivar ni
 modificar datos. La salida no recomienda borrados: la versión 1 nunca emite

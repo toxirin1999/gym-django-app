@@ -6,6 +6,7 @@ from collections import Counter
 from datetime import timedelta
 
 from django.urls import reverse
+from django.conf import settings
 
 
 SCHEMA_VERSION = 1
@@ -13,6 +14,22 @@ CLASSIFICATIONS = {
     "core_active", "active_support", "historical_required", "security_exposed",
     "protected_integration", "unknown",
 }
+
+
+LIFTIN_REGISTERED_ROUTES = (
+    "entrenos:dashboard_liftin", "entrenos:dashboard_liftin_cliente",
+    "entrenos:importar_liftin", "entrenos:importar_liftin_completo",
+    "entrenos:estadisticas_liftin", "entrenos:exportar_datos_liftin",
+    "entrenos:detalle_ejercicios_liftin", "entrenos:editar_entrenamiento_liftin",
+    "entrenos:eliminar_entrenamiento_liftin", "entrenos:buscar_entrenamientos_liftin",
+    "entrenos:comparar_liftin_manual", "entrenos:api_stats_liftin",
+    "entrenos:api_ejercicios_liftin",
+)
+
+
+def liftin_archive_context(request):
+    """Expone el flag únicamente para ocultar/recuperar controles de UX."""
+    return {"LIFTIN_UI_ENABLED": getattr(settings, "LIFTIN_UI_ENABLED", False)}
 
 
 def _routes(route_specs, limitations, domain):
@@ -79,13 +96,25 @@ def audit_archive_surfaces(*, cliente_id, hasta, ventana_dias=90):
             "workout_id_present_count": entrenos.exclude(liftin_workout_id__isnull=True).exclude(liftin_workout_id="").count(),
         }
 
-    liftin = _query("liftin", "historical_required", liftin_query, limitations,
-                    source="liftin", active_producer_count=1, active_consumer_count=4)
+    liftin = _query(
+        "liftin", "historical_required", liftin_query, limitations,
+        source="liftin",
+        registered_producer_count=1,
+        active_producer_count=1 if settings.LIFTIN_UI_ENABLED else 0,
+        active_consumer_count=4,
+    )
     if liftin_routes is None:
         liftin.update(classification="unknown", route_status="unavailable")
     else:
         liftin.update(route_status="success", reachable_route_count=liftin_routes,
                       reachable_routes=liftin_paths)
+    liftin.update(
+        ux_status="active" if settings.LIFTIN_UI_ENABLED else "archived",
+        ui_enabled=bool(settings.LIFTIN_UI_ENABLED),
+        registered_routes=list(LIFTIN_REGISTERED_ROUTES),
+    )
+    if not settings.LIFTIN_UI_ENABLED and liftin_routes is not None:
+        liftin.update(route_status="archived", reachable_route_count=0)
     evidence.append(liftin)
 
     gam_routes, gam_paths = _routes([

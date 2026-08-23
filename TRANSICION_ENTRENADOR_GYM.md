@@ -552,6 +552,19 @@ Reducir superficie sin destrucción prematura.
 - La huella SHA-256 cubre el payload canónico y excluye cualquier tiempo de
   generación, por lo que sirve para comparar auditorías equivalentes.
 
+### Fase 12.3 — Liftin archivado, historia conservada
+
+- `LIFTIN_UI_ENABLED=False` es el estado por defecto. Un guard en el URLconf
+  devuelve 404 antes de entrar en cualquiera de las 13 vistas Liftin, también
+  para importación completa y demás mutaciones.
+- Paths y nombres permanecen registrados y reversibles. Activar el flag restaura
+  la superficie sin cambios de esquema ni reconstrucción del historial.
+- Las sesiones Liftin continúan visibles en las vistas generales de lista,
+  detalle y analytics; en el detalle solo desaparecen editar/eliminar.
+- La auditoría conserva `historical_required` y representa por separado la UX
+  como `archived`. No se modifican modelos, signals, consumidores, admin ni
+  comandos: archivar interfaz no equivale a eliminar evidencia.
+
 ## 17. Orden de riesgo
 
 ### Bajo riesgo

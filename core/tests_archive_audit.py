@@ -114,6 +114,17 @@ class ArchiveAuditServiceTests(TestCase):
         strava = next(row for row in result["evidence"] if row["domain"] == "strava")
         self.assertEqual(strava["classification"], "protected_integration")
 
+    def test_liftin_keeps_historical_classification_and_reports_archived_ux(self):
+        liftin = next(row for row in self.audit()["evidence"] if row["domain"] == "liftin")
+        self.assertEqual(liftin["classification"], "historical_required")
+        self.assertEqual(liftin["ux_status"], "archived")
+        self.assertEqual(liftin["ui_enabled"], False)
+        self.assertEqual(liftin["route_status"], "archived")
+        self.assertEqual(liftin["reachable_route_count"], 0)
+        self.assertEqual(liftin["active_producer_count"], 0)
+        self.assertEqual(liftin["active_consumer_count"], 4)
+        self.assertEqual(len(liftin["registered_routes"]), 13)
+
 
 class ArchiveAuditCommandTests(TestCase):
     def setUp(self):
