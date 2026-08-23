@@ -1274,6 +1274,54 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </span>
       </summary>
 
+    {% if proyeccion_bloque_gym.disponible %}
+    <section class="rb-aprendio-card" aria-labelledby="bloque-gym-title"
+             style="border-left:3px solid rgba(226,178,62,.62);background:linear-gradient(100deg,rgba(226,178,62,.065),transparent 58%);">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="min-width:0;flex:1;">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+            <span style="font-family:var(--font-mono);font-size:8px;font-weight:800;letter-spacing:.16em;color:rgba(226,178,62,.82);text-transform:uppercase;">Bloque Gym</span>
+            {% if proyeccion_bloque_gym.estado == 'pausado' %}
+            <span style="font-family:var(--font-mono);font-size:8px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;padding:2px 6px;border:1px solid rgba(226,178,62,.45);color:rgba(226,178,62,.9);">Pausado</span>
+            {% endif %}
+          </div>
+          <h3 id="bloque-gym-title" style="margin:0;color:var(--td-strong);font-size:13px;line-height:1.35;font-weight:750;">
+            {{ proyeccion_bloque_gym.objetivo_principal }}
+          </h3>
+          <div style="margin-top:4px;font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.04em;">
+            Semana {{ proyeccion_bloque_gym.semana_actual }} de {{ proyeccion_bloque_gym.semanas_previstas }} · versión {{ proyeccion_bloque_gym.version }}
+          </div>
+          {% if proyeccion_bloque_gym.objetivos_secundarios %}
+          <div style="margin-top:5px;font-size:10px;color:var(--td);line-height:1.35;">
+            {{ proyeccion_bloque_gym.objetivos_secundarios|join:" · " }}
+          </div>
+          {% endif %}
+          <div style="margin-top:3px;font-family:var(--font-mono);font-size:8px;color:var(--ink-4);letter-spacing:.04em;">
+            {{ proyeccion_bloque_gym.rango.inicio|date:"d/m/Y" }}—{{ proyeccion_bloque_gym.rango.fin|date:"d/m/Y" }}
+          </div>
+        </div>
+        {% if proyeccion_bloque_gym.progreso_disponible %}
+        <div aria-label="Progreso del contrato semanal" style="flex-shrink:0;text-align:right;border-left:1px solid var(--line);padding-left:12px;">
+          <div style="font-family:var(--font-mono);font-size:16px;font-weight:800;color:var(--td-strong);line-height:1;">
+            {{ proyeccion_bloque_gym.sesiones_completadas }} / {{ proyeccion_bloque_gym.objetivo_sesiones }}
+          </div>
+          <div style="margin-top:4px;font-family:var(--font-mono);font-size:8px;color:var(--ink-4);letter-spacing:.06em;text-transform:uppercase;">
+            mínimo válido {{ proyeccion_bloque_gym.minimo_valido }}
+          </div>
+        </div>
+        {% else %}
+        <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);line-height:1.4;">Semana no materializada</div>
+        {% endif %}
+      </div>
+      {% if proyeccion_bloque_gym.requiere_decision %}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);flex-wrap:wrap;">
+        <span style="font-size:10px;color:var(--warn);font-weight:700;">Requiere revisión</span>
+        <a href="{{ proyeccion_bloque_gym.url_decision }}" style="font-family:var(--font-mono);font-size:9px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--td-strong);text-decoration:underline;text-underline-offset:3px;">Abrir Centro →</a>
+      </div>
+      {% endif %}
+    </section>
+    {% endif %}
+
     {# Tarjeta 1: "Esta semana" — datos + lectura del momento actual #}
     {% if analisis_semanal and analisis_semanal.hay_datos %}
     <div class="rb-aprendio-card" style="border-left:3px solid rgba(150,180,255,0.3);">

@@ -1807,6 +1807,10 @@ def mockup_demo(request):
         autoridad_gym=context.get('autoridad_gym'),
     )
 
+    # Proyección contractual estrictamente read-only para el detalle de portada.
+    from entrenos.services.proyeccion_bloque_gym_service import proyectar_bloque_gym
+    context['proyeccion_bloque_gym'] = proyectar_bloque_gym(cliente, fecha=_hoy)
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 

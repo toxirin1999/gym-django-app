@@ -1524,3 +1524,19 @@ python manage.py auditar_revision_memoria \
   --limit 500 \
   --settings=gymproject.settings
 ```
+
+### Fase 11A — Portada contractual del bloque Gym
+
+- `proyectar_bloque_gym` expone de forma determinista el único bloque activo o
+  pausado del cliente: identidad, versión, objetivo, rango y semana actual.
+  Si la base devuelve más de un bloque abierto, falla cerrado con autoridad
+  ambigua y la portada no elige ni muestra uno arbitrariamente.
+- El progreso solo existe si la semana tiene un `ContratoSemanalGym` ya
+  materializado. Cuenta exclusivamente sus `SesionProgramada` completadas y usa
+  objetivo y mínimo del snapshot semanal; una semana ausente se declara como
+  evidencia no disponible y nunca como cero sesiones.
+- Las evaluaciones semanales y de bloque solo se reflejan cuando ya están
+  persistidas. El enlace al Centro aparece únicamente ante una revisión
+  pendiente; la portada no evalúa, cierra, materializa, genera, cachea ni muta.
+- La lectura vive como tarjeta compacta dentro de «El plan en detalle». No añade
+  una decisión diaria, CTA principal ni voz JOI, y no se renderiza sin bloque.
