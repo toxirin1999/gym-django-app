@@ -131,14 +131,6 @@ def poda_manual_joi(request):
 
 
 @login_required
-@require_POST
-def desactivar_entrada_manual(request, entrada_id):
-    from joi.models import ManualDavid
-    updated = ManualDavid.objects.filter(id=entrada_id, user=request.user).update(activa=False)
-    return JsonResponse({'ok': bool(updated)})
-
-
-@login_required
 def habitacion_joi(request):
     from clientes.models import Cliente
     from .models import MensajeJOI

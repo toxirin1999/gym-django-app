@@ -146,12 +146,6 @@
       font-weight: 400;
     }
 
-    .poda-entrada.eliminando {
-      opacity: 0;
-      transform: translateX(12px);
-      pointer-events: none;
-    }
-
     .poda-entrada-cuerpo {
       display: flex; align-items: flex-start; gap: 1.5rem;
     }
@@ -195,27 +189,6 @@
       color: var(--ink-mute);
     }
 
-    .poda-btn-borrar {
-      flex-shrink: 0;
-      background: transparent;
-      border: none;
-      border-left: 1px solid rgba(200, 140, 140, 0.18);
-      font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-      font-style: italic; font-weight: 300;
-      font-size: 0.85rem;
-      color: rgba(200, 140, 140, 0.45);
-      cursor: pointer;
-      padding: 0.75rem 0 0.75rem 1rem;
-      min-height: 44px;
-      transition: color 0.25s, border-color 0.25s;
-      -webkit-tap-highlight-color: transparent;
-      white-space: nowrap;
-    }
-    .poda-btn-borrar:hover {
-      color: rgba(200, 140, 140, 0.85);
-      border-color: rgba(200, 140, 140, 0.4);
-    }
-
     /* Vacío */
     .poda-vacia {
       text-align: center;
@@ -233,9 +206,6 @@
       .poda-orbita { animation: none !important; opacity: 0.8; }
       .poda-entrada { transition: none !important; }
     }
-
-    /* ── CURSOR ── */
-    .poda-btn-borrar, .poda-volver { cursor: pointer; }
 
     /* ── NAV COORDS ── */
     .joi-coords { display:flex;align-items:center;gap:10px;font-family:-apple-system,monospace;font-size:9px;letter-spacing:0.18em;text-transform:uppercase; }
@@ -260,7 +230,6 @@
 
     @media (max-width: 480px) {
       .poda-entrada-cuerpo { flex-direction: column; gap: 0.75rem; }
-      .poda-btn-borrar { padding: 0.5rem 0; }
     }
   </style>
 </head>
@@ -273,8 +242,11 @@
     <h1 class="poda-titulo">Lo que voy entendiendo de ti</h1>
     <p class="poda-subtitulo">
       Esto es lo que he creído entender leyéndote.<br>
-      Si algo ya <em>no es verdad</em>, dímelo y lo suelto.
+      Este archivo es informativo. Las revisiones se hacen en la habitación.
     </p>
+    <a class="poda-volver" href="{% url 'joi:joi_habitacion' %}">
+      Revisar memoria en la habitación →
+    </a>
   </div>
 
   {% if entradas %}
@@ -299,9 +271,6 @@
               <span class="poda-entrada-fecha">{{ entrada.creado_en|date:"j N Y" }}</span>
             </div>
           </div>
-          <button class="poda-btn-borrar" onclick="desactivar({{ entrada.id }})">
-            ya no es verdad →
-          </button>
         </div>
       </li>
       {% endfor %}
@@ -324,37 +293,5 @@
   </nav>
 
 </div>
-
-<script>
-const CSRF = '{{ csrf_token }}';
-
-async function desactivar(entradaId) {
-  const el = document.getElementById('entrada-' + entradaId);
-  el.classList.add('eliminando');
-
-  try {
-    await fetch(`/joi/manual/${entradaId}/desactivar/`, {
-      method: 'POST',
-      headers: { 'X-CSRFToken': CSRF },
-    });
-  } catch (_) {}
-
-  setTimeout(() => {
-    el.remove();
-    const lista = document.getElementById('lista-manual');
-    if (lista && lista.children.length === 0) {
-      lista.remove();
-      document.querySelector('.poda-meta')?.remove();
-      const vacia = document.createElement('div');
-      vacia.className = 'poda-vacia';
-      vacia.innerHTML = '<p class="poda-vacia-texto">El manual está en blanco.<br>Empezamos de cero.</p>';
-      document.querySelector('.poda-wrap').insertBefore(
-        vacia,
-        document.querySelector('.poda-volver')
-      );
-    }
-  }, 500);
-}
-</script>
 </body>
 </html>

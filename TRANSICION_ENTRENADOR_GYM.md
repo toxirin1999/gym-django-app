@@ -1472,3 +1472,16 @@ superficies queda para 7B.
   `_prompt_apertura_manana` intenta leer `cliente.user` fuera de ámbito y atrapa
   silenciosamente el error. Se mantiene sin cambios para no mezclar un bugfix de
   apertura con el contrato de autoridad 8.0-G.
+- Fase 8.0-H retira la segunda vía humana de mutación que sobrevivía en
+  `/joi/manual/`. El manual conserva su función de inventario informativo y
+  enlaza a la Habitación, pero ya no ofrece descarte directo, JavaScript de
+  escritura ni endpoint propio.
+- La única revisión humana permanece en `/joi/habitacion/`, subordinada a la
+  elegibilidad 8.0-C y al ledger F1: fingerprint, UUID idempotente, PRG, recibo
+  y deshacer efímero. Así, correcciones estables `feedback_error`, datos y otras
+  entradas no elegibles pueden seguir visibles en el inventario sin inventar
+  una decisión ni forzar su entrada en la cola.
+- La URL legacy `/joi/manual/<id>/desactivar/` deja de resolver para cualquier
+  método o propietario. No se migra ni reinterpreta ninguna poda histórica, no
+  se añade voz JOI, trigger o llamada a IA y la Paradoja B continúa fuera de
+  alcance.
