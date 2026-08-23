@@ -68,6 +68,40 @@ class ProyeccionBloqueGymTests(TestCase):
         self.assertEqual(resultado['rango'], {'inicio': self.inicio, 'fin': date(2026, 8, 30)})
         self.assertEqual(resultado['estado_evidencia'], 'evidencia_no_disponible')
 
+    def test_dia_anterior_es_proximo_sin_semana_ni_lookup_semanal(self):
+        self._bloque()
+        with patch.object(ContratoSemanalGym.objects, 'filter') as buscar_semana:
+            resultado = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 2))
+        buscar_semana.assert_not_called()
+        self.assertEqual(resultado['fase_temporal'], 'proximo')
+        self.assertNotIn('semana_actual', resultado)
+        self.assertFalse(resultado['progreso_disponible'])
+
+    def test_inicio_y_fin_estan_en_curso_con_semanas_limite(self):
+        self._bloque()
+        inicio = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 3))
+        fin = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 30))
+        self.assertEqual((inicio['fase_temporal'], inicio['semana_actual']), ('en_curso', 1))
+        self.assertEqual((fin['fase_temporal'], fin['semana_actual']), ('en_curso', 4))
+
+    def test_dia_posterior_esta_pendiente_cierre_sin_lookup_semanal(self):
+        bloque = self._bloque()
+        with patch.object(ContratoSemanalGym.objects, 'filter') as buscar_semana:
+            resultado = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 31))
+        buscar_semana.assert_not_called()
+        self.assertEqual(resultado['fase_temporal'], 'pendiente_cierre')
+        self.assertNotIn('semana_actual', resultado)
+        self.assertFalse(resultado['progreso_disponible'])
+        self.assertFalse(resultado['requiere_decision'])
+        EvaluacionBloqueGym.objects.create(
+            bloque=bloque, version_calculo=1, fingerprint_evidencia='pendiente-temporal',
+            estado_resultado=EvaluacionBloqueGym.RESULTADO_MINIMO,
+            estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+        )
+        resultado = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 31))
+        self.assertTrue(resultado['requiere_decision'])
+        self.assertEqual(resultado['url_decision'], reverse('clientes:plan_decisiones'))
+
     def test_bloque_pausado_se_identifica_sin_materializar_semana(self):
         self._bloque(ContratoBloqueGym.ESTADO_PAUSADO)
         resultado = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 11))
@@ -235,3 +269,23 @@ class PortadaBloqueGymViewTests(TestCase):
             response = self.client.get(reverse('clientes:mockup_demo'))
         self.assertContains(response, reverse('clientes:plan_decisiones'))
         self.assertContains(response, 'Requiere revisión')
+
+    def test_ui_proximo_y_pendiente_cierre_no_dicEN_semana_materializada(self):
+        self._bloque()
+        self.client.force_login(self.user)
+        with patch('django.utils.timezone.localdate', return_value=date(2026, 8, 2)):
+            proximo = self.client.get(reverse('clientes:mockup_demo'))
+        self.assertContains(proximo, 'Comienza el 03/08')
+        self.assertNotContains(proximo, 'Semana no materializada')
+        with patch('django.utils.timezone.localdate', return_value=date(2026, 8, 31)):
+            pendiente = self.client.get(reverse('clientes:mockup_demo'))
+        self.assertContains(pendiente, 'Bloque pendiente de cierre')
+        self.assertNotContains(pendiente, 'Semana no materializada')
+
+    def test_ui_proximo_pausado_conserva_badge(self):
+        self._bloque(ContratoBloqueGym.ESTADO_PAUSADO)
+        self.client.force_login(self.user)
+        with patch('django.utils.timezone.localdate', return_value=date(2026, 8, 2)):
+            response = self.client.get(reverse('clientes:mockup_demo'))
+        self.assertContains(response, 'Pausado')
+        self.assertContains(response, 'Comienza el 03/08')

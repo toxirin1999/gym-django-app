@@ -1289,7 +1289,13 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
             {{ proyeccion_bloque_gym.objetivo_principal }}
           </h3>
           <div style="margin-top:4px;font-family:var(--font-mono);font-size:9px;color:var(--ink-4);letter-spacing:.04em;">
+            {% if proyeccion_bloque_gym.fase_temporal == 'proximo' %}
+            Comienza el {{ proyeccion_bloque_gym.rango.inicio|date:"d/m" }} · versión {{ proyeccion_bloque_gym.version }}
+            {% elif proyeccion_bloque_gym.fase_temporal == 'pendiente_cierre' %}
+            Bloque pendiente de cierre · versión {{ proyeccion_bloque_gym.version }}
+            {% else %}
             Semana {{ proyeccion_bloque_gym.semana_actual }} de {{ proyeccion_bloque_gym.semanas_previstas }} · versión {{ proyeccion_bloque_gym.version }}
+            {% endif %}
           </div>
           {% if proyeccion_bloque_gym.objetivos_secundarios %}
           <div style="margin-top:5px;font-size:10px;color:var(--td);line-height:1.35;">
@@ -1309,7 +1315,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
             mínimo válido {{ proyeccion_bloque_gym.minimo_valido }}
           </div>
         </div>
-        {% else %}
+        {% elif proyeccion_bloque_gym.fase_temporal == 'en_curso' %}
         <div style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);line-height:1.4;">Semana no materializada</div>
         {% endif %}
       </div>

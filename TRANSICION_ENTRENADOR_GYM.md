@@ -1535,6 +1535,9 @@ python manage.py auditar_revision_memoria \
   materializado. Cuenta exclusivamente sus `SesionProgramada` completadas y usa
   objetivo y mínimo del snapshot semanal; una semana ausente se declara como
   evidencia no disponible y nunca como cero sesiones.
+- La fecha proyectada distingue `proximo`, `en_curso` y `pendiente_cierre`.
+  Solo `en_curso` calcula semana o consulta el contrato semanal; antes del rango
+  se muestra el inicio y después del rango se declara el cierre pendiente.
 - Las evaluaciones semanales y de bloque solo se reflejan cuando ya están
   persistidas. El enlace al Centro aparece únicamente ante una revisión
   pendiente; la portada no evalúa, cierra, materializa, genera, cachea ni muta.

@@ -57,14 +57,18 @@ def proyectar_bloque_gym(cliente, *, fecha=None):
         }
     bloque = bloques_abiertos[0]
 
-    semana_calculada = ((fecha - bloque.semana_inicio).days // 7) + 1
-    semana_actual = min(max(semana_calculada, 1), bloque.semanas_previstas)
+    if fecha < bloque.semana_inicio:
+        fase_temporal = 'proximo'
+    elif fecha > bloque.semana_fin_prevista:
+        fase_temporal = 'pendiente_cierre'
+    else:
+        fase_temporal = 'en_curso'
     resultado = {
         'disponible': True,
         'bloque_id': bloque.pk,
         'version': bloque.version,
         'estado': bloque.estado,
-        'semana_actual': semana_actual,
+        'fase_temporal': fase_temporal,
         'semanas_previstas': bloque.semanas_previstas,
         'objetivo_principal': bloque.objetivo_principal,
         'objetivos_secundarios': list(bloque.objetivos_secundarios or []),
@@ -77,7 +81,12 @@ def proyectar_bloque_gym(cliente, *, fecha=None):
         'requiere_decision': False,
     }
 
-    contrato = (
+    if fase_temporal == 'en_curso':
+        resultado['semana_actual'] = ((fecha - bloque.semana_inicio).days // 7) + 1
+
+    contrato = None
+    if fase_temporal == 'en_curso':
+        contrato = (
         ContratoSemanalGym.objects
         .filter(
             cliente=cliente,
@@ -85,7 +94,7 @@ def proyectar_bloque_gym(cliente, *, fecha=None):
             semana=_inicio_semana(fecha),
         )
         .first()
-    )
+        )
     if contrato is not None:
         completadas = contrato.sesiones.filter(
             cliente=cliente,
