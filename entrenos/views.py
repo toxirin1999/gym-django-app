@@ -3757,7 +3757,8 @@ def vista_entrenamiento_activo(request, cliente_id):
                 )
                 ejercicio.setdefault(
                     'usa_peso',
-                    ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre'),
+                    ejercicio['tipo_progresion'] in ('peso_reps', 'peso_corporal_lastre')
+                    or (ejercicio.get('usa_distancia') and float(ejercicio.get('peso_recomendado_kg') or 0) > 0),
                 )
 
                 datos_anterior = obtener_ultimo_peso_ejercicio(
@@ -3782,6 +3783,26 @@ def vista_entrenamiento_activo(request, cliente_id):
                         - float(datos_anterior['peso'] or 0),
                         2,
                     )
+                    sugerencia_tope, reps_sugeridas_tope = calcular_sugerencia_tope(datos_anterior)
+                    if sugerencia_tope and float(datos_anterior.get('peso') or 0) > 0:
+                        ejercicio['sugerencia_tope'] = True
+                        ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
+                        ejercicio['peso_inicial_kg'] = float(datos_anterior['peso'])
+                    else:
+                        ejercicio.setdefault('sugerencia_tope', False)
+                    if ejercicio.get('usa_distancia'):
+                        d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
+                        if d_anterior > 0:
+                            try:
+                                reps_str = str(ejercicio.get('repeticiones', '8'))
+                                partes = [int(x.strip()) for x in reps_str.split('-')]
+                                reps_min = partes[0]
+                            except (ValueError, AttributeError):
+                                reps_min = 8
+                            if d_anterior >= reps_min:
+                                ejercicio['reps_objetivo'] = d_anterior + 1
+                            else:
+                                ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
                 else:
                     ejercicio.setdefault('peso_anterior_kg', 0.0)
                     ejercicio.setdefault('fecha_anterior', None)
@@ -3789,6 +3810,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicio.setdefault('repeticiones_anterior', 0)
                     ejercicio.setdefault('volumen_anterior', 0.0)
                     ejercicio.setdefault('diferencia_peso', 0.0)
+                    ejercicio.setdefault('sugerencia_tope', False)
                 try:
                     from analytics.utils import estimar_1rm
                     pr = RecordsService.obtener_mejor_marca(
