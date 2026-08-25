@@ -38,6 +38,7 @@
   --warn: var(--jds-warning);
   --danger: var(--jds-danger);
   --deload: var(--jds-joi);
+  --rb-nav-height: 57px;
 }
 
 html, body { background: var(--bg); min-height: 100vh; }
@@ -82,7 +83,8 @@ body {
 .rb-nav {
   position: sticky; top: 0; z-index: 100; background: var(--bg);
   border-bottom: 1px solid var(--line);
-  padding: 18px 40px; display: flex; justify-content: space-between; align-items: center; gap: 24px;
+  min-height: var(--rb-nav-height); padding: 6px 16px;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
 .rb-brand {
   display: flex; align-items: center; gap: 10px;
@@ -97,6 +99,39 @@ body {
 }
 .rb-live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
   animation: rb-blink 1.3s ease-in-out infinite; }
+.rb-nav-joi,
+.rb-nav-tool {
+  min-width: 44px;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 2px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: .12em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  transition: color .15s ease, border-color .15s ease, background-color .15s ease;
+}
+.rb-nav-joi { padding: 4px 10px; color: var(--ink-3); border: 1.5px solid var(--line-2); }
+.rb-nav-tools { display: flex; align-items: center; gap: 6px; }
+.rb-nav-tool { padding: 4px 9px; }
+.rb-nav-tool--body { color: rgba(120,180,255,.65); border: 1px solid rgba(120,180,255,.22); }
+.rb-nav-tool--strava { color: rgba(252,76,2,.65); border: 1px solid rgba(252,76,2,.25); }
+.rb-nav-tool--rehab { color: rgba(45,190,150,.68); border: 1px solid rgba(45,190,150,.25); }
+.rb-nav-joi:hover,
+.rb-nav-joi:focus-visible,
+.rb-nav-tool:hover,
+.rb-nav-tool:focus-visible {
+  color: var(--ink);
+  border-color: currentColor;
+  background: var(--paper);
+  outline: none;
+}
 
 /* ── BUTTONS ─────────────────────────────────── */
 .rb-btn {
@@ -505,7 +540,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
    La navegación no sustituye acciones; únicamente orienta la página larga. */
 .rb-chapter-nav {
   position: sticky;
-  top: 57px;
+  top: var(--rb-nav-height);
   z-index: 90;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -515,6 +550,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   backdrop-filter: blur(12px);
 }
 .rb-chapter-nav a {
+  position: relative;
   min-width: 0;
   min-height: 44px;
   display: flex;
@@ -531,6 +567,20 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   text-decoration: none;
   text-transform: uppercase;
   transition: color .16s ease, border-color .16s ease, background-color .16s ease;
+}
+.rb-chapter-nav a.is-active {
+  color: var(--ink);
+  background: var(--paper);
+  font-weight: 900;
+}
+.rb-chapter-nav a.is-active::after {
+  content: '';
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  left: 8px;
+  height: 2px;
+  background: currentColor;
 }
 .rb-chapter-nav a:hover {
   color: var(--ink);
@@ -589,11 +639,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   .rb-chapter-nav a { font-size: 7px; letter-spacing: .055em; }
   .rb-chapter-context { display: none; }
   .rb-chapter-heading { grid-template-columns: 24px minmax(0, 1fr); }
+  .rb-nav { padding-inline: 8px; gap: 5px; }
+  .rb-brand { gap: 6px; font-size: 11px; letter-spacing: .1em; }
+  .rb-nav-tools { gap: 3px; }
+  .rb-nav-tool-label { display: none; }
+  .rb-live { gap: 3px; font-size: 7px; letter-spacing: .08em; }
 }
 
 /* ── RESPONSIVE ──────────────────────────────── */
 @media (max-width: 640px) {
-  .rb-nav { padding: 12px 16px; gap: 10px; }
   .rb-container { padding: 0 16px; }
   .rb-bib { padding: 16px 16px 20px; }
   .rb-bottom-actions { grid-template-columns: repeat(3, 1fr); }
@@ -621,37 +675,22 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     <div class="rb-brand-bar"></div>
     GYM<span style="color:var(--accent);">/</span>OS
   </a>
-  <a href="/joi/habitacion/"
-     style="display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
-            font-size:9px;font-weight:700;letter-spacing:0.14em;text-transform:uppercase;
-            color:var(--ink-3);border:1.5px solid var(--line-2);border-radius:2px;
-            padding:4px 10px;text-decoration:none;transition:all .15s;"
-     onmouseover="this.style.borderColor='var(--ink)';this.style.color='var(--ink)'"
-     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
+  <a class="rb-nav-joi" href="/joi/habitacion/" aria-label="Abrir JOI">
     <span style="width:5px;height:5px;border-radius:50%;background:{% if joi_mensaje_pendiente %}#6494dc{% else %}rgba(100,148,220,.35){% endif %};{% if joi_mensaje_pendiente %}box-shadow:0 0 6px rgba(100,148,220,.6);{% endif %}display:inline-block;"></span>
     JOI
   </a>
-  <div style="display:flex;align-items:center;gap:10px;">
+  <div class="rb-nav-tools">
     <a href="{% url 'clientes:mi_cuerpo' cliente.id %}"
-       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
-              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-              color:rgba(120,180,255,.65);border:1px solid rgba(120,180,255,.22);border-radius:2px;
-              padding:4px 9px;text-decoration:none;white-space:nowrap;">
-      <i class="fa-solid fa-ruler"></i> Mi cuerpo
+       class="rb-nav-tool rb-nav-tool--body" aria-label="Mi cuerpo" title="Mi cuerpo">
+      <i class="fa-solid fa-ruler" aria-hidden="true"></i><span class="rb-nav-tool-label">Mi cuerpo</span>
     </a>
     <a href="{% url 'hyrox:strava_reconciliacion' %}"
-       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
-              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-              color:rgba(252,76,2,.55);border:1px solid rgba(252,76,2,.22);border-radius:2px;
-              padding:4px 9px;text-decoration:none;white-space:nowrap;">
-      <i class="fab fa-strava"></i> Strava
+       class="rb-nav-tool rb-nav-tool--strava" aria-label="Strava" title="Strava">
+      <i class="fab fa-strava" aria-hidden="true"></i><span class="rb-nav-tool-label">Strava</span>
     </a>
     <a href="{% url 'rehab:hoy' %}"
-       style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);
-              font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;
-              color:rgba(45,190,150,.6);border:1px solid rgba(45,190,150,.22);border-radius:2px;
-              padding:4px 9px;text-decoration:none;white-space:nowrap;">
-      <i class="fa-solid fa-bone"></i> Rehab
+       class="rb-nav-tool rb-nav-tool--rehab" aria-label="Rehab" title="Rehab">
+      <i class="fa-solid fa-bone" aria-hidden="true"></i><span class="rb-nav-tool-label">Rehab</span>
     </a>
     <div class="rb-live">
       <div class="rb-live-dot"></div>
@@ -664,11 +703,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 <div class="rb-container">
 
   <nav class="rb-chapter-nav" aria-label="Secciones del panel">
-    <a href="#chapter-ahora">Ahora</a>
-    <a href="#chapter-entrenamiento">Entreno</a>
-    <a href="#chapter-plan" data-gym-chapter>Plan</a>
-    <a href="#chapter-memoria" data-gym-chapter>Memoria</a>
-    <a href="#chapter-vida">Vida</a>
+    <a data-chapter-link href="#chapter-ahora" class="is-active" aria-current="location">Ahora</a>
+    <a data-chapter-link href="#chapter-entrenamiento">Entreno</a>
+    <a data-chapter-link data-gym-chapter href="#chapter-plan">Plan</a>
+    <a data-chapter-link data-gym-chapter href="#chapter-memoria">Memoria</a>
+    <a data-chapter-link href="#chapter-vida">Vida</a>
   </nav>
 
   <section id="chapter-ahora" class="rb-chapter rb-chapter--now" aria-labelledby="chapter-ahora-title">
@@ -1265,10 +1304,8 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
     <!-- ══ SEÑALES (tras EMPEZAR ENTRENO — Phase 62 / Fase A autoridad Organismo) ══ -->
     {% if alertas_sistema %}
-    {% if portada_hoy %}
     <details data-secondary-signals class="rb-plan-detalle">
       <summary>Señales del sistema · {{ alertas_sistema|length }}</summary>
-    {% endif %}
     <div style="margin-top:6px;margin-bottom:12px;background:var(--paper);border:1px solid var(--line-2);border-radius:14px;overflow:hidden;">
       <div style="display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--line);">
         <span style="font-size:14px;">🧠</span>
@@ -1372,7 +1409,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <a href="{% url 'clientes:memoria_entrenador' cliente.id %}" style="font-family:var(--font-mono);font-size:9px;color:var(--ink-4);text-decoration:none;letter-spacing:.08em;">VER TODO LO QUE SÉ DE TI →</a>
       </div>
     </div>
-    {% if portada_hoy %}</details>{% endif %}
+    </details>
     {% endif %}
 
     <section id="chapter-plan" class="rb-chapter rb-chapter--plan" aria-labelledby="chapter-plan-title">
@@ -2379,6 +2416,46 @@ document.body.addEventListener('htmx:afterSettle', function(evt) {
 });
 
 document.addEventListener('DOMContentLoaded', function () {
+  const chapterLinks = Array.from(document.querySelectorAll('[data-chapter-link]'));
+  const chapterSections = chapterLinks
+    .map((link) => document.querySelector(link.getAttribute('href')))
+    .filter(Boolean);
+  let activeChapter = 'chapter-ahora';
+
+  function setActiveChapter(chapterId) {
+    const target = document.getElementById(chapterId);
+    if (!target) return;
+    activeChapter = chapterId;
+    chapterLinks.forEach((link) => {
+      const isActive = link.getAttribute('href') === '#' + chapterId;
+      link.classList.toggle('is-active', isActive);
+      if (isActive) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    });
+  }
+
+  const hashChapter = location.hash ? location.hash.slice(1) : 'chapter-ahora';
+  setActiveChapter(document.getElementById(hashChapter) ? hashChapter : 'chapter-ahora');
+
+  chapterLinks.forEach((link) => {
+    link.addEventListener('click', () => setActiveChapter(link.getAttribute('href').slice(1)));
+  });
+
+  if ('IntersectionObserver' in window) {
+    const navHeight = getComputedStyle(document.documentElement)
+      .getPropertyValue('--rb-nav-height').trim() || '57px';
+    const chapterObserver = new IntersectionObserver((entries) => {
+      const visible = entries
+        .filter((entry) => entry.isIntersecting)
+        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visible) setActiveChapter(visible.target.id);
+    }, {
+      rootMargin: '-' + navHeight + ' 0px -58% 0px',
+      threshold: [0.08, 0.25, 0.55]
+    });
+    chapterSections.forEach((section) => chapterObserver.observe(section));
+  }
+
   {% if hyrox_objetivo %}
   const btnGym = document.getElementById('rbBtnGym');
   const btnHyrox = document.getElementById('rbBtnHyrox');
@@ -2386,7 +2463,17 @@ document.addEventListener('DOMContentLoaded', function () {
   const hyroxContent = document.getElementById('rbHyroxContent');
 
   function setMode(mode) {
-    if (mode === 'hyrox') {
+    const isHyrox = mode === 'hyrox';
+    document.querySelectorAll('[data-gym-chapter]').forEach((chapterLink) => {
+      chapterLink.hidden = isHyrox;
+    });
+    if (isHyrox && (
+      activeChapter === 'chapter-plan' || activeChapter === 'chapter-memoria'
+    )) {
+      setActiveChapter('chapter-entrenamiento');
+    }
+
+    if (isHyrox) {
       btnGym.classList.remove('active');
       btnHyrox.classList.add('active-hyrox');
       gymContent.style.display = 'none';

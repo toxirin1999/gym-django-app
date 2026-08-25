@@ -65,3 +65,55 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         self.assertIn("min-height: 44px", self.source)
         self.assertIn("@media (prefers-reduced-motion: reduce)", self.source)
 
+    def test_nav_principal_tiene_contrato_responsive_y_nombres_accesibles(self):
+        for css_class in (
+            "rb-nav-joi",
+            "rb-nav-tools",
+            "rb-nav-tool",
+            "rb-nav-tool-label",
+        ):
+            self.assertIn(css_class, self.source)
+
+        self.assertIn("--rb-nav-height:", self.source)
+        self.assertIn("top: var(--rb-nav-height)", self.source)
+        self.assertRegex(
+            self.source,
+            r"@media \(max-width: 390px\)[\s\S]*?\.rb-nav-tool-label\s*\{\s*display:\s*none",
+        )
+        self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Mi cuerpo"')
+        self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Strava"')
+        self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Rehab"')
+        main_nav = re.search(r'<nav class="rb-nav">([\s\S]*?)</nav>', self.source)
+        self.assertIsNotNone(main_nav)
+        self.assertNotIn("onmouseover=", main_nav.group(1))
+        self.assertNotIn("onmouseout=", main_nav.group(1))
+
+    def test_navegacion_de_capitulos_expone_estado_activo_accesible(self):
+        links = re.findall(r'<a\b[^>]*data-chapter-link[^>]*href="#chapter-[^"]+"[^>]*>', self.source)
+        self.assertEqual(len(links), 5)
+        self.assertIn("is-active", self.source)
+        self.assertIn("aria-current", self.source)
+        self.assertIn("IntersectionObserver", self.source)
+        self.assertIn("location.hash", self.source)
+        self.assertIn(".rb-chapter-nav a.is-active::after", self.source)
+
+    def test_modo_hyrox_oculta_capitulos_gym_y_reubica_el_activo(self):
+        self.assertIn("querySelectorAll('[data-gym-chapter]')", self.source)
+        self.assertIn("chapterLink.hidden = isHyrox", self.source)
+        self.assertIn("activeChapter === 'chapter-plan'", self.source)
+        self.assertIn("activeChapter === 'chapter-memoria'", self.source)
+        self.assertIn("setActiveChapter('chapter-entrenamiento')", self.source)
+
+    def test_senales_secundarias_siempre_son_un_details_cerrado(self):
+        signals = re.search(
+            r"\{% if alertas_sistema %\}([\s\S]*?)\{% endif %\}\s*\n\s*<section id=\"chapter-plan\"",
+            self.source,
+        )
+        self.assertIsNotNone(signals)
+        block = signals.group(1)
+        opening = re.search(r"<details\b[^>]*data-secondary-signals[^>]*>", block)
+        self.assertIsNotNone(opening)
+        self.assertNotRegex(opening.group(0), r"\sopen(?:\s|=|>)")
+        self.assertNotIn("{% if portada_hoy %}", block)
+        self.assertEqual(block.count("<details data-secondary-signals"), 1)
+        self.assertEqual(block.count("</details>"), 2)  # señales + lista de señales extra
