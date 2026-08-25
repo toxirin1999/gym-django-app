@@ -13,6 +13,14 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         super().setUpClass()
         cls.source = TEMPLATE.read_text(encoding="utf-8")
 
+    def chapter(self, chapter_id):
+        match = re.search(
+            rf'<section id="{chapter_id}"[^>]*>[\s\S]*?</section><!-- #{chapter_id} -->',
+            self.source,
+        )
+        self.assertIsNotNone(match, chapter_id)
+        return match.group(0)
+
     def test_declara_cinco_capitulos_unicos_en_orden_editorial(self):
         chapter_ids = [
             "chapter-ahora",
@@ -87,7 +95,7 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         self.assertIsNotNone(compact)
         self.assertRegex(compact.group(1), r"\.rb-nav\s*\{[^}]*overflow-x:\s*hidden")
         self.assertRegex(compact.group(1), r"\.rb-nav-tool\s*\{[^}]*padding-inline:\s*0")
-        self.assertRegex(compact.group(1), r"\.rb-live\s*\{[^}]*overflow:\s*hidden")
+        self.assertRegex(compact.group(1), r"\.rb-live\s*\{[^}]*display:\s*none")
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Mi cuerpo"')
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Strava"')
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Rehab"')
@@ -123,23 +131,66 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
                 self.source,
             )
 
-    def test_modo_hyrox_oculta_capitulos_gym_y_reubica_el_activo(self):
-        self.assertIn("querySelectorAll('[data-gym-chapter]')", self.source)
-        self.assertIn("chapterLink.hidden = isHyrox", self.source)
-        self.assertIn("activeChapter === 'chapter-plan'", self.source)
-        self.assertIn("activeChapter === 'chapter-memoria'", self.source)
-        self.assertIn("setActiveChapter('chapter-entrenamiento')", self.source)
+    def test_modo_hyrox_solo_alterna_contenidos_de_entrenamiento(self):
+        self.assertNotIn("data-gym-chapter", self.source)
+        self.assertNotIn("chapterLink.hidden", self.source)
+        set_mode = re.search(r"function setMode\(mode\) \{([\s\S]*?)\n  \}", self.source)
+        self.assertIsNotNone(set_mode)
+        self.assertIn("gymContent.style.display", set_mode.group(1))
+        self.assertIn("hyroxContent.style.display", set_mode.group(1))
+        self.assertNotIn("activeChapter", set_mode.group(1))
+
+    def test_capitulos_universales_son_hermanos_del_entrenamiento(self):
+        entrenamiento = self.chapter("chapter-entrenamiento")
+        plan = self.chapter("chapter-plan")
+        memoria = self.chapter("chapter-memoria")
+        self.assertIn('id="rbGymContent"', entrenamiento)
+        self.assertIn('id="rbHyroxContent"', entrenamiento)
+        self.assertNotIn('id="chapter-plan"', entrenamiento)
+        self.assertNotIn('id="chapter-memoria"', entrenamiento)
+        self.assertNotIn('id="rbGymContent"', plan + memoria)
+
+    def test_herramientas_de_plan_pertenecen_unicamente_a_plan(self):
+        plan = self.chapter("chapter-plan")
+        vida = self.chapter("chapter-vida")
+        expected_urls = (
+            "entrenos:vista_plan_anual", "entrenos:timeline_atleta",
+            "entrenos:registrar_actividad_libre", "entrenos:dashboard_evolucion",
+            "analytics:explicacion_plan_helms", "clientes:plan_decisiones",
+        )
+        self.assertIn("rb-plan-tools", plan)
+        self.assertIn("data-acwr-detail", plan)
+        self.assertIn('id="acwr-widget-container"', plan)
+        for url in expected_urls:
+            self.assertIn(url, plan)
+            self.assertNotIn(url, vida)
+
+    def test_vida_conserva_solo_herramientas_personales(self):
+        vida = self.chapter("chapter-vida")
+        for url in (
+            "diario:dashboard_diario", "clientes:blade_runner_dashboard",
+            "estoico:dashboard", "logros:ver_codice_completo",
+        ):
+            self.assertIn(url, vida)
+        for forbidden in ("data-acwr-detail", "vista_plan_anual", "timeline_atleta", "plan_decisiones"):
+            self.assertNotIn(forbidden, vida)
+
+    def test_acwr_mantiene_contrato_htmx_y_modal_fuera_de_capitulos(self):
+        plan = self.chapter("chapter-plan")
+        self.assertIn('hx-get="{% url \'clientes:widget_acwr\' cliente.id %}"', plan)
+        self.assertIn('hx-trigger="revealed"', plan)
+        self.assertIn('hx-swap="innerHTML"', plan)
+        self.assertIn("htmx:afterSettle", self.source)
+        modal_pos = self.source.index('id="rbAcwrModal"')
+        self.assertGreater(modal_pos, self.source.index('</section><!-- #chapter-vida -->'))
 
     def test_senales_secundarias_siempre_son_un_details_cerrado(self):
-        signals = re.search(
-            r"\{% if alertas_sistema %\}([\s\S]*?)\{% endif %\}\s*\n\s*<section id=\"chapter-plan\"",
-            self.source,
-        )
-        self.assertIsNotNone(signals)
-        block = signals.group(1)
+        entrenamiento = self.chapter("chapter-entrenamiento")
+        start = entrenamiento.index("{% if alertas_sistema %}")
+        block = entrenamiento[start:]
         opening = re.search(r"<details\b[^>]*data-secondary-signals[^>]*>", block)
         self.assertIsNotNone(opening)
         self.assertNotRegex(opening.group(0), r"\sopen(?:\s|=|>)")
         self.assertNotIn("{% if portada_hoy %}", block)
         self.assertEqual(block.count("<details data-secondary-signals"), 1)
-        self.assertEqual(block.count("</details>"), 2)  # señales + lista de señales extra
+        self.assertGreaterEqual(block.count("</details>"), 2)  # señales + lista extra

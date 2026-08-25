@@ -644,7 +644,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   .rb-nav-tools { min-width: 0; gap: 3px; }
   .rb-nav-tool { padding-inline: 0; }
   .rb-nav-tool-label { display: none; }
-  .rb-live { width: 6px; min-width: 6px; gap: 0; overflow: hidden; font-size: 7px; letter-spacing: .08em; white-space: nowrap; }
+  .rb-live { display: none; }
   .rb-live-dot { flex: 0 0 6px; }
 }
 
@@ -707,8 +707,8 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <nav class="rb-chapter-nav" aria-label="Secciones del panel">
     <a data-chapter-link href="#chapter-ahora" class="is-active" aria-current="location">Ahora</a>
     <a data-chapter-link href="#chapter-entrenamiento">Entreno</a>
-    <a data-chapter-link data-gym-chapter href="#chapter-plan">Plan</a>
-    <a data-chapter-link data-gym-chapter href="#chapter-memoria">Memoria</a>
+    <a data-chapter-link href="#chapter-plan">Plan</a>
+    <a data-chapter-link href="#chapter-memoria">Memoria</a>
     <a data-chapter-link href="#chapter-vida">Vida</a>
   </nav>
 
@@ -1414,6 +1414,46 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </details>
     {% endif %}
 
+  </div><!-- #rbGymContent -->
+
+  <!-- ── HYROX CONTENT ────────────────────────── -->
+  {% if hyrox_objetivo %}
+  <div id="rbHyroxContent" style="display:none;">
+    {% if not hyrox_decision.puede_ejecutar_plan %}
+    <div class="rb-workout-card rb-hyrox-protected" style="border-left:3px solid var(--danger);">
+      <div class="rb-workout-eyebrow" style="color:var(--danger);">Hyrox · estado protegido</div>
+      <div style="font-size:10px;color:var(--danger);margin-top:5px;">Prioridad: recuperación</div>
+      <div class="rb-workout-title">{{ hyrox_decision.titulo|default:"Decisión no disponible" }}</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">{{ hyrox_decision.subtitulo }}</div>
+      {% if hyrox_decision.mensaje %}<div style="font-size:11px;color:var(--td);margin-top:8px;line-height:1.5;">{{ hyrox_decision.mensaje }}</div>{% endif %}
+      {% if hyrox_decision.permitido %}<div style="margin-top:10px;font-size:10px;color:var(--ok);">Permitido · {{ hyrox_decision.permitido|join:", " }}</div>{% endif %}
+      {% if hyrox_decision.evitar %}<div style="margin-top:5px;font-size:10px;color:var(--danger);">Evitar · {{ hyrox_decision.evitar|join:", " }}</div>{% endif %}
+    </div>
+    {% elif hyrox_proxima_sesion %}
+    <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
+      <div class="rb-workout-eyebrow">{{ hyrox_decision.titulo|default:"Próxima Sesión Hyrox" }}</div>
+      <div class="rb-workout-title">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</div>
+      {% if hyrox_proxima_sesion.tipo_fase %}<div class="rb-workout-badge" style="color:var(--accent);">{{ hyrox_proxima_sesion.tipo_fase|upper }}</div>{% endif %}
+    </div>
+    {% else %}
+    <div class="rb-workout-card">
+      <div class="rb-workout-eyebrow">Hyrox</div>
+      <div class="rb-workout-title">Sin sesión programada</div>
+      <div class="rb-bib-sub" style="margin-top:6px;">Sin datos suficientes</div>
+    </div>
+    {% endif %}
+    {% if hyrox_decision.puede_ejecutar_plan %}
+    <div style="text-align:center;margin-top:10px;">
+      <a href="{% url 'hyrox:strava_reconciliacion' %}" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(252,76,2,.55);text-decoration:none;">
+        <i class="fab fa-strava"></i> Importar actividad de Strava →
+      </a>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  </section><!-- #chapter-entrenamiento -->
+
     <section id="chapter-plan" class="rb-chapter rb-chapter--plan" aria-labelledby="chapter-plan-title">
       <header class="rb-chapter-heading">
         <span class="rb-chapter-index">03</span>
@@ -1961,6 +2001,47 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
 
     </details>
+
+    <div class="rb-plan-tools" aria-labelledby="rb-plan-tools-title">
+      <div class="rb-section-head" style="margin-top:18px;">
+        <div class="rb-section-num">TOOLS</div>
+        <h3 class="rb-section-title" id="rb-plan-tools-title">Carga y herramientas</h3>
+        <div class="rb-section-line"></div>
+      </div>
+
+      <details class="rb-section" data-acwr-detail>
+        <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
+          <div class="rb-section-num">CARGA</div>
+          <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
+          <div class="rb-section-line"></div>
+          <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);white-space:nowrap;">{% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %} · ver gráfica</span>
+        </summary>
+        <div style="margin-top:12px;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+          <button onclick="document.getElementById('rbAcwrModal').classList.add('open')" class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;"><i class="fas fa-circle-info"></i> ¿Qué es?</button>
+        </div>
+        <div class="rb-acwr-container" id="acwr-widget-container"
+             hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
+             hx-trigger="revealed" hx-swap="innerHTML">
+          <div class="rb-skeleton"></div>
+        </div>
+      </details>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:12px;">
+        <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">Rutina</a>
+        <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">Timeline</a>
+      </div>
+      <details class="rb-plan-detalle" style="margin-top:6px;">
+        <summary>Más herramientas del plan</summary>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
+          <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn"><i class="fas fa-plus"></i> Añadir actividad</a>
+          <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn"><i class="fas fa-chart-area"></i> Evolución</a>
+          <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn"><i class="fas fa-map"></i> Plan Helms</a>
+        </div>
+      </details>
+      <a href="{% url 'clientes:plan_decisiones' %}" class="rb-bottom-btn" style="margin-top:6px;flex-direction:row;gap:10px;">
+        <i class="fas fa-bullseye"></i> Por qué el plan decide así
+      </a>
+    </div>
     </section><!-- #chapter-plan -->
 
     <section id="chapter-memoria" class="rb-chapter rb-chapter--memory" aria-labelledby="chapter-memoria-title">
@@ -2019,59 +2100,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
 
     </section><!-- #chapter-memoria -->
-  </div><!-- #rbGymContent -->
-
-  <!-- ── HYROX CONTENT ────────────────────────── -->
-  {% if hyrox_objetivo %}
-  <div id="rbHyroxContent" style="display:none;">
-
-    {% if not hyrox_decision.puede_ejecutar_plan %}
-    <div class="rb-workout-card rb-hyrox-protected" style="border-left:3px solid var(--danger);">
-      <div class="rb-workout-eyebrow" style="color:var(--danger);">Hyrox · estado protegido</div>
-      <div style="font-size:10px;color:var(--danger);margin-top:5px;">Prioridad: recuperación</div>
-      <div class="rb-workout-title">{{ hyrox_decision.titulo|default:"Decisión no disponible" }}</div>
-      <div class="rb-bib-sub" style="margin-top:6px;">{{ hyrox_decision.subtitulo }}</div>
-      {% if hyrox_decision.mensaje %}
-      <div style="font-size:11px;color:var(--td);margin-top:8px;line-height:1.5;">{{ hyrox_decision.mensaje }}</div>
-      {% endif %}
-      {% if hyrox_decision.permitido %}
-      <div style="margin-top:10px;font-size:10px;color:var(--ok);">Permitido · {{ hyrox_decision.permitido|join:", " }}</div>
-      {% endif %}
-      {% if hyrox_decision.evitar %}
-      <div style="margin-top:5px;font-size:10px;color:var(--danger);">Evitar · {{ hyrox_decision.evitar|join:", " }}</div>
-      {% endif %}
-    </div>
-    {% else %}
-    {% if hyrox_proxima_sesion %}
-    <div class="rb-workout-card" style="border-left:3px solid var(--accent);">
-      <div class="rb-workout-eyebrow">{{ hyrox_decision.titulo|default:"Próxima Sesión Hyrox" }}</div>
-      <div class="rb-workout-title">{{ hyrox_proxima_sesion.titulo|default:"Hyrox Session" }}</div>
-      {% if hyrox_proxima_sesion.tipo_fase %}
-      <div class="rb-workout-badge" style="color:var(--accent);">{{ hyrox_proxima_sesion.tipo_fase|upper }}</div>
-      {% endif %}
-    </div>
-    {% else %}
-    <div class="rb-workout-card">
-      <div class="rb-workout-eyebrow">Hyrox</div>
-      <div class="rb-workout-title">Sin sesión programada</div>
-      <div class="rb-bib-sub" style="margin-top:6px;">Sin datos suficientes</div>
-    </div>
-    {% endif %}
-
-    {% endif %}
-
-    {% if hyrox_decision.puede_ejecutar_plan %}
-    <div style="text-align:center;margin-top:10px;">
-      <a href="{% url 'hyrox:strava_reconciliacion' %}" style="display:inline-flex;align-items:center;gap:5px;font-family:var(--font-mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:rgba(252,76,2,.55);text-decoration:none;">
-        <i class="fab fa-strava"></i> Importar actividad de Strava →
-      </a>
-    </div>
-    {% endif %}
-
-  </div>
-  {% endif %}
-
-  </section><!-- #chapter-entrenamiento -->
 
   <section id="chapter-vida" class="rb-chapter rb-chapter--life" aria-labelledby="chapter-vida-title">
     <header class="rb-chapter-heading">
@@ -2227,61 +2255,12 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
   </div>
 
-  <!-- ── ACWR WIDGET (colapsado por defecto) ──── -->
-  <details class="rb-section" data-acwr-detail style="margin-top:20px;">
-    <summary style="display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;margin-bottom:0;">
-      <div class="rb-section-num">CARGA</div>
-      <h3 class="rb-section-title" style="margin:0;">Ratio Carga ACWR</h3>
-      <div class="rb-section-line"></div>
-      <span style="font-family:var(--font-mono);font-size:9px;font-weight:700;color:var(--ink-4);white-space:nowrap;">
-        {% if acwr_actual %}{{ acwr_actual|floatformat:2 }}{% else %}—{% endif %}
-        · ver gráfica
-      </span>
-    </summary>
-    <div style="margin-top:12px;display:flex;align-items:center;gap:6px;margin-bottom:10px;">
-      <button onclick="document.getElementById('rbAcwrModal').classList.add('open')"
-              class="rb-btn rb-btn-ghost rb-btn-sm" style="flex-shrink:0;">
-        <i class="fas fa-circle-info"></i> ¿Qué es?
-      </button>
-    </div>
-    <div class="rb-acwr-container"
-         id="acwr-widget-container"
-         hx-get="{% url 'clientes:widget_acwr' cliente.id %}"
-         hx-trigger="revealed"
-         hx-swap="innerHTML">
-      <div class="rb-skeleton"></div>
-    </div>
-  </details>
-
-  {# STATS BAR eliminada — duplicaba los 4 stats del BIB HERO de arriba #}
-
-  <!-- ── ACCIONES PRIMARIAS (rutina + timeline) ── -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
-    <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" class="rb-bottom-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><path d="M17.5 6.5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2 2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/><line x1="8.5" y1="12" x2="15.5" y2="12"/><line x1="2" y1="10" x2="4.5" y2="10"/><line x1="2" y1="14" x2="4.5" y2="14"/><line x1="19.5" y1="10" x2="22" y2="10"/><line x1="19.5" y1="14" x2="22" y2="14"/></svg>
-      Rutina
-    </a>
-    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-bottom-btn">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      Timeline
-    </a>
-  </div>
-
-  <!-- ── MÁS (colapsado) ───────────────────────── -->
+  <!-- ── MÁS PERSONAL (colapsado) ───────────────── -->
   <details class="rb-plan-detalle" style="margin-top:6px;">
     <summary>Más</summary>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:8px;">
-      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;background:var(--accent);border-color:var(--accent);color:var(--bg);">
-        <i class="fas fa-plus"></i> Añadir
-      </a>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
       <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
         <i class="fas fa-book"></i> Diario
-      </a>
-      <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-chart-area"></i> Evolución
-      </a>
-      <a href="{% url 'analytics:explicacion_plan_helms' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
-        <i class="fas fa-map"></i> Plan
       </a>
       <a href="{% url 'clientes:blade_runner_dashboard' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
         <i class="fas fa-bolt"></i> Blade
@@ -2294,21 +2273,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </a>
     </div>
   </details>
-
-  <!-- Phase 26 — Centro de decisiones del plan -->
-  <a href="{% url 'clientes:plan_decisiones' %}"
-     style="display:flex;align-items:center;gap:10px;margin-top:6px;padding:11px 14px;
-            background:var(--paper);border:1px solid var(--line-2);border-radius:12px;
-            text-decoration:none;color:var(--ink-3);transition:border-color .2s,color .2s;"
-     onmouseover="this.style.borderColor='rgba(20,184,166,0.4)';this.style.color='var(--ink)'"
-     onmouseout="this.style.borderColor='var(--line-2)';this.style.color='var(--ink-3)'">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(20,184,166,0.7)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="2"/><path d="M12 2a10 10 0 0 1 0 20A10 10 0 0 1 12 2"/>
-      <path d="M12 6a6 6 0 0 1 0 12 6 6 0 0 1 0-12"/>
-    </svg>
-    <span style="font-size:11px;font-weight:700;letter-spacing:0.04em;">Por qué el plan decide así</span>
-    <span style="margin-left:auto;font-size:9px;font-family:var(--font-mono);color:rgba(20,184,166,0.55);font-weight:700;letter-spacing:0.1em;">→</span>
-  </a>
 
   </section><!-- #chapter-vida -->
 
@@ -2496,15 +2460,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
   function setMode(mode) {
     const isHyrox = mode === 'hyrox';
-    document.querySelectorAll('[data-gym-chapter]').forEach((chapterLink) => {
-      chapterLink.hidden = isHyrox;
-    });
-    if (isHyrox && (
-      activeChapter === 'chapter-plan' || activeChapter === 'chapter-memoria'
-    )) {
-      setActiveChapter('chapter-entrenamiento');
-    }
-
     if (isHyrox) {
       btnGym.classList.remove('active');
       btnHyrox.classList.add('active-hyrox');
