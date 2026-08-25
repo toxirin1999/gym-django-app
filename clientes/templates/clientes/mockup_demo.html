@@ -635,15 +635,17 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 .rb-chapter--memory { padding-top: 30px; }
 .rb-chapter--memory > a > div { border-left: 2px solid rgba(180, 140, 255, .5) !important; }
 
-@media (max-width: 390px) {
+@media (max-width: 520px) {
   .rb-chapter-nav a { font-size: 7px; letter-spacing: .055em; }
   .rb-chapter-context { display: none; }
   .rb-chapter-heading { grid-template-columns: 24px minmax(0, 1fr); }
-  .rb-nav { padding-inline: 8px; gap: 5px; }
+  .rb-nav { width: 100%; max-width: 100%; padding-inline: 8px; gap: 5px; overflow-x: hidden; }
   .rb-brand { gap: 6px; font-size: 11px; letter-spacing: .1em; }
-  .rb-nav-tools { gap: 3px; }
+  .rb-nav-tools { min-width: 0; gap: 3px; }
+  .rb-nav-tool { padding-inline: 0; }
   .rb-nav-tool-label { display: none; }
-  .rb-live { gap: 3px; font-size: 7px; letter-spacing: .08em; }
+  .rb-live { width: 6px; min-width: 6px; gap: 0; overflow: hidden; font-size: 7px; letter-spacing: .08em; white-space: nowrap; }
+  .rb-live-dot { flex: 0 0 6px; }
 }
 
 /* ── RESPONSIVE ──────────────────────────────── */
@@ -2441,20 +2443,50 @@ document.addEventListener('DOMContentLoaded', function () {
     link.addEventListener('click', () => setActiveChapter(link.getAttribute('href').slice(1)));
   });
 
-  if ('IntersectionObserver' in window) {
-    const navHeight = getComputedStyle(document.documentElement)
-      .getPropertyValue('--rb-nav-height').trim() || '57px';
-    const chapterObserver = new IntersectionObserver((entries) => {
-      const visible = entries
-        .filter((entry) => entry.isIntersecting)
-        .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visible) setActiveChapter(visible.target.id);
-    }, {
-      rootMargin: '-' + navHeight + ' 0px -58% 0px',
-      threshold: [0.08, 0.25, 0.55]
-    });
-    chapterSections.forEach((section) => chapterObserver.observe(section));
+  function getChapterReadingLine() {
+    const primaryNav = document.querySelector('.rb-nav');
+    const chapterNav = document.querySelector('.rb-chapter-nav');
+    const stickyHeight = (primaryNav ? primaryNav.offsetHeight : 0)
+      + (chapterNav ? chapterNav.offsetHeight : 0);
+    return stickyHeight + window.innerHeight * 0.18;
   }
+
+  function syncActiveChapterFromScroll() {
+    chapterSyncFrame = null;
+    const visibleSections = chapterSections.filter((section) => (
+      section.offsetParent !== null && !section.hidden
+    ));
+    if (!visibleSections.length) return;
+
+    const atDocumentEnd = window.scrollY + window.innerHeight
+      >= document.documentElement.scrollHeight - 2;
+    if (atDocumentEnd) {
+      setActiveChapter(visibleSections[visibleSections.length - 1].id);
+      return;
+    }
+
+    const readingLine = getChapterReadingLine();
+    let selectedChapter = visibleSections[0].id;
+    visibleSections.forEach((section) => {
+      const heading = section.querySelector(':scope > .rb-chapter-heading');
+      if (heading && heading.getBoundingClientRect().top <= readingLine) {
+        selectedChapter = section.id;
+      }
+    });
+    setActiveChapter(selectedChapter);
+  }
+
+  let chapterSyncFrame = null;
+  function requestChapterSync() {
+    if (chapterSyncFrame !== null) return;
+    chapterSyncFrame = requestAnimationFrame(syncActiveChapterFromScroll);
+  }
+
+  window.addEventListener('scroll', requestChapterSync, { passive: true });
+  window.addEventListener('load', requestChapterSync);
+  window.addEventListener('resize', requestChapterSync);
+  window.addEventListener('hashchange', requestChapterSync);
+  requestChapterSync();
 
   {% if hyrox_objetivo %}
   const btnGym = document.getElementById('rbBtnGym');
@@ -2485,6 +2517,7 @@ document.addEventListener('DOMContentLoaded', function () {
       hyroxContent.style.display = 'none';
     }
     localStorage.setItem('rb_panel_mode', mode);
+    requestChapterSync();
   }
 
   btnGym.addEventListener('click', () => setMode('gym'));

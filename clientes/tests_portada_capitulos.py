@@ -78,8 +78,16 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         self.assertIn("top: var(--rb-nav-height)", self.source)
         self.assertRegex(
             self.source,
-            r"@media \(max-width: 390px\)[\s\S]*?\.rb-nav-tool-label\s*\{\s*display:\s*none",
+            r"@media \(max-width: 520px\)[\s\S]*?\.rb-nav-tool-label\s*\{\s*display:\s*none",
         )
+        compact = re.search(
+            r"@media \(max-width: 520px\)\s*\{([\s\S]*?)\n\}",
+            self.source,
+        )
+        self.assertIsNotNone(compact)
+        self.assertRegex(compact.group(1), r"\.rb-nav\s*\{[^}]*overflow-x:\s*hidden")
+        self.assertRegex(compact.group(1), r"\.rb-nav-tool\s*\{[^}]*padding-inline:\s*0")
+        self.assertRegex(compact.group(1), r"\.rb-live\s*\{[^}]*overflow:\s*hidden")
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Mi cuerpo"')
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Strava"')
         self.assertRegex(self.source, r'class="rb-nav-tool[^\"]*"[^>]+aria-label="Rehab"')
@@ -93,9 +101,27 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         self.assertEqual(len(links), 5)
         self.assertIn("is-active", self.source)
         self.assertIn("aria-current", self.source)
-        self.assertIn("IntersectionObserver", self.source)
         self.assertIn("location.hash", self.source)
         self.assertIn(".rb-chapter-nav a.is-active::after", self.source)
+
+    def test_scrollspy_usa_linea_de_lectura_y_ultimo_heading_visible(self):
+        self.assertNotIn("new IntersectionObserver", self.source)
+        self.assertIn("function getChapterReadingLine()", self.source)
+        self.assertIn("window.innerHeight * 0.18", self.source)
+        self.assertIn("heading.getBoundingClientRect().top <= readingLine", self.source)
+        self.assertIn("selectedChapter = section.id", self.source)
+        self.assertIn("section.offsetParent !== null", self.source)
+        self.assertIn("document.documentElement.scrollHeight", self.source)
+        self.assertIn("visibleSections[visibleSections.length - 1].id", self.source)
+
+    def test_scrollspy_se_sincroniza_sin_saturar_el_scroll(self):
+        self.assertIn("requestAnimationFrame(syncActiveChapterFromScroll)", self.source)
+        self.assertIn("addEventListener('scroll', requestChapterSync, { passive: true })", self.source)
+        for event_name in ("load", "resize", "hashchange"):
+            self.assertIn(
+                f"addEventListener('{event_name}', requestChapterSync)",
+                self.source,
+            )
 
     def test_modo_hyrox_oculta_capitulos_gym_y_reubica_el_activo(self):
         self.assertIn("querySelectorAll('[data-gym-chapter]')", self.source)
