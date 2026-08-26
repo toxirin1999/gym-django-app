@@ -18,7 +18,7 @@ REGLAS CLAVE:
 
 SEÑALES LEÍDAS:
 - Hyrox: Pulso, RPE, UserInjury
-- JOI: estado (SILENCIO, OBSERVANDO, PRESENTE, PROTEGIENDO)
+- JOI: presencia narrativa (solo OBSERVANDO; nunca autoridad ejecutiva)
 - Gym: sesión viable, frenos
 - Diario: si disponible, entrada pendiente cierre
 
@@ -100,8 +100,7 @@ def _check_protegiendo(usuario, decision_gym=None):
     2. RPE extremo en sesión reciente (≥ 9)
     3. Lesión AGUDA / SUB_AGUDA activa
     4. Recuperación pendiente sin registrar
-    5. JOI Habitación está PROTEGIENDO (validación)
-    6. Gym tiene freno por lesión
+    5. Gym tiene freno por lesión
     """
     motivo = None
     modulo_principal = None
@@ -207,23 +206,6 @@ def _check_protegiendo(usuario, decision_gym=None):
             modulo_principal = 'hyrox'
             accion_label = 'Registrar recuperación'
             accion_url = '/hyrox/registrar-recuperacion/'
-            return _estado_dict(
-                'PROTEGIENDO', motivo,
-                'El sistema baja el tono hoy.',
-                accion_label, accion_url, modulo_principal
-            )
-    except Exception:
-        pass
-
-    # Check 5: JOI Habitación está PROTEGIENDO (validación)
-    try:
-        from joi.services import determinar_estado_habitacion_joi
-        estado, _ = determinar_estado_habitacion_joi(usuario)
-        if estado == 'PROTEGIENDO':
-            motivo = 'joi_protegiendo'
-            modulo_principal = 'joi'
-            accion_label = 'Ver habitación'
-            accion_url = '/joi/habitacion/'
             return _estado_dict(
                 'PROTEGIENDO', motivo,
                 'El sistema baja el tono hoy.',
