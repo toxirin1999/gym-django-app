@@ -750,18 +750,26 @@ def _ctx_analytics(cliente, hoy):
 
 
 def _ctx_hyrox(cliente, hoy):
-    """Objetivo Hyrox activo y próxima sesión."""
+    """Objetivo contractual de la campaña Hyrox activa y próxima sesión."""
     try:
+        from hyrox.campaign_authority import resolver_autoridad_campana
         from hyrox.models import HyroxObjective, HyroxSession
-        objetivo = (
-            HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-            or HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
-        )
-        proxima = None
-        if objetivo:
-            proxima = HyroxSession.objects.filter(
+        autoridad = resolver_autoridad_campana(cliente, hoy)
+        if autoridad.get('estado') != 'activa':
+            return None, None
+        objetivo = HyroxObjective.objects.filter(
+            pk=autoridad.get('objetivo_id'), cliente=cliente
+        ).first()
+        if objetivo is None:
+            return None, None
+        proxima = (
+            HyroxSession.objects.filter(
                 objective=objetivo, estado='planificado', fecha__gte=hoy
-            ).order_by('fecha').prefetch_related('activities').first()
+            )
+            .order_by('fecha')
+            .prefetch_related('activities')
+            .first()
+        )
         return objetivo, proxima
     except Exception as e:
         logger.warning("_ctx_hyrox error para cliente %s: %s", cliente.id, e)
@@ -1617,17 +1625,6 @@ def mockup_demo(request):
         ).order_by('-fecha_inicio').first()
     except Exception:
         context['lesion_activa'] = None
-
-    # Garantiza que hyrox_objetivo esté en el contexto aunque _ctx_hyrox haya fallado.
-    if not context.get('hyrox_objetivo'):
-        try:
-            from hyrox.models import HyroxObjective
-            context['hyrox_objetivo'] = (
-                HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
-                or HyroxObjective.objects.filter(cliente=cliente, estado='active').first()
-            )
-        except Exception:
-            context.setdefault('hyrox_objetivo', None)
 
     # ── Daily push Hyrox ──────────────────────────────────────────
     try:
