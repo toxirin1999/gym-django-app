@@ -3251,9 +3251,19 @@ def _corregir_fecha_sesion_en_servicio(sesion):
 # Compartido por el flujo HTML y el endpoint AJAX.
 # ─────────────────────────────────────────────────────────────────────────────
 
-def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
+def guardar_registro_factual_hyrox_service(
+    objetivo,
+    sesion,
+    form_data,
+    *,
+    _ejecutar_efectos_prescriptivos=False,
+):
     """
-    Guarda una sesión Hyrox completa y ejecuta todos los motores post-guardado.
+    Persiste los hechos de una sesión Hyrox sin prescribir cambios futuros.
+
+    El argumento privado existe únicamente para que el wrapper histórico pueda
+    conservar su contrato. Los consumidores de registro manual siempre usan el
+    valor por defecto y, por tanto, nunca alcanzan los motores post-guardado.
 
     Input:
       objetivo   — HyroxObjective
@@ -3279,6 +3289,13 @@ def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
     """
     from django.db import transaction
     from .models import HyroxActivity, UserInjury
+    from .campaign_authority import exigir_registro_manual
+
+    exigir_registro_manual(
+        objetivo.cliente,
+        fecha=sesion.fecha,
+        objective=objetivo,
+    )
 
     mensajes = []
     eventos = []
@@ -3522,6 +3539,18 @@ def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
             except (ValueError, KeyError):
                 pass
 
+    resultado_factual = {
+        'success': True,
+        'error': None,
+        'sesion_id': sesion.id,
+        'readiness_score_antes': readiness_score_antes,
+        'eventos': eventos,
+        'warnings': warnings,
+        'messages': mensajes,
+    }
+    if not _ejecutar_efectos_prescriptivos:
+        return resultado_factual
+
     # ── Motores post-guardado (fuera del atomic para no revertir la sesión) ──
     # Clasificación: accesorios → fallo no cancela; críticos → advertencia y continuar.
     from .training_engine import HyroxTrainingEngine
@@ -3635,6 +3664,16 @@ def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
         'warnings': warnings,
         'messages': mensajes,
     }
+
+
+def guardar_sesion_hyrox_service(objetivo, sesion, form_data):
+    """Guarda hechos y, si la campaña lo autoriza, ejecuta efectos de plan."""
+    return guardar_registro_factual_hyrox_service(
+        objetivo,
+        sesion,
+        form_data,
+        _ejecutar_efectos_prescriptivos=True,
+    )
 
 
 def construir_respuesta_sesion_guardada(objetivo, sesion, resultado_dominio):
