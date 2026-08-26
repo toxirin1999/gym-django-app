@@ -127,6 +127,41 @@ def exigir_prescripcion(cliente, *, accion='generar_plan', fecha=None, objective
     return autoridad
 
 
+def exigir_registro_manual(cliente, fecha=None, objective=None):
+    """Autoriza una captura factual sin conceder permisos prescriptivos."""
+    autoridad = resolver_autoridad_campana(
+        cliente,
+        fecha or timezone.localdate(),
+    )
+    if not autoridad['permisos'].get('registro_manual', False):
+        raise CampanaHyroxNoAutoriza(
+            accion='registro_manual',
+            autoridad=autoridad,
+        )
+    objetivo_valido = (
+        objective is None
+        or (
+            isinstance(objective, HyroxObjective)
+            and objective.pk is not None
+            and not objective._state.adding
+            and HyroxObjective.objects.filter(
+                pk=objective.pk,
+                cliente=cliente,
+            ).exists()
+        )
+    )
+    if not objetivo_valido:
+        autoridad['hallazgos'] = [
+            *autoridad.get('hallazgos', []),
+            'objetivo_invalido',
+        ]
+        raise CampanaHyroxNoAutoriza(
+            accion='registro_manual',
+            autoridad=autoridad,
+        )
+    return autoridad
+
+
 def autoriza_efectos_campana(objective, *, accion='autoajuste', fecha=None):
     """Booleano seguro para signals: una denegación equivale a no-op factual."""
     if objective is None:
