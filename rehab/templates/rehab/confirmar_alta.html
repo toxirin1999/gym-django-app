@@ -1,0 +1,35 @@
+{% extends "rehab/base_rehab.html" %}
+
+{% block title %}Confirmar cierre{% endblock %}
+{% block body_class %}rehab-dark{% endblock %}
+
+{% block content %}
+<div class="rehab-wrap">
+  <header class="rehab-header">
+    <div><div class="rehab-kicker">Rehabilitación</div><h1 class="rehab-title">Cerrar episodio</h1></div>
+  </header>
+  <section class="rehab-panel">
+    <h2>{{ episodio.protocolo.nombre }}</h2>
+    <div class="rehab-alerta"><strong>Esto no es un alta médica.</strong> Es tu confirmación personal para cerrar este seguimiento en la app.</div>
+    <p>¿Confirmas que ahora entrenas sin restricciones por esta molestia?</p>
+    {% if error %}<div class="rehab-alerta" role="alert">{{ error }}</div>{% endif %}
+    <form method="post">
+      {% csrf_token %}
+      <label for="id_lesion_hyrox">Lesión vinculada explícitamente (opcional)</label>
+      <select id="id_lesion_hyrox" name="lesion_hyrox_id">
+        <option value="">Ninguna lesión vinculada</option>
+        {% for lesion in lesiones %}
+          <option value="{{ lesion.pk }}"{% if episodio.lesion_hyrox_id == lesion.pk %} selected{% endif %}>{{ lesion.zona_afectada }} · {{ lesion.get_fase_display }}</option>
+        {% endfor %}
+      </select>
+      <label for="id_nota_evidencia">Nota de evidencia</label>
+      <textarea id="id_nota_evidencia" name="nota_evidencia" placeholder="Opcional: qué ha cambiado o qué has podido volver a hacer."></textarea>
+      <label><input type="checkbox" name="confirmacion_usuario" required> confirmas que ahora entrenas sin restricciones por esta molestia</label>
+      <div class="rehab-acciones">
+        <button type="submit" class="rehab-btn-primary">Confirmar y cerrar seguimiento</button>
+        <a href="{% url 'rehab:hoy' %}" class="rehab-btn-secondary">Cancelar</a>
+      </div>
+    </form>
+  </section>
+</div>
+{% endblock %}

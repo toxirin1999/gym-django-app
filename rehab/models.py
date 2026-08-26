@@ -3,6 +3,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models, transaction
 from django.db.models import Q
 from django.utils import timezone
+from django.conf import settings
 
 from clientes.models import Cliente
 
@@ -149,6 +150,11 @@ class EpisodioRehab(models.Model):
     ]
 
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='episodios_rehab')
+    lesion_hyrox = models.ForeignKey(
+        'hyrox.UserInjury', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='episodios_rehab',
+        help_text='Vínculo explícito opcional; nunca se infiere por texto o zona.',
+    )
     protocolo = models.ForeignKey(ProtocoloRehab, on_delete=models.CASCADE, related_name='episodios')
     protocolo_version = models.IntegerField()
     fase_actual = models.ForeignKey(
@@ -172,6 +178,47 @@ class EpisodioRehab(models.Model):
 
     def __str__(self):
         return f"{self.cliente} · {self.protocolo.nombre} ({self.estado})"
+
+
+class EventoAltaRehab(models.Model):
+    """Hecho append-only de cierre confirmado; no representa un alta médica."""
+
+    MOTIVO_CONFIRMACION_USUARIO = 'confirmacion_usuario'
+
+    episodio = models.OneToOneField(
+        EpisodioRehab, on_delete=models.PROTECT, related_name='evento_alta'
+    )
+    lesion_hyrox = models.ForeignKey(
+        'hyrox.UserInjury', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='eventos_alta_rehab',
+    )
+    fecha = models.DateField()
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.PROTECT,
+        related_name='altas_rehab_confirmadas',
+    )
+    nota_evidencia = models.TextField(blank=True)
+    motivo = models.CharField(max_length=40, default=MOTIVO_CONFIRMACION_USUARIO)
+    confirmacion_usuario = models.BooleanField(default=False)
+    creado_en = models.DateTimeField(auto_now_add=True)
+
+    _CAMPOS_INMUTABLES = (
+        'episodio_id', 'lesion_hyrox_id', 'fecha', 'actor_id',
+        'nota_evidencia', 'motivo', 'confirmacion_usuario',
+    )
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anterior = type(self).objects.get(pk=self.pk)
+            if any(
+                getattr(anterior, campo) != getattr(self, campo)
+                for campo in self._CAMPOS_INMUTABLES
+            ):
+                raise ValidationError('El evento de alta Rehab es append-only e inmutable.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('El evento de alta Rehab es append-only y no se elimina.')
 
 
 class RegistroDiarioRehab(models.Model):

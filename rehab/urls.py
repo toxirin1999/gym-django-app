@@ -13,4 +13,5 @@ urlpatterns = [
     path("recorrido/", views.recorrido_view, name="recorrido"),
     path("evolucion/", views.evolucion_view, name="evolucion"),
     path("episodio/<int:episodio_id>/avance/confirmar/", views.confirmar_avance_view, name="confirmar_avance"),
+    path("episodio/<int:episodio_id>/alta/", views.confirmar_alta_view, name="confirmar_alta"),
 ]

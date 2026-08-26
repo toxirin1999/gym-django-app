@@ -278,3 +278,41 @@ def confirmar_avance_view(request, episodio_id):
         else:
             messages.success(request, 'Fase avanzada correctamente.')
     return redirect('rehab:proponer_avance')
+
+
+@login_required
+def confirmar_alta_view(request, episodio_id):
+    """Confirmación humana de retorno sin restricciones; no es un alta médica."""
+    from hyrox.models import UserInjury
+    from .services.alta_service import confirmar_alta_rehab
+
+    cliente = request.user.cliente_perfil
+    episodio = get_object_or_404(
+        EpisodioRehab.objects.select_related('lesion_hyrox', 'protocolo'),
+        pk=episodio_id,
+        cliente=cliente,
+    )
+    lesiones = UserInjury.objects.filter(
+        cliente=cliente, activa=True
+    ).order_by('-fecha_inicio', '-pk')
+    if request.method == 'POST':
+        try:
+            confirmar_alta_rehab(
+                episodio=episodio,
+                actor=request.user,
+                confirmacion_usuario=request.POST.get('confirmacion_usuario') == 'on',
+                nota_evidencia=request.POST.get('nota_evidencia', ''),
+                lesion_hyrox_id=request.POST.get('lesion_hyrox_id') or None,
+            )
+        except (ValidationError, ValueError) as exc:
+            return render(request, 'rehab/confirmar_alta.html', {
+                'episodio': episodio,
+                'lesiones': lesiones,
+                'error': '; '.join(exc.messages) if isinstance(exc, ValidationError) else str(exc),
+            }, status=400)
+        messages.success(request, 'Episodio Rehab cerrado con tu confirmación.')
+        return redirect('rehab:hoy')
+    return render(request, 'rehab/confirmar_alta.html', {
+        'episodio': episodio,
+        'lesiones': lesiones,
+    })
