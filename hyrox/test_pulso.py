@@ -149,5 +149,6 @@ class PulsoTemplateTest(TestCase):
 
         self.assertIn('hyrox_decision', response.context)
         self.assertEqual(response.context['hyrox_decision']['estado'], 'inactivo')
-        self.assertIn(b'HYROX EN PAUSA', response.content)
-        self.assertNotIn(b'Estado de hoy', response.content)
+        self.assertTrue(response.context['hyrox_desacoplado'])
+        self.assertIn(b'HYROX DESACOPLADO', response.content)
+        self.assertNotIn(b'HYROX EN PAUSA', response.content)

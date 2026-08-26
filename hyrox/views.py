@@ -375,12 +375,24 @@ def hyrox_dashboard(request):
     _objetivo_campana = objetivo_autorizado_campana(
         cliente, accion='joi_hyrox', fecha=hoy
     )
-    objetivo_activo = _objetivo_campana or HyroxObjective.objects.filter(
-        cliente=cliente, estado='activo'
-    ).first()
+    if _objetivo_campana is not None:
+        objetivo_activo = _objetivo_campana
+    else:
+        # Semántica de presentación local: el dashboard Hyrox puede leer su
+        # objetivo propio persistido aunque la campaña no tenga autoridad.
+        # Este fallback no se exporta a JOI, clientes ni entrenos.
+        objetivos_propios = HyroxObjective.objects.filter(cliente=cliente)
+        objetivo_activo = objetivos_propios.filter(estado='activo').order_by(
+            '-fecha_evento', '-fecha_creacion', '-pk'
+        ).first()
+        if objetivo_activo is None:
+            objetivo_activo = objetivos_propios.order_by(
+                '-fecha_evento', '-fecha_creacion', '-pk'
+            ).first()
     _campana_activa = bool(
         _objetivo_campana and objetivo_activo.pk == _objetivo_campana.pk
     )
+    _hyrox_desacoplado = bool(objetivo_activo and not _campana_activa)
     
     sesiones_completadas = []
     sesiones_planificadas = []
@@ -1757,6 +1769,7 @@ def hyrox_dashboard(request):
 
     context = {
         'campana_hyrox_activa': _campana_activa,
+        'hyrox_desacoplado': _hyrox_desacoplado,
         'competition_progress': competition_progress,
         'macro_data': macro_data,
         'cliente': cliente,
