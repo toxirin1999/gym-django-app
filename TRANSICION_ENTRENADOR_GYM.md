@@ -487,6 +487,23 @@ Mantener el Diario personal y compartir solo contexto autorizado.
 
 Un cierre puede tener valor personal sin convertirse en dato deportivo.
 
+### Fase 9A — señal mínima autorizada Diario → Gym
+
+- La clasificación corporal de `SeguimientoVires` permanece privada y puede
+  originar una propuesta, pero Gym ya no la consume ni la muestra directamente.
+- Aceptar `diario_tendencia_corporal` revalida la evidencia y publica una
+  `SenalEntrenamientoAutorizada` versionada durante 14 días naturales. La
+  proyección pública contiene solo categoría, intensidad, vigencia, alcance de
+  observación e identidades causales; nunca notas ni texto libre del Diario.
+- La autorización queda enlazada a su `SugerenciaPlan` y a una
+  `IntervencionPlan(vigilar_senal)`. Si la evidencia ya no existe, toda la
+  aceptación revierte transaccionalmente y la propuesta continúa pendiente.
+- Caducidad, cancelación o revocación cortan el consumo inmediatamente. El
+  propietario puede retirarla desde el Centro de decisiones sin borrar el
+  Diario, la sugerencia ni la historia de la autorización.
+- `GymDecisionTrace` conserva únicamente `{id, schema_version}` cuando la señal
+  autorizada fue realmente visible. No persiste contenido personal.
+
 ## 14. Fase 10 — JOI
 
 ### Objetivo

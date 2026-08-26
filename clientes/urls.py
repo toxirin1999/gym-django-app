@@ -110,6 +110,7 @@ urlpatterns = [
     # Acciones sobre SugerenciaPlan (Phase 10B)
     path('sugerencia/<int:sugerencia_id>/aceptar/', views.aceptar_sugerencia_view, name='aceptar_sugerencia'),
     path('sugerencia/<int:sugerencia_id>/ignorar/', views.ignorar_sugerencia_view, name='ignorar_sugerencia'),
+    path('senal-diario/<int:senal_id>/revocar/', views.revocar_senal_diario_view, name='revocar_senal_diario'),
     path('intervencion/<int:intervencion_id>/cancelar-ajuste/', views.cancelar_intervencion_esenciales_view, name='cancelar_intervencion_esenciales'),
 
     # Phase 13 — Continuation recommendation actions

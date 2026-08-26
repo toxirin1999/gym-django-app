@@ -895,10 +895,10 @@ def _ctx_joi_semanal(cliente):
 
 def _ctx_senal_corporal_diario(cliente):
     try:
-        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
-        return obtener_senal_corporal_diario(cliente.user)
+        from entrenos.services.senales_autorizadas_service import obtener_proyeccion_senal_autorizada
+        return obtener_proyeccion_senal_autorizada(cliente)
     except Exception:
-        return {'hay_senal': False}
+        return {'hay_senal': False, 'schema_version': 1}
 
 
 def _ctx_sugerencia_diario(cliente):
@@ -1320,12 +1320,9 @@ def _get_dashboard_context_data(request, cliente):
     import json as _json
     acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
 
-    # Phase 3.0 — señal corporal del diario (5 min cache — cambia máx cada cierre)
-    _senal_key = f'dashboard_senal_diario_{cliente.id}'
-    _senal_diario = cache.get(_senal_key)
-    if _senal_diario is None:
-        _senal_diario = _ctx_senal_corporal_diario(cliente)
-        cache.set(_senal_key, _senal_diario, 300)
+    # Fase 9A — no cachear consentimiento: revocación/caducidad deben cortar
+    # el consumo en la siguiente lectura.
+    _senal_diario = _ctx_senal_corporal_diario(cliente)
 
     # Phase 3.5 — sugerencia diario (5 min cache — solo cambia al aceptar/ignorar)
     _MISSING = object.__new__(object)
@@ -5150,7 +5147,27 @@ def aceptar_sugerencia_view(request, sugerencia_id):
     except SugerenciaNoVigente:
         messages.info(request, "La señal ha cambiado. No aplicamos ningún ajuste.")
         return redirect('clientes:plan_decisiones')
-    messages.info(request, "Mantendremos las cargas durante 7 días.")
+    if sugerencia.patron == 'diario_tendencia_corporal':
+        messages.info(request, "Observaremos esta señal durante 14 días, sin cambiar el plan por sí sola.")
+    else:
+        messages.info(request, "La propuesta queda aplicada durante su vigencia.")
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def revocar_senal_diario_view(request, senal_id):
+    """Retira una autorización Diario→Gym del propietario sin borrar historia."""
+    from entrenos.models import SenalEntrenamientoAutorizada
+    from entrenos.services.senales_autorizadas_service import revocar_senal_autorizada
+
+    senal = get_object_or_404(
+        SenalEntrenamientoAutorizada,
+        pk=senal_id,
+        cliente__user=request.user,
+    )
+    revocar_senal_autorizada(senal)
+    messages.info(request, 'La observación del Diario queda retirada del entrenador.')
     return redirect('clientes:plan_decisiones')
 
 
@@ -5429,7 +5446,7 @@ def plan_decisiones_view(request):
             estado=IntervencionPlan.ESTADO_ACTIVA,
             fecha_inicio__lte=hoy,
             fecha_fin__gte=hoy,
-        ).order_by('-creada_en')
+        ).select_related('senal_autorizada').order_by('-creada_en')
     )
 
     # 3. Pruebas de distribución recientes (últimas 5 — activas o expiradas)

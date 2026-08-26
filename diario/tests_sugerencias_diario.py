@@ -10,6 +10,7 @@ from django.test import TestCase
 from unittest.mock import patch
 
 from clientes.utils import get_cliente_actual
+from diario.models import SeguimientoVires
 from diario.services.sugerencias_diario import get_sugerencia_diario
 from entrenos.models import IntervencionPlan, SugerenciaPlan
 
@@ -118,6 +119,13 @@ class AceptarSugerenciaDiarioTest(TestCase):
 
     def setUp(self):
         self.cliente = _cliente('test_acepta_sug')
+        hoy = date.today()
+        for offset in (0, 1):
+            SeguimientoVires.objects.create(
+                usuario=self.cliente.user,
+                fecha=hoy - timedelta(days=offset),
+                cuerpo_cierre='dolorido',
+            )
 
     def test_aceptar_crea_intervencion_vigilar_senal(self):
         from entrenos.services.sugerencias_service import aceptar_sugerencia
@@ -146,7 +154,8 @@ class AceptarSugerenciaDiarioTest(TestCase):
         hoy = date.today()
         aceptar_sugerencia(sg, fecha_ref=hoy)
         ip = IntervencionPlan.objects.get(cliente=self.cliente, tipo=IntervencionPlan.TIPO_VIGILAR_SENAL)
-        self.assertEqual(ip.fecha_fin, hoy + timedelta(days=14))
+        # Ventana de 14 días naturales, contando el día de aceptación.
+        self.assertEqual(ip.fecha_fin, hoy + timedelta(days=13))
 
     def test_aceptar_no_cambia_cargas(self):
         from entrenos.services.sugerencias_service import aceptar_sugerencia

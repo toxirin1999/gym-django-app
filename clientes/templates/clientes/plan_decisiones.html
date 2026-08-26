@@ -1253,7 +1253,7 @@
           <p class="dc-card-meta">Origen: {{ iv.origen_patron }}.</p>
           {% endif %}
           <p class="dc-card-note">
-            {% if iv.origen_patron == 'esenciales_frecuentes' %}
+            {% if iv.origen_patron == 'esenciales_frecuentes' or iv.origen_patron == 'diario_tendencia_corporal' %}
             Termina automáticamente en la fecha indicada, o puedes cancelarlo ahora.
             {% else %}
             Expira automáticamente al terminar su ventana.
@@ -1263,6 +1263,11 @@
           <form method="post" action="{% url 'clientes:cancelar_intervencion_esenciales' iv.id %}">
             {% csrf_token %}
             <button class="dc-button is-danger" type="submit">Cancelar ajuste</button>
+          </form>
+          {% elif iv.origen_patron == 'diario_tendencia_corporal' and iv.senal_autorizada %}
+          <form method="post" action="{% url 'clientes:revocar_senal_diario' iv.senal_autorizada.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-danger" type="submit">Dejar de compartir</button>
           </form>
           {% endif %}
         </article>

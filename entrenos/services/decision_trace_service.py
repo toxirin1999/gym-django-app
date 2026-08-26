@@ -197,6 +197,21 @@ def _extraer_intervenciones(cliente, fecha=None) -> list[str]:
         return []
 
 
+def _extraer_senales_autorizadas(cliente, decision: dict, fecha=None) -> list[dict]:
+    """Traza solo identidad/version de una señal que fue realmente visible."""
+    aviso = decision.get('distribucion_aviso') or {}
+    if aviso.get('tipo') != 'vigilar_senal':
+        return []
+    try:
+        from entrenos.services.senales_autorizadas_service import obtener_proyeccion_senal_autorizada
+        payload = obtener_proyeccion_senal_autorizada(cliente, fecha_ref=fecha)
+        if not payload.get('hay_senal'):
+            return []
+        return [{'id': payload['senal_id'], 'schema_version': payload['schema_version']}]
+    except Exception:
+        return []
+
+
 def _extraer_lesion_contexto(decision: dict) -> dict:
     aviso = decision.get('lesion_aviso')
     if not aviso:
@@ -255,6 +270,7 @@ def registrar_decision_trace(cliente, decision: dict, fecha=None) -> None:
             'explicacion_senales':  explicacion.get('senales_activas', []),
             'preferencias_activas': _extraer_preferencias(decision),
             'intervenciones_activas': _extraer_intervenciones(cliente, fecha),
+            'senales_autorizadas': _extraer_senales_autorizadas(cliente, decision, fecha),
             'lesion_contexto':      _extraer_lesion_contexto(decision),
         }
 

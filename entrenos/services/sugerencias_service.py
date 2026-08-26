@@ -204,6 +204,15 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
     if tipo is None:
         raise ValueError(f'No existe una intervención definida para {sugerencia.patron!r}.')
 
+    clasificacion_diario = None
+    if sugerencia.patron == 'diario_tendencia_corporal':
+        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
+        clasificacion_diario = obtener_senal_corporal_diario(
+            sugerencia.cliente.user, fecha_ref=fecha_ref,
+        )
+        if not clasificacion_diario.get('hay_senal') or not clasificacion_diario.get('intensidad'):
+            raise SugerenciaNoVigente('La clasificación privada ya no sostiene la publicación.')
+
     if sugerencia.patron == 'esenciales_frecuentes':
         from entrenos.services.contrato_sugerencia_service import revalidar_sugerencia
         contrato_actual = revalidar_sugerencia(sugerencia, fecha_ref=fecha_ref)
@@ -214,7 +223,11 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
     # Distribution interventions last 2 weeks; carga ones expire on Sunday
     if sugerencia.patron == 'esenciales_frecuentes':
         fecha_fin = fecha_ref + timedelta(days=6)
+    elif sugerencia.patron == 'diario_tendencia_corporal':
+        # Ventana inclusiva de 14 fechas: inicio + los 13 días siguientes.
+        fecha_fin = fecha_ref + timedelta(days=13)
     elif tipo in _DISTRIBUCION_PATRONES:
+        # Semántica legacy de las pruebas de distribución, fuera de Fase 9A.
         fecha_fin = fecha_ref + timedelta(days=14)
     else:
         fecha_fin = _fin_de_semana(fecha_ref)
@@ -227,7 +240,7 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
         ))
         sugerencia.contrato_snapshot = snap
 
-    IntervencionPlan.objects.create(
+    intervencion = IntervencionPlan.objects.create(
         cliente=sugerencia.cliente,
         sugerencia=sugerencia,
         tipo=tipo,
@@ -236,6 +249,35 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
         fecha_fin=fecha_fin,
         estado=IntervencionPlan.ESTADO_ACTIVA,
     )
+
+    if sugerencia.patron == 'diario_tendencia_corporal':
+        from diario.models import SeguimientoVires
+        from entrenos.models import SenalEntrenamientoAutorizada
+        intensidad = clasificacion_diario['intensidad']
+        ids_fuente = list(
+            SeguimientoVires.objects.filter(
+                usuario=sugerencia.cliente.user,
+                fecha__range=[fecha_ref - timedelta(days=4), fecha_ref],
+            ).values_list('id', flat=True)
+        )
+        SenalEntrenamientoAutorizada.objects.get_or_create(
+            sugerencia=sugerencia,
+            defaults={
+                'cliente': sugerencia.cliente,
+                'categoria': SenalEntrenamientoAutorizada.CATEGORIA_RECUPERACION,
+                'intensidad': intensidad,
+                'estado': SenalEntrenamientoAutorizada.ESTADO_AUTORIZADA,
+                'vigente_desde': fecha_ref,
+                'vigente_hasta': fecha_fin,
+                'autorizada_en': timezone.now(),
+                'evidencia_tecnica': {
+                    'seguimiento_vires_ids': ids_fuente,
+                    'fecha_clasificacion': fecha_ref.isoformat(),
+                    'codigo_clasificacion': 'tendencia_corporal_v1',
+                },
+                'intervencion': intervencion,
+            },
+        )
 
     sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
     sugerencia.fecha_respuesta = timezone.now()

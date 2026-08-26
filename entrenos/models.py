@@ -1927,6 +1927,71 @@ class IntervencionPlan(models.Model):
         return f"{self.cliente} — {self.tipo} ({self.fecha_inicio} → {self.fecha_fin})"
 
 
+class SenalEntrenamientoAutorizada(models.Model):
+    """Frontera consentida entre una clasificación privada y el entrenador Gym."""
+
+    CATEGORIA_RECUPERACION = 'recuperacion'
+    CATEGORIA_DISPONIBILIDAD = 'disponibilidad'
+    CATEGORIA_CONTINUIDAD = 'continuidad'
+    CATEGORIA_RELACION_ENTRENAMIENTO = 'relacion_entrenamiento'
+    CATEGORIAS = [(valor, valor.replace('_', ' ').title()) for valor in (
+        CATEGORIA_RECUPERACION,
+        CATEGORIA_DISPONIBILIDAD,
+        CATEGORIA_CONTINUIDAD,
+        CATEGORIA_RELACION_ENTRENAMIENTO,
+    )]
+
+    INTENSIDAD_SUAVE = 'suave'
+    INTENSIDAD_MODERADA = 'moderada'
+    INTENSIDAD_ALTA = 'alta'
+    INTENSIDADES = [(valor, valor.title()) for valor in (
+        INTENSIDAD_SUAVE, INTENSIDAD_MODERADA, INTENSIDAD_ALTA,
+    )]
+
+    ESTADO_PROPUESTA = 'propuesta'
+    ESTADO_AUTORIZADA = 'autorizada'
+    ESTADO_REVOCADA = 'revocada'
+    ESTADO_SUSTITUIDA = 'sustituida'
+    ESTADO_EXPIRADA = 'expirada'
+    ESTADOS = [(valor, valor.title()) for valor in (
+        ESTADO_PROPUESTA, ESTADO_AUTORIZADA, ESTADO_REVOCADA,
+        ESTADO_SUSTITUIDA, ESTADO_EXPIRADA,
+    )]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE,
+        related_name='senales_entrenamiento_autorizadas',
+    )
+    categoria = models.CharField(max_length=40, choices=CATEGORIAS, db_index=True)
+    intensidad = models.CharField(max_length=20, choices=INTENSIDADES)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default=ESTADO_PROPUESTA, db_index=True)
+    vigente_desde = models.DateField(db_index=True)
+    vigente_hasta = models.DateField(db_index=True)
+    autorizada_en = models.DateTimeField(null=True, blank=True)
+    revocada_en = models.DateTimeField(null=True, blank=True)
+    evidencia_tecnica = models.JSONField(default=dict, blank=True)
+    sugerencia = models.OneToOneField(
+        SugerenciaPlan, on_delete=models.PROTECT, related_name='senal_autorizada',
+    )
+    intervencion = models.OneToOneField(
+        IntervencionPlan, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='senal_autorizada',
+    )
+    version = models.PositiveSmallIntegerField(default=1)
+    schema_version = models.PositiveSmallIntegerField(default=1)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    actualizada_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+        indexes = [
+            models.Index(
+                fields=['cliente', 'estado', 'vigente_hasta'],
+                name='senal_auth_cli_est_fin_idx',
+            ),
+        ]
+
+
 class PreferenciaPlanAprendida(models.Model):
     """
     Phase 22 — A soft plan preference learned from repeated favorable probes.
@@ -2014,6 +2079,7 @@ class GymDecisionTrace(models.Model):
     # Active influencers at the time of the decision
     preferencias_activas    = models.JSONField(default=list)    # [tipo_str, ...]
     intervenciones_activas  = models.JSONField(default=list)    # [tipo_str, ...]
+    senales_autorizadas     = models.JSONField(default=list)    # [{id, schema_version}], nunca texto privado
     lesion_contexto         = models.JSONField(default=dict)    # {zona, fase, es_bloqueante, ejercicios}
 
     creado_en   = models.DateTimeField(auto_now_add=True)
