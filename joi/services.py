@@ -4047,10 +4047,31 @@ def determinar_estado_habitacion_joi(usuario):
         # ─ PRIORIDAD 1: PROTEGIENDO ─────────────────────────────────────────
         # Si el cuerpo está en protección, JOI baja el tono
 
+        # Seguridad general: una lesión activa protege aunque no exista campaña
+        # Hyrox. No depende de que el Pulso tenga un objetivo autorizado.
+        try:
+            lesion_activa = UserInjury.objects.filter(
+                cliente__user=usuario,
+                activa=True,
+                fase__in=['AGUDA', 'SUB_AGUDA']
+            ).exists()
+
+            if lesion_activa:
+                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Lesión activa)")
+                return ('PROTEGIENDO', 'lesion_activa')
+        except Exception as e:
+            logger.warning(f"[JOI Estado] Injury check failed: {e}")
+
         # Check 1: Pulso Hyrox PROTEGIENDO (calcula readiness + señales)
         try:
+            from hyrox.campaign_authority import resolver_autoridad_campana
             from hyrox.pulso_service import PulsoService
-            hyrox_obj = HyroxObjective.objects.filter(cliente__user=usuario).order_by('-id').first()
+            cliente = getattr(usuario, 'cliente_perfil', None)
+            autoridad = resolver_autoridad_campana(cliente, today) if cliente else {}
+            hyrox_obj = HyroxObjective.objects.filter(
+                pk=autoridad.get('objetivo_id'),
+                cliente=cliente,
+            ).first() if autoridad.get('estado') == 'activa' else None
             if not hyrox_obj:
                 raise HyroxObjective.DoesNotExist
 
@@ -4063,6 +4084,7 @@ def determinar_estado_habitacion_joi(usuario):
 
             lesion_activa = UserInjury.objects.filter(
                 cliente=hyrox_obj.cliente,
+                activa=True,
                 fase__in=['AGUDA', 'SUB_AGUDA']
             ).first()
 
@@ -4107,19 +4129,6 @@ def determinar_estado_habitacion_joi(usuario):
                     return ('PROTEGIENDO', 'rpe_extremo')
         except Exception as e:
             logger.warning(f"[JOI Estado] RPE check failed: {e}")
-
-        # Check 3: Lesión activa (AGUDA/SUB_AGUDA)
-        try:
-            lesion_activa = UserInjury.objects.filter(
-                cliente__user=usuario,
-                fase__in=['AGUDA', 'SUB_AGUDA']
-            ).exists()
-
-            if lesion_activa:
-                logger.info(f"[JOI Estado] {usuario.username}: PROTEGIENDO (Lesión activa)")
-                return ('PROTEGIENDO', 'lesion_activa')
-        except Exception as e:
-            logger.warning(f"[JOI Estado] Injury check failed: {e}")
 
         # ─ PRIORIDAD 2: PRESENTE ────────────────────────────────────────────
         # Hay mensaje o narrativa clara
