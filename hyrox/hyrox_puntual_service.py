@@ -2,11 +2,58 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from .campaign_authority import exigir_registro_manual
-from .models import SolicitudHyroxPuntual
+from .models import HyroxObjective, HyroxSession, SolicitudHyroxPuntual
 
 
 class IdempotencyKeyReutilizada(ValueError):
     """La clave ya representa una solicitud con contenido diferente."""
+
+
+def objetivo_historico_para_extra(cliente):
+    """Referencia propia, estable y puramente histórica para colgar el hecho."""
+    return HyroxObjective.objects.filter(cliente=cliente).order_by(
+        '-fecha_evento', '-fecha_creacion', '-pk'
+    ).first()
+
+
+def idempotency_key_extra_hoy(cliente, fecha=None):
+    fecha = fecha or timezone.localdate()
+    return f'hyrox-extra:{cliente.pk}:{fecha.isoformat()}'
+
+
+def snapshots_extra(cliente, fecha=None):
+    """Captura contexto verificable; no escribe ni decide sobre el plan Gym."""
+    from entrenos.models import SesionProgramada
+    from .campaign_authority import resolver_autoridad_campana
+    from .models import UserInjury
+
+    fecha = fecha or timezone.localdate()
+    gym = SesionProgramada.objects.filter(
+        cliente=cliente, fecha_prevista=fecha
+    ).order_by('pk').first()
+    lesion = UserInjury.objects.filter(cliente=cliente, activa=True).order_by('pk').first()
+    return {
+        'safety_snapshot': {
+            'lesion_id': lesion.pk if lesion else None,
+            'fase': lesion.fase if lesion else None,
+            'tags_restringidos': list(lesion.tags_restringidos or []) if lesion else [],
+        },
+        'gym_contract_snapshot': {
+            'sesion_programada_id': gym.pk if gym else None,
+            'estado': gym.estado if gym else None,
+            'fecha_prevista': str(gym.fecha_prevista) if gym else None,
+        },
+        'authority': resolver_autoridad_campana(cliente, fecha),
+    }
+
+
+def modulo_archivado_para_extra(cliente):
+    """El CTA puntual no es una vía paralela durante una campaña declarada activa."""
+    from .models import ContratoCampanaHyrox
+    contrato = ContratoCampanaHyrox.objects.filter(cliente=cliente).order_by(
+        '-version', '-pk'
+    ).first()
+    return contrato is None or contrato.estado in ('inactiva', 'finalizada')
 
 
 def _payload_coincide(solicitud, *, fecha, authority_snapshot, safety_snapshot,
@@ -81,3 +128,38 @@ def autorizar_solicitud_extra(*, cliente, objective, idempotency_key,
         raise IdempotencyKeyReutilizada(
             'La idempotency_key ya fue usada con un payload diferente.'
         )
+
+
+@transaction.atomic
+def abrir_registro_extra(*, cliente, actor, fecha=None):
+    """Crea/reutiliza la única solicitud y su único esqueleto factual del día."""
+    fecha = fecha or timezone.localdate()
+    if not modulo_archivado_para_extra(cliente):
+        raise PermissionError('El registro puntual extra solo está disponible con Hyrox archivado.')
+    objective = objetivo_historico_para_extra(cliente)
+    if objective is None:
+        raise HyroxObjective.DoesNotExist('No hay objetivo Hyrox histórico propio.')
+    snapshots = snapshots_extra(cliente, fecha)
+    solicitud = autorizar_solicitud_extra(
+        cliente=cliente,
+        objective=objective,
+        idempotency_key=idempotency_key_extra_hoy(cliente, fecha),
+        fecha=fecha,
+        safety_snapshot=snapshots['safety_snapshot'],
+        gym_contract_snapshot=snapshots['gym_contract_snapshot'],
+        actor=actor,
+    )
+    if solicitud.hyrox_session_id is None:
+        sesion = HyroxSession.objects.create(
+            objective=objective,
+            fecha=fecha,
+            estado='planificado',
+            titulo='Sesión Hyrox puntual',
+        )
+        solicitud.hyrox_session = sesion
+        solicitud.estado = 'en_registro'
+        solicitud.save(update_fields=['hyrox_session', 'estado', 'actualizado_en'])
+    elif solicitud.estado == 'autorizada':
+        solicitud.estado = 'en_registro'
+        solicitud.save(update_fields=['estado', 'actualizado_en'])
+    return solicitud

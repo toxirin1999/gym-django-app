@@ -3284,8 +3284,9 @@ def guardar_registro_factual_hyrox_service(
       }
 
     Side effects controlados — persiste en BD:
-      HyroxSession, HyroxActivity, HyroxReadinessLog, HyroxObjective (RMs/pace),
-      sesiones futuras (motor de adaptación continua).
+      HyroxSession, HyroxActivity y su reflejo factual en el hub de carga.
+      Los cambios de plan, RMs, ritmos y sesiones futuras solo se ejecutan
+      cuando el wrapper histórico activa expresamente los efectos prescriptivos.
     """
     from django.db import transaction
     from .models import HyroxActivity, UserInjury
@@ -3313,8 +3314,8 @@ def guardar_registro_factual_hyrox_service(
         sustituir_material = form_data.get('sustituir_material', False)
 
         campos_directos = [
-            'energia_pre', 'rpe_global', 'hr_avg', 'hr_max',
-            'tiempo_total_minutos', 'notas_texto',
+            'nivel_energia_pre', 'rpe_global', 'hr_media', 'hr_maxima',
+            'tiempo_total_minutos', 'notas_raw',
         ]
         for campo in campos_directos:
             if campo in form_data and hasattr(sesion, campo):

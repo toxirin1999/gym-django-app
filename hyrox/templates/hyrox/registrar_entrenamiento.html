@@ -713,7 +713,7 @@
     Habilita JavaScript para la experiencia completa. El formulario funciona igualmente de forma tradicional.
   </div>
 </noscript>
-<form method="post" id="formRegistrarEntrenamiento" class="rb-stage" data-session-id="{% if sesion_planificada %}{{ sesion_planificada.id }}{% endif %}">
+<form method="post" id="formRegistrarEntrenamiento" class="rb-stage" data-session-id="{% if sesion_planificada %}{{ sesion_planificada.id }}{% endif %}"{% if solicitud_puntual %} data-save-url="{% url 'hyrox:registrar_extra' solicitud_puntual.pk %}"{% endif %}>
   {% csrf_token %}
   <div style="display:none">{{ form.titulo }}</div>
   <textarea name="notas_raw" id="id_notas_raw" style="display:none"></textarea>
@@ -1834,6 +1834,16 @@ function rbConfirmSave() {
   sfSerialize();
 
   var form = document.getElementById('formRegistrarEntrenamiento');
+
+  var explicitUrl = form ? form.getAttribute('data-save-url') : null;
+  if (explicitUrl) {
+    if (window.hyroxReactividad && window.hyroxReactividad.handleAjaxSaveFromData) {
+      window.hyroxReactividad.handleAjaxSaveFromData(form, explicitUrl);
+    } else if (form) {
+      form.submit();
+    }
+    return;
+  }
 
   // Obtener URL del endpoint
   var urlMatch = window.location.pathname.match(/\/registrar-entrenamiento\/(\d+)\/(\d+)\//);

@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container py-5" style="max-width:760px">
+  <p class="text-uppercase text-muted">Registro factual · Hyrox en pausa</p>
+  <h1>Registrar una sesión Hyrox puntual</h1>
+  <p>Este registro añade lo que hagas hoy al historial. No sustituye ni mueve tu sesión Gym, no reactiva la campaña y no genera sesiones futuras.</p>
+  {% if objetivo_historico %}
+    <p>Se vinculará como referencia al objetivo histórico del {{ objetivo_historico.fecha_evento|date:"d/m/Y" }}.</p>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-primary">Continuar al registro detallado</button>
+    </form>
+  {% else %}
+    <p role="alert">No hay un objetivo Hyrox histórico al que vincular este registro. No se ha cambiado ningún plan.</p>
+  {% endif %}
+</main>
+{% endblock %}

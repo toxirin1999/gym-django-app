@@ -1,5 +1,6 @@
 import logging
 from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +22,101 @@ from django.utils.safestring import mark_safe
 from .forms import HyroxObjectiveForm, HyroxSessionNotesForm, UserInjuryForm, DailyRecoveryEntryForm
 from .services import HyroxParserService, HyroxCoachService
 from .training_engine import HyroxTrainingEngine
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_POST
 from .models import HyroxObjective, HyroxSession, HyroxActivity, UserInjury, DailyRecoveryEntry
+
+
+@login_required
+def solicitar_hyrox_extra(request):
+    """Preview/confirmación factual para Hyrox en pausa; nunca prescribe."""
+    from .hyrox_puntual_service import (
+        abrir_registro_extra, modulo_archivado_para_extra,
+        objetivo_historico_para_extra,
+    )
+
+    cliente = request.user.cliente_perfil
+    objetivo = objetivo_historico_para_extra(cliente)
+    if request.method == 'POST':
+        if not modulo_archivado_para_extra(cliente):
+            return HttpResponse('Hyrox no está archivado.', status=409)
+        if objetivo is None:
+            return HttpResponse('No hay un objetivo Hyrox histórico propio.', status=409)
+        solicitud = abrir_registro_extra(cliente=cliente, actor=request.user)
+        return redirect('hyrox:registrar_extra', solicitud_id=solicitud.pk)
+    return render(request, 'hyrox/solicitar_extra.html', {
+        'objetivo_historico': objetivo,
+    })
+
+
+@login_required
+def registrar_hyrox_extra(request, solicitud_id):
+    """Registro detallado de una autorización extra, sin motores prescriptivos."""
+    from django.db import transaction
+    from .models import SolicitudHyroxPuntual
+    from .services import guardar_registro_factual_hyrox_service
+
+    cliente = request.user.cliente_perfil
+    solicitud = get_object_or_404(
+        SolicitudHyroxPuntual.objects.select_related('hyrox_session__objective'),
+        pk=solicitud_id,
+        cliente=cliente,
+        modo='extra',
+    )
+    sesion = solicitud.hyrox_session
+    if sesion is None:
+        return HttpResponse('La solicitud no tiene una sesión asociada.', status=409)
+
+    if request.method == 'POST':
+        if solicitud.estado == 'completada':
+            return redirect('hyrox:dashboard')
+        form = HyroxSessionNotesForm(request.POST, instance=sesion)
+        if form.is_valid():
+            form_data = dict(form.cleaned_data)
+            form_data['titulo'] = 'Sesión Hyrox puntual'
+            form_data.update({
+                key: value for key, value in request.POST.items()
+                if key.startswith(('act_tiempo_s_', 'act_reps_st_', 'act_kg_st_',
+                                   'act_done_', 'act_dist_km_'))
+            })
+            form_data['usar_plan_original'] = request.POST.get('usar_plan_original', '')
+            form_data['station_feedback_json'] = request.POST.get('station_feedback_json', '')
+            with transaction.atomic():
+                locked = SolicitudHyroxPuntual.objects.select_for_update().get(pk=solicitud.pk)
+                if locked.estado != 'completada':
+                    resultado = guardar_registro_factual_hyrox_service(
+                        sesion.objective, sesion, form_data
+                    )
+                    if not resultado['success']:
+                        return render(request, 'hyrox/registrar_entrenamiento.html', {
+                            'form': form, 'objetivo': sesion.objective,
+                            'sesion_planificada': sesion,
+                            'actividades_planificadas': sesion.activities.all(),
+                            'lesion_activa': UserInjury.objects.filter(cliente=cliente, activa=True).first(),
+                            'solicitud_puntual': locked,
+                        }, status=400)
+                    locked.estado = 'completada'
+                    locked.save(update_fields=['estado', 'actualizado_en'])
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({'success': True, 'redirect_url': reverse('hyrox:dashboard')})
+            return redirect('hyrox:dashboard')
+    else:
+        form = HyroxSessionNotesForm(instance=sesion)
+
+    return render(request, 'hyrox/registrar_entrenamiento.html', {
+        'form': form,
+        'objetivo': sesion.objective,
+        'sesion_planificada': sesion,
+        'actividades_planificadas': sesion.activities.all(),
+        'lesion_activa': UserInjury.objects.filter(cliente=cliente, activa=True).first(),
+        'es_override': False,
+        'titulo_limpio': sesion.titulo,
+        'plan_original_snapshot': [],
+        'plan_elegido': 'ajustado',
+        'sf_stations': [],
+        'modo_protegida': False,
+        'solicitud_puntual': solicitud,
+    })
 
 def _parse_tiempo_a_segundos(tiempo_str):
     """Convierte '1:40:00' o '40:00' a segundos. Devuelve None si inválido."""
