@@ -175,6 +175,29 @@ class PortadaCapitulosVisualesTests(SimpleTestCase):
         for forbidden in ("data-acwr-detail", "vista_plan_anual", "timeline_atleta", "plan_decisiones"):
             self.assertNotIn(forbidden, vida)
 
+    def test_bloque_inferior_de_vida_ofrece_un_acceso_hyrox_siempre_visible(self):
+        vida = self.chapter("chapter-vida")
+        bloque_inferior = re.search(
+            r'<details\b[^>]*>\s*<summary>Más</summary>([\s\S]*?)</details>',
+            vida,
+        )
+        self.assertIsNotNone(bloque_inferior)
+        contenido = bloque_inferior.group(1)
+
+        url_hyrox = "{% url 'hyrox:dashboard' %}"
+        self.assertEqual(contenido.count(url_hyrox), 1)
+        acceso = re.search(
+            rf'<a\b[^>]*href="{re.escape(url_hyrox)}"[^>]*>([\s\S]*?)</a>',
+            contenido,
+        )
+        self.assertIsNotNone(acceso)
+        etiqueta_apertura = acceso.group(0)
+        self.assertRegex(
+            etiqueta_apertura,
+            r'(?i)(?:aria-label="[^"]*hyrox[^"]*"|>[^<]*hyrox|</i>\s*hyrox)',
+        )
+        self.assertNotRegex(contenido, r'{%\s*if\b[^%]*(?:campana|campaña|campaign)')
+
     def test_acwr_mantiene_contrato_htmx_y_modal_fuera_de_capitulos(self):
         plan = self.chapter("chapter-plan")
         self.assertIn('hx-get="{% url \'clientes:widget_acwr\' cliente.id %}"', plan)
