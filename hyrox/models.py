@@ -1,3 +1,5 @@
+import uuid
+
 from django.db import models, transaction
 from django.utils import timezone
 from clientes.models import Cliente
@@ -41,6 +43,66 @@ class ContratoCampanaHyrox(models.Model):
             if any(getattr(anterior, x) != getattr(self, x) for x in self._SNAPSHOT):
                 raise ValidationError('Una campaña aprobada es inmutable; crea una versión sucesora.')
         return super().save(*args, **kwargs)
+
+
+class SolicitudHyroxPuntual(models.Model):
+    """Autorización auditable para registrar una sesión Hyrox aislada."""
+
+    MODOS = [
+        ('extra', 'Extra'),
+        ('sustituye_gym', 'Sustituye Gym'),
+    ]
+    RESOLUCIONES_GYM = [
+        ('ninguna', 'Ninguna'),
+        ('reubicada', 'Reubicada'),
+        ('omitida', 'Omitida'),
+    ]
+    ESTADOS = [
+        ('autorizada', 'Autorizada'),
+        ('en_registro', 'En registro'),
+        ('completada', 'Completada'),
+        ('cancelada', 'Cancelada'),
+        ('fallida', 'Fallida'),
+    ]
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    cliente = models.ForeignKey(
+        Cliente, on_delete=models.CASCADE, related_name='solicitudes_hyrox_puntuales'
+    )
+    fecha = models.DateField(db_index=True)
+    modo = models.CharField(max_length=20, choices=MODOS, default='extra')
+    sesion_gym_programada = models.ForeignKey(
+        'entrenos.SesionProgramada', null=True, blank=True,
+        on_delete=models.PROTECT, related_name='solicitudes_hyrox_puntuales',
+    )
+    resolucion_gym = models.CharField(
+        max_length=12, choices=RESOLUCIONES_GYM, default='ninguna'
+    )
+    fecha_reubicacion = models.DateField(null=True, blank=True)
+    estado = models.CharField(max_length=16, choices=ESTADOS, default='autorizada')
+    idempotency_key = models.CharField(max_length=128)
+    authority_snapshot = models.JSONField(default=dict)
+    safety_snapshot = models.JSONField(default=dict)
+    gym_contract_snapshot = models.JSONField(default=dict)
+    actor = models.ForeignKey(
+        User, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='solicitudes_hyrox_puntuales_autorizadas',
+    )
+    hyrox_session = models.ForeignKey(
+        'HyroxSession', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='solicitudes_puntuales',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-creado_en']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cliente', 'idempotency_key'],
+                name='uniq_solicitud_hyrox_cliente_key',
+            ),
+        ]
 
 class HyroxObjective(models.Model):
     CATEGORIA_CHOICES = [
