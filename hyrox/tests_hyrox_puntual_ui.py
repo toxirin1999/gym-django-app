@@ -5,7 +5,10 @@ from django.test import Client, TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from entrenos.models import ActividadRealizada, SesionProgramada
+from entrenos.models import (
+    ActividadRealizada, ContratoSemanalGym, EstrategiaSemanalGym,
+    SesionProgramada,
+)
 from hyrox.models import (
     ContratoCampanaHyrox,
     HyroxObjective,
@@ -163,3 +166,133 @@ class HyroxPuntualExtraCSRFFTests(TestCase):
         client = Client(enforce_csrf_checks=True)
         client.login(username='puntual-csrf', password='secret')
         self.assertEqual(client.post(reverse('hyrox:solicitar_extra')).status_code, 403)
+
+
+class HyroxPuntualSustituirGymUITests(TestCase):
+    def setUp(self):
+        self.hoy = timezone.localdate()
+        self.lunes = self.hoy - datetime.timedelta(days=self.hoy.weekday())
+        self.user = User.objects.create_user('puntual-sustituir', password='secret')
+        self.cliente = self.user.cliente_perfil
+        self.objective = HyroxObjective.objects.create(
+            cliente=self.cliente,
+            fecha_evento=self.hoy - datetime.timedelta(days=20),
+            estado='completado',
+        )
+        self.estrategia = EstrategiaSemanalGym.objects.create(
+            cliente=self.cliente, version=1, objetivo_sesiones=4,
+            minimo_valido=3, vigente_desde=self.lunes,
+        )
+        self.contrato = ContratoSemanalGym.objects.create(
+            cliente=self.cliente, estrategia=self.estrategia,
+            semana=self.lunes, objetivo_sesiones=4, minimo_valido=3,
+        )
+        self.gym = SesionProgramada.objects.create(
+            cliente=self.cliente, contrato_semanal=self.contrato,
+            semana_prescrita=self.lunes, fecha_prevista=self.hoy,
+            nombre_sesion='Pierna de hoy',
+        )
+        self.client.login(username='puntual-sustituir', password='secret')
+        self.url = reverse('hyrox:solicitar_sustitucion_gym')
+
+    def test_get_preview_muestra_gym_y_consecuencia_sin_mutar(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Pierna de hoy')
+        self.assertContains(response, 'Saltarla por decisión tuya')
+        self.assertContains(response, 'Reubicarla dentro de esta semana')
+        self.gym.refresh_from_db()
+        self.assertEqual(self.gym.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertIsNone(self.gym.pospuesta_hasta)
+        self.assertFalse(SolicitudHyroxPuntual.objects.exists())
+        self.assertFalse(HyroxSession.objects.exists())
+
+    def test_omitir_usa_saltada_usuario_y_doble_post_es_idempotente(self):
+        first = self.client.post(self.url, {'resolucion_gym': 'omitida'})
+        second = self.client.post(self.url, {'resolucion_gym': 'omitida'})
+
+        solicitud = SolicitudHyroxPuntual.objects.get()
+        self.assertEqual(first.status_code, 302)
+        self.assertEqual(second.url, first.url)
+        self.assertEqual(solicitud.modo, 'sustituye_gym')
+        self.assertEqual(solicitud.resolucion_gym, 'omitida')
+        self.assertEqual(solicitud.estado, 'en_registro')
+        self.assertEqual(solicitud.sesion_gym_programada, self.gym)
+        self.assertEqual(SolicitudHyroxPuntual.objects.count(), 1)
+        self.assertEqual(HyroxSession.objects.count(), 1)
+        self.gym.refresh_from_db()
+        self.assertEqual(self.gym.estado, SesionProgramada.ESTADO_SALTADA_USUARIO)
+        self.assertNotEqual(self.gym.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertIsNone(self.gym.fecha_realizada)
+
+    def test_reubicar_mismo_contrato_actualiza_fecha_efectiva(self):
+        destino = self.hoy + datetime.timedelta(days=1)
+
+        response = self.client.post(self.url, {
+            'resolucion_gym': 'reubicada',
+            'fecha_reubicacion': destino.isoformat(),
+        })
+
+        self.assertEqual(response.status_code, 302)
+        solicitud = SolicitudHyroxPuntual.objects.get()
+        self.assertEqual(solicitud.resolucion_gym, 'reubicada')
+        self.assertEqual(solicitud.fecha_reubicacion, destino)
+        self.gym.refresh_from_db()
+        self.assertEqual(self.gym.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(self.gym.pospuesta_hasta, destino)
+        self.assertEqual(self.gym.contrato_semanal, self.contrato)
+
+    def test_reubicar_fuera_de_semana_o_con_colision_bloquea_sin_mutar(self):
+        fuera = self.lunes + datetime.timedelta(days=7)
+        response = self.client.post(self.url, {
+            'resolucion_gym': 'reubicada', 'fecha_reubicacion': fuera.isoformat(),
+        })
+        self.assertEqual(response.status_code, 400)
+
+        destino = self.hoy + datetime.timedelta(days=1)
+        SesionProgramada.objects.create(
+            cliente=self.cliente, contrato_semanal=self.contrato,
+            semana_prescrita=self.lunes, fecha_prevista=destino,
+            nombre_sesion='Otra sesión',
+        )
+        response = self.client.post(self.url, {
+            'resolucion_gym': 'reubicada', 'fecha_reubicacion': destino.isoformat(),
+        })
+        self.assertEqual(response.status_code, 409)
+        self.gym.refresh_from_db()
+        self.assertEqual(self.gym.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertIsNone(self.gym.pospuesta_hasta)
+        self.assertFalse(SolicitudHyroxPuntual.objects.exists())
+        self.assertFalse(HyroxSession.objects.exists())
+
+    def test_sin_gym_hoy_bloquea_y_ownership_csrf_se_conservan(self):
+        self.gym.delete()
+        self.assertEqual(self.client.get(self.url).status_code, 200)
+        self.assertEqual(self.client.post(self.url, {'resolucion_gym': 'omitida'}).status_code, 409)
+
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.login(username='puntual-sustituir', password='secret')
+        self.assertEqual(csrf_client.post(self.url, {'resolucion_gym': 'omitida'}).status_code, 403)
+
+    def test_decisiones_extra_y_sustitucion_comparten_clave_diaria(self):
+        extra = self.client.post(reverse('hyrox:solicitar_extra'))
+        self.assertEqual(extra.status_code, 302)
+
+        sustitucion = self.client.post(self.url, {'resolucion_gym': 'omitida'})
+
+        self.assertEqual(sustitucion.status_code, 409)
+        self.assertEqual(SolicitudHyroxPuntual.objects.count(), 1)
+        self.assertEqual(HyroxSession.objects.count(), 1)
+        self.gym.refresh_from_db()
+        self.assertEqual(self.gym.estado, SesionProgramada.ESTADO_PENDIENTE)
+
+    def test_sustitucion_impide_un_segundo_extra_el_mismo_dia(self):
+        sustitucion = self.client.post(self.url, {'resolucion_gym': 'omitida'})
+        self.assertEqual(sustitucion.status_code, 302)
+
+        extra = self.client.post(reverse('hyrox:solicitar_extra'))
+
+        self.assertEqual(extra.status_code, 409)
+        self.assertEqual(SolicitudHyroxPuntual.objects.count(), 1)
+        self.assertEqual(HyroxSession.objects.count(), 1)

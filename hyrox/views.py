@@ -31,7 +31,7 @@ from .models import HyroxObjective, HyroxSession, HyroxActivity, UserInjury, Dai
 def solicitar_hyrox_extra(request):
     """Preview/confirmación factual para Hyrox en pausa; nunca prescribe."""
     from .hyrox_puntual_service import (
-        abrir_registro_extra, modulo_archivado_para_extra,
+        IdempotencyKeyReutilizada, abrir_registro_extra, modulo_archivado_para_extra,
         objetivo_historico_para_extra,
     )
 
@@ -42,10 +42,59 @@ def solicitar_hyrox_extra(request):
             return HttpResponse('Hyrox no está archivado.', status=409)
         if objetivo is None:
             return HttpResponse('No hay un objetivo Hyrox histórico propio.', status=409)
-        solicitud = abrir_registro_extra(cliente=cliente, actor=request.user)
+        try:
+            solicitud = abrir_registro_extra(cliente=cliente, actor=request.user)
+        except IdempotencyKeyReutilizada as exc:
+            return HttpResponse(str(exc), status=409)
         return redirect('hyrox:registrar_extra', solicitud_id=solicitud.pk)
     return render(request, 'hyrox/solicitar_extra.html', {
         'objetivo_historico': objetivo,
+    })
+
+
+@login_required
+def solicitar_sustitucion_gym(request):
+    """Preview y confirmación explícita para sustituir únicamente el Gym de hoy."""
+    from datetime import date
+    from .hyrox_puntual_service import (
+        ColisionReubicacionGym, IdempotencyKeyReutilizada,
+        SesionGymNoDisponible, SustitucionGymInvalida,
+        abrir_registro_sustituyendo_gym, objetivo_historico_para_extra,
+        sesion_gym_sustituible_hoy,
+    )
+
+    cliente = request.user.cliente_perfil
+    gym = sesion_gym_sustituible_hoy(cliente)
+    objetivo = objetivo_historico_para_extra(cliente)
+    if request.method == 'POST':
+        resolucion = request.POST.get('resolucion_gym', '')
+        fecha_raw = request.POST.get('fecha_reubicacion', '').strip()
+        try:
+            fecha_reubicacion = date.fromisoformat(fecha_raw) if fecha_raw else None
+        except ValueError:
+            return HttpResponse('Fecha de reubicación inválida.', status=400)
+        try:
+            solicitud = abrir_registro_sustituyendo_gym(
+                cliente=cliente,
+                actor=request.user,
+                resolucion_gym=resolucion,
+                fecha_reubicacion=fecha_reubicacion,
+            )
+        except ColisionReubicacionGym as exc:
+            return HttpResponse(str(exc), status=409)
+        except IdempotencyKeyReutilizada as exc:
+            return HttpResponse(str(exc), status=409)
+        except SesionGymNoDisponible as exc:
+            return HttpResponse(str(exc), status=409)
+        except SustitucionGymInvalida as exc:
+            return HttpResponse(str(exc), status=400)
+        except HyroxObjective.DoesNotExist as exc:
+            return HttpResponse(str(exc), status=409)
+        return redirect('hyrox:registrar_extra', solicitud_id=solicitud.pk)
+    return render(request, 'hyrox/solicitar_sustitucion_gym.html', {
+        'sesion_gym': gym,
+        'objetivo_historico': objetivo,
+        'hoy': timezone.localdate(),
     })
 
 

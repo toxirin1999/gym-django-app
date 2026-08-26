@@ -10,6 +10,7 @@
       {% csrf_token %}
       <button type="submit" class="btn btn-primary">Continuar al registro detallado</button>
     </form>
+    <p><a href="{% url 'hyrox:solicitar_sustitucion_gym' %}">Quiero sustituir la sesión Gym de hoy</a></p>
   {% else %}
     <p role="alert">No hay un objetivo Hyrox histórico al que vincular este registro. No se ha cambiado ningún plan.</p>
   {% endif %}

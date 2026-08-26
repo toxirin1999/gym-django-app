@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
@@ -18,7 +20,7 @@ def objetivo_historico_para_extra(cliente):
 
 def idempotency_key_extra_hoy(cliente, fecha=None):
     fecha = fecha or timezone.localdate()
-    return f'hyrox-extra:{cliente.pk}:{fecha.isoformat()}'
+    return f'hyrox-puntual:{cliente.pk}:{fecha.isoformat()}'
 
 
 def snapshots_extra(cliente, fecha=None):
@@ -162,4 +164,131 @@ def abrir_registro_extra(*, cliente, actor, fecha=None):
     elif solicitud.estado == 'autorizada':
         solicitud.estado = 'en_registro'
         solicitud.save(update_fields=['estado', 'actualizado_en'])
+    return solicitud
+
+
+class SustitucionGymInvalida(ValueError):
+    pass
+
+
+class ColisionReubicacionGym(SustitucionGymInvalida):
+    pass
+
+
+class SesionGymNoDisponible(SustitucionGymInvalida):
+    pass
+
+
+def sesion_gym_sustituible_hoy(cliente, fecha=None):
+    from django.db.models import Q
+    from entrenos.models import SesionProgramada
+
+    fecha = fecha or timezone.localdate()
+    return SesionProgramada.objects.filter(
+        cliente=cliente,
+        fecha_prevista=fecha,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+    ).filter(
+        Q(pospuesta_hasta__isnull=True) | Q(pospuesta_hasta__lte=fecha)
+    ).select_related('contrato_semanal').order_by('pk').first()
+
+
+def _validar_reubicacion_gym(sesion, destino, fecha):
+    from django.db.models import Q
+    from entrenos.models import SesionProgramada
+
+    if destino is None or destino <= fecha:
+        raise SustitucionGymInvalida('La reubicación debe ser posterior a hoy.')
+    contrato = sesion.contrato_semanal
+    semana = contrato.semana if contrato else sesion.semana_prescrita
+    if semana is None or not (semana <= destino <= semana + timedelta(days=6)):
+        raise SustitucionGymInvalida('La reubicación debe permanecer en el contrato semanal.')
+    colision = SesionProgramada.objects.select_for_update().filter(
+        cliente=sesion.cliente,
+    ).exclude(pk=sesion.pk).filter(
+        Q(fecha_prevista=destino) | Q(pospuesta_hasta=destino)
+    ).exists()
+    if colision:
+        raise ColisionReubicacionGym('Ya existe una sesión Gym en la fecha elegida.')
+
+
+@transaction.atomic
+def abrir_registro_sustituyendo_gym(
+    *, cliente, actor, resolucion_gym, fecha_reubicacion=None, fecha=None,
+):
+    """Sustituye explícitamente la sesión Gym visible de hoy por un hecho Hyrox."""
+    from entrenos.models import SesionProgramada
+    from entrenos.services.sesion_recomendada import (
+        posponer_sesion_programada, saltar_sesion_programada,
+    )
+
+    fecha = fecha or timezone.localdate()
+    if resolucion_gym not in ('omitida', 'reubicada'):
+        raise SustitucionGymInvalida('Elige omitir o reubicar la sesión Gym.')
+    if not modulo_archivado_para_extra(cliente):
+        raise PermissionError('La sustitución puntual solo está disponible con Hyrox archivado.')
+
+    key = idempotency_key_extra_hoy(cliente, fecha)
+    # La identidad Gym serializa decisiones concurrentes del mismo día. Se
+    # bloquea incluso si el primer request ya la marcó como saltada.
+    gym = SesionProgramada.objects.select_for_update().filter(
+        cliente=cliente, fecha_prevista=fecha,
+    ).order_by('pk').first()
+    existente = SolicitudHyroxPuntual.objects.select_for_update().filter(
+        cliente=cliente, idempotency_key=key,
+    ).first()
+    if existente:
+        coincide = (
+            existente.modo == 'sustituye_gym'
+            and existente.resolucion_gym == resolucion_gym
+            and existente.fecha_reubicacion == fecha_reubicacion
+        )
+        if coincide:
+            return existente
+        raise IdempotencyKeyReutilizada('Ya existe otra decisión Hyrox puntual para hoy.')
+
+    if gym is None or gym.estado != SesionProgramada.ESTADO_PENDIENTE:
+        raise SesionGymNoDisponible('No hay una sesión Gym pendiente para sustituir hoy.')
+    if gym.pospuesta_hasta and gym.pospuesta_hasta > fecha:
+        raise SustitucionGymInvalida('La sesión Gym de hoy ya estaba reubicada.')
+    if resolucion_gym == 'reubicada':
+        _validar_reubicacion_gym(gym, fecha_reubicacion, fecha)
+    elif fecha_reubicacion is not None:
+        raise SustitucionGymInvalida('Omitir no admite fecha de reubicación.')
+
+    objective = objetivo_historico_para_extra(cliente)
+    if objective is None:
+        raise HyroxObjective.DoesNotExist('No hay objetivo Hyrox histórico propio.')
+    autoridad = exigir_registro_manual(cliente, fecha=fecha, objective=objective)
+    snapshots = snapshots_extra(cliente, fecha)
+    solicitud = SolicitudHyroxPuntual.objects.create(
+        cliente=cliente,
+        fecha=fecha,
+        modo='sustituye_gym',
+        sesion_gym_programada=gym,
+        resolucion_gym=resolucion_gym,
+        fecha_reubicacion=fecha_reubicacion,
+        estado='en_registro',
+        idempotency_key=key,
+        authority_snapshot={**autoridad, 'objective_id': objective.pk},
+        safety_snapshot=snapshots['safety_snapshot'],
+        gym_contract_snapshot=snapshots['gym_contract_snapshot'],
+        actor=actor,
+    )
+    sesion = HyroxSession.objects.create(
+        objective=objective, fecha=fecha, estado='planificado',
+        titulo='Sesión Hyrox puntual',
+    )
+    solicitud.hyrox_session = sesion
+    solicitud.save(update_fields=['hyrox_session', 'actualizado_en'])
+
+    if resolucion_gym == 'omitida':
+        saltar_sesion_programada(
+            gym, motivo='El usuario sustituyó la sesión Gym por una sesión Hyrox puntual.',
+        )
+    else:
+        posponer_sesion_programada(
+            gym, fecha_reubicacion,
+            motivo=f'El usuario reubicó esta sesión al {fecha_reubicacion} para realizar Hyrox hoy.',
+        )
     return solicitud

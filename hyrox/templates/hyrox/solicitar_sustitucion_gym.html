@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+<main class="container py-5" style="max-width:760px">
+  <p class="text-uppercase text-muted">Decisión puntual · Hyrox en pausa</p>
+  <h1>Sustituir el Gym de hoy por Hyrox</h1>
+  {% if sesion_gym and objetivo_historico %}
+    <p>Sesión Gym prevista hoy: <strong>{{ sesion_gym.nombre_sesion|default:"Sesión Gym" }}</strong>.</p>
+    <p>Elige una consecuencia explícita. La campaña Hyrox seguirá archivada y no se generará ningún plan.</p>
+    <form method="post">
+      {% csrf_token %}
+      <fieldset>
+        <legend>¿Qué hacemos con la sesión Gym?</legend>
+        <label><input type="radio" name="resolucion_gym" value="omitida" required> Saltarla por decisión tuya</label>
+        <br>
+        <label><input type="radio" name="resolucion_gym" value="reubicada" required> Reubicarla dentro de esta semana</label>
+        <input type="date" name="fecha_reubicacion" min="{{ hoy|date:'Y-m-d' }}">
+      </fieldset>
+      <button type="submit" class="btn btn-primary mt-3">Confirmar y registrar Hyrox</button>
+    </form>
+  {% elif not sesion_gym %}
+    <p role="alert">No hay una sesión Gym pendiente para sustituir hoy.</p>
+  {% else %}
+    <p role="alert">No hay un objetivo Hyrox histórico al que vincular el registro.</p>
+  {% endif %}
+</main>
+{% endblock %}
