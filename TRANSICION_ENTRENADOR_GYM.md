@@ -1838,3 +1838,20 @@ python manage.py auditar_revision_memoria \
 - La tarjeta solo proyecta estado, rango, duración, objetivo y énfasis
   allowlisted. No muestra fingerprints, IDs técnicos, snapshots, motor,
   límites ni notas privadas.
+# Fase Centro operativo — jerarquía editorial y siguiente paso (2026-08-27)
+
+- `construir_resumen_operativo_centro(...)` proyecta un DTO de solo lectura y
+  lista blanca para la cabecera del Centro: posición semanal del bloque,
+  contrato semanal materializado, sesiones realmente `completada`, próxima
+  `SesionProgramada` pendiente por fecha efectiva y causa autorizada de carga.
+- Si no existe contrato semanal, el progreso es `desconocido`: no se reconstruye
+  desde entrenamientos ni desde fuentes paralelas.
+- Una sesión pospuesta usa `pospuesta_hasta` como única fecha efectiva; el DTO
+  no expone simultáneamente fecha prevista y pospuesta.
+- La carga alta solo se explica con `rpe_alto` o `bloque_incompleto`. Cualquier
+  código no reconocido degrada a desconocido y no muestra texto libre.
+- La pantalla adopta una auditoría editorial/industrial mobile-first: hero
+  compacto, franja **Siguiente paso**, definiciones y señales completas en
+  `details`, tres grupos recientes visibles y trazabilidad técnica cerrada.
+- Las acciones colaborativas 3E permanecen operativas; el GET continúa sin
+  materializar contratos, semanas, sesiones ni entrenamientos.

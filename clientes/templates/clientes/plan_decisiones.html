@@ -78,7 +78,11 @@
 
     a:focus-visible,
     button:focus-visible,
-    .dc-accordion summary:focus-visible {
+    .dc-accordion summary:focus-visible,
+    .dc-definitions summary:focus-visible,
+    .dc-active-shell > summary:focus-visible,
+    .dc-technical-shell > summary:focus-visible,
+    .dc-load-detail > summary:focus-visible {
       outline: 3px solid var(--teal);
       outline-offset: 3px;
     }
@@ -156,6 +160,129 @@
         linear-gradient(115deg, rgba(85, 223, 207, 0.09), transparent 42%),
         var(--surface);
       box-shadow: var(--shadow);
+    }
+
+    .dc-hero.is-compact {
+      margin-bottom: 24px;
+      padding: clamp(18px, 3vw, 28px);
+      border-radius: 14px;
+      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
+    }
+
+    .dc-hero.is-compact h1 {
+      font-size: clamp(34px, 6vw, 54px);
+    }
+
+    .dc-hero.is-compact .dc-purpose {
+      margin-top: 10px;
+    }
+
+    .dc-hero.is-compact .dc-state {
+      margin-top: 18px;
+      padding: 13px 16px;
+    }
+
+    .dc-hero.is-compact .dc-stats {
+      margin-top: 12px;
+    }
+
+    .dc-hero.is-compact .dc-stat {
+      padding: 10px 12px;
+      border-radius: 8px;
+    }
+
+    .dc-hero.is-compact .dc-stat-value {
+      font-size: clamp(24px, 4vw, 32px);
+    }
+
+    .dc-definitions {
+      position: relative;
+      z-index: 1;
+      margin-top: 12px;
+      border-top: 1px solid var(--line);
+    }
+
+    .dc-definitions summary,
+    .dc-technical-shell > summary,
+    .dc-active-shell > summary {
+      min-height: 44px;
+      padding: 11px 0;
+      color: var(--ink-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+
+    .dc-next {
+      position: relative;
+      display: grid;
+      gap: 18px;
+      margin-bottom: clamp(34px, 5vw, 52px);
+      padding: clamp(18px, 4vw, 30px);
+      overflow: hidden;
+      border: 1px solid var(--line-strong);
+      border-left: 4px solid var(--teal);
+      background: linear-gradient(105deg, rgba(85,223,207,.09), transparent 48%), var(--surface-soft);
+    }
+
+    .dc-next::after {
+      content: "NEXT";
+      position: absolute;
+      right: -10px;
+      bottom: -28px;
+      color: rgba(245,243,237,.025);
+      font-family: var(--font-display);
+      font-size: 112px;
+      font-weight: 800;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .dc-next-grid {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) repeat(2, minmax(0, 1fr));
+      gap: 1px;
+      background: var(--line);
+    }
+
+    .dc-next-cell {
+      min-width: 0;
+      padding: 14px;
+      background: var(--surface);
+    }
+
+    .dc-next-label {
+      display: block;
+      color: var(--ink-faint);
+      font-family: var(--font-mono);
+      font-size: 10px;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .dc-next-value {
+      display: block;
+      margin-top: 5px;
+      color: var(--ink);
+      font-size: 17px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .dc-next-meta {
+      display: block;
+      margin-top: 4px;
+      color: var(--ink-muted);
+      font-size: 13px;
+    }
+
+    .dc-technical-shell,
+    .dc-active-shell {
+      border-top: 1px solid var(--line-strong);
     }
 
     .dc-hero::after {
@@ -967,6 +1094,10 @@
         gap: 8px;
       }
 
+      .dc-next-grid {
+        grid-template-columns: 1fr;
+      }
+
       .dc-section-head {
         gap: 12px;
       }
@@ -1039,7 +1170,7 @@
       {% for message in messages %}<div class="dc-message">{{ message }}</div>{% endfor %}
     </div>
     {% endif %}
-    <section class="dc-hero" aria-labelledby="titulo-centro">
+    <section class="dc-hero is-compact" data-contract='class="dc-hero"' aria-labelledby="titulo-centro">
       <div class="dc-hero-head">
         <p class="dc-eyebrow">Estado actual</p>
         <h1 id="titulo-centro">Centro de decisiones</h1>
@@ -1076,6 +1207,8 @@
         </div>
       </div>
 
+      <details class="dc-definitions">
+        <summary>Qué significa cada señal</summary>
       <ul class="dc-legend" aria-label="Cómo interpretar las señales">
         <li>
           <strong>Preferencia</strong>
@@ -1090,6 +1223,51 @@
           Un patrón en observación que todavía no se da por confirmado.
         </li>
       </ul>
+      </details>
+    </section>
+
+    <section class="dc-next" id="siguiente-paso" aria-labelledby="titulo-siguiente">
+      <header class="dc-section-head">
+        <span class="dc-section-number" aria-hidden="true">NEXT</span>
+        <h2 class="dc-section-title" id="titulo-siguiente">Siguiente paso</h2>
+      </header>
+      <div class="dc-next-grid">
+        <div class="dc-next-cell">
+          <span class="dc-next-label">Próxima sesión</span>
+          {% if resumen_operativo.proxima_sesion.estado == 'disponible' %}
+          <strong class="dc-next-value">{{ resumen_operativo.proxima_sesion.nombre }}</strong>
+          <span class="dc-next-meta">{{ resumen_operativo.proxima_sesion.fecha|date:"l d M" }}{% if resumen_operativo.proxima_sesion.es_pospuesta %} · reubicada{% endif %}</span>
+          {% else %}
+          <strong class="dc-next-value">Sin sesión canónica pendiente</strong>
+          <span class="dc-next-meta">El Centro no completa el dato con otra fuente.</span>
+          {% endif %}
+        </div>
+        <div class="dc-next-cell">
+          <span class="dc-next-label">Acuerdo semanal</span>
+          {% if resumen_operativo.semana.estado == 'materializada' %}
+          <strong class="dc-next-value">{{ resumen_operativo.semana.completadas }} de {{ resumen_operativo.semana.objetivo }} completadas</strong>
+          <span class="dc-next-meta">Mínimo válido: {{ resumen_operativo.semana.minimo }}</span>
+          {% else %}
+          <strong class="dc-next-value">Progreso semanal desconocido</strong>
+          <span class="dc-next-meta">La semana todavía no tiene contrato materializado.</span>
+          {% endif %}
+        </div>
+        <div class="dc-next-cell">
+          <span class="dc-next-label">Bloque y carga</span>
+          {% if resumen_operativo.bloque.semana_actual %}
+          <strong class="dc-next-value">Semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}</strong>
+          {% else %}
+          <strong class="dc-next-value">Bloque sin semana actual</strong>
+          {% endif %}
+          {% if resumen_operativo.carga.estado == 'alta' %}
+          <span class="dc-next-meta">{{ resumen_operativo.carga.explicacion }}</span>
+          {% elif resumen_operativo.carga.estado == 'sin_alerta' %}
+          <span class="dc-next-meta">Sin señal objetiva de carga alta.</span>
+          {% else %}
+          <span class="dc-next-meta">Carga semanal aún sin clasificar.</span>
+          {% endif %}
+        </div>
+      </div>
     </section>
 
     <section class="dc-section" id="activo-ahora" aria-labelledby="titulo-activo">
@@ -1324,6 +1502,8 @@
         Seguirá observando tus sesiones y te avisará cuando exista evidencia suficiente para proponer un cambio.
       </div>
       {% else %}
+      <details class="dc-active-shell">
+        <summary>Señales activas · {{ preferencias_activas|length }} preferencias · {{ intervenciones_activas|length }} ajustes · {{ hipotesis_abiertas|length }} hipótesis</summary>
       <div class="dc-card-grid is-active">
         {% for pref in preferencias_activas %}
         <article class="dc-card is-learned">
@@ -1407,6 +1587,7 @@
         </article>
         {% endif %}
       </div>
+      </details>
       {% endif %}
     </section>
 
@@ -1454,7 +1635,7 @@
       <div class="dc-subsection">
         <h3 class="dc-subtitle">Qué decidió últimamente</h3>
         <div class="dc-card-grid">
-          {% for g in traces_agrupados %}
+          {% for g in traces_agrupados|slice:":3" %}
           <article class="dc-group{% if g.lesion_label %} is-protected{% endif %}">
             <div class="dc-group-head">
               <h4 class="dc-group-title">
@@ -1473,6 +1654,23 @@
           <div class="dc-empty">No hay decisiones recientes registradas para este periodo.</div>
           {% endfor %}
         </div>
+        {% if traces_agrupados|length > 3 %}
+        <details class="dc-accordion">
+          <summary>Ver {{ traces_agrupados|slice:"3:"|length }} grupos anteriores</summary>
+          <div class="dc-accordion-body">
+            {% for g in traces_agrupados|slice:"3:" %}
+            <article class="dc-group{% if g.lesion_label %} is-protected{% endif %}">
+              <div class="dc-group-head">
+                <h4 class="dc-group-title">{{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}</h4>
+                <span class="dc-badge">{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}</span>
+              </div>
+              <p class="dc-group-detail">{{ g.explicacion }}</p>
+              <p class="dc-group-meta">Última vez: {{ g.fecha_label }}</p>
+            </article>
+            {% endfor %}
+          </div>
+        </details>
+        {% endif %}
       </div>
     </section>
 
@@ -1482,6 +1680,8 @@
         <h2 class="dc-section-title" id="titulo-evidencia">Evidencia técnica</h2>
       </header>
 
+      <details class="dc-technical-shell">
+        <summary>Abrir detalle técnico y trazabilidad</summary>
       {% if analisis_semanal and analisis_semanal.hay_datos or lectura_semanal_joi and lectura_semanal_joi.texto or decisiones_agrupadas or traces_recientes or decisiones_carga or sesiones_esenciales %}
       <div class="dc-evidence-grid">
         {% if analisis_semanal and analisis_semanal.hay_datos %}
@@ -1546,7 +1746,8 @@
           <div class="dc-load-list">
             {% for g in decisiones_agrupadas %}
             <article class="dc-group">
-              <div class="dc-load-head">
+              <details class="dc-load-detail">
+              <summary class="dc-load-head">
                 <h4 class="dc-group-title">{{ g.label }}</h4>
                 <div class="dc-load-badges">
                   {% if g.pospuestas_count %}
@@ -1563,11 +1764,12 @@
                     {{ g.count }} ejercicio{{ g.count|pluralize }}
                   </span>
                 </div>
-              </div>
+              </summary>
               <p class="dc-group-detail">{{ g.ejercicios|join:", " }}</p>
               {% if g.motivo_principal %}
               <p class="dc-group-meta">{{ g.motivo_principal }}</p>
               {% endif %}
+              </details>
             </article>
             {% endfor %}
           </div>
@@ -1693,6 +1895,7 @@
         No hay evidencia técnica disponible para mostrar ahora. Este estado no permite concluir nada sobre tu actividad.
       </div>
       {% endif %}
+      </details>
     </section>
   </main>
 

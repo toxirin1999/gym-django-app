@@ -12,6 +12,125 @@ CONTRATO:
       agrupadores conservan ese orden para "última vez" / "más reciente".
 """
 
+from datetime import timedelta
+
+from entrenos.models import ContratoSemanalGym, SesionProgramada
+
+
+def construir_resumen_operativo_centro(
+    cliente,
+    bloque_colaborativo,
+    analisis_semanal,
+    fecha_ref,
+) -> dict:
+    """Proyección factual y allowlisted para la cabecera operativa del Centro.
+
+    La función es estrictamente de lectura: no materializa contratos ni corrige
+    estados. Una ausencia se expresa como desconocida en lugar de inferirse a
+    partir de entrenamientos u otras fuentes paralelas.
+    """
+    bloque = (bloque_colaborativo or {}).get('bloque')
+    bloque_dto = {
+        'estado': None,
+        'semana_actual': None,
+        'semanas_total': None,
+    }
+    if bloque is not None:
+        semana_actual = None
+        if bloque.semana_inicio <= fecha_ref <= bloque.semana_fin_prevista:
+            semana_actual = ((fecha_ref - bloque.semana_inicio).days // 7) + 1
+        bloque_dto = {
+            'estado': bloque.estado,
+            'semana_actual': semana_actual,
+            'semanas_total': bloque.semanas_previstas,
+        }
+
+    lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
+    contrato = (
+        ContratoSemanalGym.objects.filter(cliente=cliente, semana=lunes)
+        .prefetch_related('sesiones')
+        .order_by('-id')
+        .first()
+    )
+    if contrato is None:
+        semana_dto = {
+            'estado': 'desconocido',
+            'completadas': None,
+            'objetivo': None,
+            'minimo': None,
+        }
+    else:
+        semana_dto = {
+            'estado': 'materializada',
+            'completadas': contrato.sesiones.filter(
+                estado=SesionProgramada.ESTADO_COMPLETADA,
+            ).count(),
+            'objetivo': contrato.objetivo_sesiones,
+            'minimo': contrato.minimo_valido,
+        }
+
+    pendientes = SesionProgramada.objects.filter(
+        cliente=cliente,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+    ).only('nombre_sesion', 'fecha_prevista', 'pospuesta_hasta')
+    candidatas = []
+    for sesion in pendientes:
+        fecha_efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
+        if fecha_efectiva >= fecha_ref:
+            candidatas.append((fecha_efectiva, sesion.pk, sesion))
+    candidatas.sort(key=lambda item: (item[0], item[1]))
+    if candidatas:
+        fecha_efectiva, _, sesion = candidatas[0]
+        proxima_dto = {
+            'estado': 'disponible',
+            'nombre': sesion.nombre_sesion or 'Sesión Gym',
+            'fecha': fecha_efectiva,
+            'es_pospuesta': sesion.pospuesta_hasta is not None,
+        }
+    else:
+        proxima_dto = {
+            'estado': 'desconocido',
+            'nombre': None,
+            'fecha': None,
+            'es_pospuesta': False,
+        }
+
+    carga_dto = {
+        'estado': 'desconocido',
+        'causa_codigo': None,
+        'explicacion': None,
+    }
+    if analisis_semanal:
+        if analisis_semanal.get('carga_alta_objetiva'):
+            motivo = analisis_semanal.get('motivo_carga')
+            if motivo == 'rpe_alto':
+                rpe = analisis_semanal.get('rpe_medio_semana')
+                rpe_label = str(rpe).replace('.', ',') if rpe is not None else 'alto'
+                carga_dto = {
+                    'estado': 'alta',
+                    'causa_codigo': motivo,
+                    'explicacion': f'RPE medio {rpe_label}: la exigencia percibida fue alta esta semana.',
+                }
+            elif motivo == 'bloque_incompleto':
+                carga_dto = {
+                    'estado': 'alta',
+                    'causa_codigo': motivo,
+                    'explicacion': 'Parte del bloque principal quedó incompleta; el plan conserva margen.',
+                }
+        else:
+            carga_dto = {
+                'estado': 'sin_alerta',
+                'causa_codigo': None,
+                'explicacion': None,
+            }
+
+    return {
+        'bloque': bloque_dto,
+        'semana': semana_dto,
+        'proxima_sesion': proxima_dto,
+        'carga': carga_dto,
+    }
+
 # Phase 62G.1 — etiquetas de grupo para "Carga por ejercicio". Distintas de
 # accion_label (que dice "Mantener"): aquí se nombra el grupo tal y como
 # aparece en el Centro 2.0 ("Mantener carga", "Reducir peso", ...).

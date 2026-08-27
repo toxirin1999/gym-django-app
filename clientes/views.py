@@ -5380,7 +5380,8 @@ def plan_decisiones_view(request):
         PreferenciaPlanAprendida,
     )
     from entrenos.services.centro_decisiones_service import (
-        agrupar_decisiones_carga, agrupar_traces_recientes, construir_estado_plan,
+        agrupar_decisiones_carga, agrupar_traces_recientes,
+        construir_estado_plan, construir_resumen_operativo_centro,
     )
 
     cliente = get_object_or_404(Cliente, user=request.user)
@@ -5588,6 +5589,12 @@ def plan_decisiones_view(request):
     from clientes.forms_bloque_gym import BloqueGymColaborativoForm
     from entrenos.services.contrato_bloque_gym_service import consultar_bloque_gym_colaborativo
     bloque_colaborativo = consultar_bloque_gym_colaborativo(cliente)
+    resumen_operativo = construir_resumen_operativo_centro(
+        cliente,
+        bloque_colaborativo,
+        analisis_semanal,
+        hoy,
+    )
     bloque_visible = bloque_colaborativo.get('bloque')
     siguiente_lunes = hoy + timedelta(days=(-hoy.weekday()) % 7)
     inicial_bloque = {
@@ -5630,6 +5637,7 @@ def plan_decisiones_view(request):
         'cierre_bloque': cierre_bloque,
         'cierre_bloque_semanas_ui': cierre_bloque_semanas_ui,
         'bloque_colaborativo': bloque_colaborativo,
+        'resumen_operativo': resumen_operativo,
         'form_bloque_gym': form_bloque_gym,
     })
 
