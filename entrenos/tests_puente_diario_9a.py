@@ -6,7 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from clientes.models import Cliente
-from diario.models import SeguimientoVires
+from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
 from entrenos.models import IntervencionPlan, SenalEntrenamientoAutorizada, SugerenciaPlan
 from entrenos.services.senales_autorizadas_service import (
     obtener_proyeccion_senal_autorizada,
@@ -23,15 +23,25 @@ class PuenteDiario9ABase(TestCase):
         self.cliente = Cliente.objects.get(user=self.user)
         self.cliente_otro = Cliente.objects.get(user=self.otro)
         self.hoy = timezone.localdate()
+        mes = ProsocheMes.objects.create(
+            usuario=self.user, mes='Prueba 9A', año=self.hoy.year,
+        )
         for offset in (0, 1):
+            fecha = self.hoy - timedelta(days=offset)
             SeguimientoVires.objects.create(
                 usuario=self.user,
-                fecha=self.hoy - timedelta(days=offset),
+                fecha=fecha,
                 cuerpo_cierre='dolorido',
                 molestia_zona='espalda',
                 molestia_nota='texto íntimo que nunca debe salir',
                 notas='otra nota privada',
                 descripcion_entrenamiento='descripción privada',
+            )
+            ProsocheDiario.objects.create(
+                prosoche_mes=mes,
+                fecha=fecha,
+                apertura_confirmada_en=timezone.now(),
+                cierre_confirmado_en=timezone.now(),
             )
         self.sugerencia = SugerenciaPlan.objects.create(
             cliente=self.cliente,

@@ -5,6 +5,41 @@ from django.utils import timezone
 from clientes.utils import get_cliente_actual
 from diario.models import SeguimientoVires
 
+
+def _vires_recuperacion_confirmados(usuario, inicio, fin):
+    """Proyeccion privada minima: solo hechos corporales confirmados en Presencia."""
+    from diario.models import ProsocheDiario
+    entradas = ProsocheDiario.objects.filter(
+        prosoche_mes__usuario=usuario, fecha__range=[inicio, fin],
+    ).values('fecha', 'apertura_confirmada_en', 'cierre_confirmado_en')
+    confirmaciones = {row['fecha']: (bool(row['apertura_confirmada_en']), bool(row['cierre_confirmado_en'])) for row in entradas}
+    resultado = []
+    for vires in SeguimientoVires.objects.filter(usuario=usuario, fecha__range=[inicio, fin]).order_by('fecha'):
+        apertura, cierre = confirmaciones.get(vires.fecha, (False, False))
+        vires.molestia_zona = vires.molestia_zona if apertura else ''
+        vires.cuerpo_cierre = vires.cuerpo_cierre if cierre else ''
+        vires.nivel_energia = None
+        if vires.molestia_zona or vires.cuerpo_cierre:
+            resultado.append(vires)
+    return resultado
+
+
+def obtener_senal_recuperacion_confirmada(usuario, n_dias=5, fecha_ref=None):
+    """Clasifica solo recuperacion estructurada y confirmada; no devuelve narrativa."""
+    hoy = fecha_ref or timezone.localdate()
+    vires = _vires_recuperacion_confirmados(usuario, hoy - timedelta(days=n_dias - 1), hoy)
+    clasificacion = _clasificar_senal(vires)
+    if not clasificacion.get('hay_senal'):
+        return {'hay_senal': False}
+    return {'hay_senal': True, 'categoria': 'recuperacion', 'intensidad': clasificacion['intensidad'],
+            'schema_version': 1, 'seguimiento_vires_ids': [v.pk for v in vires]}
+
+
+def categorias_entrenamiento_con_productor():
+    """Allowlist explicita del puente Diario -> entrenador."""
+    return {'recuperacion': True, 'disponibilidad': False, 'continuidad': False,
+            'relacion_entrenamiento': False}
+
 # ── helpers internos para computar señal desde listas en memoria ─────────────
 
 def _clasificar_senal(vires_ventana):

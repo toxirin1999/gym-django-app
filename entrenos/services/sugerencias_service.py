@@ -206,8 +206,8 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
 
     clasificacion_diario = None
     if sugerencia.patron == 'diario_tendencia_corporal':
-        from diario.services.senales_entrenamiento import obtener_senal_corporal_diario
-        clasificacion_diario = obtener_senal_corporal_diario(
+        from diario.services.senales_entrenamiento import obtener_senal_recuperacion_confirmada
+        clasificacion_diario = obtener_senal_recuperacion_confirmada(
             sugerencia.cliente.user, fecha_ref=fecha_ref,
         )
         if not clasificacion_diario.get('hay_senal') or not clasificacion_diario.get('intensidad'):
@@ -251,15 +251,9 @@ def _aceptar_sugerencia(sugerencia, fecha_ref=None):
     )
 
     if sugerencia.patron == 'diario_tendencia_corporal':
-        from diario.models import SeguimientoVires
         from entrenos.models import SenalEntrenamientoAutorizada
         intensidad = clasificacion_diario['intensidad']
-        ids_fuente = list(
-            SeguimientoVires.objects.filter(
-                usuario=sugerencia.cliente.user,
-                fecha__range=[fecha_ref - timedelta(days=4), fecha_ref],
-            ).values_list('id', flat=True)
-        )
+        ids_fuente = clasificacion_diario['seguimiento_vires_ids']
         SenalEntrenamientoAutorizada.objects.get_or_create(
             sugerencia=sugerencia,
             defaults={

@@ -7,10 +7,11 @@ from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase
+from django.utils import timezone
 from unittest.mock import patch
 
 from clientes.utils import get_cliente_actual
-from diario.models import SeguimientoVires
+from diario.models import ProsocheDiario, ProsocheMes, SeguimientoVires
 from diario.services.sugerencias_diario import get_sugerencia_diario
 from entrenos.models import IntervencionPlan, SugerenciaPlan
 
@@ -120,11 +121,19 @@ class AceptarSugerenciaDiarioTest(TestCase):
     def setUp(self):
         self.cliente = _cliente('test_acepta_sug')
         hoy = date.today()
+        mes = ProsocheMes.objects.create(
+            usuario=self.cliente.user, mes='Prueba sugerencia', año=hoy.year,
+        )
         for offset in (0, 1):
+            fecha = hoy - timedelta(days=offset)
             SeguimientoVires.objects.create(
                 usuario=self.cliente.user,
-                fecha=hoy - timedelta(days=offset),
+                fecha=fecha,
                 cuerpo_cierre='dolorido',
+            )
+            ProsocheDiario.objects.create(
+                prosoche_mes=mes, fecha=fecha,
+                cierre_confirmado_en=timezone.now(),
             )
 
     def test_aceptar_crea_intervencion_vigilar_senal(self):

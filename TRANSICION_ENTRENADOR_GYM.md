@@ -504,6 +504,18 @@ Un cierre puede tener valor personal sin convertirse en dato deportivo.
 - `GymDecisionTrace` conserva únicamente `{id, schema_version}` cuando la señal
   autorizada fue realmente visible. No persiste contenido personal.
 
+### Fase 9B — contrato semántico verificable
+
+- El único productor activo del Diario es `recuperacion`. Disponibilidad,
+  continuidad y relación con entrenar quedan explícitamente sin productor hasta
+  que dispongan de evidencia estructurada propia.
+- La molestia al abrir y el estado corporal al cerrar solo son elegibles si la
+  apertura o el cierre correspondientes quedaron confirmados en `ProsocheDiario`.
+- Energía, sueño, estrés, hábitos, el checkbox legacy de entrenamiento y todo
+  texto libre permanecen fuera del puente.
+- La aceptación vuelve a clasificar esta proyección confirmada; un
+  `SeguimientoVires` huérfano o legacy no puede publicar una señal deportiva.
+
 ## 14. Fase 10 — JOI
 
 ### Objetivo
