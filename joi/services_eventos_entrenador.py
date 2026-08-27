@@ -9,6 +9,7 @@ from django.utils import timezone
 SCHEMA_VERSION = 1
 SOURCE_MODEL = "entrenos.GymDecisionLog"
 EVENT_TYPE = "gym_decision_application"
+OUTCOME_EVENT_TYPE = "gym_decision_outcome"
 ACCIONES_VERBALIZABLES = frozenset({
     "cambiar_variante", "bajar_peso", "deload", "mantener",
 })
@@ -67,12 +68,67 @@ def publicar_evento_decision_aplicada(decision):
 encolar_evento_decision_aplicada = publicar_evento_decision_aplicada
 
 
+def construir_evento_resultado_decision(decision):
+    """DTO evaluado y allowlisted; excluye toda explicación narrativa libre."""
+    facts = {
+        "resultado": decision.resultado,
+        "accion": decision.accion,
+        "ejercicio": decision.ejercicio,
+        "confianza": decision.confianza,
+        "fecha_evaluacion": decision.fecha_evaluacion.isoformat(),
+    }
+    if decision.motivo_codigo in MOTIVOS_CODIGO_PERMITIDOS:
+        facts["motivo_codigo"] = decision.motivo_codigo
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "event_type": OUTCOME_EVENT_TYPE,
+        "source_model": SOURCE_MODEL,
+        "source_id": decision.pk,
+        "occurred_at": decision.fecha_evaluacion.isoformat(),
+        "epistemic_level": "evaluated",
+        "status": decision.resultado,
+        "facts": facts,
+    }
+
+
+def publicar_evento_resultado_decision(decision):
+    """Encola únicamente cierres evaluados del productor canónico."""
+    if decision.resultado not in {"validada", "fallida", "neutra"}:
+        return None
+    if decision.fecha_evaluacion is None:
+        return None
+    payload = construir_evento_resultado_decision(decision)
+    from joi.models import EventoEntrenadorJOI
+    evento, _ = EventoEntrenadorJOI.objects.get_or_create(
+        event_type=payload["event_type"],
+        source_model=payload["source_model"],
+        source_id=payload["source_id"],
+        status=payload["status"],
+        defaults={"user": decision.cliente.user, "payload": payload},
+    )
+    return evento
+
+
 def _construir_lote(eventos):
+    tipos = {evento.payload.get("event_type") for evento in eventos}
+    if tipos == {EVENT_TYPE}:
+        event_type = "gym_decision_application_batch"
+        epistemic_level = "applied"
+        status = "aplicada"
+    elif tipos == {OUTCOME_EVENT_TYPE}:
+        event_type = "gym_decision_event_batch"
+        epistemic_level = "evaluated"
+        estados = {evento.payload.get("status") for evento in eventos}
+        status = estados.pop() if len(estados) == 1 else "mixed"
+    else:
+        event_type = "gym_decision_event_batch"
+        epistemic_level = "mixed"
+        status = "mixed"
     return {
         "schema_version": 2,
-        "event_type": "gym_decision_application_batch",
-        "epistemic_level": "applied",
-        "status": "aplicada",
+        "event_type": event_type,
+        "epistemic_level": epistemic_level,
+        "status": status,
         "events": [evento.payload for evento in eventos],
     }
 

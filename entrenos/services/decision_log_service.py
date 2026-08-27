@@ -376,6 +376,35 @@ def evaluar_decisiones_para_entreno(entreno):
         _actualizar_perfil(cliente, nombre)
 
 
+def _persistir_evaluacion_final(log, resultado, notas):
+    """Cierra una evaluación y publica su hecho durable después del commit."""
+    from entrenos.models import GymDecisionLog
+
+    with transaction.atomic():
+        decision = GymDecisionLog.objects.select_for_update().get(pk=log.pk)
+        if decision.resultado is not None:
+            return decision
+        decision.resultado = resultado
+        decision.notas_resultado = notas
+        decision.fecha_evaluacion = timezone.now()
+        decision.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+
+        decision_id = decision.pk
+
+        def encolar_resultado():
+            from joi.services_eventos_entrenador import publicar_evento_resultado_decision
+            evaluada = GymDecisionLog.objects.select_related('cliente__user').get(pk=decision_id)
+            publicar_evento_resultado_decision(evaluada)
+
+        transaction.on_commit(encolar_resultado)
+
+    # Mantiene coherente la instancia del llamador sin realizar otro save.
+    log.resultado = decision.resultado
+    log.notas_resultado = decision.notas_resultado
+    log.fecha_evaluacion = decision.fecha_evaluacion
+    return log
+
+
 def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
@@ -407,10 +436,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado, notas = 'validada', 'Primera reexposición sin molestia y dentro del límite local'
         else:
             resultado, notas = 'neutra', 'La primera reexposición no aporta evidencia concluyente'
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if log.motivo_codigo in ('progresion_peso', 'progresion_reps'):
@@ -453,10 +479,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
                 resultado = 'neutra'
                 notas = 'Hubo avance, pero todavía no se alcanzó el objetivo completo'
 
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if log.motivo_codigo == 'tecnica_comprometida':
@@ -480,10 +503,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Técnica recuperada, pero la carga no se mantuvo para aislar el ajuste'
 
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if log.motivo_codigo == 'tope_maquina':
@@ -505,10 +525,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Mismo rendimiento en el tope; aún no alcanzó el objetivo'
 
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if log.motivo_codigo in (
@@ -527,10 +544,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Sin fallo no previsto, pero la carga cambió y no permite aislar el ajuste'
 
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if log.motivo_codigo in ('rpe_alto_sostenido', 'rpe_extremo'):
@@ -548,10 +562,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Reducción aplicada sin dato suficiente para confirmar el margen'
 
-        log.resultado = resultado
-        log.notas_resultado = notas
-        log.fecha_evaluacion = timezone.now()
-        log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        _persistir_evaluacion_final(log, resultado, notas)
         return
 
     if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
@@ -584,10 +595,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         resultado = 'neutra'
         notas = 'Sin cambio claro respecto a la decisión'
 
-    log.resultado = resultado
-    log.notas_resultado = notas
-    log.fecha_evaluacion = timezone.now()
-    log.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+    _persistir_evaluacion_final(log, resultado, notas)
 
 
 def _actualizar_perfil(cliente, ejercicio):

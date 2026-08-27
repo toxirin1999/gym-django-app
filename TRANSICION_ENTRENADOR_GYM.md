@@ -1763,3 +1763,19 @@ python manage.py auditar_revision_memoria \
   recupera automáticamente tras cinco minutos, evitando eventos bloqueados.
 - El lote conserva exclusivamente DTOs allowlisted y no incorpora contexto
   global, texto libre del Diario ni motivos narrativos de las decisiones.
+
+### Fase 10C — JOI comunica resultados evaluados
+
+- El productor canónico es el cierre de `GymDecisionLog`: solo la transición
+  desde resultado pendiente a `validada`, `fallida` o `neutra` genera evento.
+- El recibo se encola con `transaction.on_commit` inmediatamente después de
+  persistir la evaluación final. No existe un `post_save` indiscriminado.
+- Aplicación y evaluación son hechos distintos e idempotentes. Comparten la
+  outbox y pueden sintetizarse en el mismo lote sin confundir sus niveles
+  epistémicos (`applied` frente a `evaluated`).
+- El DTO de resultado solo expone resultado, acción, ejercicio, causa estable
+  permitida, confianza y fecha de evaluación. Motivo, notas de resultado y
+  postergación nunca cruzan la frontera.
+- JOI puede decir que una evaluación mostró, validó, no sostuvo o quedó
+  neutral. No atribuye causalidad ni afirma aprendizaje fuera de un resultado
+  efectivamente evaluado.

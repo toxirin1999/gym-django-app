@@ -1158,7 +1158,8 @@ def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
     if evento:
         eventos = evento.get('events') or []
         if eventos:
-            hechos = []
+            aplicaciones = []
+            evaluaciones = []
             for item in eventos:
                 facts = item.get('facts') or {}
                 accion = facts.get('accion', 'ajustar')
@@ -1167,13 +1168,25 @@ def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
                 detalle = f"{accion} en {ejercicio}"
                 if causa:
                     detalle += f" ({causa})"
-                hechos.append(detalle)
+                if item.get('event_type') == 'gym_decision_outcome':
+                    lenguaje = {
+                        'validada': 'la evaluación validó',
+                        'fallida': 'la evaluación mostró que no sostuvo',
+                        'neutra': 'la evaluación quedó neutral',
+                    }.get(facts.get('resultado') or item.get('status'), 'la evaluación quedó neutral')
+                    evaluaciones.append(f"{lenguaje} {detalle}")
+                else:
+                    aplicaciones.append(detalle)
+            partes = []
+            if aplicaciones:
+                partes.append("el motor aplicó: " + "; ".join(aplicaciones))
+            if evaluaciones:
+                partes.append("resultados evaluados: " + "; ".join(evaluaciones))
             return (
-                "HECHOS CONFIRMADOS: el motor ya aplicó estas decisiones: "
-                + "; ".join(hechos)
-                + ". Sintetízalas en un único mensaje de 1-3 frases. "
-                "No afirmes todavía que funcionaron: sus resultados aún no "
-                "están evaluados. No inventes causas ni información personal."
+                "HECHOS CONFIRMADOS: " + ". ".join(partes) + ". "
+                "Sintetiza el lote en 1-3 frases y conserva separados aplicación y resultado. "
+                "No afirmes causalidad: una evaluación mostró, validó, no sostuvo o quedó neutral; "
+                "no digas que aprendiste fuera de un resultado evaluado. No inventes información personal."
             )
         facts = evento.get('facts') or {}
         accion = facts.get('accion', 'ajustar')
