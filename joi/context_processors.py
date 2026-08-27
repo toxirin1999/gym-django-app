@@ -28,27 +28,13 @@ def _apertura_on_demand(user):
     Lock de caché de 10 min para no llamar a Haiku en cada request.
     Retorna el MensajeJOI generado, o None si ya existe / falla.
     """
-    hoy = timezone.localdate()
-    lock_key = f'joi_apertura_lock_{user.id}_{hoy}'
-    if cache.get(lock_key):
-        return None
-
-    from joi.models import MensajeJOI
-    ya_existe = MensajeJOI.objects.filter(
-        user=user, trigger='apertura_manana', creado_en__date=hoy
-    ).exists()
-    if ya_existe:
-        return None
-
-    # Poner el lock antes de llamar a Haiku para evitar llamadas paralelas
-    cache.set(lock_key, True, 600)
     try:
         from clientes.models import Cliente
-        from joi.services import generar_mensaje_joi
+        from joi.services_eventos_entrenador import resolver_apertura_diaria_entrenador
         cliente = Cliente.objects.filter(user=user).first()
         if not cliente:
             return None
-        return generar_mensaje_joi(cliente, 'apertura_manana')
+        return resolver_apertura_diaria_entrenador(cliente)
     except Exception:
         # Antes: cache.delete(lock_key) — liberaba el lock al instante pese a que
         # el comentario decía "reintentar en 10 min". Si Anthropic está caído de
@@ -79,41 +65,18 @@ def _get_mensaje_gym(user):
     if mensaje:
         return mensaje
 
-    try:
-        from clientes.models import Cliente
-        from joi.services_eventos_entrenador import (
-            procesar_eventos_entrenador_pendientes,
-            reconciliar_eventos_en_apertura,
-        )
-        cliente = Cliente.objects.filter(user=user).first()
-        if not cliente:
-            return _apertura_on_demand(user)
-
-        hoy = timezone.localdate()
-        apertura_hoy = MensajeJOI.objects.filter(
-            user=user,
-            trigger='apertura_manana',
-            creado_en__date=hoy,
-        ).exists()
-        if apertura_hoy:
-            # Los hechos posteriores a la apertura conservan su voz ejecutiva
-            # y nunca reescriben el mensaje con el que comenzó el día.
-            nuevo = procesar_eventos_entrenador_pendientes(cliente, limite=20)
-            return nuevo or _apertura_on_demand(user)
-
-        lock_key = f'joi_apertura_lock_{user.id}_{hoy}'
-        if not cache.add(lock_key, True, 600):
+    # Con hechos ejecutivos pendientes entramos directamente por el resolvedor
+    # canónico: un fallo no debe caer después en una apertura limpia. Sin cola
+    # conservamos el seam histórico de apertura bajo demanda.
+    from joi.models import EventoEntrenadorJOI
+    if EventoEntrenadorJOI.objects.filter(user=user, estado='pendiente').exists():
+        try:
+            from clientes.models import Cliente
+            from joi.services_eventos_entrenador import resolver_apertura_diaria_entrenador
+            cliente = Cliente.objects.filter(user=user).first()
+            return resolver_apertura_diaria_entrenador(cliente) if cliente else None
+        except Exception:
             return None
-        nuevo, habia_eventos = reconciliar_eventos_en_apertura(cliente, limite=20)
-        if habia_eventos:
-            # Si falló la síntesis, la cola quedó pendiente. No se crea una
-            # segunda apertura incompleta que silencie el próximo reintento.
-            if nuevo is None:
-                cache.delete(lock_key)
-            return nuevo
-        cache.delete(lock_key)
-    except Exception:
-        return None
     return _apertura_on_demand(user)
 
 

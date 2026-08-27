@@ -1797,3 +1797,21 @@ python manage.py auditar_revision_memoria \
 - El bloque de apertura reconstruye cada recibo desde una allowlist incluso si
   la fila fuera manipulada. Mantiene separados `applied` y `evaluated`, y no
   incorpora motivos libres, secretos ni contexto narrativo de los productores.
+
+### Fase 10E — apertura canónica y auditoría del outbox
+
+- `resolver_apertura_diaria_entrenador` es la única puerta para crear la
+  apertura desde la presencia web o desde Celery. Usa la fecha local, integra
+  como máximo veinte recibos de las últimas 48 horas y conserva la apertura
+  existente como un registro inmutable e idempotente.
+- Si el lote reciente falla, ningún mensaje limpio ocupa su lugar y todos los
+  recibos permanecen pendientes. Sin hechos elegibles se genera la apertura
+  normal; los hechos posteriores a una apertura usan `decision_plan`.
+- `auditar_outbox_entrenador_joi` expone un diagnóstico JSONL estrictamente de
+  lectura con corte `--as-of`, cliente opcional y límite explícito. Clasifica
+  backlog envejecido, claims abandonados, enlaces rotos o cruzados, identidad
+  de fuente divergente, payload fuera de allowlist, duplicidad semántica,
+  fechas futuras e intentos fallidos sin contexto técnico.
+- La auditoría solo publica IDs, códigos estables, conteos y nombres de campos;
+  nunca devuelve mensajes, notas ni valores privados del payload. El resumen
+  determinista declara estados, backlog y `contract_ok` sin reparar histórico.

@@ -69,29 +69,19 @@ def generar_apertura_manana(self):
     Se programa via Celery Beat cada día a las 07:30 (hora México/Madrid).
     Solo genera si el usuario no tiene ya un mensaje sin leer del día de hoy.
     """
-    from datetime import date
-    from django.contrib.auth.models import User
-    from joi.models import MensajeJOI
-    from joi.services import generar_mensaje_joi
     from clientes.models import Cliente
+    from joi.services_eventos_entrenador import resolver_apertura_diaria_entrenador
 
-    hoy = date.today()
+    hoy = timezone.localdate()
     generados = 0
     errores = 0
 
     for cliente in Cliente.objects.select_related('user').all():
         try:
-            ya_tiene = MensajeJOI.objects.filter(
-                user=cliente.user,
-                trigger='apertura_manana',
-                creado_en__date=hoy,
-            ).exists()
-            if ya_tiene:
-                continue
-
-            generar_mensaje_joi(cliente, 'apertura_manana')
-            generados += 1
-        except Exception as e:
+            mensaje = resolver_apertura_diaria_entrenador(cliente)
+            if mensaje is not None:
+                generados += 1
+        except Exception:
             errores += 1
 
     return {'generados': generados, 'errores': errores, 'fecha': str(hoy)}
