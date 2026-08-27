@@ -881,6 +881,52 @@
       border: 0;
     }
 
+    .dc-messages,
+    .dc-form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .dc-message {
+      padding: 12px 16px;
+      border: 1px solid var(--line-strong);
+      border-radius: 12px;
+      background: var(--surface);
+      color: var(--ink-muted);
+    }
+
+    .dc-form-grid p {
+      display: grid;
+      gap: 6px;
+      margin: 0;
+    }
+
+    .dc-form-grid input,
+    .dc-form-grid select,
+    .dc-form-grid textarea {
+      width: 100%;
+      min-height: 44px;
+      padding: 10px 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 9px;
+      background: var(--surface-soft);
+      color: var(--ink);
+    }
+
+    .dc-form-grid input[type="checkbox"] {
+      width: auto;
+      min-height: auto;
+    }
+
+    .dc-form-grid ul {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 16px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
     @media (max-width: 640px) {
       .dc-top {
         grid-template-columns: auto 1fr;
@@ -988,6 +1034,11 @@
   </header>
 
   <main class="dc-wrap">
+    {% if messages %}
+    <div class="dc-messages" aria-live="polite">
+      {% for message in messages %}<div class="dc-message">{{ message }}</div>{% endfor %}
+    </div>
+    {% endif %}
     <section class="dc-hero" aria-labelledby="titulo-centro">
       <div class="dc-hero-head">
         <p class="dc-eyebrow">Estado actual</p>
@@ -1046,6 +1097,53 @@
         <span class="dc-section-number" aria-hidden="true">01</span>
         <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
       </header>
+
+      {% if bloque_colaborativo.bloque %}
+      <article class="dc-card is-temporary" aria-labelledby="bloque-colaborativo-titulo">
+        <span class="dc-pill is-temporary">{{ bloque_colaborativo.card.estado_label }}</span>
+        <h3 id="bloque-colaborativo-titulo" class="dc-card-text">
+          Bloque Gym {{ bloque_colaborativo.card.estado_label|lower }}
+        </h3>
+        <p class="dc-close-score">{{ bloque_colaborativo.card.objetivo_label }}</p>
+        <p class="dc-card-meta">
+          {{ bloque_colaborativo.card.semanas }} semanas ·
+          {{ bloque_colaborativo.card.semana_inicio|date:"d/m/Y" }}–{{ bloque_colaborativo.card.semana_fin|date:"d/m/Y" }} ·
+          {{ bloque_colaborativo.card.objetivo_sesiones }} sesiones · mínimo {{ bloque_colaborativo.card.minimo_valido }}
+        </p>
+        {% if bloque_colaborativo.card.secundarios %}
+        <p class="dc-card-meta">Énfasis: {{ bloque_colaborativo.card.secundarios|join:", " }}</p>
+        {% endif %}
+        {% if bloque_colaborativo.card.estado == 'propuesto' and not bloque_colaborativo.cierre_pendiente %}
+        <div class="dc-actions">
+          <form method="post" action="{% url 'clientes:activar_bloque_gym_colaborativo' bloque_colaborativo.bloque.pk %}">
+            {% csrf_token %}<input type="hidden" name="version" value="{{ bloque_colaborativo.card.version }}">
+            <button class="dc-button is-primary" type="submit">Activar bloque</button>
+          </form>
+          <form method="post" action="{% url 'clientes:retirar_bloque_gym_colaborativo' bloque_colaborativo.bloque.pk %}">
+            {% csrf_token %}<input type="hidden" name="version" value="{{ bloque_colaborativo.card.version }}">
+            <button class="dc-button is-quiet" type="submit">Retirar propuesta</button>
+          </form>
+        </div>
+        <details class="dc-accordion">
+          <summary>Revisar propuesta <span aria-hidden="true">⌄</span></summary>
+          <form class="dc-accordion-body dc-form-grid" method="post" action="{% url 'clientes:revisar_bloque_gym_colaborativo' bloque_colaborativo.bloque.pk %}">
+            {% csrf_token %}<input type="hidden" name="version" value="{{ bloque_colaborativo.card.version }}">
+            {{ form_bloque_gym.as_p }}
+            <button class="dc-button is-primary" type="submit">Guardar como nueva versión</button>
+          </form>
+        </details>
+        {% endif %}
+      </article>
+      {% elif not bloque_colaborativo.cierre_pendiente %}
+      <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
+        <h3 id="preparar-bloque-titulo" class="dc-card-text">Preparar bloque Gym</h3>
+        <p class="dc-card-meta">Define la dirección. El plan mantiene internamente el acuerdo semanal de 5 sesiones y mínimo 3.</p>
+        <form class="dc-form-grid" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
+          {% csrf_token %}{{ form_bloque_gym.as_p }}
+          <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
+        </form>
+      </article>
+      {% endif %}
 
       {% if cierre_bloque %}
       <article class="dc-card is-weekly-close" aria-labelledby="cierre-bloque-titulo">
@@ -1220,7 +1318,7 @@
       </article>
       {% endif %}
 
-      {% if not cierre_bloque and not cierre_semanal and not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
+      {% if not bloque_colaborativo.bloque and not cierre_bloque and not cierre_semanal and not sugerencia_prioritaria and not sugerencia_hipotesis and not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas and not continuidad %}
       <div class="dc-empty">
         <strong>El plan no necesita ninguna decisión tuya ahora.</strong>
         Seguirá observando tus sesiones y te avisará cuando exista evidencia suficiente para proponer un cambio.

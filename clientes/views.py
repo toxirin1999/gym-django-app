@@ -5583,6 +5583,28 @@ def plan_decisiones_view(request):
     traces_agrupados = agrupar_traces_recientes(traces_recientes)
     decisiones_agrupadas = agrupar_decisiones_carga(decisiones_carga_resumen)
 
+    # Fase 3E: proyección colaborativa estrictamente read-only. El GET solo
+    # construye el formulario y consulta contratos ya persistidos.
+    from clientes.forms_bloque_gym import BloqueGymColaborativoForm
+    from entrenos.services.contrato_bloque_gym_service import consultar_bloque_gym_colaborativo
+    bloque_colaborativo = consultar_bloque_gym_colaborativo(cliente)
+    bloque_visible = bloque_colaborativo.get('bloque')
+    siguiente_lunes = hoy + timedelta(days=(-hoy.weekday()) % 7)
+    inicial_bloque = {
+        'semana_inicio': siguiente_lunes,
+        'semanas_previstas': 4,
+        'objetivo_principal': cliente.objetivo_principal,
+        'objetivos_secundarios': [],
+    }
+    if bloque_visible and bloque_visible.estado == bloque_visible.ESTADO_PROPUESTO:
+        inicial_bloque.update({
+            'semana_inicio': bloque_visible.semana_inicio,
+            'semanas_previstas': bloque_visible.semanas_previstas,
+            'objetivo_principal': bloque_visible.objetivo_principal,
+            'objetivos_secundarios': bloque_visible.objetivos_secundarios,
+        })
+    form_bloque_gym = BloqueGymColaborativoForm(initial=inicial_bloque)
+
     return render(request, 'clientes/plan_decisiones.html', {
         'cliente': cliente,
         'hoy': hoy,
@@ -5607,7 +5629,114 @@ def plan_decisiones_view(request):
         'cierre_metricas_ui': cierre_metricas_ui,
         'cierre_bloque': cierre_bloque,
         'cierre_bloque_semanas_ui': cierre_bloque_semanas_ui,
+        'bloque_colaborativo': bloque_colaborativo,
+        'form_bloque_gym': form_bloque_gym,
     })
+
+
+def _errores_bloque_gym(form):
+    return ' '.join(
+        str(error)
+        for errores in form.errors.values()
+        for error in errores
+    ) or 'Revisa los datos del bloque.'
+
+
+def _version_bloque_post(request):
+    try:
+        return int(request.POST.get('version', ''))
+    except (TypeError, ValueError):
+        return None
+
+
+def _mensaje_conflicto_bloque(request, exc):
+    messages.error(request, str(exc))
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def preparar_bloque_gym_view(request):
+    from clientes.forms_bloque_gym import BloqueGymColaborativoForm
+    from entrenos.services.contrato_bloque_gym_service import preparar_bloque_gym_colaborativo
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    form = BloqueGymColaborativoForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, _errores_bloque_gym(form))
+        return redirect('clientes:plan_decisiones')
+    try:
+        preparar_bloque_gym_colaborativo(cliente, actor=request.user, **form.cleaned_data)
+    except Exception as exc:
+        return _mensaje_conflicto_bloque(request, exc)
+    messages.success(request, 'Bloque Gym preparado. Revísalo antes de activarlo.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def revisar_bloque_gym_view(request, bloque_id):
+    from clientes.forms_bloque_gym import BloqueGymColaborativoForm
+    from entrenos.models import ContratoBloqueGym
+    from entrenos.services.contrato_bloque_gym_service import revisar_bloque_gym_colaborativo
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    bloque = get_object_or_404(ContratoBloqueGym, pk=bloque_id, cliente=cliente)
+    form = BloqueGymColaborativoForm(request.POST)
+    version = _version_bloque_post(request)
+    if not form.is_valid() or version is None:
+        messages.error(request, _errores_bloque_gym(form) if form.errors else 'Versión no válida.')
+        return redirect('clientes:plan_decisiones')
+    try:
+        revisar_bloque_gym_colaborativo(
+            bloque, version_esperada=version, actor=request.user, **form.cleaned_data,
+        )
+    except Exception as exc:
+        return _mensaje_conflicto_bloque(request, exc)
+    messages.success(request, 'Revisión preparada como una nueva versión del bloque.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def activar_bloque_gym_colaborativo_view(request, bloque_id):
+    from entrenos.models import ContratoBloqueGym
+    from entrenos.services.contrato_bloque_gym_service import activar_bloque_gym
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    bloque = get_object_or_404(ContratoBloqueGym, pk=bloque_id, cliente=cliente)
+    version = _version_bloque_post(request)
+    if version is None:
+        messages.error(request, 'Versión no válida.')
+        return redirect('clientes:plan_decisiones')
+    try:
+        activar_bloque_gym(bloque, version_esperada=version, actor=request.user)
+    except Exception as exc:
+        return _mensaje_conflicto_bloque(request, exc)
+    messages.success(request, 'Bloque Gym activado. Las semanas se abrirán por su flujo habitual.')
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def retirar_bloque_gym_colaborativo_view(request, bloque_id):
+    from entrenos.models import ContratoBloqueGym
+    from entrenos.services.contrato_bloque_gym_service import retirar_propuesta_bloque_gym
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    bloque = get_object_or_404(ContratoBloqueGym, pk=bloque_id, cliente=cliente)
+    version = _version_bloque_post(request)
+    if version is None:
+        messages.error(request, 'Versión no válida.')
+        return redirect('clientes:plan_decisiones')
+    try:
+        retirar_propuesta_bloque_gym(
+            bloque, version_esperada=version, actor=request.user,
+        )
+    except Exception as exc:
+        return _mensaje_conflicto_bloque(request, exc)
+    messages.info(request, 'La propuesta de bloque queda retirada.')
+    return redirect('clientes:plan_decisiones')
 
 
 @login_required

@@ -1815,3 +1815,26 @@ python manage.py auditar_revision_memoria \
 - La auditoría solo publica IDs, códigos estables, conteos y nombres de campos;
   nunca devuelve mensajes, notas ni valores privados del payload. El resumen
   determinista declara estados, backlog y `contract_ok` sin reparar histórico.
+
+### Fase 3E — activación colaborativa del bloque Gym
+
+- El Centro incorpora una tarjeta contractual en «Activo ahora». Sin bloque
+  ofrece preparar una propuesta; una propuesta puede activarse, revisarse como
+  sucesora o retirarse. El GET solo consulta y nunca crea estrategia, bloque,
+  semana, sesión ni entrenamiento.
+- El formulario acepta exclusivamente lunes de inicio, duración acotada,
+  objetivo general del vocabulario del cliente, hasta dos énfasis revisados y
+  un motivo opcional del propietario. Cliente, estrategia, motor, umbrales,
+  límites y JSON siguen bajo autoridad del servicio y no son superficie POST.
+- Toda propuesta colaborativa resuelve internamente la estrategia aprobada
+  canónica de cinco sesiones y mínimo tres. Helms y los límites conservadores
+  quedan fijados por el servicio, no por el navegador.
+- Revisar bloquea cliente y versión, retira la propuesta anterior y crea una
+  sucesora dentro de la misma transacción. Activar reutiliza el gobierno
+  existente con ownership y versión optimista; no materializa semanas ni plan.
+- Un cierre longitudinal pendiente impide nuevas transiciones. Objetos ajenos
+  responden 404, todas las acciones usan POST+PRG y los conflictos dejan un
+  mensaje legible sin aplicar cambios parciales.
+- La tarjeta solo proyecta estado, rango, duración, objetivo y énfasis
+  allowlisted. No muestra fingerprints, IDs técnicos, snapshots, motor,
+  límites ni notas privadas.

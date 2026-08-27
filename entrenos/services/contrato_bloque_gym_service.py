@@ -44,6 +44,10 @@ class EvaluacionBloqueCongelada(RuntimeError):
     pass
 
 
+class CierreBloquePendiente(RuntimeError):
+    pass
+
+
 def _fingerprint(payload):
     serializado = json.dumps(payload, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     return hashlib.sha256(serializado.encode('utf-8')).hexdigest()
@@ -60,6 +64,164 @@ def _estrategia_vigente(cliente, semana):
         .order_by('-version')
         .first()
     )
+
+
+def _exigir_propietario(cliente, actor):
+    if actor is None or actor.pk != cliente.user_id:
+        raise ActorBloqueNoAutorizado('Solo el propietario puede gestionar su bloque.')
+
+
+def _exigir_sin_cierre_pendiente(cliente):
+    if EvaluacionBloqueGym.objects.filter(
+        bloque__cliente=cliente,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    ).exists():
+        raise CierreBloquePendiente(
+            'Hay un cierre del bloque pendiente de revisión antes de continuar.'
+        )
+
+
+def _resolver_estrategia_colaborativa(cliente, semana_inicio, actor):
+    estrategia = _estrategia_vigente(cliente, semana_inicio)
+    if estrategia and (
+        estrategia.objetivo_sesiones == 5 and estrategia.minimo_valido == 3
+    ):
+        return estrategia
+    from entrenos.services.estrategia_semanal_gym_service import aprobar_estrategia_semanal_gym
+    return aprobar_estrategia_semanal_gym(
+        cliente,
+        objetivo_sesiones=5,
+        minimo_valido=3,
+        vigente_desde=semana_inicio,
+        aprobado_por=actor,
+        motivo='Estrategia canónica del bloque colaborativo Gym.',
+    )
+
+
+def consultar_bloque_gym_colaborativo(cliente):
+    """Proyección de lectura para el Centro; nunca materializa ni modifica."""
+    cierre_pendiente = EvaluacionBloqueGym.objects.filter(
+        bloque__cliente=cliente,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    ).exists()
+    bloque = (
+        ContratoBloqueGym.objects.filter(
+            cliente=cliente,
+            estado__in=[
+                ContratoBloqueGym.ESTADO_PROPUESTO,
+                ContratoBloqueGym.ESTADO_ACTIVO,
+                ContratoBloqueGym.ESTADO_PAUSADO,
+            ],
+        )
+        .order_by('-version')
+        .first()
+    )
+    if bloque is None:
+        return {'cierre_pendiente': cierre_pendiente, 'bloque': None}
+    objetivos = dict(Cliente.OBJETIVO_CHOICES)
+    secundarios = {
+        'gemelos': 'Gemelos', 'hombros': 'Hombros', 'brazos': 'Brazos',
+        'espalda': 'Espalda', 'pecho': 'Pecho', 'gluteos': 'Glúteos',
+        'cuadriceps': 'Cuádriceps',
+    }
+    return {
+        'cierre_pendiente': cierre_pendiente,
+        'bloque': bloque,
+        'card': {
+            'estado': bloque.estado,
+            'estado_label': dict(ContratoBloqueGym.ESTADOS).get(bloque.estado, bloque.estado),
+            'semana_inicio': bloque.semana_inicio,
+            'semana_fin': bloque.semana_fin_prevista,
+            'semanas': bloque.semanas_previstas,
+            'objetivo_label': objetivos.get(bloque.objetivo_principal, 'Objetivo del bloque'),
+            'secundarios': [
+                secundarios[item]
+                for item in bloque.objetivos_secundarios
+                if item in secundarios
+            ],
+            'objetivo_sesiones': bloque.objetivo_sesiones,
+            'minimo_valido': bloque.minimo_valido,
+            'version': bloque.version,
+        },
+    }
+
+
+@transaction.atomic
+def preparar_bloque_gym_colaborativo(
+    cliente, *, semana_inicio, semanas_previstas, objetivo_principal,
+    objetivos_secundarios=None, motivo='', actor,
+):
+    _exigir_propietario(cliente, actor)
+    Cliente.objects.select_for_update().get(pk=cliente.pk)
+    _exigir_sin_cierre_pendiente(cliente)
+    if ContratoBloqueGym.objects.select_for_update().filter(
+        cliente=cliente,
+        estado__in=[
+            ContratoBloqueGym.ESTADO_PROPUESTO,
+            ContratoBloqueGym.ESTADO_ACTIVO,
+            ContratoBloqueGym.ESTADO_PAUSADO,
+        ],
+    ).exists():
+        raise TransicionBloqueInvalida(
+            'Ya existe un bloque o una propuesta; usa su acción de revisión.'
+        )
+    _resolver_estrategia_colaborativa(cliente, semana_inicio, actor)
+    return proponer_bloque_gym(
+        cliente,
+        semana_inicio=semana_inicio,
+        semanas_previstas=semanas_previstas,
+        objetivo_principal=objetivo_principal,
+        objetivos_secundarios=objetivos_secundarios or [],
+        limites_snapshot={'sin_autoajustes': True},
+        motor_nombre='Helms',
+        motor_version='actual',
+        motivo=motivo,
+    )
+
+
+@transaction.atomic
+def revisar_bloque_gym_colaborativo(
+    bloque, *, version_esperada, semana_inicio, semanas_previstas,
+    objetivo_principal, objetivos_secundarios=None, motivo='', actor,
+):
+    cliente = Cliente.objects.select_for_update().get(pk=bloque.cliente_id)
+    _exigir_propietario(cliente, actor)
+    _exigir_sin_cierre_pendiente(cliente)
+    anterior = ContratoBloqueGym.objects.select_for_update().get(pk=bloque.pk)
+    if anterior.version != version_esperada:
+        raise ConflictoVersionBloque('La propuesta visible ya no es la versión actual.')
+    if anterior.estado != ContratoBloqueGym.ESTADO_PROPUESTO:
+        raise TransicionBloqueInvalida('Solo una propuesta puede revisarse.')
+    _resolver_estrategia_colaborativa(cliente, semana_inicio, actor)
+    anterior.estado = ContratoBloqueGym.ESTADO_RETIRADO
+    anterior.save(update_fields=['estado', 'actualizado_en'])
+    return proponer_bloque_gym(
+        cliente,
+        semana_inicio=semana_inicio,
+        semanas_previstas=semanas_previstas,
+        objetivo_principal=objetivo_principal,
+        objetivos_secundarios=objetivos_secundarios or [],
+        limites_snapshot={'sin_autoajustes': True},
+        motor_nombre='Helms',
+        motor_version='actual',
+        motivo=motivo,
+        predecesor=anterior,
+    )
+
+
+@transaction.atomic
+def retirar_propuesta_bloque_gym(bloque, *, version_esperada, actor):
+    cliente = Cliente.objects.select_for_update().get(pk=bloque.cliente_id)
+    _exigir_propietario(cliente, actor)
+    _exigir_sin_cierre_pendiente(cliente)
+    propuesta = ContratoBloqueGym.objects.select_for_update().get(pk=bloque.pk)
+    if propuesta.version != version_esperada:
+        raise ConflictoVersionBloque('La propuesta visible ya no es la versión actual.')
+    if propuesta.estado != ContratoBloqueGym.ESTADO_PROPUESTO:
+        raise TransicionBloqueInvalida('Solo una propuesta puede retirarse.')
+    propuesta.estado = ContratoBloqueGym.ESTADO_RETIRADO
+    propuesta.save(update_fields=['estado', 'actualizado_en'])
+    return propuesta
 
 
 def previsualizar_propuesta_bloque_gym(
@@ -164,6 +326,7 @@ def activar_bloque_gym(bloque, *, version_esperada, actor):
         raise ConflictoVersionBloque('La propuesta visible ya no es la versión actual.')
     if actor is None or actor.pk != bloque.cliente.user_id:
         raise ActorBloqueNoAutorizado('Solo el propietario puede aprobar el bloque.')
+    _exigir_sin_cierre_pendiente(bloque.cliente)
     if bloque.estado == ContratoBloqueGym.ESTADO_ACTIVO:
         return bloque
     if bloque.estado != ContratoBloqueGym.ESTADO_PROPUESTO:

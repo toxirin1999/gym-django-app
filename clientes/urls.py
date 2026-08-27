@@ -127,6 +127,10 @@ urlpatterns = [
 
     # Phase 26 — Decision center
     path('plan/decisiones/', views.plan_decisiones_view, name='plan_decisiones'),
+    path('plan/bloque/preparar/', views.preparar_bloque_gym_view, name='preparar_bloque_gym'),
+    path('plan/bloque/<int:bloque_id>/revisar/', views.revisar_bloque_gym_view, name='revisar_bloque_gym_colaborativo'),
+    path('plan/bloque/<int:bloque_id>/activar/', views.activar_bloque_gym_colaborativo_view, name='activar_bloque_gym_colaborativo'),
+    path('plan/bloque/<int:bloque_id>/retirar/', views.retirar_bloque_gym_colaborativo_view, name='retirar_bloque_gym_colaborativo'),
     path('plan/cierre-semanal/<int:evaluacion_id>/aceptar/', views.aceptar_cierre_semanal_view, name='aceptar_cierre_semanal'),
     path('plan/cierre-semanal/<int:evaluacion_id>/rechazar/', views.rechazar_cierre_semanal_view, name='rechazar_cierre_semanal'),
     path('plan/cierre-bloque/<int:evaluacion_id>/aceptar/', views.aceptar_cierre_bloque_view, name='aceptar_cierre_bloque'),
