@@ -1,6 +1,6 @@
 """Frontera/outbox entre decisiones ejecutivas de Gym y la voz JOI."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from django.db import transaction
 from django.db.models import F
@@ -129,8 +129,123 @@ def _construir_lote(eventos):
         "event_type": event_type,
         "epistemic_level": epistemic_level,
         "status": status,
-        "events": [evento.payload for evento in eventos],
+        "events": [_serializar_evento_para_voz(evento) for evento in eventos],
     }
+
+
+def _serializar_evento_para_voz(evento):
+    """Reconstruye el recibo desde una allowlist aunque la fila sea manipulada."""
+    payload = evento.payload or {}
+    facts = payload.get("facts") or {}
+    permitidos = {"accion", "ejercicio", "confianza", "motivo_codigo"}
+    if evento.event_type == EVENT_TYPE:
+        permitidos.update({"peso_anterior", "rpe_anterior", "valor_cambio"})
+    elif evento.event_type == OUTCOME_EVENT_TYPE:
+        permitidos.update({"resultado", "fecha_evaluacion"})
+    facts_limpios = {clave: facts[clave] for clave in permitidos if clave in facts}
+    if facts_limpios.get("motivo_codigo") not in MOTIVOS_CODIGO_PERMITIDOS:
+        facts_limpios.pop("motivo_codigo", None)
+    return {
+        "schema_version": payload.get("schema_version", SCHEMA_VERSION),
+        "event_type": evento.event_type,
+        "source_model": evento.source_model,
+        "source_id": evento.source_id,
+        "occurred_at": payload.get("occurred_at"),
+        "epistemic_level": (
+            "evaluated" if evento.event_type == OUTCOME_EVENT_TYPE else "applied"
+        ),
+        "status": evento.status,
+        "facts": facts_limpios,
+    }
+
+
+def _ocurrido_en(evento):
+    valor = (evento.payload or {}).get("occurred_at")
+    try:
+        ocurrido = datetime.fromisoformat(valor)
+    except (TypeError, ValueError):
+        return evento.creado_en
+    if timezone.is_naive(ocurrido):
+        ocurrido = timezone.make_aware(ocurrido, timezone.get_current_timezone())
+    return ocurrido
+
+
+def _prioridad_evento(evento):
+    return 0 if evento.event_type == EVENT_TYPE else 1
+
+
+def reconciliar_eventos_en_apertura(cliente, *, limite=20, ventana_horas=48):
+    """Integra hechos recientes en una única apertura y publica sus recibos.
+
+    Retorna ``(mensaje, habia_eventos_elegibles)`` para que el llamador pueda
+    distinguir una cola vacía de un fallo y no crear una apertura parcial.
+    """
+    from joi.models import EventoEntrenadorJOI
+
+    limite = max(1, min(int(limite), 20))
+    ahora = timezone.now()
+    umbral = ahora - timedelta(hours=ventana_horas)
+
+    try:
+        with transaction.atomic():
+            EventoEntrenadorJOI.objects.select_for_update().filter(
+                user=cliente.user,
+                estado=EventoEntrenadorJOI.ESTADO_PROCESANDO,
+                reclamado_en__lt=ahora - timedelta(minutes=5),
+            ).update(
+                estado=EventoEntrenadorJOI.ESTADO_PENDIENTE,
+                reclamado_en=None,
+                ultimo_error="stale_claim_recovered",
+            )
+
+            pendientes = list(
+                EventoEntrenadorJOI.objects.select_for_update(skip_locked=True)
+                .filter(user=cliente.user, estado=EventoEntrenadorJOI.ESTADO_PENDIENTE)
+            )
+            elegibles = [
+                evento for evento in pendientes
+                if evento.source_model == SOURCE_MODEL
+                and evento.event_type in {EVENT_TYPE, OUTCOME_EVENT_TYPE}
+                and _ocurrido_en(evento) >= umbral
+            ]
+            elegibles.sort(key=lambda evento: (
+                _ocurrido_en(evento), _prioridad_evento(evento), evento.pk,
+            ))
+            candidatos = elegibles[:limite]
+            if not candidatos:
+                return None, False
+
+            ids = [evento.pk for evento in candidatos]
+            EventoEntrenadorJOI.objects.filter(pk__in=ids).update(
+                estado=EventoEntrenadorJOI.ESTADO_PROCESANDO,
+                intentos=F("intentos") + 1,
+                reclamado_en=ahora,
+                ultimo_error="",
+            )
+
+            lote = _construir_lote(candidatos)
+            from joi.services import generar_mensaje_joi
+            mensaje = generar_mensaje_joi(
+                cliente,
+                "apertura_manana",
+                {"_evento_entrenador": lote},
+            )
+            if mensaje is None:
+                # Fuerza rollback del claim y de cualquier escritura parcial
+                # que el generador hubiera alcanzado antes de devolver None.
+                raise RuntimeError("message_not_created")
+
+            EventoEntrenadorJOI.objects.filter(pk__in=ids).update(
+                estado=EventoEntrenadorJOI.ESTADO_PUBLICADO,
+                mensaje=mensaje,
+                reclamado_en=None,
+                procesado_en=timezone.now(),
+                ultimo_error="",
+            )
+            return mensaje, True
+    except Exception:
+        # La transacción revierte claim, apertura y recibos como una unidad.
+        return None, True
 
 
 def procesar_eventos_entrenador_pendientes(cliente, *, limite=20):

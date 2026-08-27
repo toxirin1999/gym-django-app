@@ -1779,3 +1779,21 @@ python manage.py auditar_revision_memoria \
 - JOI puede decir que una evaluación mostró, validó, no sostuvo o quedó
   neutral. No atribuye causalidad ni afirma aprendizaje fuera de un resultado
   efectivamente evaluado.
+
+### Fase 10D — reconciliación de la apertura con hechos ejecutivos
+
+- La presencia respeta primero cualquier mensaje no leído; nunca lo sustituye
+  ni consume eventos por detrás mientras el usuario aún tiene algo pendiente.
+- Si todavía no existe apertura local del día, reclama como máximo veinte
+  eventos canónicos de las últimas 48 horas y genera una sola apertura que los
+  integra. El orden es temporal y, ante empate, aplicación antes que resultado.
+- Apertura, publicación de recibos y enlaces al mensaje forman una unidad
+  transaccional. Un fallo revierte todo el lote, deja los eventos pendientes y
+  no crea una apertura parcial; los claims abandonados siguen recuperándose.
+- Una apertura ya existente es inmutable. Los hechos que lleguen después usan
+  el flujo `decision_plan`, conservando intactos sus mensajes históricos.
+- Los eventos anteriores a 48 horas no se pierden, pero tampoco contaminan la
+  apertura del día. Permanecen en la outbox para su cauce ejecutivo posterior.
+- El bloque de apertura reconstruye cada recibo desde una allowlist incluso si
+  la fila fuera manipulada. Mantiene separados `applied` y `evaluated`, y no
+  incorpora motivos libres, secretos ni contexto narrativo de los productores.

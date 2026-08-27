@@ -1727,6 +1727,12 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         if not contexto_minimo and trigger in ('apertura_manana', 'decision_plan'):
             from joi.context_builders.physical_evidence_context import _bloque_hechos_fisicos
             bloque_fisico = _bloque_hechos_fisicos(ctx.get('physical_evidence'))
+        bloque_ejecutivo = ''
+        if trigger == 'apertura_manana' and evento_entrenador:
+            bloque_ejecutivo = (
+                "HECHOS EJECUTIVOS RECIENTES PARA INTEGRAR EN LA APERTURA:\n"
+                + _prompt_decision_plan({}, datos_builder)
+            )
         if contexto_minimo:
             # La outbox ejecutiva verbaliza hechos allowlisted. No incorpora
             # narrativa, ManualDavid, continuidad ni contexto global privado.
@@ -1752,6 +1758,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                 _bloque_temporal(ctx_temporal),
                 bloque_cont,
                 bloque_fisico,
+                bloque_ejecutivo,
                 builder(ctx, datos_builder),
             ]
         prompt = "\n\n".join(b for b in bloques if b)

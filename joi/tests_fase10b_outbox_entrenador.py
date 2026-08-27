@@ -166,7 +166,7 @@ class OutboxEntrenador10BTests(TestCase):
         self.assertEqual(evento.estado, EventoEntrenadorJOI.ESTADO_PUBLICADO)
         self.assertEqual(evento.mensaje_id, mensaje.pk)
 
-    def test_context_processor_drena_la_cola_antes_de_leer_mensaje(self):
+    def test_context_processor_preserva_mensaje_no_leido_antes_de_drenar(self):
         from joi.context_processors import _get_mensaje_gym
 
         esperado = MensajeJOI.objects.create(
@@ -179,5 +179,4 @@ class OutboxEntrenador10BTests(TestCase):
             obtenido = _get_mensaje_gym(self.user)
 
         self.assertEqual(obtenido.pk, esperado.pk)
-        procesar.assert_called_once()
-        self.assertEqual(procesar.call_args.args[0].pk, self.cliente.pk)
+        procesar.assert_not_called()

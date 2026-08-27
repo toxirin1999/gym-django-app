@@ -1,7 +1,7 @@
 from .models import EstadoEmocional, RecuerdoEmocional, Entrenamiento
 
-import datetime
 from django.core.cache import cache
+from django.utils import timezone
 
 # Triggers que solo deben aparecer en /joi/habitacion/.
 # No se inyectan en el context processor global — permanecen en la habitación.
@@ -28,7 +28,7 @@ def _apertura_on_demand(user):
     Lock de caché de 10 min para no llamar a Haiku en cada request.
     Retorna el MensajeJOI generado, o None si ya existe / falla.
     """
-    hoy = datetime.date.today()
+    hoy = timezone.localdate()
     lock_key = f'joi_apertura_lock_{user.id}_{hoy}'
     if cache.get(lock_key):
         return None
@@ -65,20 +65,6 @@ def _get_mensaje_gym(user):
     Excluye TRIGGERS_SOLO_HABITACION: esos mensajes solo se muestran en /joi/habitacion/.
     Si no hay ninguno, intenta generar apertura_manana on-demand.
     """
-    # Fase 10B: drenar la outbox es independiente del cache global. Si varias
-    # decisiones hermanas esperan, se verbalizan juntas y ninguna se descarta
-    # por el antiguo lock temporal de mensajes.
-    try:
-        from clientes.models import Cliente
-        from joi.services_eventos_entrenador import procesar_eventos_entrenador_pendientes
-        cliente = Cliente.objects.filter(user=user).first()
-        if cliente:
-            procesar_eventos_entrenador_pendientes(cliente)
-    except Exception:
-        # Un proveedor no disponible no puede romper ninguna pantalla: el
-        # procesador ya devuelve el lote a pendiente para su próximo intento.
-        pass
-
     from joi.models import MensajeJOI
     # Triggers a excluir: hyrox_* y los de solo habitación sin prefijo hyrox_
     excluir_triggers = [t for t in TRIGGERS_SOLO_HABITACION if not t.startswith('hyrox_')]
@@ -92,6 +78,42 @@ def _get_mensaje_gym(user):
     )
     if mensaje:
         return mensaje
+
+    try:
+        from clientes.models import Cliente
+        from joi.services_eventos_entrenador import (
+            procesar_eventos_entrenador_pendientes,
+            reconciliar_eventos_en_apertura,
+        )
+        cliente = Cliente.objects.filter(user=user).first()
+        if not cliente:
+            return _apertura_on_demand(user)
+
+        hoy = timezone.localdate()
+        apertura_hoy = MensajeJOI.objects.filter(
+            user=user,
+            trigger='apertura_manana',
+            creado_en__date=hoy,
+        ).exists()
+        if apertura_hoy:
+            # Los hechos posteriores a la apertura conservan su voz ejecutiva
+            # y nunca reescriben el mensaje con el que comenzó el día.
+            nuevo = procesar_eventos_entrenador_pendientes(cliente, limite=20)
+            return nuevo or _apertura_on_demand(user)
+
+        lock_key = f'joi_apertura_lock_{user.id}_{hoy}'
+        if not cache.add(lock_key, True, 600):
+            return None
+        nuevo, habia_eventos = reconciliar_eventos_en_apertura(cliente, limite=20)
+        if habia_eventos:
+            # Si falló la síntesis, la cola quedó pendiente. No se crea una
+            # segunda apertura incompleta que silencie el próximo reintento.
+            if nuevo is None:
+                cache.delete(lock_key)
+            return nuevo
+        cache.delete(lock_key)
+    except Exception:
+        return None
     return _apertura_on_demand(user)
 
 
