@@ -1734,3 +1734,21 @@ python manage.py auditar_revision_memoria \
   pueden corresponder a pruebas/quests o a `SET_NULL`, no a un duplicado.
 - Es un instrumento exclusivamente diagnóstico: no contiene `--apply`, no
   invoca el finalizador y no modifica ni reinterpreta datos históricos.
+
+### Fase 10A — JOI verbaliza decisiones realmente aplicadas
+
+- Crear un `GymDecisionLog` deja de activar la voz: el estado inicial
+  `pendiente` es una propuesta interna, no un hecho ejecutado.
+- La emisión nace al persistir `estado_aplicacion=aplicada` y se difiere con
+  `transaction.on_commit`, por lo que JOI nunca anuncia una operación que
+  finalmente haga rollback.
+- La frontera usa un DTO versionado con fuente, ID, instante, nivel epistémico,
+  estado y hechos allowlisted. `motivo` y cualquier otra narrativa libre no
+  cruzan; `motivo_codigo` solo cruza si pertenece al vocabulario revisado.
+- El prompt distingue el hecho confirmado de su resultado: puede afirmar que
+  el ajuste se aplicó, pero no que funcionó mientras siga sin evaluarse.
+- `MensajeJOI.contexto` conserva exclusivamente ese recibo mínimo. La pareja
+  fuente + estado es idempotente; un fallo de IA no deja recibo ni marca el
+  evento como comunicado, de modo que puede reintentarse con seguridad.
+- No hay modelo, migración, nuevo trigger ni mayor frecuencia de JOI. La voz
+  canónica continúa concentrada en la habitación.

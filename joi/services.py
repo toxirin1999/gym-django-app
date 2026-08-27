@@ -1154,6 +1154,20 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
 
 
 def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
+    evento = datos_extra.get('_evento_entrenador')
+    if evento:
+        facts = evento.get('facts') or {}
+        accion = facts.get('accion', 'ajustar')
+        ejercicio = facts.get('ejercicio', 'un ejercicio')
+        causa = facts.get('motivo_codigo')
+        causa_txt = f" Causa estructurada: {causa}." if causa else ""
+        return (
+            f"HECHO CONFIRMADO: el motor ya aplicó la decisión '{accion}' "
+            f"sobre {ejercicio}.{causa_txt} "
+            "Habla de la aplicación como un hecho, pero no afirmes todavía que "
+            "el ajuste funcionó: su resultado aún no está evaluado. "
+            "Genera 1-2 frases precisas, sin motivación genérica ni causas inventadas."
+        )
     accion        = datos_extra.get('accion', '')
     ejercicio     = datos_extra.get('ejercicio', 'un ejercicio')
     motivo        = datos_extra.get('motivo', '')
@@ -1648,6 +1662,11 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
     from joi.models import MensajeJOI
 
     datos_extra = datos_extra or {}
+    evento_entrenador = datos_extra.get('_evento_entrenador')
+    if trigger == 'decision_plan' and not evento_entrenador:
+        # Fase 10A: ninguna ruta legacy puede verbalizar decisiones sin una
+        # fuente estructurada y un estado operativo confirmado.
+        return None
     builder = _PROMPT_BUILDERS.get(trigger)
     if not builder:
         return None
@@ -1711,7 +1730,7 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
             user=cliente.user,
             trigger=trigger,
             mensaje=texto,
-            contexto={**ctx, **datos_extra},
+            contexto=evento_entrenador if evento_entrenador else {**ctx, **datos_extra},
         )
         from django.core.cache import cache
         cache.delete(f'joi_ctx_{cliente.user_id}')

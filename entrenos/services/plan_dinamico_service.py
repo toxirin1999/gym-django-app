@@ -181,6 +181,19 @@ def _persistir_estado_aplicacion(log, nuevo_estado, nuevo_motivo):
         log.motivo_postergacion = nuevo_motivo
         log.fecha_aplicacion = timezone.now()
         log.save(update_fields=['estado_aplicacion', 'motivo_postergacion', 'fecha_aplicacion'])
+        if nuevo_estado == 'aplicada':
+            from django.db import transaction
+
+            decision_id = log.pk
+
+            def _verbalizar_aplicacion_confirmada():
+                from entrenos.models import GymDecisionLog
+                from joi.services_eventos_entrenador import publicar_evento_decision_aplicada
+
+                decision = GymDecisionLog.objects.select_related('cliente').get(pk=decision_id)
+                publicar_evento_decision_aplicada(decision)
+
+            transaction.on_commit(_verbalizar_aplicacion_confirmada)
 
 
 def _aplicar_overlay_molestia_reciente(cliente, ejercicios, hoy, cambios):

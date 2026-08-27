@@ -409,50 +409,12 @@ def evaluar_backlog_al_guardar_trace(sender, instance, raw=False, **kwargs):
 
     transaction.on_commit(_evaluar)
 
-@receiver(post_save, sender=_GymDecisionLog)
+# Phase 10A: crear una decisión pendiente no es comunicar que fue aplicada.
+# La publicación nace en ``_persistir_estado_aplicacion`` tras el commit.
 def joi_decision_plan(sender, instance, created, **kwargs):
-    """
-    Cuando el plan toma una decisión de intervención activa, JOI la verbaliza.
-    Lock de 30 min por usuario: evita spam si la misma sesión genera varios logs.
-    """
-    if not created:
-        return
-    if instance.accion not in _ACCIONES_JOI:
-        return
-    # 'mantener' solo interesa cuando la causa es técnica o molestia, no rutina
-    if instance.accion == 'mantener':
-        motivo_lower = (instance.motivo or '').lower()
-        causas_relevantes = {
-            'tecnica_comprometida', 'fallo_no_controlado',
-        }
-        if (
-            instance.motivo_codigo not in causas_relevantes
-            and not any(k in motivo_lower for k in ('técnica', 'tecnica', 'molestia', 'dolor', 'comprometida'))
-        ):
-            return
-
-    try:
-        from django.core.cache import cache
-        from joi.services import generar_mensaje_joi
-
-        cliente = instance.cliente
-        lock_key = f'joi_decision_lock_{cliente.pk}'
-        if cache.get(lock_key):
-            return
-        cache.set(lock_key, True, 1800)  # 30 min
-
-        generar_mensaje_joi(cliente, 'decision_plan', {
-            'accion':        instance.accion,
-            'ejercicio':     instance.ejercicio,
-            'motivo':        instance.motivo or '',
-            'peso_anterior': instance.peso_anterior,
-            'rpe_anterior':  instance.rpe_anterior,
-            'valor_cambio':  instance.valor_cambio,
-            'confianza':     instance.confianza,
-        })
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).error(f'[JOI decision_plan] {e}')
+    # Compatibilidad de importación: la antigua entrada queda inertizada.
+    # La única salida autorizada es el DTO de services_eventos_entrenador.
+    return None
 
 
 # ── Phase 23A — JOI verbaliza preferencia aprendida ──────────────────────────
