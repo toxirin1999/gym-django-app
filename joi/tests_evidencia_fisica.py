@@ -260,9 +260,9 @@ class PhysicalEvidenceJoiIntegrationTests(EvidenciaFisicaFixture):
         from joi.context_builders.physical_evidence_context import build_physical_evidence_context
         return build_physical_evidence_context(self.cliente, self.hoy)["physical_evidence"]
 
-    def test_apertura_y_decision_reciben_evidencia_despues_de_continuidad_antes_del_trigger(self):
+    def test_apertura_recibe_evidencia_despues_de_continuidad_antes_del_trigger(self):
         evidence = self._evidence()
-        for trigger in ("apertura_manana", "decision_plan"):
+        for trigger in ("apertura_manana",):
             MensajeJOI.objects.all().delete()
             antes_decisiones = GymDecisionVersion.objects.count()
             msg, prompt = self._generate_capture(trigger, {"physical_evidence": evidence})
@@ -273,7 +273,7 @@ class PhysicalEvidenceJoiIntegrationTests(EvidenciaFisicaFixture):
             self.assertLess(prompt.index("NARRATIVA"), prompt.index("MANUAL"))
             self.assertLess(prompt.index("MANUAL"), prompt.index("CONTINUIDAD"))
             self.assertLess(prompt.index("CONTINUIDAD"), prompt.index("EVIDENCIA FÍSICA"))
-            self.assertLess(prompt.index("EVIDENCIA FÍSICA"), prompt.index("press") if trigger == "decision_plan" else len(prompt))
+            self.assertLess(prompt.index("EVIDENCIA FÍSICA"), len(prompt))
 
     def test_bloque_ausente_no_deja_seccion_y_resumen_semanal_lo_excluye(self):
         _, no_evidence = self._generate_capture("apertura_manana", {})

@@ -1156,6 +1156,25 @@ def _prompt_resumen_semanal(ctx: dict, datos_extra: dict) -> str:
 def _prompt_decision_plan(ctx: dict, datos_extra: dict) -> str:
     evento = datos_extra.get('_evento_entrenador')
     if evento:
+        eventos = evento.get('events') or []
+        if eventos:
+            hechos = []
+            for item in eventos:
+                facts = item.get('facts') or {}
+                accion = facts.get('accion', 'ajustar')
+                ejercicio = facts.get('ejercicio', 'un ejercicio')
+                causa = facts.get('motivo_codigo')
+                detalle = f"{accion} en {ejercicio}"
+                if causa:
+                    detalle += f" ({causa})"
+                hechos.append(detalle)
+            return (
+                "HECHOS CONFIRMADOS: el motor ya aplicó estas decisiones: "
+                + "; ".join(hechos)
+                + ". Sintetízalas en un único mensaje de 1-3 frases. "
+                "No afirmes todavía que funcionaron: sus resultados aún no "
+                "están evaluados. No inventes causas ni información personal."
+            )
         facts = evento.get('facts') or {}
         accion = facts.get('accion', 'ajustar')
         ejercicio = facts.get('ejercicio', 'un ejercicio')
@@ -1672,8 +1691,9 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
         return None
 
     try:
-        ctx = construir_contexto(cliente)
-        ctx_temporal = resolver_contexto_temporal(trigger)
+        contexto_minimo = bool(datos_extra.get('_contexto_minimo'))
+        ctx = {} if contexto_minimo else construir_contexto(cliente)
+        ctx_temporal = {} if contexto_minimo else resolver_contexto_temporal(trigger)
         datos_extra = {**datos_extra, '_ctx_temporal': ctx_temporal}
         datos_builder = datos_extra
         semaforo = ctx.get('semaforo') or {}
@@ -1688,13 +1708,17 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
                     **datos_extra,
                     '_paradoja_b_memoria': memoria_paradoja_b,
                 }
-        continuidad_ctx = build_continuidad_context(cliente)
-        bloque_cont = _bloque_continuidad(continuidad_ctx)
+        continuidad_ctx = {} if contexto_minimo else build_continuidad_context(cliente)
+        bloque_cont = '' if contexto_minimo else _bloque_continuidad(continuidad_ctx)
         bloque_fisico = ''
-        if trigger in ('apertura_manana', 'decision_plan'):
+        if not contexto_minimo and trigger in ('apertura_manana', 'decision_plan'):
             from joi.context_builders.physical_evidence_context import _bloque_hechos_fisicos
             bloque_fisico = _bloque_hechos_fisicos(ctx.get('physical_evidence'))
-        if trigger == 'resultado_intervencion':
+        if contexto_minimo:
+            # La outbox ejecutiva verbaliza hechos allowlisted. No incorpora
+            # narrativa, ManualDavid, continuidad ni contexto global privado.
+            bloques = [builder(ctx, datos_builder)]
+        elif trigger == 'resultado_intervencion':
             # Contrato Phase 3B.3: postura longitudinal, después ManualDavid,
             # y solo al final el acontecimiento puntual. No se incluye el
             # marco narrativo compuesto para no duplicar NarrativaActiva.

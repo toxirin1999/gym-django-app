@@ -1752,3 +1752,14 @@ python manage.py auditar_revision_memoria \
   evento como comunicado, de modo que puede reintentarse con seguridad.
 - No hay modelo, migración, nuevo trigger ni mayor frecuencia de JOI. La voz
   canónica continúa concentrada en la habitación.
+
+### Fase 10B — outbox y síntesis sin pérdidas
+
+- Cada decisión aplicada genera un recibo persistente e idempotente antes de
+  cualquier llamada a IA; encolar nunca verbaliza ni depende de caché.
+- La presencia reclama por usuario un lote ordenado y lo sintetiza en un único
+  mensaje. Los recibos solo quedan publicados después de persistir el mensaje.
+- Un fallo devuelve todo el lote a pendiente. Una reclamación abandonada se
+  recupera automáticamente tras cinco minutos, evitando eventos bloqueados.
+- El lote conserva exclusivamente DTOs allowlisted y no incorpora contexto
+  global, texto libre del Diario ni motivos narrativos de las decisiones.

@@ -114,6 +114,55 @@ class MensajeJOI(models.Model):
         return f"JOI → {self.user.username} [{self.trigger}] {self.creado_en.date()}"
 
 
+class EventoEntrenadorJOI(models.Model):
+    """Outbox durable de hechos ejecutivos que JOI todavía debe verbalizar."""
+
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_PROCESANDO = 'procesando'
+    ESTADO_PUBLICADO = 'publicado'
+    ESTADO_CHOICES = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_PROCESANDO, 'Procesando'),
+        (ESTADO_PUBLICADO, 'Publicado'),
+    ]
+
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='eventos_entrenador_joi',
+    )
+    event_type = models.CharField(max_length=64)
+    source_model = models.CharField(max_length=96)
+    source_id = models.PositiveBigIntegerField()
+    status = models.CharField(max_length=32)
+    payload = models.JSONField(default=dict)
+    estado = models.CharField(
+        max_length=16, choices=ESTADO_CHOICES, default=ESTADO_PENDIENTE,
+    )
+    intentos = models.PositiveIntegerField(default=0)
+    ultimo_error = models.CharField(max_length=120, blank=True)
+    mensaje = models.ForeignKey(
+        MensajeJOI, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='eventos_entrenador',
+    )
+    creado_en = models.DateTimeField(auto_now_add=True)
+    reclamado_en = models.DateTimeField(null=True, blank=True)
+    procesado_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['creado_en', 'id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['event_type', 'source_model', 'source_id', 'status'],
+                name='joi_evento_fuente_estado_unico',
+            ),
+        ]
+        indexes = [
+            models.Index(fields=['user', 'estado', 'creado_en'], name='joi_evt_user_estado_idx'),
+        ]
+
+    def __str__(self):
+        return f"{self.event_type}:{self.source_model}:{self.source_id} [{self.estado}]"
+
+
 class ManualDavid(models.Model):
     """
     Lo que JOI ha aprendido sobre cómo leer al usuario.

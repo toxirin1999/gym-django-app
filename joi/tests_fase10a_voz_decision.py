@@ -5,7 +5,7 @@ from django.test import TestCase
 
 from clientes.models import Cliente
 from entrenos.models import GymDecisionLog
-from joi.models import MensajeJOI
+from joi.models import EventoEntrenadorJOI, MensajeJOI
 
 
 class VozDecisionPlan10ATests(TestCase):
@@ -93,16 +93,20 @@ class VozDecisionPlan10ATests(TestCase):
     @patch("joi.services.construir_contexto", return_value={})
     @patch("joi.services._llamar_haiku", return_value="El plan consolidó la técnica antes de progresar.")
     def test_mensaje_persiste_solo_contexto_minimo_del_evento(self, _haiku, _contexto):
-        from joi.services_eventos_entrenador import publicar_evento_decision_aplicada
+        from joi.services_eventos_entrenador import (
+            procesar_eventos_entrenador_pendientes,
+            publicar_evento_decision_aplicada,
+        )
 
         decision = self.decision(estado_aplicacion="aplicada")
-        mensaje = publicar_evento_decision_aplicada(decision)
+        publicar_evento_decision_aplicada(decision)
+        mensaje = procesar_eventos_entrenador_pendientes(self.cliente)
 
         self.assertIsNotNone(mensaje)
-        self.assertEqual(mensaje.contexto["source_id"], decision.pk)
+        self.assertEqual(mensaje.contexto["events"][0]["source_id"], decision.pk)
         self.assertEqual(mensaje.contexto["status"], "aplicada")
         self.assertNotIn("motivo", mensaje.contexto)
-        self.assertNotIn("motivo", mensaje.contexto["facts"])
+        self.assertNotIn("motivo", mensaje.contexto["events"][0]["facts"])
         self.assertNotIn("TEXTO PRIVADO", str(mensaje.contexto))
         self.assertNotIn("physical_evidence", mensaje.contexto)
 
@@ -117,29 +121,40 @@ class VozDecisionPlan10ATests(TestCase):
         segundo = publicar_evento_decision_aplicada(decision)
 
         self.assertEqual(primero.pk, segundo.pk)
-        self.assertEqual(MensajeJOI.objects.filter(trigger="decision_plan").count(), 1)
-        llamar.assert_called_once()
+        self.assertEqual(EventoEntrenadorJOI.objects.count(), 1)
+        self.assertEqual(MensajeJOI.objects.filter(trigger="decision_plan").count(), 0)
+        llamar.assert_not_called()
 
     @patch("joi.services.construir_contexto", return_value={})
     @patch("joi.services._llamar_haiku", side_effect=[RuntimeError("llm caído"), "Aplicado."])
     def test_fallo_llm_no_marca_evento_como_comunicado(self, llamar, _contexto):
-        from joi.services_eventos_entrenador import publicar_evento_decision_aplicada
+        from joi.services_eventos_entrenador import (
+            procesar_eventos_entrenador_pendientes,
+            publicar_evento_decision_aplicada,
+        )
 
         decision = self.decision(estado_aplicacion="aplicada")
+        evento = publicar_evento_decision_aplicada(decision)
 
-        self.assertIsNone(publicar_evento_decision_aplicada(decision))
+        self.assertIsNone(procesar_eventos_entrenador_pendientes(self.cliente))
         self.assertFalse(MensajeJOI.objects.filter(trigger="decision_plan").exists())
-        self.assertIsNotNone(publicar_evento_decision_aplicada(decision))
+        evento.refresh_from_db()
+        self.assertEqual(evento.estado, EventoEntrenadorJOI.ESTADO_PENDIENTE)
+        self.assertIsNotNone(procesar_eventos_entrenador_pendientes(self.cliente))
         self.assertEqual(llamar.call_count, 2)
 
     @patch("joi.services.construir_contexto", return_value={})
     @patch("joi.services._llamar_haiku", return_value="Lectura precisa.")
     def test_prompt_declara_certeza_confirmada_sin_motivo_libre(self, llamar, _contexto):
-        from joi.services_eventos_entrenador import publicar_evento_decision_aplicada
+        from joi.services_eventos_entrenador import (
+            procesar_eventos_entrenador_pendientes,
+            publicar_evento_decision_aplicada,
+        )
 
         decision = self.decision(estado_aplicacion="aplicada")
         publicar_evento_decision_aplicada(decision)
+        procesar_eventos_entrenador_pendientes(self.cliente)
 
         prompt = llamar.call_args.args[0]
-        self.assertIn("HECHO CONFIRMADO", prompt)
+        self.assertIn("HECHOS CONFIRMADOS", prompt)
         self.assertNotIn("TEXTO PRIVADO", prompt)

@@ -65,6 +65,20 @@ def _get_mensaje_gym(user):
     Excluye TRIGGERS_SOLO_HABITACION: esos mensajes solo se muestran en /joi/habitacion/.
     Si no hay ninguno, intenta generar apertura_manana on-demand.
     """
+    # Fase 10B: drenar la outbox es independiente del cache global. Si varias
+    # decisiones hermanas esperan, se verbalizan juntas y ninguna se descarta
+    # por el antiguo lock temporal de mensajes.
+    try:
+        from clientes.models import Cliente
+        from joi.services_eventos_entrenador import procesar_eventos_entrenador_pendientes
+        cliente = Cliente.objects.filter(user=user).first()
+        if cliente:
+            procesar_eventos_entrenador_pendientes(cliente)
+    except Exception:
+        # Un proveedor no disponible no puede romper ninguna pantalla: el
+        # procesador ya devuelve el lote a pendiente para su próximo intento.
+        pass
+
     from joi.models import MensajeJOI
     # Triggers a excluir: hyrox_* y los de solo habitación sin prefijo hyrox_
     excluir_triggers = [t for t in TRIGGERS_SOLO_HABITACION if not t.startswith('hyrox_')]
