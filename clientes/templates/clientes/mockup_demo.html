@@ -467,6 +467,30 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 }
 .rb-gym-correction-btn:hover { border-color: var(--warn); color: var(--warn); }
 .rb-gym-correction-status { min-height: 14px; color: var(--fg-mute); font-size: 10px; }
+.rb-session-calendar-action {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px;
+  margin-top: 10px; padding: 10px 0; border-top: 1px dashed var(--line-2);
+  border-bottom: 1px dashed var(--line-2);
+}
+.rb-session-calendar-copy { min-width: 0; }
+.rb-session-calendar-label {
+  display: block; margin-bottom: 3px; color: var(--fg-mute);
+  font: 700 8px var(--font-mono); letter-spacing: .14em; text-transform: uppercase;
+}
+.rb-session-calendar-note {
+  display: block; color: var(--fg-dim); font: 10px/1.45 var(--font-body);
+}
+.rb-session-calendar-btn {
+  min-height: 42px; padding: 8px 12px; background: transparent;
+  border: 1px solid var(--line-2); border-radius: 2px; color: var(--fg);
+  cursor: pointer; font: 700 9px var(--font-mono); letter-spacing: .08em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.rb-session-calendar-btn:hover { border-color: var(--accent); color: var(--accent); }
+@media (max-width: 370px) {
+  .rb-session-calendar-action { grid-template-columns: 1fr; }
+  .rb-session-calendar-btn { width: 100%; }
+}
 .rb-gym-receipt {
   margin: 4px 0 10px; padding: 10px 12px;
   border-left: 2px solid var(--warn); background: var(--bg-3);
@@ -854,6 +878,17 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       {% endif %}
       {% endif %}
       {% endwith %}
+    {% endif %}
+    {% if sesion_programada and sesion_programada.estado == 'pendiente' and portada_hoy.sesion_dominante.modulo == 'gym' %}
+    <form data-postpone-session class="rb-session-calendar-action"
+          method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
+      {% csrf_token %}
+      <span class="rb-session-calendar-copy">
+        <span class="rb-session-calendar-label">Cuándo entrenar</span>
+        <span class="rb-session-calendar-note">Conserva esta sesión y su lugar en el plan.</span>
+      </span>
+      <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
+    </form>
     {% endif %}
     {% comment %}
     Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"

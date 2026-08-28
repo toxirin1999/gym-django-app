@@ -6,7 +6,7 @@ from django.test import TestCase
 
 from clientes.models import Cliente
 from clientes.recibo_supervision_gym_service import construir_recibo_supervision_gym
-from entrenos.models import GymDecisionVersion
+from entrenos.models import GymDecisionVersion, SesionProgramada
 
 
 class ReciboSupervisionGymTests(TestCase):
@@ -139,15 +139,51 @@ class ReciboSupervisionGymTests(TestCase):
         self.assertLessEqual(html.count("data-primary-action"), 1)
         self.assertLessEqual(html.count("data-joi-voice"), 1)
 
-    def _render(self, portada, autoridad, recibo):
+    def test_portada_moderna_ofrece_mover_solo_la_sesion_canonica_a_manana(self):
+        self.motor.vigente = True
+        self.motor.save(update_fields=["vigente"])
+        sesion = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.fecha,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Fuerza A",
+        )
+
+        html = self._render(
+            self._portada(ejecutable=True),
+            self.motor.snapshot,
+            None,
+            sesion_programada=sesion,
+        )
+
+        self.assertIn('data-postpone-session', html)
+        self.assertIn('Hacer esta sesión mañana', html)
+        self.assertIn(
+            f'/clientes/sesion/{sesion.id}/posponer/',
+            html,
+        )
+        self.assertIn('Cuándo entrenar', html)
+
+    def test_portada_moderna_sin_sesion_canonica_no_inventa_accion_de_posponer(self):
+        self.motor.vigente = True
+        self.motor.save(update_fields=["vigente"])
+
+        html = self._render(self._portada(ejecutable=True), self.motor.snapshot, None)
+
+        self.assertNotIn('data-postpone-session', html)
+
+    def _render(self, portada, autoridad, recibo, sesion_programada=None):
+        postura_actual = recibo["postura_actual"] if recibo else "empujar"
+        titulo_recibo = recibo["titulo"] if recibo else ""
+        version_recibo = recibo["version"] if recibo else 1
         autoridad = {
-            "postura": recibo["postura_actual"],
+            "postura": postura_actual,
             "origen_decision": (
                 GymDecisionVersion.ORIGEN_CORRECCION
-                if recibo["titulo"] == "Ajuste supervisado"
+                if titulo_recibo == "Ajuste supervisado"
                 else GymDecisionVersion.ORIGEN_REVERSION
             ),
-            "version_persistida": recibo["version"],
+            "version_persistida": version_recibo,
             "decision_id": "decision-vigente",
             **(autoridad or {}),
         }
@@ -158,4 +194,5 @@ class ReciboSupervisionGymTests(TestCase):
             "estado_sistema": {"estado": "OBSERVANDO", "modulo_operativo": True},
             "autoridad_gym": autoridad,
             "recibo_supervision_gym": recibo,
+            "sesion_programada": sesion_programada,
         })
