@@ -113,6 +113,8 @@ def humanizar_trace(trace) -> dict | None:
     return {
         'fecha':              trace.fecha,
         'fecha_label':        fecha_label,
+        'decision_estado':    trace.decision_estado,
+        'group_key':          f'decision_estado:{trace.decision_estado}',
         'decision_label':     decision_label,
         'explicacion':        explicacion,
         'capas_usadas':       capas_usadas,

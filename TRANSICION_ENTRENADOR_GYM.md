@@ -4,6 +4,23 @@
 **Regla:** conservar el Gym funcional y transformar por contratos verificables,
 no mediante un rediseño total.
 
+## Integridad causal de sesiones programadas (28-ago-2026)
+
+- Los cierres desde el portal legacy, el entrenamiento moderno y la API de
+  Analytics transportan `sesion_programada_id` explícitamente. No se infiere
+  qué contrato cerrar a partir de un entrenamiento recién creado.
+- El servicio de cierre valida cliente, estado y coherencia contractual dentro
+  de una transacción y devuelve un resultado observable; los consumidores
+  rechazan un identificador inexistente y revierten la escritura completa.
+- `reconciliar_sesiones_programadas_gym` audita en JSONL y es *dry-run* por
+  defecto. `--apply` solo repara correspondencias 1:1 del mismo cliente, misma
+  identidad de rutina y misma fecha contractual efectiva; los casos ambiguos o
+  incoherentes quedan únicamente señalados.
+- Los traces del Centro de decisiones se agrupan por el estado semántico de la
+  decisión, conservando las explicaciones individuales, y la tarjeta de bloque
+  muestra «Objetivo general» con normalización segura de etiquetas legacy sin
+  reescribir snapshots históricos.
+
 ## 1. Diagnóstico verificado
 
 ### Fortalezas que deben preservarse

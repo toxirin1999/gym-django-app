@@ -4644,11 +4644,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # Cerrar SesionProgramada pendiente si el usuario completó desde una sesión pendiente
         _sesion_prog_id = request.POST.get('sesion_programada_id', '').strip()
         if _sesion_prog_id:
-            try:
-                from entrenos.services.sesion_recomendada import cerrar_sesion_programada
-                cerrar_sesion_programada(_sesion_prog_id, entreno)
-            except Exception:
-                pass
+            from entrenos.services.sesion_recomendada import (
+                CierreSesionProgramadaInvalido, cerrar_sesion_programada,
+            )
+            resultado_cierre = cerrar_sesion_programada(_sesion_prog_id, entreno)
+            if resultado_cierre['estado'] != 'cerrada':
+                raise CierreSesionProgramadaInvalido('La sesión programada indicada no existe.')
 
         # ============================================================================
         # INTEGRACIÓN SISTEMA DE GAMIFICACIÓN

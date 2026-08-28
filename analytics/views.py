@@ -3564,6 +3564,7 @@ def vista_resumen_anual(request, cliente_id):
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from datetime import datetime
 
 import json
@@ -3576,6 +3577,7 @@ import re  # Asegúrate de tener este import para las expresiones regulares
 
 @login_required
 @require_http_methods(["POST"])
+@transaction.atomic
 def api_marcar_entreno_completado(request, cliente_id):
     """
     API para marcar una rutina del plan como completada.
@@ -3641,6 +3643,15 @@ def api_marcar_entreno_completado(request, cliente_id):
         from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
         finalizar_gamificacion_entreno(entreno)
 
+        sesion_programada_id = data.get('sesion_programada_id')
+        if sesion_programada_id not in (None, ''):
+            from entrenos.services.sesion_recomendada import (
+                CierreSesionProgramadaInvalido, cerrar_sesion_programada,
+            )
+            resultado_cierre = cerrar_sesion_programada(sesion_programada_id, entreno)
+            if resultado_cierre['estado'] != 'cerrada':
+                raise CierreSesionProgramadaInvalido('La sesión programada indicada no existe.')
+
         return JsonResponse({
             'success': True,
             'message': f'Entrenamiento "{rutina_nombre}" del {fecha_str} guardado correctamente.'
@@ -3648,6 +3659,7 @@ def api_marcar_entreno_completado(request, cliente_id):
 
     except Exception as e:
         # Devolvemos el error específico para facilitar la depuración
+        transaction.set_rollback(True)
         return JsonResponse({'error': f'Error interno del servidor: {str(e)}'}, status=500)
 
 

@@ -4232,7 +4232,10 @@ def portal_sesion_unificado(request, cliente_id):
     - Procesa el check-in diario si se envía ese formulario específico.
     - El guardado del entrenamiento se delega a la vista 'guardar_entrenamiento_activo'.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
     hoy = timezone.now().date()
 
     # Procesar el check-in si se envía
@@ -4256,6 +4259,15 @@ def portal_sesion_unificado(request, cliente_id):
 
     if not rutina_planificada or rutina_planificada.get('fecha') != hoy:
         rutina_planificada = None
+
+    sesion_programada_id = ''
+    if rutina_planificada:
+        from entrenos.services.sesion_recomendada import resolver_sesion_programada_portal
+        sesion_programada = resolver_sesion_programada_portal(
+            cliente, hoy, rutina_planificada.get('rutina_nombre'),
+        )
+        if sesion_programada:
+            sesion_programada_id = sesion_programada.pk
 
     ajuste_sesion = None
     rutina_ajustada = None
@@ -4339,6 +4351,7 @@ def portal_sesion_unificado(request, cliente_id):
         'checkin_form': CheckinDiarioForm(instance=bitacora_hoy) if bitacora_hoy else CheckinDiarioForm(),
         'ajuste_sesion': ajuste_sesion,
         'rutina_ajustada': rutina_ajustada,
+        'sesion_programada_id': sesion_programada_id,
         'leyenda_rpe': {
             "10": "Máximo esfuerzo...", "9": "Muy intenso...", "8": "Intenso...", "7": "Moderado...",
         }
@@ -4460,6 +4473,14 @@ def guardar_entrenamiento_activo(request, cliente_id):
         entreno.volumen_total_kg = volumen_total_entreno
         entreno.numero_ejercicios = ejercicios_procesados_count
         entreno.save(update_fields=['volumen_total_kg', 'numero_ejercicios'])
+        sesion_programada_id = request.POST.get('sesion_programada_id', '').strip()
+        if sesion_programada_id:
+            from entrenos.services.sesion_recomendada import (
+                CierreSesionProgramadaInvalido, cerrar_sesion_programada,
+            )
+            resultado_cierre = cerrar_sesion_programada(sesion_programada_id, entreno)
+            if resultado_cierre['estado'] != 'cerrada':
+                raise CierreSesionProgramadaInvalido('La sesión programada indicada no existe.')
         from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
         finalizar_gamificacion_entreno(entreno)
         # print(f"-> Entrenamiento ID {entreno.id} finalizado. Volumen: {volumen_total_entreno} kg.")
@@ -4471,6 +4492,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # print(f"\n--- ❌ ERROR CRÍTICO DURANTE EL GUARDADO: {e} ---")
         import traceback
         traceback.print_exc()
+        transaction.set_rollback(True)
         messages.error(request, f"Hubo un error crítico al guardar el entrenamiento: {e}")
         return redirect('clientes:panel_cliente')
 

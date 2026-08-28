@@ -119,6 +119,7 @@ def consultar_bloque_gym_colaborativo(cliente):
     if bloque is None:
         return {'cierre_pendiente': cierre_pendiente, 'bloque': None}
     objetivos = dict(Cliente.OBJETIVO_CHOICES)
+    objetivo_legacy = ' '.join((bloque.objetivo_principal or '').casefold().split())
     secundarios = {
         'gemelos': 'Gemelos', 'hombros': 'Hombros', 'brazos': 'Brazos',
         'espalda': 'Espalda', 'pecho': 'Pecho', 'gluteos': 'Glúteos',
@@ -133,7 +134,10 @@ def consultar_bloque_gym_colaborativo(cliente):
             'semana_inicio': bloque.semana_inicio,
             'semana_fin': bloque.semana_fin_prevista,
             'semanas': bloque.semanas_previstas,
-            'objetivo_label': objetivos.get(bloque.objetivo_principal, 'Objetivo del bloque'),
+            'objetivo_label': objetivos.get(
+                objetivo_legacy,
+                'Objetivo del bloque',
+            ),
             'secundarios': [
                 secundarios[item]
                 for item in bloque.objetivos_secundarios

@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from django.core.cache import cache
+from django.db import transaction
 from django.utils import timezone
 
 from entrenos.models import ActividadRealizada, EntrenoRealizado, SesionProgramada
@@ -1085,25 +1086,66 @@ def _aplicar_preferencia_activa(cliente, decision, fecha_hoy):
     return decision
 
 
+class CierreSesionProgramadaInvalido(Exception):
+    """El ID explícito no puede cerrarse con este entrenamiento."""
+
+
+def resolver_sesion_programada_portal(cliente, fecha, rutina_nombre):
+    """Devuelve el único pendiente canónico compatible o ``None``.
+
+    No corrige ni elige entre candidatos ambiguos. La fecha efectiva es
+    ``pospuesta_hasta`` cuando existe y, en otro caso, ``fecha_prevista``.
+    """
+    identidad = ' '.join((rutina_nombre or '').casefold().split())
+    candidatas = []
+    for sesion in SesionProgramada.objects.filter(
+        cliente=cliente, estado=SesionProgramada.ESTADO_PENDIENTE,
+    ).only('id', 'nombre_sesion', 'fecha_prevista', 'pospuesta_hasta'):
+        fecha_efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
+        nombre = ' '.join((sesion.nombre_sesion or '').casefold().split())
+        if fecha_efectiva == fecha and nombre == identidad:
+            candidatas.append(sesion)
+    return candidatas[0] if len(candidatas) == 1 else None
+
+
+@transaction.atomic
 def cerrar_sesion_programada(sesion_programada_id, entreno_realizado):
     """
-    Closes a SesionProgramada when the user completes it.
-    Safe to call even if the session is already closed or doesn't exist.
+    Cierra la sesión indicada explícitamente y devuelve un resultado observable.
+
+    Un ID inexistente conserva compatibilidad como ``missing``; propiedad,
+    estado y contrato incoherentes son errores causales y nunca se silencian.
     """
-    try:
-        sp = SesionProgramada.objects.get(
-            id=sesion_programada_id,
-            cliente=entreno_realizado.cliente,
-            estado=SesionProgramada.ESTADO_PENDIENTE,
-        )
-        sp.estado = SesionProgramada.ESTADO_COMPLETADA
-        sp.fecha_realizada = entreno_realizado.fecha
-        sp.entreno_realizado = entreno_realizado
-        sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
-    except SesionProgramada.DoesNotExist:
-        pass
-    except Exception:
-        logger.exception('cerrar_sesion_programada: error cerrando id=%s', sesion_programada_id)
+    sp = (
+        SesionProgramada.objects.select_for_update()
+        .select_related('contrato_semanal')
+        .filter(id=sesion_programada_id)
+        .first()
+    )
+    if sp is None:
+        return {'estado': 'missing', 'sesion_programada_id': sesion_programada_id}
+    if sp.cliente_id != entreno_realizado.cliente_id:
+        raise CierreSesionProgramadaInvalido('La sesión programada pertenece a otro cliente.')
+    if sp.estado != SesionProgramada.ESTADO_PENDIENTE:
+        raise CierreSesionProgramadaInvalido('La sesión programada ya no está pendiente.')
+    if sp.contrato_semanal_id:
+        contrato = sp.contrato_semanal
+        if contrato.cliente_id != entreno_realizado.cliente_id:
+            raise CierreSesionProgramadaInvalido('El contrato semanal pertenece a otro cliente.')
+        if sp.semana_prescrita and sp.semana_prescrita != contrato.semana:
+            raise CierreSesionProgramadaInvalido('La semana prescrita no coincide con el contrato.')
+
+    fecha_real = entreno_realizado.fecha_ejecucion or entreno_realizado.fecha
+    sp.estado = SesionProgramada.ESTADO_COMPLETADA
+    sp.fecha_realizada = fecha_real
+    sp.entreno_realizado = entreno_realizado
+    sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
+    return {
+        'estado': 'cerrada',
+        'sesion_programada_id': sp.pk,
+        'entreno_realizado_id': entreno_realizado.pk,
+        'fecha_realizada': fecha_real,
+    }
 
 
 def sincronizar_pendientes_recientes(cliente, fecha_hoy):

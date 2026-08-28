@@ -500,6 +500,7 @@ body {
                     {% csrf_token %}
                     <input type="hidden" name="fecha" value="{{ rutina_ajustada.fecha|date:'Y-m-d' }}">
                     <input type="hidden" name="rutina_nombre" value="{{ rutina_ajustada.rutina_nombre }}">
+                    <input type="hidden" name="sesion_programada_id" value="{{ sesion_programada_id|default:'' }}">
 
                     {% for ejercicio in rutina_ajustada.ejercicios %}
                     <!-- CÓDIGO NUEVO (CORREGIDO Y COMPLETO) -->

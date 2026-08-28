@@ -146,20 +146,26 @@ _ACCION_GROUP_LABELS = {
 
 def agrupar_traces_recientes(traces: list[dict]) -> list[dict]:
     """
-    Agrupa traces humanizados (humanizar_trace) por (decision_label, explicacion).
+    Agrupa traces humanizados por su clave semántica estable. La explicación
+    puede variar entre días sin fragmentar una misma decisión de estado.
 
     Devuelve una lista de grupos, en el orden de primera aparición de
     `traces` (más reciente primero), cada uno con:
         decision_label, explicacion, lesion_label, count,
         fecha_label (de la ocurrencia más reciente), items (originales).
     """
-    grupos: dict[tuple, dict] = {}
-    orden: list[tuple] = []
+    grupos: dict[str, dict] = {}
+    orden: list[str] = []
 
     for trace in traces:
-        clave = (trace['decision_label'], trace['explicacion'])
+        clave = trace.get('group_key') or (
+            f"decision_estado:{trace['decision_estado']}"
+            if trace.get('decision_estado')
+            else f"decision_label:{trace['decision_label']}"
+        )
         if clave not in grupos:
             grupos[clave] = {
+                'group_key': clave,
                 'decision_label': trace['decision_label'],
                 'explicacion': trace['explicacion'],
                 'lesion_label': trace['lesion_label'],
