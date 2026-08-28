@@ -8,14 +8,20 @@ ni los modelos — solo transforma listas ya existentes en grupos.
 
 from datetime import date, datetime
 
-from django.test import SimpleTestCase
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase
 
-from entrenos.models import GymDecisionLog, IntervencionPlan, PreferenciaPlanAprendida
+from clientes.models import Cliente
+from entrenos.models import (
+    GymDecisionLog, GymDecisionTrace, IntervencionPlan,
+    PreferenciaPlanAprendida, SesionProgramada,
+)
 from entrenos.services.centro_decisiones_service import (
     agrupar_decisiones_carga,
     agrupar_traces_recientes,
     construir_estado_plan,
 )
+from entrenos.services.decision_trace_service import get_traces_recientes
 
 
 def _trace(decision_label, explicacion, fecha_label, lesion_label='', fecha=None):
@@ -101,6 +107,47 @@ class TestAgruparTracesRecientes(SimpleTestCase):
 
     def test_lista_vacia_devuelve_lista_vacia(self):
         self.assertEqual(agrupar_traces_recientes([]), [])
+
+
+class TestAgrupacionPlanificacionVsEjecucion(TestCase):
+    def test_pendiente_no_incrementa_grupo_de_sesiones_ejecutadas(self):
+        user = User.objects.create_user('centro-ejecucion-real')
+        cliente = Cliente.objects.get(user=user)
+        fechas = [date(2026, 8, dia) for dia in range(24, 29)]
+
+        for indice, fecha in enumerate(fechas):
+            estado = (
+                SesionProgramada.ESTADO_PENDIENTE
+                if indice == 4
+                else SesionProgramada.ESTADO_COMPLETADA
+            )
+            sesion = SesionProgramada.objects.create(
+                cliente=cliente,
+                fecha_prevista=fecha,
+                fecha_realizada=fecha if estado == SesionProgramada.ESTADO_COMPLETADA else None,
+                estado=estado,
+                nombre_sesion=f'Día {indice + 1}',
+            )
+            GymDecisionTrace.objects.create(
+                cliente=cliente,
+                fecha=fecha,
+                sesion_programada=sesion,
+                decision_estado='entrenar',
+                causa_principal='sesion_hoy',
+            )
+
+        grupos = agrupar_traces_recientes(get_traces_recientes(cliente, n=7))
+
+        ejecutadas = next(g for g in grupos if g['decision_label'] == 'Sesión del plan')
+        planificadas = next(g for g in grupos if g['decision_label'] == 'Sesión planificada')
+        self.assertEqual(ejecutadas['count'], 4)
+        self.assertEqual(ejecutadas['fecha'], date(2026, 8, 27))
+        self.assertEqual(planificadas['count'], 1)
+        self.assertIn('todavía no consta como completada', planificadas['explicacion'])
+        for trace in get_traces_recientes(cliente, n=7):
+            self.assertNotIn('decision_estado', trace)
+            self.assertNotIn('execution_state', trace)
+            self.assertNotIn('group_key', trace)
 
 
 class TestAgruparDecisionesCarga(SimpleTestCase):

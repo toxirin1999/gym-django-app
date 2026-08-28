@@ -78,7 +78,24 @@ def humanizar_trace(trace) -> dict | None:
 
     decision_label = _ESTADO_LABELS.get(trace.decision_estado, '')
 
+    # Una decisión de entrenar no demuestra que la sesión se ejecutara. El
+    # Centro conserva ambas capas: lo que el plan propuso y lo que finalmente
+    # consta como completado en SesionProgramada.
+    execution_state = 'not_applicable'
+    if trace.decision_estado == 'entrenar':
+        execution_state = 'unknown'
+        sesion = trace.sesion_programada
+        if sesion is not None:
+            from entrenos.models import SesionProgramada
+            if sesion.estado == SesionProgramada.ESTADO_COMPLETADA:
+                execution_state = 'executed'
+            elif sesion.estado == SesionProgramada.ESTADO_PENDIENTE:
+                execution_state = 'planned'
+                decision_label = 'Sesión planificada'
+
     explicacion = trace.get_explicacion_humana()
+    if execution_state == 'planned':
+        explicacion = 'Sesión prevista por el plan; todavía no consta como completada.'
 
     capas_usadas = [
         _CAPA_LABELS[c] for c in (trace.capas_visibles or [])
@@ -113,8 +130,6 @@ def humanizar_trace(trace) -> dict | None:
     return {
         'fecha':              trace.fecha,
         'fecha_label':        fecha_label,
-        'decision_estado':    trace.decision_estado,
-        'group_key':          f'decision_estado:{trace.decision_estado}',
         'decision_label':     decision_label,
         'explicacion':        explicacion,
         'capas_usadas':       capas_usadas,
@@ -130,7 +145,11 @@ def get_traces_recientes(cliente, n: int = 5) -> list[dict]:
     """Returns last n humanized traces for the client (newest first)."""
     try:
         from entrenos.models import GymDecisionTrace
-        qs = GymDecisionTrace.objects.filter(cliente=cliente).order_by('-fecha')[:n]
+        qs = (
+            GymDecisionTrace.objects.filter(cliente=cliente)
+            .select_related('sesion_programada')
+            .order_by('-fecha')[:n]
+        )
         result = []
         for t in qs:
             h = humanizar_trace(t)

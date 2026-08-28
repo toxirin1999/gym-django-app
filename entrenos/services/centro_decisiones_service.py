@@ -166,6 +166,7 @@ def agrupar_traces_recientes(traces: list[dict]) -> list[dict]:
         if clave not in grupos:
             grupos[clave] = {
                 'group_key': clave,
+                'fecha': trace.get('fecha'),
                 'decision_label': trace['decision_label'],
                 'explicacion': trace['explicacion'],
                 'lesion_label': trace['lesion_label'],
