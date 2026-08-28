@@ -16,6 +16,12 @@ no mediante un rediseño total.
   defecto. `--apply` solo repara correspondencias 1:1 del mismo cliente, misma
   identidad de rutina y misma fecha contractual efectiva; los casos ambiguos o
   incoherentes quedan únicamente señalados.
+- La reconciliación semanal separa pasado, presente y futuro mediante la fecha
+  efectiva (`pospuesta_hasta` o `fecha_prevista`): una sesión futura nunca se
+  omite como deuda antigua. El comando puede identificar y restaurar una
+  `omitida_sistema` creada antes de su vencimiento solo cuando conserva el
+  motivo exacto de reconciliación y no existe entrenamiento asociado; no
+  completa ni reinterpreta omisiones legítimas.
 - Los traces del Centro de decisiones se agrupan por el estado semántico de la
   decisión, conservando las explicaciones individuales, y la tarjeta de bloque
   muestra «Objetivo general» con normalización segura de etiquetas legacy sin

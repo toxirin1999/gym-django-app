@@ -401,6 +401,45 @@ class TestCase8_ReconciliacionSemanal(SesionProgramadaBase):
         self.assertEqual(self.semana_anterior.estado, SesionProgramada.ESTADO_PENDIENTE)
         self.assertEqual(antigua.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
 
+    def test_sesion_normal_futura_no_se_omite_aunque_haya_sesion_actual(self):
+        futura = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 5, 29),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            prioridad=SesionProgramada.PRIORIDAD_NORMAL,
+            nombre_sesion='Semana futura',
+        )
+
+        _reconciliar_pendientes_semana(self.cliente, self.hoy)
+
+        futura.refresh_from_db()
+        self.assertEqual(futura.estado, SesionProgramada.ESTADO_PENDIENTE)
+
+    def test_fecha_efectiva_aplazada_protege_futuro_y_semana_actual(self):
+        aplazada_futura = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 5, 12),
+            pospuesta_hasta=date(2026, 5, 29),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            prioridad=SesionProgramada.PRIORIDAD_NORMAL,
+            nombre_sesion='Aplazada a futuro',
+        )
+        aplazada_actual = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 5, 29),
+            pospuesta_hasta=date(2026, 5, 20),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            prioridad=SesionProgramada.PRIORIDAD_NORMAL,
+            nombre_sesion='Aplazada a hoy',
+        )
+
+        _reconciliar_pendientes_semana(self.cliente, self.hoy)
+
+        aplazada_futura.refresh_from_db()
+        aplazada_actual.refresh_from_db()
+        self.assertEqual(aplazada_futura.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(aplazada_actual.estado, SesionProgramada.ESTADO_PENDIENTE)
+
 
 class TestCase9_CacheNoBloquea(SesionProgramadaBase):
     """Case 9: _marcar_completadas runs without cache so completions are immediate."""

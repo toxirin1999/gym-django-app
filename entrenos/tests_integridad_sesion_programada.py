@@ -1,5 +1,5 @@
 import json
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
 from io import StringIO
 from unittest.mock import patch
 
@@ -175,6 +175,108 @@ class ReconciliarSesionProgramadaCommandTests(TestCase):
         )
         sp.refresh_from_db()
         self.assertEqual(sp.entreno_realizado, entreno)
+
+    def test_omision_anticipada_se_diagnostica_y_restaura_sin_completar(self):
+        user = User.objects.create_user('reconciliar-omision-anticipada')
+        cliente = Cliente.objects.get(user=user)
+        motivo = 'Sesión omitida por reconciliación semanal para evitar acumulación de deuda.'
+        sp = SesionProgramada.objects.create(
+            cliente=cliente,
+            fecha_prevista=date(2026, 8, 28),
+            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+            prioridad=SesionProgramada.PRIORIDAD_NORMAL,
+            nombre_sesion='Día 5 - Fuerza — Avanzada',
+            motivo_estado=motivo,
+        )
+        SesionProgramada.objects.filter(pk=sp.pk).update(
+            actualizada_en=datetime(2026, 8, 23, 12, tzinfo=dt_timezone.utc),
+        )
+
+        out = StringIO()
+        call_command(
+            'reconciliar_sesiones_programadas_gym', cliente=cliente.pk,
+            desde='2026-08-20', hasta='2026-08-30', stdout=out,
+        )
+        registro = json.loads(out.getvalue().splitlines()[0])
+        self.assertEqual(registro['classification'], 'omitted_before_due')
+        self.assertEqual(registro['estado_previo'], SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertEqual(registro['fecha_prevista'], '2026-08-28')
+        self.assertIsNone(registro['pospuesta_hasta'])
+        self.assertEqual(registro['motivo'], motivo)
+        self.assertEqual(registro['motivo_estado'], motivo)
+
+        call_command(
+            'reconciliar_sesiones_programadas_gym', cliente=cliente.pk,
+            desde='2026-08-20', hasta='2026-08-30', apply=True, stdout=StringIO(),
+        )
+        sp.refresh_from_db()
+        self.assertEqual(sp.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(sp.motivo_estado, '')
+        self.assertIsNone(sp.entreno_realizado_id)
+        self.assertIsNone(sp.fecha_realizada)
+
+        out = StringIO()
+        call_command(
+            'reconciliar_sesiones_programadas_gym', cliente=cliente.pk,
+            desde='2026-08-20', hasta='2026-08-30', stdout=out,
+        )
+        self.assertNotIn('omitted_before_due', out.getvalue())
+
+    def test_no_restaura_omisiones_legitimas_ni_ambiguas(self):
+        user = User.objects.create_user('reconciliar-omisiones-legitimas')
+        cliente = Cliente.objects.get(user=user)
+        rutina = Rutina.objects.create(nombre='Rutina ambigua')
+        motivo = 'Sesión omitida por reconciliación semanal para evitar acumulación de deuda.'
+        vencida = SesionProgramada.objects.create(
+            cliente=cliente, fecha_prevista=date(2026, 8, 20),
+            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+            nombre_sesion='Vencida', motivo_estado=motivo,
+        )
+        otro_motivo = SesionProgramada.objects.create(
+            cliente=cliente, fecha_prevista=date(2026, 8, 27),
+            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+            nombre_sesion='Otra causa', motivo_estado='Omisión manual auditada.',
+        )
+        ambigua = SesionProgramada.objects.create(
+            cliente=cliente, fecha_prevista=date(2026, 8, 28),
+            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+            nombre_sesion='Rutina ambigua', motivo_estado=motivo,
+        )
+        saltada = SesionProgramada.objects.create(
+            cliente=cliente, fecha_prevista=date(2026, 8, 25),
+            estado=SesionProgramada.ESTADO_SALTADA_USUARIO,
+            nombre_sesion='Saltada', motivo_estado=motivo,
+        )
+        cancelada = SesionProgramada.objects.create(
+            cliente=cliente, fecha_prevista=date(2026, 8, 26),
+            estado=SesionProgramada.ESTADO_CANCELADA_LESION,
+            nombre_sesion='Cancelada', motivo_estado=motivo,
+        )
+        SesionProgramada.objects.filter(
+            pk__in=[otro_motivo.pk, ambigua.pk, saltada.pk, cancelada.pk],
+        ).update(
+            actualizada_en=datetime(2026, 8, 23, 12, tzinfo=dt_timezone.utc),
+        )
+        for _ in range(2):
+            EntrenoRealizado.objects.create(
+                cliente=cliente, rutina=rutina, fecha=date(2026, 8, 28),
+                fecha_ejecucion=date(2026, 8, 28),
+            )
+
+        call_command(
+            'reconciliar_sesiones_programadas_gym', cliente=cliente.pk,
+            desde='2026-08-20', hasta='2026-08-30', apply=True, stdout=StringIO(),
+        )
+        vencida.refresh_from_db()
+        otro_motivo.refresh_from_db()
+        ambigua.refresh_from_db()
+        saltada.refresh_from_db()
+        cancelada.refresh_from_db()
+        self.assertEqual(vencida.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertEqual(otro_motivo.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertEqual(ambigua.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertEqual(saltada.estado, SesionProgramada.ESTADO_SALTADA_USUARIO)
+        self.assertEqual(cancelada.estado, SesionProgramada.ESTADO_CANCELADA_LESION)
 
 
 class AgrupacionTraceSemanticaTests(TestCase):

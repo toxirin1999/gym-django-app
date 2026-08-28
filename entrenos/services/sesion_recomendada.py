@@ -10,6 +10,9 @@ from entrenos.models import ActividadRealizada, EntrenoRealizado, SesionPrograma
 logger = logging.getLogger(__name__)
 
 _SYNC_CACHE_TTL = 3600  # 1 hour — throttle the expensive planificador loop
+MOTIVO_OMISION_RECONCILIACION = (
+    'Sesión omitida por reconciliación semanal para evitar acumulación de deuda.'
+)
 
 
 def _build_planificador(cliente):
@@ -277,8 +280,14 @@ def _reconciliar_pendientes_semana(cliente, fecha_hoy):
     if not pendientes:
         return
 
-    semana_actual_list = [sp for sp in pendientes if sp.fecha_prevista.isocalendar()[:2] == semana_actual]
-    anteriores_list = [sp for sp in pendientes if sp.fecha_prevista.isocalendar()[:2] != semana_actual]
+    def semana_efectiva(sesion):
+        fecha_efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
+        return fecha_efectiva.isocalendar()[:2]
+
+    # Una semana distinta no es necesariamente anterior: puede ser futura.
+    # La reconciliación solo puede generar deuda sobre semanas ya cerradas.
+    semana_actual_list = [sp for sp in pendientes if semana_efectiva(sp) == semana_actual]
+    anteriores_list = [sp for sp in pendientes if semana_efectiva(sp) < semana_actual]
 
     if not anteriores_list:
         return
@@ -307,7 +316,7 @@ def _reconciliar_pendientes_semana(cliente, fecha_hoy):
             id__in=[sp.id for sp in to_omit]
         ).update(
             estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
-            motivo_estado='Sesión omitida por reconciliación semanal para evitar acumulación de deuda.',
+            motivo_estado=MOTIVO_OMISION_RECONCILIACION,
         )
 
 

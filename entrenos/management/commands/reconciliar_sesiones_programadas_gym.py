@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from entrenos.models import EntrenoRealizado, SesionProgramada
+from entrenos.services.sesion_recomendada import MOTIVO_OMISION_RECONCILIACION
 
 
 def _normalizar(valor):
@@ -70,6 +71,25 @@ class Command(BaseCommand):
             registro = self._clasificar(sesion)
             clasificacion = registro['classification']
             conteos[clasificacion] = conteos.get(clasificacion, 0) + 1
+            if options['apply'] and clasificacion == 'omitted_before_due':
+                with transaction.atomic():
+                    bloqueada = (
+                        SesionProgramada.objects.select_for_update()
+                        .select_related(
+                            'entreno_realizado', 'entreno_realizado__rutina', 'contrato_semanal',
+                        )
+                        .get(pk=sesion.pk)
+                    )
+                    vigente = self._clasificar(bloqueada)
+                    if vigente['classification'] == 'omitted_before_due':
+                        bloqueada.estado = SesionProgramada.ESTADO_PENDIENTE
+                        bloqueada.motivo_estado = ''
+                        bloqueada.save(update_fields=['estado', 'motivo_estado', 'actualizada_en'])
+                        registro['applied'] = True
+                        registro['estado_nuevo'] = SesionProgramada.ESTADO_PENDIENTE
+                        aplicados += 1
+                self.stdout.write(json.dumps(registro, default=str, sort_keys=True))
+                continue
             match_seguro = (
                 clasificacion == 'unique_safe_match'
                 or (
@@ -77,7 +97,11 @@ class Command(BaseCommand):
                     and registro.get('match_status') == 'unique_safe_match'
                 )
             )
-            if options['apply'] and match_seguro:
+            puede_completar = sesion.estado in (
+                SesionProgramada.ESTADO_PENDIENTE,
+                SesionProgramada.ESTADO_COMPLETADA,
+            )
+            if options['apply'] and match_seguro and puede_completar:
                 with transaction.atomic():
                     bloqueada = SesionProgramada.objects.select_for_update().get(pk=sesion.pk)
                     entreno = EntrenoRealizado.objects.select_for_update().get(
@@ -107,6 +131,11 @@ class Command(BaseCommand):
             'sesion_programada_id': sesion.pk,
             'cliente_id': sesion.cliente_id,
             'fecha_efectiva': _fecha_sesion(sesion),
+            'fecha_prevista': sesion.fecha_prevista,
+            'pospuesta_hasta': sesion.pospuesta_hasta,
+            'estado_previo': sesion.estado,
+            'motivo': sesion.motivo_estado or '',
+            'motivo_estado': sesion.motivo_estado or '',
         }
         if sesion.entreno_realizado_id:
             if sesion.entreno_realizado.cliente_id != sesion.cliente_id:
@@ -152,6 +181,19 @@ class Command(BaseCommand):
                     'match_status': 'ambiguous',
                 })
             return registro
+        if (
+            sesion.estado == SesionProgramada.ESTADO_OMITIDA_SISTEMA
+            and sesion.motivo_estado == MOTIVO_OMISION_RECONCILIACION
+            and sesion.entreno_realizado_id is None
+            and sesion.fecha_realizada is None
+            and not candidatos
+            and timezone.localtime(sesion.actualizada_en).date() < _fecha_sesion(sesion)
+        ):
+            return {
+                **base,
+                'classification': 'omitted_before_due',
+                'actualizada_fecha_local': timezone.localtime(sesion.actualizada_en).date(),
+            }
         if sesion.estado == SesionProgramada.ESTADO_COMPLETADA:
             return {
                 **base,
