@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from datetime import date
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -87,6 +88,27 @@ class PortadaEvidenciaRealTests(TestCase):
         self.assertContains(response, "Sin datos suficientes")
         self.assertNotContains(response, "Día de descanso · Recuperación activa")
         self.assertNotContains(response, "Ver Estoico")
+
+    @patch("clientes.views.timezone.localdate", return_value=date(2026, 8, 28))
+    def test_portada_representa_sesion_pospuesta_con_identidad_y_fecha_efectiva(self, _localdate):
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 8, 28),
+            pospuesta_hasta=date(2026, 8, 29),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Día 5 - Fuerza — Avanzada",
+            motivo_estado="El usuario indicó que hoy no podía entrenar.",
+        )
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Sesión guardada para mañana")
+        self.assertContains(response, "Día 5 - Fuerza — Avanzada")
+        self.assertContains(response, "sábado 29", html=False)
+        self.assertNotContains(response, "Sin sesión programada")
+        self.assertNotContains(response, "Sin datos suficientes")
+        self.assertNotContains(response, "data-primary-action")
 
     @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
     def test_ejercicio_sin_series_reps_no_recibe_prescripcion_generica(self, decision):

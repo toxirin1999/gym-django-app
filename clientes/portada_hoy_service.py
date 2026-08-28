@@ -64,6 +64,7 @@ def construir_portada_hoy(
     diario_label="Abrir Diario",
     senales=(),
     aprendizajes=(),
+    sesion_pospuesta=None,
 ):
     """Traduce decisiones existentes al contrato visual de la portada."""
     estado_sistema = estado_sistema or {}
@@ -90,7 +91,11 @@ def construir_portada_hoy(
         _sesion("hyrox", sesion_hyrox, ejecutable=hyrox_viable)
         if hyrox_relevante else None
     )
-    dominante = gym if gym_viable else hyrox if hyrox_viable else gym or hyrox
+    pospuesta = _sesion("gym", sesion_pospuesta, ejecutable=False)
+    if pospuesta:
+        dominante = pospuesta
+    else:
+        dominante = gym if gym_viable else hyrox if hyrox_viable else gym or hyrox
     alternativa = None
     if dominante and dominante["modulo"] == "gym" and hyrox:
         alternativa = hyrox
@@ -142,18 +147,30 @@ def construir_portada_hoy(
             "label": hyrox_decision.get("accion_label") or "Abrir sesión Hyrox",
             "url": hyrox_url,
         }
+    if pospuesta:
+        # La sesión no desapareció: conserva su identidad y fecha efectiva,
+        # pero no representa una invitación a entrenar durante el día aplazado.
+        accion = None
     # Diario ya dispone de una acción contextual en su propio bloque. En un
     # día de descanso promoverla aquí convertiría un estado informativo en
     # una falsa urgencia y duplicaría el acceso inferior.
 
+    decision = {
+        "estado": estado_sistema.get("estado_label") or estado_sistema.get("estado") or "Hoy",
+        "frase": estado_sistema.get("texto") or "El sistema no necesita forzar nada ahora.",
+    }
+    if pospuesta:
+        decision = {
+            "estado": "Guardada",
+            "frase": "Sesión guardada para mañana.",
+        }
+
     return {
-        "decision": {
-            "estado": estado_sistema.get("estado_label") or estado_sistema.get("estado") or "Hoy",
-            "frase": estado_sistema.get("texto") or "El sistema no necesita forzar nada ahora.",
-        },
+        "decision": decision,
         "accion_principal": accion,
         "sesion_dominante": dominante,
         "sesion_alternativa": alternativa,
+        "sesion_pospuesta": sesion_pospuesta,
         "senales": _limitar_textos(senales),
         "aprendizajes": _limitar_textos(aprendizajes),
     }

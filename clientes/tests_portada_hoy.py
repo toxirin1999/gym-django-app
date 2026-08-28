@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.test import SimpleTestCase
 
 from clientes.portada_hoy_service import construir_portada_hoy
@@ -138,6 +140,41 @@ class PortadaHoyBuilderTests(SimpleTestCase):
 
     def test_sin_sesion_ni_diario_no_inventa_accion(self):
         portada = self.build(sesion_gym=None, decision_gym={"estado": "descanso"})
+        self.assertIsNone(portada["accion_principal"])
+
+    def test_sesion_pospuesta_se_proyecta_como_guardada_y_no_como_descanso(self):
+        portada = self.build(
+            estado_sistema={
+                "estado": "SILENCIO",
+                "estado_label": "Silencio",
+                "texto": "No hay nada que forzar ahora.",
+                "modulo_principal": None,
+                "modulo_operativo": False,
+            },
+            decision_gym={"estado": "descanso", "causa_principal": "pospuesto_usuario"},
+            sesion_gym=None,
+            sesion_pospuesta={
+                "id": 37,
+                "nombre": "Día 5 - Fuerza — Avanzada",
+                "fecha_prevista": date(2026, 8, 28),
+                "fecha_efectiva": date(2026, 8, 29),
+            },
+        )
+
+        self.assertEqual(portada["decision"]["estado"], "Guardada")
+        self.assertEqual(
+            portada["decision"]["frase"],
+            "Sesión guardada para mañana.",
+        )
+        self.assertEqual(
+            portada["sesion_dominante"]["datos"]["nombre"],
+            "Día 5 - Fuerza — Avanzada",
+        )
+        self.assertEqual(
+            portada["sesion_dominante"]["datos"]["fecha_efectiva"],
+            date(2026, 8, 29),
+        )
+        self.assertFalse(portada["sesion_dominante"]["ejecutable"])
         self.assertIsNone(portada["accion_principal"])
 
     def test_limita_senales_y_aprendizajes_a_tres(self):

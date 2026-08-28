@@ -94,6 +94,39 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+def _proyeccion_sesion_pospuesta(cliente, fecha):
+    """Referencia factual de la sesión conservada fuera del día actual."""
+    from entrenos.models import SesionProgramada
+
+    sesion = (
+        SesionProgramada.objects.filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            fecha_prevista__lte=fecha,
+            pospuesta_hasta__gt=fecha,
+        )
+        .order_by("pospuesta_hasta", "fecha_prevista", "id")
+        .only("id", "nombre_sesion", "fecha_prevista", "pospuesta_hasta")
+        .first()
+    )
+    if sesion is None:
+        return None
+    dias_semana = (
+        "lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo",
+    )
+    return {
+        "id": sesion.id,
+        "nombre": sesion.nombre_sesion,
+        "rutina_nombre": sesion.nombre_sesion,
+        "fecha_prevista": sesion.fecha_prevista,
+        "fecha_efectiva": sesion.pospuesta_hasta,
+        "fecha_efectiva_label": (
+            f"{dias_semana[sesion.pospuesta_hasta.weekday()]} "
+            f"{sesion.pospuesta_hasta.day}"
+        ),
+    }
+
+
 @login_required
 def mapa_energia(request):
     cliente = request.user.cliente_perfil
@@ -1808,6 +1841,7 @@ def mockup_demo(request):
         diario_label=_diario_label,
         senales=_senales_portada,
         aprendizajes=_aprendizajes_portada,
+        sesion_pospuesta=_proyeccion_sesion_pospuesta(cliente, _hoy),
     )
 
     # Recibo factual de la supervisión vigente; no recalcula autoridad.

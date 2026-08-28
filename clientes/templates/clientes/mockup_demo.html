@@ -779,6 +779,10 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}
       · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
     </div>
+    {% elif portada_hoy.sesion_pospuesta %}
+    <div class="rb-bib-sub" data-postponed-session-date style="margin-top:6px;">
+      Sesión guardada · {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}
+    </div>
     {% else %}
     <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
     {% endif %}
@@ -974,6 +978,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
           {{ portada_hoy.sesion_dominante.datos.titulo|default:"Sesión Hyrox" }}
         {% endif %}
       </div>
+      {% if portada_hoy.sesion_pospuesta %}
+      <div data-postponed-session-summary style="font-size:11px;color:var(--ink-3);margin-top:4px;">
+        Programada para {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}.
+      </div>
+      {% endif %}
     </div>
     {% endif %}
     {% if portada_hoy.sesion_alternativa %}
