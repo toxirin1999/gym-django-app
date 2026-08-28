@@ -20,6 +20,7 @@ from unittest.mock import MagicMock, patch
 from django.contrib.auth.models import User
 from django.core.cache import cache
 from django.test import RequestFactory, TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from clientes.models import Cliente
@@ -218,6 +219,54 @@ class TestCase3_HoyNoPuedoPosponeTodas(SesionProgramadaBase):
             Q(pospuesta_hasta__isnull=True) | Q(pospuesta_hasta__lte=self.hoy)
         ).count()
         self.assertEqual(visibles, 0)
+
+    def test_posponer_entrenamiento_hoy_no_adelanta_sesiones_futuras(self):
+        futura = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy + timedelta(days=2),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Sesión futura',
+        )
+
+        posponer_entrenamiento_hoy(self.cliente, self.hoy)
+
+        futura.refresh_from_db()
+        self.assertIsNone(futura.pospuesta_hasta)
+        self.assertEqual(futura.motivo_estado, '')
+
+
+class TestPosponerSesionViewSingular(SesionProgramadaBase):
+    def test_endpoint_con_id_pospone_solo_la_sesion_seleccionada(self):
+        seleccionada = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Sesión de hoy',
+        )
+        futura = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.hoy + timedelta(days=1),
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Sesión futura',
+        )
+        self.client.force_login(self.user)
+
+        with patch('clientes.views.timezone.localdate', return_value=self.hoy):
+            response = self.client.post(
+                reverse('clientes:posponer_sesion', args=[seleccionada.id]),
+            )
+
+        self.assertEqual(response.status_code, 302)
+        seleccionada.refresh_from_db()
+        futura.refresh_from_db()
+        self.assertEqual(seleccionada.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(seleccionada.pospuesta_hasta, self.hoy + timedelta(days=1))
+        self.assertEqual(
+            seleccionada.motivo_estado,
+            'El usuario indicó que hoy no podía entrenar.',
+        )
+        self.assertIsNone(futura.pospuesta_hasta)
+        self.assertEqual(futura.motivo_estado, '')
 
 
 class TestCase4_PospuestaNoAparece(SesionProgramadaBase):

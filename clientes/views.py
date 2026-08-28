@@ -5132,19 +5132,23 @@ def posponer_sesion_hoy_view(request):
 @login_required
 @require_POST
 def posponer_sesion_view(request, sesion_id):
-    """'Hoy no puedo entrenar' — postpones ALL visible pending sessions until tomorrow."""
+    """Postpone only the selected pending session until tomorrow."""
     from entrenos.models import SesionProgramada
-    from entrenos.services.sesion_recomendada import posponer_entrenamiento_hoy
+    from entrenos.services.sesion_recomendada import posponer_sesion_programada
 
-    # Verify ownership (the sesion_id is just used for ownership check)
-    get_object_or_404(
+    hoy = timezone.localdate()
+    sesion = get_object_or_404(
         SesionProgramada,
         id=sesion_id,
         cliente__user=request.user,
         estado=SesionProgramada.ESTADO_PENDIENTE,
+        fecha_prevista__lte=hoy,
     )
-    cliente = get_object_or_404(Cliente, user=request.user)
-    posponer_entrenamiento_hoy(cliente, timezone.localdate())
+    posponer_sesion_programada(
+        sesion,
+        hoy + timedelta(days=1),
+        motivo='El usuario indicó que hoy no podía entrenar.',
+    )
     messages.info(request, "La sesión sigue aquí. Hoy no hace falta forzarla.")
     return redirect('clientes:panel_cliente')
 

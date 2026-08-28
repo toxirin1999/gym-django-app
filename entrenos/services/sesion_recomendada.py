@@ -727,6 +727,7 @@ def posponer_entrenamiento_hoy(cliente, fecha_hoy):
     SesionProgramada.objects.filter(
         cliente=cliente,
         estado=SesionProgramada.ESTADO_PENDIENTE,
+        fecha_prevista__lte=fecha_hoy,
     ).filter(
         Q(pospuesta_hasta__isnull=True) | Q(pospuesta_hasta__lte=fecha_hoy)
     ).update(
