@@ -96,6 +96,24 @@ class TrayectoriaPlanTests(TestCase):
         self.assertEqual(resultado['semana']['evaluacion']['id'], evaluacion.id)
         self.assertEqual(resultado['semana']['evaluacion']['estado_revision'], 'pendiente')
 
+    def test_semana_completa_sin_semana_siguiente_materializada_anuncia_su_apertura(self):
+        for dia in range(5):
+            fecha_sesion = self.inicio + timedelta(days=dia)
+            SesionProgramada.objects.create(
+                cliente=self.cliente,
+                contrato_semanal=self.contrato,
+                fecha_prevista=fecha_sesion,
+                fecha_realizada=fecha_sesion,
+                estado=SesionProgramada.ESTADO_COMPLETADA,
+                nombre_sesion=f'Día {dia + 1}',
+            )
+
+        resultado = self._proyectar(fecha=date(2026, 8, 29))
+
+        self.assertEqual(resultado['proximo_hito']['tipo'], 'inicio_semana')
+        self.assertEqual(resultado['proximo_hito']['fecha'], date(2026, 8, 31))
+        self.assertEqual(resultado['proximo_hito']['etiqueta'], 'Inicio de la semana 2')
+
     def test_proyeccion_es_read_only_y_declara_unknown_sin_rellenar_ceros(self):
         conteos = (
             ContratoBloqueGym.objects.count(), ContratoSemanalGym.objects.count(),

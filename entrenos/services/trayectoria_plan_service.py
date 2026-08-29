@@ -86,7 +86,9 @@ def _serializar_sesion(sesion):
     }
 
 
-def _proximo_hito(fecha, sesiones, evaluacion, bloque, periodizacion):
+def _proximo_hito(fecha, semana, bloque, periodizacion):
+    sesiones = semana['sesiones'] if semana else []
+    evaluacion = semana['evaluacion'] if semana else None
     candidatas = sorted(
         (s for s in sesiones if s['estado'] == SesionProgramada.ESTADO_PENDIENTE and s['fecha_efectiva'] >= fecha),
         key=lambda s: (s['fecha_efectiva'], s['id']),
@@ -99,6 +101,21 @@ def _proximo_hito(fecha, sesiones, evaluacion, bloque, periodizacion):
         }
     if evaluacion and evaluacion['estado_revision'] == EvaluacionSemanalGym.ESTADO_PENDIENTE:
         return {'tipo': 'revision_semanal', 'fecha': None, 'etiqueta': 'Revisar la semana'}
+    completadas = sum(1 for sesion in sesiones if sesion['realizada'])
+    if (
+        semana
+        and bloque
+        and completadas >= semana['objetivo_sesiones']
+        and semana['indice'] < bloque['semanas']
+    ):
+        siguiente_inicio = semana['fin'] + timedelta(days=1)
+        if siguiente_inicio > fecha and siguiente_inicio <= bloque['fin']:
+            siguiente_indice = semana['indice'] + 1
+            return {
+                'tipo': 'inicio_semana',
+                'fecha': siguiente_inicio,
+                'etiqueta': f'Inicio de la semana {siguiente_indice}',
+            }
     if bloque and bloque.get('rango', {}).get('fin') and bloque['rango']['fin'] >= fecha:
         return {'tipo': 'fin_bloque', 'fecha': bloque['rango']['fin'], 'etiqueta': 'Cierre del bloque'}
     if periodizacion and periodizacion.get('fin') and periodizacion['fin'] >= fecha:
@@ -178,13 +195,7 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
                 'estado_revision': persistida.estado_revision,
             }
 
-    proximo = _proximo_hito(
-        fecha,
-        semana['sesiones'] if semana else [],
-        semana['evaluacion'] if semana else None,
-        bloque,
-        periodizacion,
-    )
+    proximo = _proximo_hito(fecha, semana, bloque, periodizacion)
     if proximo is None:
         limitations.append('proximo_hito_no_determinable')
 
