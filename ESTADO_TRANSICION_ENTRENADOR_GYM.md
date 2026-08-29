@@ -82,6 +82,7 @@ PythonAnywhere coincida con el entorno local.
 | **10C Resultados evaluados** | **Terminado** | Productor explícito de evaluación y pruebas del cierre; aplicación y resultado conservan niveles distintos. | No promover una evaluación aislada a conocimiento estable. |
 | **10D–E Apertura canónica** | **En observación** | Resolver compartido por web/tarea, reconciliación transaccional y `auditar_outbox_entrenador_joi`; pruebas 10D/10E. | Verificar en producción que no haya aperturas duplicadas, claims abandonados ni backlog envejecido. |
 | **11A–C Portada y Centro contractuales** | **En observación** | [`proyeccion_bloque_gym_service.py`](entrenos/services/proyeccion_bloque_gym_service.py), [`portada_hoy_service.py`](clientes/portada_hoy_service.py), tests de portada, cierre semanal/bloque y UX móvil. | Continuar evaluación visual en móvil sin retirar paneles de memoria, sesiones, plan o vida. |
+| **11D Evolución de rendimiento** | **Pendiente** | El usuario ha comunicado que producción conserva más de 200 sesiones históricas, útiles para tendencias y líneas base retrospectivas; este conteo no ha sido verificado desde el repositorio. | Abrir diseño e implementación después de aceptar el cierre del primer bloque contractual. Debe separar tendencia histórica de atribución causal por contratos nuevos. |
 | **12.1 Auditoría de superficies** | **Terminado** | [`auditar_superficies_archivo.py`](entrenos/management/commands/auditar_superficies_archivo.py) y [docs/fase12_archive_audit.md](docs/fase12_archive_audit.md). | Repetir antes de retirar una nueva superficie. |
 | **12.2 Gestión multi-cliente** | **Terminado** | Política staff/superusuario y pruebas de autorización. | La app sigue siendo de un solo usuario; conservar la superficie protegida, no convertirla en prioridad. |
 | **12.3 Liftin** | **Pospuesto conscientemente** | UX archivada por flag, rutas reversibles e historia conservada. | No borrar modelos o sesiones históricas. |
@@ -105,6 +106,48 @@ Los pendientes reales son:
 5. auditar el outbox JOI y la autoridad física con datos posteriores al corte;
 6. mantener Rehab, gamificación, Liftin y nutrición fuera del camino crítico;
 7. aplazar cualquier borrado físico hasta medir dependencias y reversibilidad.
+
+## Pantalla futura — Evolución de rendimiento
+
+**Estado:** pendiente planificado; no es urgente antes de cerrar el primer
+bloque contractual.
+
+La futura pantalla debe responder preguntas concretas del entrenador, no
+convertirse en otro dashboard genérico:
+
+1. **Progreso global:** cómo cambia el rendimiento en el tiempo y respecto a la
+   línea base personal.
+2. **Patrones:** qué mejoras, estancamientos o retrocesos se repiten y con qué
+   cobertura de datos.
+3. **Eficiencia del entrenamiento:** relación entre carga, repeticiones, RPE,
+   técnica y tiempo, preservando los datos ausentes como ausentes.
+4. **Comparación por bloque:** diferencias entre bloques cerrados con ventanas,
+   objetivos y criterios equivalentes o claramente declarados.
+5. **Resultado causal:** qué decisiones del entrenador fueron aplicadas, cómo
+   se evaluaron y si quedaron validadas, fallidas, neutras o inconclusas.
+
+### Evidencia histórica y causalidad
+
+El usuario ha comunicado que producción contiene **más de 200 sesiones
+históricas**. Ese dato permite planificar tendencias y baselines retrospectivos,
+pero no se presenta aquí como un conteo de base de datos verificado. Tampoco
+convierte automáticamente esas sesiones en evidencia causal.
+
+- Las sesiones históricas sirven para describir trayectoria, referencias y
+  distribución observada.
+- Las semanas y bloques contractuales nuevos aportan identidad prescrita,
+  decisión aplicada y evaluación, necesarias para atribuir resultados al
+  entrenador.
+- Una coincidencia temporal entre una decisión y una mejora no basta para
+  declarar causalidad si falta el vínculo contractual.
+
+### Criterio de apertura
+
+Iniciar diseño e implementación solo después de que el primer bloque Gym haya
+terminado, tenga todas sus semanas contractuales cerradas y su
+`EvaluacionBloqueGym` haya sido revisada y aceptada. En ese momento se definirá
+un contrato de lectura único antes de diseñar el template: métricas, cobertura,
+comparadores válidos, niveles causales y tratamiento del histórico legacy.
 
 ## Próximo hito exacto — Semana 2
 
