@@ -1,6 +1,12 @@
 # Mapa de transición — De la app actual al entrenador Gym
 
-**Estado:** hoja de ruta conceptual; no es un plan de implementación aprobado.  
+> **Archivo histórico — no usar como checklist vigente.** Este documento
+> conserva el razonamiento, los contratos y los cortes técnicos acumulados
+> durante la transición. El estado actual, los pendientes y el próximo hito
+> viven en
+> [ESTADO_TRANSICION_ENTRENADOR_GYM.md](ESTADO_TRANSICION_ENTRENADOR_GYM.md).
+
+**Estado:** historial técnico y hoja de ruta original; no es el tablero actual.
 **Regla:** conservar el Gym funcional y transformar por contratos verificables,
 no mediante un rediseño total.
 
