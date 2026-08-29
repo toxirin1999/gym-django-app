@@ -928,6 +928,62 @@ class TestPhase5_AnalisisSemanal(SesionProgramadaBase):
         result = self._analizar(self.cliente, self.hoy)
         self.assertIn('sólida', result['lectura_textual'].lower())
 
+    def test_semana_cinco_de_cinco_nombra_la_sesion_reubicada(self):
+        lunes = self.hoy - timedelta(days=self.hoy.weekday())
+        for offset in range(4):
+            entreno = self._make_entreno(lunes + timedelta(days=offset))
+            SesionProgramada.objects.create(
+                cliente=self.cliente,
+                fecha_prevista=lunes + timedelta(days=offset),
+                fecha_realizada=lunes + timedelta(days=offset),
+                estado=SesionProgramada.ESTADO_COMPLETADA,
+                entreno_realizado=entreno,
+                nombre_sesion=f'Día {offset + 1}',
+            )
+
+        entreno_reubicado = self._make_entreno(lunes + timedelta(days=5))
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=lunes + timedelta(days=4),
+            pospuesta_hasta=lunes + timedelta(days=5),
+            fecha_realizada=lunes + timedelta(days=5),
+            estado=SesionProgramada.ESTADO_COMPLETADA,
+            entreno_realizado=entreno_reubicado,
+            nombre_sesion='Día 5',
+        )
+
+        result = self._analizar(self.cliente, lunes + timedelta(days=6))
+
+        self.assertEqual(result['sesiones_completadas'], 5)
+        self.assertEqual(result['sesiones_reubicadas'], 1)
+        self.assertIn(
+            '5 sesiones realizadas; 1 fue reubicada al día siguiente',
+            result['lectura_textual'],
+        )
+        self.assertNotIn('sin adaptaciones', result['lectura_textual'].lower())
+
+    def test_lectura_pluraliza_reubicaciones(self):
+        from entrenos.services.analisis_semanal_service import _generar_lectura
+
+        lectura = _generar_lectura(
+            sesiones_completadas=5,
+            sesiones_normales=5,
+            sesiones_esenciales=0,
+            sesiones_saltadas=0,
+            bloques_principales_completos=0,
+            bloques_principales_parciales=0,
+            pct_principal_medio=None,
+            pct_opcional_medio=None,
+            sesiones_reubicadas=2,
+            reubicadas_al_dia_siguiente=2,
+        )
+
+        self.assertIn(
+            '5 sesiones realizadas; 2 fueron reubicadas al día siguiente',
+            lectura,
+        )
+        self.assertNotIn('sin adaptaciones', lectura.lower())
+
     # ── Phase 5.1 — Checklist coverage ────────────────────────────────────────
 
     def test_lectura_mixta_detecta_bloques_mantenidos(self):

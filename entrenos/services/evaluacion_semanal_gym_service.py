@@ -59,7 +59,13 @@ def _snapshot(contrato):
     ]
     reubicadas = sum(
         sesion.fecha_realizada is not None
-        and sesion.fecha_realizada != sesion.fecha_prevista
+        and (
+            sesion.fecha_realizada != sesion.fecha_prevista
+            or (
+                sesion.pospuesta_hasta is not None
+                and sesion.pospuesta_hasta != sesion.fecha_prevista
+            )
+        )
         for sesion in completadas
     )
 
@@ -97,6 +103,7 @@ def _snapshot(contrato):
                 'id': sesion.pk,
                 'estado': sesion.estado,
                 'fecha_prevista': sesion.fecha_prevista.isoformat(),
+                'pospuesta_hasta': sesion.pospuesta_hasta.isoformat() if sesion.pospuesta_hasta else None,
                 'fecha_realizada': sesion.fecha_realizada.isoformat() if sesion.fecha_realizada else None,
                 'entreno_realizado_id': sesion.entreno_realizado_id,
             }

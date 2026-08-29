@@ -66,6 +66,25 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         1 for sp in sesiones_sp
         if sp.estado == SesionProgramada.ESTADO_PENDIENTE and sp.pospuesta_hasta is not None
     )
+    sesiones_reubicadas_items = [
+        sp for sp in sesiones_sp
+        if (
+            sp.estado == SesionProgramada.ESTADO_COMPLETADA
+            and sp.fecha_realizada is not None
+            and (
+                sp.fecha_realizada != sp.fecha_prevista
+                or (
+                    sp.pospuesta_hasta is not None
+                    and sp.pospuesta_hasta != sp.fecha_prevista
+                )
+            )
+        )
+    ]
+    sesiones_reubicadas = len(sesiones_reubicadas_items)
+    reubicadas_al_dia_siguiente = sum(
+        sp.fecha_realizada == sp.fecha_prevista + timedelta(days=1)
+        for sp in sesiones_reubicadas_items
+    )
 
     bloques_principales_completos = 0
     bloques_principales_parciales = 0
@@ -104,6 +123,8 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         bloques_principales_parciales=bloques_principales_parciales,
         pct_principal_medio=pct_principal_medio,
         pct_opcional_medio=pct_opcional_medio,
+        sesiones_reubicadas=sesiones_reubicadas,
+        reubicadas_al_dia_siguiente=reubicadas_al_dia_siguiente,
     )
 
     estado_semana, continuidad, suficiencia, margen = _clasificar_estado(
@@ -132,6 +153,7 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         'sesiones_normales': sesiones_normales,
         'sesiones_esenciales': sesiones_esenciales,
         'sesiones_pospuestas': sesiones_pospuestas,
+        'sesiones_reubicadas': sesiones_reubicadas,
         'sesiones_saltadas': sesiones_saltadas,
         'sesiones_omitidas': sesiones_omitidas,
         'bloques_principales_completos': bloques_principales_completos,
@@ -661,6 +683,7 @@ def _generar_lectura(
     sesiones_completadas, sesiones_normales, sesiones_esenciales,
     sesiones_saltadas, bloques_principales_completos, bloques_principales_parciales,
     pct_principal_medio, pct_opcional_medio,
+    sesiones_reubicadas=0, reubicadas_al_dia_siguiente=0,
 ):
     """
     Deterministic narrative. Priority order:
@@ -706,6 +729,20 @@ def _generar_lectura(
             f"y {sesiones_esenciales} "
             f"{_pl(sesiones_esenciales, 'esencial', 'esenciales')}. "
             "Los bloques principales se mantuvieron. El plan sigue en dirección."
+        )
+
+    if sesiones_reubicadas > 0:
+        verbo = 'fue reubicada' if sesiones_reubicadas == 1 else 'fueron reubicadas'
+        destino = (
+            ' al día siguiente'
+            if reubicadas_al_dia_siguiente == sesiones_reubicadas
+            else ' a otro día'
+        )
+        return (
+            f"{sesiones_completadas} "
+            f"{_pl(sesiones_completadas, 'sesión realizada', 'sesiones realizadas')}; "
+            f"{sesiones_reubicadas} {verbo}{destino}. "
+            "La continuidad sigue sólida."
         )
 
     # All normal sessions

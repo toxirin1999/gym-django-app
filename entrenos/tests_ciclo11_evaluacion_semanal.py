@@ -123,6 +123,26 @@ class EvaluacionSemanalGymTests(TestCase):
         })
         self.assertEqual(len(evaluacion.evidencia_snapshot['sesiones']), 5)
 
+    def test_pospuesta_completada_en_fecha_efectiva_es_reubicada(self):
+        sesiones = self._materializar(5)
+        sesion = sesiones[-1]
+        sesion.pospuesta_hasta = sesion.fecha_prevista + timedelta(days=1)
+        sesion.fecha_realizada = sesion.pospuesta_hasta
+        sesion.save(update_fields=['pospuesta_hasta', 'fecha_realizada'])
+
+        evaluacion = self._evaluar()
+        evidencia = next(
+            item for item in evaluacion.evidencia_snapshot['sesiones']
+            if item['id'] == sesion.id
+        )
+
+        self.assertEqual(evaluacion.estado_cumplimiento, 'objetivo')
+        self.assertEqual(evaluacion.sesiones_completadas, 5)
+        self.assertEqual(evaluacion.sesiones_reubicadas, 1)
+        self.assertEqual(evidencia['fecha_prevista'], '2026-08-14')
+        self.assertEqual(evidencia['pospuesta_hasta'], '2026-08-15')
+        self.assertEqual(evidencia['fecha_realizada'], '2026-08-15')
+
     def test_metricas_proceden_solo_de_entrenos_enlazados_y_exponen_cobertura(self):
         sesiones = self._materializar(2)
         sesiones[1].entreno_realizado = None
