@@ -810,6 +810,15 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </div>
       </div>
     </div>
+    <p style="margin:10px 0 8px;font-family:var(--font-body);font-size:12px;line-height:1.5;color:var(--ink-3);">
+      Sigue la evolución prevista de tu plan y el bloque en el que estás.
+    </p>
+    <a href="{% url 'clientes:trayectoria_plan' %}"
+       class="rb-bottom-btn"
+       aria-label="Ver trayectoria del plan"
+       style="display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;box-sizing:border-box;">
+      Ver trayectoria del plan <span aria-hidden="true">→</span>
+    </a>
     </details>
 
     <!-- Bio readiness — solo visible con lesión activa -->

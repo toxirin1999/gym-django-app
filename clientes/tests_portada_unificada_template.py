@@ -34,6 +34,20 @@ class PortadaUnificadaTemplateTests(TestCase):
         self.assertNotIn('Completar ahora', template_source)
         self.assertIn('Tu trayectoria', html)
 
+    def test_trayectoria_superior_expone_contexto_y_cta_accesible(self):
+        template_source = get_template(
+            "clientes/mockup_demo.html"
+        ).template.source
+        inicio = template_source.index('>Tu trayectoria</summary>')
+        fin = template_source.index('</details>', inicio)
+        bloque_trayectoria = template_source[inicio:fin]
+
+        self.assertIn('Sigue la evolución prevista de tu plan', bloque_trayectoria)
+        self.assertIn("{% url 'clientes:trayectoria_plan' %}", bloque_trayectoria)
+        self.assertIn('Ver trayectoria del plan', bloque_trayectoria)
+        self.assertIn('aria-label="Ver trayectoria del plan"', bloque_trayectoria)
+        self.assertIn('min-height:44px', bloque_trayectoria)
+
     def _render_con_accion_principal(self, accion):
         portada = {
             "decision": {"estado": "SILENCIO", "frase": "Decisión de prueba"},

@@ -170,6 +170,8 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         self.assertNotIn('https://', html)
         self.assertNotIn('http://', html)
 
-    def test_dashboard_enlaza_una_sola_vez_a_trayectoria(self):
+    def test_dashboard_ofrece_dos_accesos_a_trayectoria(self):
         plantilla = Path('clientes/templates/clientes/mockup_demo.html').read_text()
-        self.assertEqual(plantilla.count("{% url 'clientes:trayectoria_plan' %}"), 1)
+        self.assertEqual(plantilla.count("{% url 'clientes:trayectoria_plan' %}"), 2)
+        self.assertIn('Ver trayectoria del plan', plantilla)
+        self.assertIn('Trayectoria del plan', plantilla)
