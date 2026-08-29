@@ -2303,6 +2303,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <details class="rb-plan-detalle" style="margin-top:6px;">
     <summary>Más</summary>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px;">
+      <a href="{% url 'clientes:trayectoria_plan' %}" class="rb-bottom-btn" style="grid-column:1 / -1;flex-direction:row;gap:6px;padding:10px 12px;min-height:44px;">
+        <span aria-hidden="true">↗</span> Trayectoria del plan
+      </a>
       <a href="{% url 'diario:dashboard_diario' %}" class="rb-bottom-btn" style="flex-direction:row;gap:6px;padding:10px 12px;">
         <i class="fas fa-book"></i> Diario
       </a>

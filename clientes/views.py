@@ -1860,6 +1860,19 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
+@login_required
+@require_GET
+def trayectoria_plan(request):
+    """Vista autoservicio y estrictamente read-only de la trayectoria Gym."""
+    from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    return render(request, 'clientes/trayectoria_plan.html', {
+        'cliente': cliente,
+        'trayectoria': proyectar_trayectoria_plan(cliente),
+    })
+
+
 _GRUPOS_MUSCULARES = {
     'hombro': ['hombro', 'shoulder', 'deltoid', 'press militar', 'elevación lateral'],
     'pecho': ['pecho', 'chest', 'press banca', 'banca', 'aperturas', 'flies'],

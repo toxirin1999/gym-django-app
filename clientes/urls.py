@@ -72,6 +72,7 @@ urlpatterns = [
     path('medidas/', views.lista_medidas, name='lista_medidas'),
     path('medidas/agregar/', views.agregar_medida, name='agregar_medida'),
     path('mockup-demo/', views.mockup_demo, name='mockup_demo'),
+    path('mi-panel/trayectoria-plan/', views.trayectoria_plan, name='trayectoria_plan'),
     path('responder-sugerencia/', views.responder_sugerencia, name='responder_sugerencia'),
 
     # Historial

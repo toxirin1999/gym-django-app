@@ -82,7 +82,8 @@ PythonAnywhere coincida con el entorno local.
 | **10C Resultados evaluados** | **Terminado** | Productor explícito de evaluación y pruebas del cierre; aplicación y resultado conservan niveles distintos. | No promover una evaluación aislada a conocimiento estable. |
 | **10D–E Apertura canónica** | **En observación** | Resolver compartido por web/tarea, reconciliación transaccional y `auditar_outbox_entrenador_joi`; pruebas 10D/10E. | Verificar en producción que no haya aperturas duplicadas, claims abandonados ni backlog envejecido. |
 | **11A–C Portada y Centro contractuales** | **En observación** | [`proyeccion_bloque_gym_service.py`](entrenos/services/proyeccion_bloque_gym_service.py), [`portada_hoy_service.py`](clientes/portada_hoy_service.py), tests de portada, cierre semanal/bloque y UX móvil. | Continuar evaluación visual en móvil sin retirar paneles de memoria, sesiones, plan o vida. |
-| **11D Evolución de rendimiento** | **Pendiente** | El usuario ha comunicado que producción conserva más de 200 sesiones históricas, útiles para tendencias y líneas base retrospectivas; este conteo no ha sido verificado desde el repositorio. | Abrir diseño e implementación después de aceptar el cierre del primer bloque contractual. Debe separar tendencia histórica de atribución causal por contratos nuevos. |
+| **11D Trayectoria del plan** | **Implementado; pendiente de observación** | [`trayectoria_plan_service.py`](entrenos/services/trayectoria_plan_service.py), GET autoservicio y línea temporal año → bloque → semana → sesiones. Compone el plan anual Helms y autoridad contractual sin materializar ni evaluar. | Validar legibilidad móvil y coincidencia con producción durante el bloque activo. Los límites explícitos no se sustituyen por ceros. |
+| **11E Evolución de rendimiento** | **Pendiente** | El usuario ha comunicado que producción conserva más de 200 sesiones históricas, útiles para tendencias y líneas base retrospectivas; este conteo no ha sido verificado desde el repositorio. | Abrir diseño e implementación después de aceptar el cierre del primer bloque contractual. Debe separar tendencia histórica de atribución causal por contratos nuevos. |
 | **12.1 Auditoría de superficies** | **Terminado** | [`auditar_superficies_archivo.py`](entrenos/management/commands/auditar_superficies_archivo.py) y [docs/fase12_archive_audit.md](docs/fase12_archive_audit.md). | Repetir antes de retirar una nueva superficie. |
 | **12.2 Gestión multi-cliente** | **Terminado** | Política staff/superusuario y pruebas de autorización. | La app sigue siendo de un solo usuario; conservar la superficie protegida, no convertirla en prioridad. |
 | **12.3 Liftin** | **Pospuesto conscientemente** | UX archivada por flag, rutas reversibles e historia conservada. | No borrar modelos o sesiones históricas. |
@@ -107,7 +108,17 @@ Los pendientes reales son:
 6. mantener Rehab, gamificación, Liftin y nutrición fuera del camino crítico;
 7. aplazar cualquier borrado físico hasta medir dependencias y reversibilidad.
 
-## Pantalla futura — Evolución de rendimiento
+## 11D — Trayectoria del plan
+
+La pantalla canónica de trayectoria es una lectura autoservicio y de solo
+lectura. Separa dos carriles que no deben confundirse: **Fase de
+periodización**, obtenida del mismo generador Helms que alimenta el calendario
+anual, y **Objetivo del bloque**, obtenido del contrato longitudinal vigente.
+Expone la semana materializada, sus fechas previstas, pospuestas, efectivas y
+realizadas, únicamente evaluaciones persistidas y un próximo hito determinista.
+No abre contratos, no materializa sesiones, no evalúa y no cierra ciclos.
+
+## Pantalla futura — Evolución de rendimiento (11E)
 
 **Estado:** pendiente planificado; no es urgente antes de cerrar el primer
 bloque contractual.
