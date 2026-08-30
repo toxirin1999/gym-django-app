@@ -12,8 +12,8 @@
         --neon-pink: #d1a732;
         --neon-green: #53d88b;
         --neon-orange: #ba8cff;
-        --glass-bg: #0d1115;
-        --glass-border: #273039;
+        --glass-bg: #131a20;
+        --glass-border: #333f4a;
         --ink-black: #05080b;
         --color-hipertrofia: #72ddff;
         --color-fuerza: #ba8cff;
@@ -140,11 +140,12 @@
     /* PARAMETERS GRID */
     .params-grid {
         display: grid;
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         gap: 1rem;
     }
 
     .param-box {
+        min-width: 0;
         background: var(--glass-bg);
         border: 1px solid var(--glass-border);
         border-radius: 0;
@@ -162,6 +163,8 @@
         font-weight: 700;
         color: #f2f3f5;
         margin-bottom: 0.25rem;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     .param-label {
@@ -414,11 +417,12 @@
 
     .phase-card-header {
         display: flex;
-        align-items: center;
+        flex-wrap: wrap;
+        align-items: flex-start;
         justify-content: space-between;
         padding: 1.25rem 1.5rem;
         cursor: pointer;
-        gap: 1rem;
+        gap: 0.5rem 1rem;
         min-height: 44px;
         transition: background 0.2s;
     }
@@ -431,7 +435,7 @@
         display: flex;
         align-items: center;
         gap: 1rem;
-        flex: 1;
+        flex: 1 1 180px;
         min-width: 0;
     }
 
@@ -466,20 +470,19 @@
         font-weight: 700;
         font-size: 0.95rem;
         color: #f2f3f5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        white-space: normal;
+        overflow-wrap: break-word;
     }
 
     .phase-card-dates {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #7f8992;
-        font-family: monospace;
         margin-top: 0.15rem;
     }
 
     .phase-card-badges {
         display: flex;
+        flex-wrap: wrap;
         gap: 0.5rem;
         align-items: center;
         flex-shrink: 0;
@@ -529,7 +532,7 @@
 
     .phase-detail-grid {
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 0.75rem;
         margin-bottom: 1rem;
         padding-top: 1rem;
@@ -538,11 +541,12 @@
 
     @media (max-width: 600px) {
         .phase-detail-grid {
-            grid-template-columns: repeat(2, 1fr);
+            grid-template-columns: repeat(2, minmax(0, 1fr));
         }
     }
 
     .phase-detail-item {
+        min-width: 0;
         text-align: center;
     }
 
@@ -550,6 +554,8 @@
         font-weight: 700;
         font-size: 1.1rem;
         color: #f2f3f5;
+        overflow-wrap: break-word;
+        word-break: break-word;
     }
 
     .phase-detail-label {
