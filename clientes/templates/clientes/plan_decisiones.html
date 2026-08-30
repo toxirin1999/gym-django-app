@@ -4,38 +4,34 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#080b10">
+  <meta name="theme-color" content="#05080b">
   <title>Centro de decisiones · Gym</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       color-scheme: dark;
-      --bg: #080b10;
-      --surface: #111720;
-      --surface-raised: #17202b;
-      --surface-soft: #0d131b;
-      --ink: #f5f3ed;
-      --ink-muted: #b8b5ad;
-      --ink-faint: #8f918f;
-      --line: #2c3541;
-      --line-strong: #465363;
-      --teal: #55dfcf;
-      --teal-soft: rgba(85, 223, 207, 0.10);
-      --amber: #f6bd60;
-      --amber-soft: rgba(246, 189, 96, 0.10);
-      --blue: #8bb9f3;
-      --blue-soft: rgba(139, 185, 243, 0.10);
-      --red: #ff9a98;
-      --red-soft: rgba(255, 115, 112, 0.09);
-      --violet: #c1a8ff;
-      --violet-soft: rgba(193, 168, 255, 0.10);
-      --font-display: "Barlow Condensed", sans-serif;
-      --font-body: "Barlow", sans-serif;
-      --font-mono: "JetBrains Mono", monospace;
-      --radius: 16px;
-      --shadow: 0 18px 60px rgba(0, 0, 0, 0.24);
+      --bg: #05080b;
+      --surface: #0d1115;
+      --surface-raised: #12171c;
+      --surface-soft: #0a0d10;
+      --ink: #f2f3f5;
+      --ink-muted: #9da5ad;
+      --ink-faint: #7f8992;
+      --line: #273039;
+      --line-strong: #33404b;
+      --cyan: #72ddff;
+      --cyan-soft: rgba(114, 221, 255, 0.10);
+      --gold: #d1a732;
+      --gold-soft: rgba(209, 167, 50, 0.12);
+      --purple: #ba8cff;
+      --purple-soft: rgba(186, 140, 255, 0.10);
+      --green: #53d88b;
+      --green-soft: rgba(83, 216, 139, 0.10);
+      --red: #ff8a80;
+      --red-soft: rgba(255, 138, 128, 0.10);
+      --font-display: Arial, sans-serif;
+      --font-body: Arial, sans-serif;
+      --font-mono: monospace;
+      --radius: 0px;
     }
 
     * {
@@ -57,12 +53,7 @@
       font-size: 16px;
       line-height: 1.6;
       padding-bottom: 7rem;
-      background:
-        linear-gradient(90deg, rgba(85, 223, 207, 0.025) 1px, transparent 1px),
-        linear-gradient(rgba(85, 223, 207, 0.018) 1px, transparent 1px),
-        radial-gradient(circle at 12% -10%, rgba(85, 223, 207, 0.11), transparent 32rem),
-        var(--bg);
-      background-size: 56px 56px, 56px 56px, auto, auto;
+      background: var(--bg);
     }
 
     button,
@@ -83,23 +74,20 @@
     .dc-active-shell > summary:focus-visible,
     .dc-technical-shell > summary:focus-visible,
     .dc-load-detail > summary:focus-visible {
-      outline: 3px solid var(--teal);
+      outline: 2px solid var(--cyan);
       outline-offset: 3px;
     }
 
     .dc-top {
-      position: sticky;
-      top: 0;
-      z-index: 20;
+      position: static;
       display: grid;
       grid-template-columns: minmax(44px, 1fr) auto minmax(44px, 1fr);
       align-items: center;
       gap: 12px;
-      min-height: 64px;
-      padding: 8px clamp(12px, 3vw, 28px);
-      border-bottom: 1px solid var(--line);
-      background: rgba(8, 11, 16, 0.92);
-      backdrop-filter: blur(18px);
+      min-height: 44px;
+      padding: 18px clamp(16px, 4vw, 40px) 0;
+      border-bottom: 0;
+      background: transparent;
     }
 
     .dc-back {
@@ -109,9 +97,12 @@
       gap: 8px;
       width: fit-content;
       min-height: 44px;
-      color: var(--ink-muted);
-      font-size: 14px;
-      font-weight: 600;
+      color: var(--cyan);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
       text-decoration: none;
       transition: color 180ms ease;
     }
@@ -121,18 +112,18 @@
     }
 
     .dc-back svg {
-      width: 18px;
-      height: 18px;
+      width: 14px;
+      height: 14px;
       flex: 0 0 auto;
     }
 
     .dc-kicker {
       margin: 0;
-      color: var(--ink-faint);
+      color: var(--cyan);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.12em;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
       text-align: center;
       text-transform: uppercase;
     }
@@ -142,63 +133,59 @@
     }
 
     .dc-wrap {
-      width: 100%;
-      max-width: 1040px;
+      width: min(100%, 880px);
       margin: 0 auto;
-      padding: clamp(22px, 4vw, 52px) clamp(16px, 4vw, 40px);
+      padding: 18px clamp(16px, 4vw, 40px) 64px;
     }
 
     .dc-hero {
       position: relative;
       min-width: 0;
-      margin-bottom: clamp(36px, 6vw, 64px);
-      padding: clamp(22px, 5vw, 48px);
-      overflow: hidden;
-      border: 1px solid var(--line-strong);
-      border-radius: 22px;
-      background:
-        linear-gradient(115deg, rgba(85, 223, 207, 0.09), transparent 42%),
-        var(--surface);
-      box-shadow: var(--shadow);
+      margin-bottom: 34px;
+      padding: 0;
+      overflow: visible;
+      border: 0;
+      border-radius: 0;
+      background: transparent;
+      box-shadow: none;
     }
 
     .dc-hero.is-compact {
-      margin-bottom: 24px;
-      padding: clamp(18px, 3vw, 28px);
-      border-radius: 14px;
-      box-shadow: 0 14px 42px rgba(0, 0, 0, 0.18);
+      margin-bottom: 34px;
+      padding: 0;
+      border-radius: 0;
+      box-shadow: none;
     }
 
     .dc-hero.is-compact h1 {
-      font-size: clamp(34px, 6vw, 54px);
+      font-size: clamp(38px, 11vw, 64px);
     }
 
     .dc-hero.is-compact .dc-purpose {
-      margin-top: 10px;
+      margin-top: 18px;
     }
 
     .dc-hero.is-compact .dc-state {
-      margin-top: 18px;
-      padding: 13px 16px;
+      margin-top: 30px;
     }
 
     .dc-hero.is-compact .dc-stats {
-      margin-top: 12px;
+      margin-top: 20px;
     }
 
     .dc-hero.is-compact .dc-stat {
-      padding: 10px 12px;
-      border-radius: 8px;
+      padding: 14px 16px;
+      border-radius: 0;
     }
 
     .dc-hero.is-compact .dc-stat-value {
-      font-size: clamp(24px, 4vw, 32px);
+      font-size: clamp(26px, 4vw, 36px);
     }
 
     .dc-definitions {
       position: relative;
       z-index: 1;
-      margin-top: 12px;
+      margin-top: 20px;
       border-top: 1px solid var(--line);
     }
 
@@ -209,8 +196,8 @@
       padding: 11px 0;
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 11px;
-      letter-spacing: .08em;
+      font-size: 10px;
+      letter-spacing: .1em;
       text-transform: uppercase;
       cursor: pointer;
     }
@@ -219,25 +206,16 @@
       position: relative;
       display: grid;
       gap: 18px;
-      margin-bottom: clamp(34px, 5vw, 52px);
-      padding: clamp(18px, 4vw, 30px);
+      margin-bottom: 34px;
+      padding: clamp(18px, 4vw, 26px);
       overflow: hidden;
-      border: 1px solid var(--line-strong);
-      border-left: 4px solid var(--teal);
-      background: linear-gradient(105deg, rgba(85,223,207,.09), transparent 48%), var(--surface-soft);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--gold);
+      background: var(--surface);
     }
 
     .dc-next::after {
-      content: "NEXT";
-      position: absolute;
-      right: -10px;
-      bottom: -28px;
-      color: rgba(245,243,237,.025);
-      font-family: var(--font-display);
-      font-size: 112px;
-      font-weight: 800;
-      line-height: 1;
-      pointer-events: none;
+      content: none;
     }
 
     .dc-next-grid {
@@ -259,7 +237,7 @@
       display: block;
       color: var(--ink-faint);
       font-family: var(--font-mono);
-      font-size: 10px;
+      font-size: 9px;
       letter-spacing: .1em;
       text-transform: uppercase;
     }
@@ -268,7 +246,7 @@
       display: block;
       margin-top: 5px;
       color: var(--ink);
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 700;
       line-height: 1.35;
     }
@@ -286,48 +264,42 @@
     }
 
     .dc-hero::after {
-      content: "";
-      position: absolute;
-      top: 0;
-      right: clamp(24px, 7vw, 72px);
-      width: 1px;
-      height: 100%;
-      background: linear-gradient(transparent, rgba(85, 223, 207, 0.4), transparent);
-      pointer-events: none;
+      content: none;
     }
 
     .dc-hero-head {
       position: relative;
       z-index: 1;
-      max-width: 720px;
+      max-width: 48ch;
     }
 
     .dc-eyebrow {
-      margin: 0 0 8px;
-      color: var(--teal);
+      margin: 0 0 10px;
+      color: var(--cyan);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.13em;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
     }
 
     h1 {
-      max-width: 760px;
+      max-width: 22ch;
       margin: 0;
       font-family: var(--font-display);
-      font-size: clamp(40px, 8vw, 70px);
-      font-weight: 800;
-      letter-spacing: -0.025em;
-      line-height: 0.96;
+      font-size: clamp(38px, 11vw, 64px);
+      font-weight: 700;
+      letter-spacing: -0.055em;
+      line-height: 0.92;
+      text-transform: uppercase;
       text-wrap: balance;
     }
 
     .dc-purpose {
-      max-width: 650px;
+      max-width: 48ch;
       margin: 18px 0 0;
       color: var(--ink-muted);
-      font-size: clamp(16px, 2vw, 18px);
+      font-size: 15px;
       line-height: 1.65;
     }
 
@@ -336,35 +308,36 @@
       z-index: 1;
       display: grid;
       gap: 8px;
-      max-width: 760px;
-      margin-top: clamp(24px, 4vw, 38px);
-      padding: 18px 20px;
-      border-left: 3px solid var(--teal);
-      background: rgba(0, 0, 0, 0.18);
+      max-width: 48ch;
+      margin-top: 30px;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--cyan);
+      background: var(--surface);
     }
 
     .dc-state-label,
     .dc-cause-label {
       color: var(--ink-faint);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.1em;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
       text-transform: uppercase;
     }
 
     .dc-state-value {
       margin: 0;
       color: var(--ink);
-      font-size: clamp(17px, 2vw, 20px);
-      font-weight: 500;
+      font-size: 15px;
+      font-weight: 400;
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
 
     .dc-cause-label {
       margin-top: 8px;
-      color: var(--teal);
+      color: var(--cyan);
     }
 
     .dc-stats {
@@ -380,32 +353,32 @@
       min-width: 0;
       padding: 16px;
       border: 1px solid var(--line);
-      border-radius: 13px;
-      background: rgba(0, 0, 0, 0.18);
+      border-radius: 0;
+      background: var(--surface);
     }
 
     .dc-stat-value {
       display: block;
       color: var(--ink);
       font-family: var(--font-display);
-      font-size: clamp(30px, 5vw, 44px);
+      font-size: clamp(28px, 5vw, 40px);
       font-weight: 700;
       line-height: 1;
     }
 
     .dc-stat.is-learned .dc-stat-value {
-      color: var(--teal);
+      color: var(--cyan);
     }
 
     .dc-stat.is-temporary .dc-stat-value {
-      color: var(--amber);
+      color: var(--gold);
     }
 
     .dc-stat-label {
       display: block;
       margin-top: 6px;
       color: var(--ink-muted);
-      font-size: 13px;
+      font-size: 12px;
       line-height: 1.35;
       overflow-wrap: anywhere;
     }
@@ -437,23 +410,23 @@
 
     .dc-section {
       min-width: 0;
-      margin-bottom: clamp(40px, 7vw, 70px);
-      scroll-margin-top: 84px;
+      margin-bottom: 48px;
+      scroll-margin-top: 24px;
     }
 
     .dc-section-head {
       display: grid;
       grid-template-columns: auto 1fr;
       align-items: end;
-      gap: 18px;
-      margin-bottom: 20px;
+      gap: 14px;
+      margin-bottom: 18px;
     }
 
     .dc-section-number {
-      color: var(--teal);
+      color: var(--cyan);
       font-family: var(--font-mono);
-      font-size: 12px;
-      letter-spacing: 0.08em;
+      font-size: 11px;
+      letter-spacing: 0.1em;
     }
 
     .dc-section-title {
@@ -461,10 +434,11 @@
       padding-bottom: 8px;
       border-bottom: 1px solid var(--line-strong);
       font-family: var(--font-display);
-      font-size: clamp(28px, 5vw, 42px);
+      font-size: clamp(24px, 4vw, 34px);
       font-weight: 700;
-      letter-spacing: -0.01em;
+      letter-spacing: -0.02em;
       line-height: 1;
+      text-transform: uppercase;
     }
 
     .dc-subsection {
@@ -479,7 +453,7 @@
     .dc-subtitle {
       margin: 0 0 12px;
       color: var(--ink);
-      font-size: 18px;
+      font-size: 16px;
       font-weight: 700;
       line-height: 1.3;
     }
@@ -487,7 +461,7 @@
     .dc-subtitle-meta {
       margin: -6px 0 14px;
       color: var(--ink-muted);
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .dc-card-grid {
@@ -510,32 +484,32 @@
     .dc-group,
     .dc-week,
     .dc-joi-reading {
-      padding: 18px 20px;
+      padding: 18px;
     }
 
     .dc-card.is-learned {
-      border-left: 3px solid var(--teal);
+      border-left: 3px solid var(--cyan);
     }
 
     .dc-card.is-temporary,
     .dc-card.is-hypothesis,
     .dc-card.is-experiment {
-      border-left: 3px solid var(--amber);
+      border-left: 3px solid var(--gold);
     }
 
     .dc-card.is-continuity,
     .dc-group.is-protected {
-      border-left: 3px solid var(--blue);
-      background: var(--blue-soft);
+      border-left: 3px solid var(--purple);
+      background: var(--purple-soft);
     }
 
     .dc-card.is-experiment {
-      background: var(--amber-soft);
+      background: var(--gold-soft);
     }
 
     .dc-card.is-weekly-close {
-      border-left: 3px solid var(--teal);
-      background: linear-gradient(110deg, var(--teal-soft), transparent 55%), var(--surface);
+      border-left: 3px solid var(--cyan);
+      background: var(--surface);
     }
 
     .dc-close-head,
@@ -550,15 +524,16 @@
     .dc-close-title {
       margin: 0;
       font-family: var(--font-display);
-      font-size: 25px;
+      font-size: 21px;
       line-height: 1.1;
+      text-transform: uppercase;
     }
 
     .dc-close-score {
       margin: 12px 0 0;
       color: var(--ink);
       font-family: var(--font-display);
-      font-size: clamp(28px, 5vw, 38px);
+      font-size: clamp(24px, 4vw, 32px);
       font-weight: 700;
       line-height: 1;
     }
@@ -580,7 +555,7 @@
       display: block;
       color: var(--ink);
       font-family: var(--font-mono);
-      font-size: 15px;
+      font-size: 14px;
     }
 
     .dc-pill {
@@ -591,13 +566,14 @@
       margin-bottom: 9px;
       padding: 4px 9px;
       border: 1px solid currentColor;
-      border-radius: 999px;
+      border-radius: 0;
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: 0.04em;
       line-height: 1.25;
+      text-transform: uppercase;
     }
 
     .dc-pill::before {
@@ -610,12 +586,12 @@
     }
 
     .dc-pill.is-learned {
-      color: var(--teal);
+      color: var(--cyan);
     }
 
     .dc-pill.is-temporary,
     .dc-pill.is-hypothesis {
-      color: var(--amber);
+      color: var(--gold);
     }
 
     .dc-card-text,
@@ -624,7 +600,7 @@
     .dc-joi-text {
       margin: 0;
       color: var(--ink);
-      font-size: 16px;
+      font-size: 15px;
       line-height: 1.6;
       overflow-wrap: anywhere;
     }
@@ -642,7 +618,7 @@
       margin: 12px 0 0;
       padding-top: 11px;
       border-top: 1px solid var(--line);
-      color: var(--ink-muted);
+      color: var(--ink-faint);
       font-size: 13px;
       font-style: italic;
       line-height: 1.5;
@@ -668,23 +644,26 @@
       min-height: 44px;
       padding: 9px 16px;
       border: 1px solid var(--line-strong);
-      border-radius: 10px;
+      border-radius: 0;
       background: var(--surface-raised);
       color: var(--ink);
       cursor: pointer;
-      font-size: 14px;
+      font-family: var(--font-mono);
+      font-size: 12px;
       font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
       transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
     }
 
     .dc-button:hover {
-      border-color: var(--teal);
+      border-color: var(--cyan);
     }
 
     .dc-button.is-primary {
-      border-color: rgba(246, 189, 96, 0.5);
-      background: rgba(246, 189, 96, 0.14);
-      color: #ffe0a5;
+      border-color: var(--gold);
+      background: var(--gold-soft);
+      color: var(--gold);
     }
 
     .dc-button.is-quiet {
@@ -694,7 +673,7 @@
     .dc-button.is-danger {
       width: auto;
       margin-top: 14px;
-      border-color: rgba(255, 154, 152, 0.35);
+      border-color: var(--red);
       background: var(--red-soft);
       color: var(--red);
     }
@@ -703,7 +682,7 @@
       padding: 20px;
       border-style: dashed;
       color: var(--ink-muted);
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.55;
     }
 
@@ -723,7 +702,7 @@
       min-width: 0;
       margin: 0;
       color: var(--ink);
-      font-size: 17px;
+      font-size: 16px;
       font-weight: 700;
       line-height: 1.35;
       overflow-wrap: anywhere;
@@ -734,38 +713,43 @@
       align-items: center;
       justify-content: center;
       flex: 0 0 auto;
-      min-height: 28px;
+      min-height: 26px;
       padding: 3px 9px;
-      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      border-radius: 0;
       background: var(--surface-raised);
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       line-height: 1.2;
       white-space: nowrap;
     }
 
     .dc-badge.is-up {
-      background: var(--teal-soft);
-      color: var(--teal);
+      border-color: var(--cyan);
+      background: var(--cyan-soft);
+      color: var(--cyan);
     }
 
     .dc-badge.is-hold,
     .dc-badge.is-postponed {
-      background: var(--amber-soft);
-      color: var(--amber);
+      border-color: var(--gold);
+      background: var(--gold-soft);
+      color: var(--gold);
     }
 
     .dc-badge.is-down {
+      border-color: var(--red);
       background: var(--red-soft);
       color: var(--red);
     }
 
     .dc-badge.is-variant,
     .dc-badge.is-deload {
-      background: var(--violet-soft);
-      color: var(--violet);
+      border-color: var(--purple);
+      background: var(--purple-soft);
+      color: var(--purple);
     }
 
     .dc-group-detail {
@@ -777,7 +761,7 @@
       margin: 9px 0 0;
       color: var(--ink-faint);
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       line-height: 1.5;
     }
 
@@ -796,9 +780,9 @@
 
     .dc-week-number {
       display: block;
-      color: var(--teal);
+      color: var(--cyan);
       font-family: var(--font-display);
-      font-size: 34px;
+      font-size: 30px;
       font-weight: 700;
       line-height: 1;
     }
@@ -809,30 +793,35 @@
     }
 
     .dc-week-status {
-      min-height: 30px;
+      min-height: 28px;
       padding: 4px 10px;
-      border-radius: 999px;
+      border: 1px solid var(--line-strong);
+      border-radius: 0;
       background: var(--surface-raised);
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       line-height: 1.8;
+      text-transform: uppercase;
     }
 
     .dc-week-status.is-high {
+      border-color: var(--red);
       background: var(--red-soft);
       color: var(--red);
     }
 
     .dc-week-status.is-careful {
-      background: var(--amber-soft);
-      color: var(--amber);
+      border-color: var(--gold);
+      background: var(--gold-soft);
+      color: var(--gold);
     }
 
     .dc-week-status.is-solid {
-      background: var(--teal-soft);
-      color: var(--teal);
+      border-color: var(--green);
+      background: var(--green-soft);
+      color: var(--green);
     }
 
     .dc-week-reading {
@@ -842,15 +831,15 @@
     }
 
     .dc-joi-reading {
-      border-left: 3px solid var(--violet);
-      background: var(--violet-soft);
+      border-left: 3px solid var(--purple);
+      background: var(--purple-soft);
     }
 
     .dc-joi-state {
       margin: 10px 0 0;
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
@@ -876,14 +865,14 @@
       align-items: center;
       justify-content: space-between;
       gap: 12px;
-      min-height: 52px;
-      padding: 12px 16px;
+      min-height: 48px;
+      padding: 12px 14px;
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 0;
       background: var(--surface);
       color: var(--ink);
       cursor: pointer;
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
       list-style: none;
       transition: border-color 180ms ease, background-color 180ms ease;
@@ -899,10 +888,10 @@
     }
 
     .dc-chevron {
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       flex: 0 0 auto;
-      color: var(--teal);
+      color: var(--cyan);
       transition: transform 180ms ease;
     }
 
@@ -911,7 +900,7 @@
     }
 
     .dc-accordion[open] summary {
-      border-radius: 12px 12px 0 0;
+      border-radius: 0;
     }
 
     .dc-accordion-body {
@@ -920,22 +909,22 @@
       padding: 14px;
       border: 1px solid var(--line);
       border-top: 0;
-      border-radius: 0 0 12px 12px;
+      border-radius: 0;
       background: var(--surface-soft);
     }
 
     .dc-technical-card {
       min-width: 0;
-      padding: 15px;
+      padding: 14px;
       border: 1px solid var(--line);
-      border-radius: 11px;
+      border-radius: 0;
       background: var(--surface);
     }
 
     .dc-technical-text {
       margin: 8px 0 0;
       color: var(--ink);
-      font-size: 15px;
+      font-size: 14px;
       line-height: 1.55;
       overflow-wrap: anywhere;
     }
@@ -944,24 +933,24 @@
       margin-top: 10px;
       padding: 10px 12px;
       border-left: 2px solid var(--line-strong);
-      background: rgba(255, 255, 255, 0.025);
+      background: var(--surface-soft);
     }
 
     .dc-evaluation-label {
       color: var(--ink-muted);
       font-family: var(--font-mono);
-      font-size: 12px;
-      font-weight: 600;
+      font-size: 11px;
+      font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
     .dc-evaluation-label.is-margin {
-      color: var(--teal);
+      color: var(--cyan);
     }
 
     .dc-evaluation-label.is-hypothesis {
-      color: var(--amber);
+      color: var(--gold);
     }
 
     .dc-evaluation-summary {
@@ -979,7 +968,7 @@
     .dc-detail-name {
       margin: 0;
       color: var(--ink);
-      font-size: 15px;
+      font-size: 14px;
       font-weight: 700;
     }
 
@@ -993,7 +982,7 @@
       margin-top: 5px;
       color: var(--ink-faint);
       font-family: var(--font-mono);
-      font-size: 12px;
+      font-size: 11px;
     }
 
     .dc-visually-hidden {
@@ -1017,7 +1006,7 @@
     .dc-message {
       padding: 12px 16px;
       border: 1px solid var(--line-strong);
-      border-radius: 12px;
+      border-radius: 0;
       background: var(--surface);
       color: var(--ink-muted);
     }
@@ -1035,9 +1024,10 @@
       min-height: 44px;
       padding: 10px 12px;
       border: 1px solid var(--line-strong);
-      border-radius: 9px;
+      border-radius: 0;
       background: var(--surface-soft);
       color: var(--ink);
+      font-family: var(--font-body);
     }
 
     .dc-form-grid input[type="checkbox"] {
@@ -1057,6 +1047,7 @@
     @media (max-width: 640px) {
       .dc-top {
         grid-template-columns: auto 1fr;
+        padding-top: 14px;
       }
 
       .dc-kicker {
@@ -1070,15 +1061,6 @@
       .dc-wrap {
         padding-right: 14px;
         padding-left: 14px;
-      }
-
-      .dc-hero {
-        padding: 22px 18px;
-        border-radius: 17px;
-      }
-
-      .dc-hero::after {
-        display: none;
       }
 
       .dc-stats {
