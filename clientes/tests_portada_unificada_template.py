@@ -69,6 +69,17 @@ class PortadaUnificadaTemplateTests(TestCase):
                     {"tipo": "enlace", "label": label, "url": "/entrenos/plan/"}
                 )
                 self.assertNotIn("data-primary-action", html)
+                self.assertIn("<button data-checkin-badge", html)
+                self.assertIn('onclick="rbOpenCheckin(this)"', html)
+
+    def test_checkin_pendiente_no_duplica_el_cta_principal_de_checkin(self):
+        html = self._render_con_accion_principal(
+            {"tipo": "modal_checkin", "label": "Completar check-in", "url": ""}
+        )
+
+        self.assertEqual(html.count("data-primary-action"), 1)
+        self.assertNotIn("<button data-checkin-badge", html)
+        self.assertEqual(html.count('onclick="rbOpenCheckin(this)"'), 1)
 
     def test_acciones_principales_operativas_siguen_renderizandose(self):
         acciones = (

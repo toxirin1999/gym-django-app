@@ -755,7 +755,17 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       CHECK-IN · {{ checkin_hoy.horas_sueno }}H · ENERGÍA {{ checkin_hoy.energia_subjetiva }}{% if checkin_hoy.fc_reposo %} · {{ checkin_hoy.fc_reposo }} BPM{% endif %}{% if checkin_hoy.hrv_ms %} · VFC {{ checkin_hoy.hrv_ms }}ms{% endif %}
     </button>
     {% else %}
+    {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}
     <span data-checkin-status style="display:inline-flex;align-items:center;min-height:44px;font-size:10px;letter-spacing:.08em;color:rgba(245,158,11,.78);">CHECK-IN PENDIENTE</span>
+    {% else %}
+    <button data-checkin-badge type="button" onclick="rbOpenCheckin(this)"
+       aria-label="Completar check-in pendiente"
+       style="display:inline-flex;align-items:center;min-height:44px;font-size:10px;letter-spacing:.08em;
+              color:rgba(245,158,11,.78);background:transparent;border:1px solid rgba(245,158,11,.3);
+              border-radius:9999px;padding:4px 10px;cursor:pointer;outline:none;">
+      CHECK-IN PENDIENTE
+    </button>
+    {% endif %}
     {% endif %}
   </div>
 

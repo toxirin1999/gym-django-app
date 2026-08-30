@@ -29,6 +29,8 @@ class CheckinPortadaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["checkin_pendiente"])
         self.assertContains(response, "CHECK-IN PENDIENTE")
+        self.assertContains(response, "<button data-checkin-badge")
+        self.assertContains(response, 'onclick="rbOpenCheckin(this)"')
         self.assertNotContains(response, "Completar ahora")
         self.assertContains(response, "Más tarde")
         self.assertContains(response, "Sueño y energía son obligatorios")
@@ -49,6 +51,8 @@ class CheckinPortadaTests(TestCase):
 
         self.assertFalse(response.context["checkin_pendiente"])
         self.assertIsNotNone(response.context["checkin_hoy"])
+        self.assertContains(response, "<button data-checkin-badge")
+        self.assertContains(response, 'onclick="rbOpenCheckin(this)"')
 
     def test_post_requiere_sueno_y_energia_y_no_crea_registro_parcial(self):
         response = self.client.post(self.url, {"horas_sueno": "7.5"})
