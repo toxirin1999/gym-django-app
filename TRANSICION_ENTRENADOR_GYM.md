@@ -366,6 +366,30 @@ python manage.py preparar_semana_gym \
   --settings=gymproject.settings
 ```
 
+### Operación semanal unificada
+
+`operar_semana_gym` unifica la apertura y el cierre en una entrada operativa
+invocable. Es *dry-run* por defecto y solo escribe con `--apply`; acepta
+`--fecha-referencia YYYY-MM-DD` para ejecuciones reproducibles. El domingo
+prepara la semana cuyo lunes es el día siguiente, el lunes evalúa los contratos
+elegibles de la semana anterior y de martes a sábado responde como *no-op* de
+solo lectura.
+
+El cierre aplicado crea, cuando procede, una `EvaluacionSemanalGym` pendiente.
+Nunca la acepta ni la rechaza automáticamente y tampoco cambia el plan, el
+contrato o sus sesiones. Repetir la operación es idempotente: una semana ya
+materializada o una evaluación existente se informa sin duplicarla ni alterar
+su respuesta o sus timestamps.
+
+```bash
+python manage.py operar_semana_gym --fecha-referencia 2026-08-30
+python manage.py operar_semana_gym --fecha-referencia 2026-08-30 --apply
+```
+
+Si se programa fuera de Django, la recomendación es una única tarea externa
+diaria que invoque este comando. El propio orquestador decide si corresponde
+abrir, cerrar o no operar; no hacen falta tareas separadas por día.
+
 ### Fase 11B — revisión del cierre de bloque en el Centro
 
 El Centro de decisiones muestra, dentro de «Activo ahora», una única tarjeta
