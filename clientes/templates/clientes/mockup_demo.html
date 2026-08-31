@@ -743,6 +743,31 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <span class="rb-chapter-context">Decidir el día</span>
     </header>
 
+  {% if revisiones_gym_pendientes.total %}
+  <aside data-revisiones-gym-pendientes role="status" aria-labelledby="revisiones-gym-titulo"
+         style="margin-top:12px;padding:14px 16px;border:1px solid rgba(245,158,11,.42);
+                border-left:3px solid var(--warn);border-radius:var(--jds-radius-sm);
+                background:rgba(245,158,11,.08);color:var(--fg);">
+    <div id="revisiones-gym-titulo" style="font-family:var(--font-mono);font-size:11px;font-weight:700;
+         letter-spacing:.08em;text-transform:uppercase;color:var(--warn);">
+      {% if revisiones_gym_pendientes.total == 1 %}<span>1 revisión Gym pendiente</span>{% else %}<span>{{ revisiones_gym_pendientes.total }} revisiones Gym pendientes</span>{% endif %}
+    </div>
+    <p style="margin:6px 0 0;font-size:12px;line-height:1.5;color:var(--td-strong);">
+      {% if revisiones_gym_pendientes.semanales %}
+        {{ revisiones_gym_pendientes.semanales }} semana{% if revisiones_gym_pendientes.semanales != 1 %}s{% endif %}{% if revisiones_gym_pendientes.primera_semana %} · Semana del {{ revisiones_gym_pendientes.primera_semana.contrato.semana|date:"d/m/Y" }}{% endif %}
+      {% endif %}
+      {% if revisiones_gym_pendientes.semanales and revisiones_gym_pendientes.bloques %}<br>{% endif %}
+      {% if revisiones_gym_pendientes.bloques %}
+        {{ revisiones_gym_pendientes.bloques }} bloque{% if revisiones_gym_pendientes.bloques != 1 %}s{% endif %}{% if revisiones_gym_pendientes.primer_bloque %} · {{ revisiones_gym_pendientes.primer_bloque.bloque.semana_inicio|date:"d/m/Y" }}–{{ revisiones_gym_pendientes.primer_bloque.bloque.semana_fin_prevista|date:"d/m/Y" }}{% endif %}
+      {% endif %}
+    </p>
+    <a href="{% url 'clientes:plan_decisiones' %}" class="rb-btn rb-btn-sm"
+       style="margin-top:10px;border-color:rgba(245,158,11,.55);color:var(--warn);">
+      Revisar en el Centro →
+    </a>
+  </aside>
+  {% endif %}
+
   <!-- ── CHECK-IN BADGE ────────────────────────── -->
   <div style="display:flex;justify-content:flex-end;padding:8px 0 0;">
     {% if checkin_hoy %}

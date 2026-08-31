@@ -1857,6 +1857,27 @@ def mockup_demo(request):
     from entrenos.services.proyeccion_bloque_gym_service import proyectar_bloque_gym
     context['proyeccion_bloque_gym'] = proyectar_bloque_gym(cliente, fecha=_hoy)
 
+    # Cola global y read-only: una revisión antigua continúa visible aunque el
+    # bloque vigente cambie o existan evaluaciones posteriores ya respondidas.
+    from entrenos.models import EvaluacionBloqueGym, EvaluacionSemanalGym
+    semanas_pendientes = EvaluacionSemanalGym.objects.filter(
+        contrato__cliente=cliente,
+        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+    ).select_related('contrato').order_by('contrato__semana', 'id')
+    bloques_pendientes = EvaluacionBloqueGym.objects.filter(
+        bloque__cliente=cliente,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    ).select_related('bloque').order_by('bloque__semana_inicio', 'id')
+    semanales = semanas_pendientes.count()
+    bloques = bloques_pendientes.count()
+    context['revisiones_gym_pendientes'] = {
+        'total': semanales + bloques,
+        'semanales': semanales,
+        'bloques': bloques,
+        'primera_semana': semanas_pendientes.first(),
+        'primer_bloque': bloques_pendientes.first(),
+    }
+
     return render(request, 'clientes/mockup_demo.html', context)
 
 
@@ -5464,15 +5485,18 @@ def plan_decisiones_view(request):
 
     # Ciclo 11: consulta pura de la última semana ya cerrada. La pantalla no
     # materializa ni recalcula evaluaciones; esa operación es explícita.
-    cierre_semanal = (
+    cierres_semanales = (
         EvaluacionSemanalGym.objects.filter(
             contrato__cliente=cliente,
             contrato__semana__lt=hoy - timedelta(days=6),
         )
         .select_related('contrato')
-        .order_by('-contrato__semana', '-id')
-        .first()
     )
+    cierre_semanal = cierres_semanales.filter(
+        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+    ).order_by('contrato__semana', 'id').first()
+    if cierre_semanal is None:
+        cierre_semanal = cierres_semanales.order_by('-contrato__semana', '-id').first()
     cierre_metricas_ui = {}
     if cierre_semanal:
         metricas_cierre = cierre_semanal.evidencia_snapshot.get('metricas') or {}
