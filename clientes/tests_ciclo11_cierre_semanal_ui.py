@@ -111,6 +111,81 @@ class CierreSemanalCentroTests(TestCase):
             self.assertEqual(self.cliente.dias_disponibles, 5)
             evaluacion.delete()
 
+    def test_repetir_aceptar_es_idempotente_y_redirige_al_centro(self):
+        evaluacion = self._evaluacion()
+        self.client.force_login(self.user)
+        url = reverse('clientes:aceptar_cierre_semanal', args=[evaluacion.pk])
+        self.client.post(url)
+        evaluacion.refresh_from_db()
+        respuesta_original = (
+            evaluacion.estado_revision,
+            evaluacion.respondida_por_id,
+            evaluacion.respondida_en,
+        )
+
+        response = self.client.post(url)
+
+        self.assertRedirects(response, reverse('clientes:plan_decisiones'))
+        evaluacion.refresh_from_db()
+        self.assertEqual(
+            (evaluacion.estado_revision, evaluacion.respondida_por_id, evaluacion.respondida_en),
+            respuesta_original,
+        )
+
+    def test_repetir_rechazar_es_idempotente_y_redirige_al_centro(self):
+        evaluacion = self._evaluacion()
+        self.client.force_login(self.user)
+        url = reverse('clientes:rechazar_cierre_semanal', args=[evaluacion.pk])
+        self.client.post(url)
+        evaluacion.refresh_from_db()
+        respuesta_original = (
+            evaluacion.estado_revision,
+            evaluacion.respondida_por_id,
+            evaluacion.respondida_en,
+        )
+
+        response = self.client.post(url)
+
+        self.assertRedirects(response, reverse('clientes:plan_decisiones'))
+        evaluacion.refresh_from_db()
+        self.assertEqual(
+            (evaluacion.estado_revision, evaluacion.respondida_por_id, evaluacion.respondida_en),
+            respuesta_original,
+        )
+
+    def _assert_respuesta_opuesta_no_muta(self, primer_endpoint, segundo_endpoint, estado):
+        evaluacion = self._evaluacion()
+        self.client.force_login(self.user)
+        self.client.post(reverse(f'clientes:{primer_endpoint}', args=[evaluacion.pk]))
+        evaluacion.refresh_from_db()
+        respuesta_original = (evaluacion.respondida_por_id, evaluacion.respondida_en)
+
+        response = self.client.post(
+            reverse(f'clientes:{segundo_endpoint}', args=[evaluacion.pk]),
+        )
+
+        self.assertRedirects(response, reverse('clientes:plan_decisiones'))
+        evaluacion.refresh_from_db()
+        self.assertEqual(evaluacion.estado_revision, estado)
+        self.assertEqual(
+            (evaluacion.respondida_por_id, evaluacion.respondida_en),
+            respuesta_original,
+        )
+
+    def test_aceptada_no_puede_cambiarse_a_rechazada(self):
+        self._assert_respuesta_opuesta_no_muta(
+            'aceptar_cierre_semanal',
+            'rechazar_cierre_semanal',
+            EvaluacionSemanalGym.ESTADO_ACEPTADA,
+        )
+
+    def test_rechazada_no_puede_cambiarse_a_aceptada(self):
+        self._assert_respuesta_opuesta_no_muta(
+            'rechazar_cierre_semanal',
+            'aceptar_cierre_semanal',
+            EvaluacionSemanalGym.ESTADO_RECHAZADA,
+        )
+
     def test_otro_usuario_recibe_404_y_get_en_endpoint_recibe_405(self):
         evaluacion = self._evaluacion()
         self.client.force_login(self.otro)

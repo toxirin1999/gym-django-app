@@ -5825,15 +5825,21 @@ def retirar_bloque_gym_colaborativo_view(request, bloque_id):
 def aceptar_cierre_semanal_view(request, evaluacion_id):
     """Confirma la lectura semanal propia sin alterar el contrato ni el plan."""
     from entrenos.models import EvaluacionSemanalGym
-    from entrenos.services.evaluacion_semanal_gym_service import responder_evaluacion_semanal_gym
+    from entrenos.services.evaluacion_semanal_gym_service import (
+        EvaluacionSemanalRevisada,
+        responder_evaluacion_semanal_gym,
+    )
 
     evaluacion = get_object_or_404(
         EvaluacionSemanalGym,
         pk=evaluacion_id,
         contrato__cliente__user=request.user,
-        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
     )
-    responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=True)
+    try:
+        responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=True)
+    except EvaluacionSemanalRevisada:
+        messages.info(request, 'La evaluación semanal ya tenía una respuesta distinta.')
+        return redirect('clientes:plan_decisiones')
     messages.success(request, 'Lectura semanal confirmada.')
     return redirect('clientes:plan_decisiones')
 
@@ -5843,15 +5849,21 @@ def aceptar_cierre_semanal_view(request, evaluacion_id):
 def rechazar_cierre_semanal_view(request, evaluacion_id):
     """Marca la lectura semanal propia como no representativa, sin efectos laterales."""
     from entrenos.models import EvaluacionSemanalGym
-    from entrenos.services.evaluacion_semanal_gym_service import responder_evaluacion_semanal_gym
+    from entrenos.services.evaluacion_semanal_gym_service import (
+        EvaluacionSemanalRevisada,
+        responder_evaluacion_semanal_gym,
+    )
 
     evaluacion = get_object_or_404(
         EvaluacionSemanalGym,
         pk=evaluacion_id,
         contrato__cliente__user=request.user,
-        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
     )
-    responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=False)
+    try:
+        responder_evaluacion_semanal_gym(evaluacion, actor=request.user, aceptar=False)
+    except EvaluacionSemanalRevisada:
+        messages.info(request, 'La evaluación semanal ya tenía una respuesta distinta.')
+        return redirect('clientes:plan_decisiones')
     messages.info(request, 'La lectura queda marcada como no representativa.')
     return redirect('clientes:plan_decisiones')
 
