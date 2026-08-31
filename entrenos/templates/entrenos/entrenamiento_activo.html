@@ -2201,13 +2201,17 @@ function guardarSeriePanel(fid,sn,total){
   const pdesc=document.getElementById('desc-'+fid);
   pdesc.style.display='flex';pdesc.style.flexDirection='column';
 
+  // Aplicar primero cualquier ajuste (incluido congelar el peso por tope)
+  // para que el resumen de descanso muestre la próxima serie efectiva.
+  aplicarSugerenciaSiguienteSerie(fid, sn, total, peso, rpe, reps);
+
   // Info próxima serie
   const proxEl=document.getElementById('pd-prox-'+fid);
   if(proxEl){
     const _regProxEl = document.getElementById('reg-'+fid+'-'+(sn+1));
     const usaDistProx = _regProxEl?.dataset.usaDistancia === '1';
     const usaTiempoProx = _regProxEl?.dataset.usaTiempo === '1';
-    const recPeso = document.getElementById('peso-'+fid+'-'+(sn+1))?.dataset.recWeight || peso;
+    const recPeso = document.getElementById('peso-'+fid+'-'+(sn+1))?.value || peso;
     const recReps = document.getElementById('reps-hid-'+fid+'-'+(sn+1))?.value || reps;
     const proxResumen = usaDistProx
       ? (recPeso > 0 ? '<span class="pd-prox-kg">'+recPeso+'kg</span> | '+recReps+'m' : recReps+'m')
@@ -2220,9 +2224,6 @@ function guardarSeriePanel(fid,sn,total){
   }
 
   calcularDiscos(fid,peso);
-
-  // Sugerencia de peso para la siguiente serie
-  aplicarSugerenciaSiguienteSerie(fid, sn, total, peso, rpe, reps);
 
   const card=document.getElementById('card-'+fid);
   const descSeg=parseInt(card?.dataset.descansoSeg||'0');
