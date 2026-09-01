@@ -2990,6 +2990,33 @@ let _sessionGuardada = false;
   });
 })();
 
+// STATE es la fuente de verdad de las series ya confirmadas. Antes de enviar,
+// copiarla de nuevo a los campos nombrados evita que una corrección visual
+// quede desfasada del FormData que persiste el backend.
+function sincronizarSeriesConfirmadasConFormulario(form){
+  Object.entries(STATE.seriesCompletadas || {}).forEach(([fid, series])=>{
+    (series || []).forEach((serie, index)=>{
+      if(!serie)return;
+      const sn=index+1;
+      const pesoInput=document.getElementById('peso-'+fid+'-'+sn)
+        || form.elements.namedItem(fid+'_peso_'+sn);
+      const repsInput=document.getElementById('reps-hid-'+fid+'-'+sn)
+        || form.elements.namedItem(fid+'_reps_'+sn);
+      const rpeInput=document.getElementById('rpe-hid-'+fid+'-'+sn)
+        || form.elements.namedItem(fid+'_rpe_'+sn);
+      const checkbox=document.getElementById('check-'+fid+'-'+sn)
+        || form.elements.namedItem(fid+'_completado_'+sn);
+      const tecnicaInput=form.elements.namedItem(fid+'_tecnica_'+sn);
+
+      if(pesoInput)pesoInput.value=serie.peso;
+      if(repsInput)repsInput.value=serie.reps;
+      if(rpeInput)rpeInput.value=serie.rpe;
+      if(checkbox)checkbox.checked = true;
+      if(tecnicaInput && serie.tecnica)tecnicaInput.value=serie.tecnica;
+    });
+  });
+}
+
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   _sessionGuardada = true;
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
@@ -3000,6 +3027,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
 
   // AJAX handler with fallback
   const form = document.getElementById('workout-form');
+  sincronizarSeriesConfirmadasConFormulario(form);
   const formData = new FormData(form);
   const clienteId = {{ cliente.id }};
 

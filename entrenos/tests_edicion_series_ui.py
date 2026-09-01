@@ -21,6 +21,12 @@ class EdicionSeriesUIRegressionTests(TestCase):
         cls.editar = cls.source.split("function editarSeriePanel", 1)[1].split(
             "function detectarPR", 1
         )[0]
+        cls.sincronizar = cls.source.split(
+            "function sincronizarSeriesConfirmadasConFormulario", 1
+        )[1].split("document.getElementById('btn-confirmar-guardar')", 1)[0]
+        cls.confirmar = cls.source.split(
+            "document.getElementById('btn-confirmar-guardar')", 1
+        )[1].split("// Aviso al salir sin guardar", 1)[0]
 
     def test_editar_preserva_state_y_filas_posteriores(self):
         self.assertNotIn(".splice(", self.editar)
@@ -50,3 +56,21 @@ class EdicionSeriesUIRegressionTests(TestCase):
         self.assertLess(fin_edicion, iniciar_descanso)
         self.assertIn("delete _serieEnEdicion[fid]", self.guardar[fin_edicion:iniciar_descanso])
         self.assertIn("return", self.guardar[fin_edicion:iniciar_descanso])
+
+    def test_confirmar_sincroniza_state_antes_de_construir_formdata(self):
+        sincronizar = self.confirmar.index(
+            "sincronizarSeriesConfirmadasConFormulario(form)"
+        )
+        construir_formdata = self.confirmar.index("new FormData(form)")
+        self.assertLess(sincronizar, construir_formdata)
+
+    def test_sincronizacion_copia_la_serie_confirmada_a_campos_nombrados(self):
+        self.assertIn("Object.entries(STATE.seriesCompletadas", self.sincronizar)
+        self.assertIn("serie.peso", self.sincronizar)
+        self.assertIn("serie.reps", self.sincronizar)
+        self.assertIn("serie.rpe", self.sincronizar)
+        self.assertIn("peso-'+fid+'-'+sn", self.sincronizar)
+        self.assertIn("reps-hid-'+fid+'-'+sn", self.sincronizar)
+        self.assertIn("rpe-hid-'+fid+'-'+sn", self.sincronizar)
+        self.assertIn("check-'+fid+'-'+sn", self.sincronizar)
+        self.assertIn("checkbox.checked = true", self.sincronizar)
