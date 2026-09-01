@@ -1858,6 +1858,9 @@ function elegirFrase(rpeAvg){
 }
 
 const STATE={ejActual:0,serieActual:{},seriesCompletadas:{},timers:{}};
+// Serie que se está corrigiendo por ejercicio. Editar nunca altera la
+// colección hasta que el usuario confirma el nuevo valor.
+const _serieEnEdicion = {};
 document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
   STATE.serieActual[card.dataset.formId]=1;
   STATE.seriesCompletadas[card.dataset.formId]=[];
@@ -2136,6 +2139,8 @@ function guardarSeriePanel(fid,sn,total){
   const peso=parseFloat(document.getElementById('peso-'+fid+'-'+sn)?.value||0);
   const reps=parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value||0);
   const rpe=parseFloat(document.getElementById('rpe-hid-'+fid+'-'+sn)?.value||8);
+  const esEdicion = _serieEnEdicion[fid] === sn;
+  const seriePrevia = STATE.seriesCompletadas[fid]?.[sn-1];
 
   // Marcar checkbox para que se envíe
   const cb=document.getElementById('check-'+fid+'-'+sn);
@@ -2158,14 +2163,20 @@ function guardarSeriePanel(fid,sn,total){
     tecnicaInput.name = fid+'_tecnica_'+sn;
     document.getElementById('workout-form').appendChild(tecnicaInput);
   }
-  tecnicaInput.value = '';
+  if(!esEdicion) tecnicaInput.value = '';
 
-  STATE.seriesCompletadas[fid].push({peso,reps,rpe,tecnica:null});
+  STATE.seriesCompletadas[fid][sn-1] = {
+    peso,
+    reps,
+    rpe,
+    tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null
+  };
 
   // Log visual — el badge de técnica empieza vacío y lo rellena selTecnica()
   const log=document.getElementById('log-'+fid);
   if(log){
-    const row=document.createElement('div');
+    const filaExistente=log.querySelector('[data-sn="'+sn+'"]');
+    const row=filaExistente || document.createElement('div');
     row.className='serie-done';
     row.dataset.sn=sn;
     const _regEl = document.getElementById('reg-'+fid+'-'+sn);
@@ -2176,11 +2187,19 @@ function guardarSeriePanel(fid,sn,total){
       : usaTiempoLog
         ? reps+'s'
         : peso+'kg × '+reps+' reps';
+    const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
+    const tecnicaBadge=tecnicaGuardada==='buena'
+      ? '<span style="font-size:10px;color:#2ECC71;margin-left:4px;">✔ buena</span>'
+      : tecnicaGuardada==='aceptable'
+        ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
+        : tecnicaGuardada==='comprometida'
+          ? '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>'
+          : '';
     row.innerHTML='<div class="sd-check">✓</div>'
-      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong><span id="tecnica-badge-'+fid+'-'+sn+'"></span></div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong><span id="tecnica-badge-'+fid+'-'+sn+'">'+tecnicaBadge+'</span></div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
-    log.appendChild(row);
+    if(!filaExistente) log.appendChild(row);
   }
 
   if(navigator.vibrate)navigator.vibrate(40);
@@ -2195,6 +2214,17 @@ function guardarSeriePanel(fid,sn,total){
   // Actualizar dots y pills
   actualizarDots();
   actualizarSetPills(fid);
+
+  // Una corrección termina aquí: no crea otro descanso ni vuelve a recorrer
+  // las series posteriores. El ejercicio conserva exactamente su progreso.
+  if(esEdicion){
+    delete _serieEnEdicion[fid];
+    const panelEditado=document.getElementById('reg-'+fid+'-'+sn);
+    if(panelEditado)panelEditado.style.display='none';
+    actualizarProgreso();
+    actualizarSticky();
+    return;
+  }
 
   // Ocultar panel actual, mostrar descanso
   document.getElementById('reg-'+fid+'-'+sn).style.display='none';
@@ -2235,34 +2265,9 @@ function guardarSeriePanel(fid,sn,total){
 }
 
 function editarSeriePanel(fid,sn,total){
-  // 1. Eliminar del array en STATE (sn es 1-based)
-  const idx=sn-1;
-  if(STATE.seriesCompletadas[fid] && STATE.seriesCompletadas[fid].length>idx){
-    STATE.seriesCompletadas[fid].splice(idx,1);
-  }
+  _serieEnEdicion[fid] = sn;
 
-  // 2. Desmarcar checkbox oculto
-  const cb=document.getElementById('check-'+fid+'-'+sn);
-  if(cb)cb.checked=false;
-
-  // 3. Quitar la fila del log visual
-  const log=document.getElementById('log-'+fid);
-  if(log){
-    const fila=log.querySelector('[data-sn="'+sn+'"]');
-    if(fila)fila.remove();
-    // Renumerar filas posteriores en el DOM y en STATE
-    log.querySelectorAll('.serie-done').forEach((row,i)=>{
-      const newSn=i+1;
-      row.dataset.sn=newSn;
-      const infoEl=row.querySelector('.sd-info');
-      const s=STATE.seriesCompletadas[fid]?.[i];
-      if(infoEl&&s) infoEl.innerHTML='Serie '+newSn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>';
-      const editBtn=row.querySelector('.sd-edit');
-      if(editBtn) editBtn.setAttribute('onclick',"editarSeriePanel('"+fid+"',"+newSn+","+total+")");
-    });
-  }
-
-  // 4. Ocultar pantalla de descanso si está activa
+  // Ocultar pantalla de descanso si está activa
   if(STATE.timers[fid]){
     clearInterval(STATE.timers[fid].interval);
     delete STATE.timers[fid];
@@ -2270,24 +2275,13 @@ function editarSeriePanel(fid,sn,total){
   const desc=document.getElementById('desc-'+fid);
   if(desc)desc.style.display='none';
 
-  // 5. Ocultar cualquier panel de serie posterior que estuviera visible
-  for(let s2=sn+1;s2<=total;s2++){
-    const p=document.getElementById('reg-'+fid+'-'+s2);
-    if(p)p.style.display='none';
-  }
-
-  // 6. Mostrar de nuevo el panel de esa serie
+  // Mostrar de nuevo solo el panel de esa serie
   const panel=document.getElementById('reg-'+fid+'-'+sn);
   if(panel){
     panel.style.display='block';
     panel.scrollIntoView({behavior:'smooth',block:'start'});
   }
 
-  // 7. Actualizar dots, pills, progreso
-  actualizarDots();
-  actualizarSetPills(fid);
-  actualizarProgreso();
-  guardarCheckpoint();
 }
 
 // ── DETECCIÓN PR EN TIEMPO REAL ─────────────────────────────────
