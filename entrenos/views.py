@@ -3739,6 +3739,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             if es_sesion_canonica:
                 # El snapshot ya resolvió Bio, lesión, progresión, fase, tope y
                 # deload. Aquí solo se completan aliases y metadatos de UI.
+                reps_objetivo_materializado = 'reps_objetivo' in ejercicio
                 try:
                     reps_str = str(ejercicio.get('repeticiones', '8'))
                     reps_alias = int(reps_str.split('-')[0].strip())
@@ -3790,6 +3791,22 @@ def vista_entrenamiento_activo(request, cliente_id):
                         ejercicio['peso_inicial_kg'] = float(datos_anterior['peso'])
                     else:
                         ejercicio.setdefault('sugerencia_tope', False)
+                    if ejercicio.get('solo_reps') and not reps_objetivo_materializado:
+                        reps_anteriores = int(ejercicio.get('repeticiones_anterior') or 0)
+                        if reps_anteriores > 0:
+                            try:
+                                limites = [
+                                    int(valor.strip())
+                                    for valor in str(ejercicio.get('repeticiones', '8')).split('-')
+                                ]
+                                reps_min = limites[0]
+                                reps_max = limites[-1]
+                            except (ValueError, AttributeError):
+                                reps_min = reps_max = 8
+                            ejercicio['reps_objetivo'] = min(
+                                reps_max,
+                                max(reps_min, reps_anteriores),
+                            )
                     if ejercicio.get('usa_distancia'):
                         d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
                         if d_anterior > 0:
