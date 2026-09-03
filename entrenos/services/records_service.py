@@ -74,6 +74,13 @@ class RecordsService:
             nombre = getattr(ejercicio, 'nombre_ejercicio', getattr(ejercicio, 'nombre', ''))
             if not nombre:
                 continue
+
+            series_detalladas = list(
+                entreno.series.filter(
+                    completado=True,
+                    ejercicio__nombre__iexact=nombre,
+                )
+            )
                 
             ej_nombre_lower = nombre.lower()
             
@@ -88,6 +95,8 @@ class RecordsService:
                             break
                         except (ValueError, TypeError):
                             continue
+            if series_detalladas:
+                peso = max(float(serie.peso_kg or 0) for serie in series_detalladas)
 
             # Obtener grupo muscular (con fallback al archivo ejercicios.py)
             grupo = getattr(ejercicio, 'grupo_muscular', None)
@@ -112,7 +121,15 @@ class RecordsService:
             # Verificar récord de volumen total
             # Calcular volumen de forma robusta
             vol_val = 0
-            if hasattr(ejercicio, 'volumen') and callable(ejercicio.volumen):
+            if series_detalladas:
+                vol_val = sum(
+                    (
+                        Decimal(str(serie.peso_kg or 0)) * int(serie.repeticiones or 0)
+                        for serie in series_detalladas
+                    ),
+                    Decimal('0'),
+                )
+            elif hasattr(ejercicio, 'volumen') and callable(ejercicio.volumen):
                 vol_val = ejercicio.volumen()
             elif hasattr(ejercicio, 'volumen_ejercicio'): # Para EjercicioLiftinDetallado
                  vol_val = ejercicio.volumen_ejercicio

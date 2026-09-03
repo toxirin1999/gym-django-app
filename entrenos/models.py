@@ -395,37 +395,51 @@ class EntrenoRealizado(models.Model):
 
     def calcular_volumen_total(self):
         '''Calcula el volumen total del entrenamiento de todas las fuentes disponibles'''
-        total = 0
+        total = Decimal('0')
+
+        series_completadas = list(
+            self.series.filter(completado=True).select_related('ejercicio')
+        )
+        nombres_con_detalle = {
+            serie.ejercicio.nombre.strip().lower()
+            for serie in series_completadas
+        }
 
         # 1. Ejercicios Realizados (Manuales / Importados genéricos)
         for ej in self.ejercicios_realizados.all():
-            if ej.completado:
-                peso = float(ej.peso_kg or 0)
+            if (
+                ej.completado
+                and ej.nombre_ejercicio.strip().lower() not in nombres_con_detalle
+            ):
+                peso = Decimal(str(ej.peso_kg or 0))
                 series = int(ej.series or 0)
                 reps = int(ej.repeticiones or 0)
                 total += peso * series * reps
 
         # 2. Series Realizadas (modelo SerieRealizada, used when logging sets individually)
-        for serie in self.series.all():
-            peso = float(serie.peso_kg or 0)
+        for serie in series_completadas:
+            peso = Decimal(str(serie.peso_kg or 0))
             reps = int(serie.repeticiones or 0)
             total += peso * reps
 
         # 3. Ejercicios Liftin Detallados (Específicos de importación)
         if hasattr(self, 'ejercicios_liftin_detallados'):
             for ej in self.ejercicios_liftin_detallados.all():
-                if ej.completado:
+                if (
+                    ej.completado
+                    and ej.nombre_ejercicio.strip().lower() not in nombres_con_detalle
+                ):
                     # Usar propiedad si existe, si no calcular manualmente
                     if hasattr(ej, 'volumen_ejercicio') and ej.volumen_ejercicio:
-                        total += float(ej.volumen_ejercicio)
+                        total += Decimal(str(ej.volumen_ejercicio))
                     else:
-                        peso = float(ej.peso_kg or 0)
+                        peso = Decimal(str(ej.peso_kg or 0))
                         series = int(ej.series_realizadas or 0)
                         # Usar reps min como base conservadora
                         reps = int(ej.repeticiones_min or 0)
                         total += peso * series * reps
 
-        return Decimal(str(total))
+        return total
 
     def save(self, *args, **kwargs):
         super().save(*args, **kwargs)

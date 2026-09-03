@@ -4598,7 +4598,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
         update_fields = ['volumen_total_kg', 'numero_ejercicios']
         if ejercicios_procesados_count > 0:
-            entreno.volumen_total_kg = volumen_total_entreno
+            entreno.volumen_total_kg = entreno.calcular_volumen_total()
             entreno.numero_ejercicios = ejercicios_procesados_count
         if energia_pre is not None:
             entreno.energia_pre_sesion = energia_pre
@@ -4719,8 +4719,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     )
                     _series_tot_js = _series_js
 
-                _vol_js = Decimal(str(volumen_sesion)) if volumen_sesion else Decimal('0')
-                _volumen_final = _vol_js if _vol_js > 0 else (entreno.volumen_total_kg or Decimal('0'))
+                _volumen_final = entreno.volumen_total_kg or Decimal('0')
 
                 _ejs_comp = int(ejs_comp) if ejs_comp else 0
                 _ejs_tot = int(ejs_tot) if ejs_tot else 0

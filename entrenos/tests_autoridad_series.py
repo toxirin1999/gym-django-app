@@ -1,0 +1,152 @@
+from datetime import date
+from decimal import Decimal
+
+from django.contrib.auth.models import User
+from django.test import TestCase
+from django.urls import reverse
+
+from clientes.models import Cliente
+from entrenos.models import (
+    EjercicioRealizado,
+    EjercicioLiftinDetallado,
+    EntrenoRealizado,
+    RecordPersonal,
+    SerieRealizada,
+    SesionEntrenamiento,
+)
+from entrenos.services.records_service import RecordsService
+from rutinas.models import EjercicioBase, Rutina
+
+
+class AutoridadSeriesBase(TestCase):
+    NOMBRE = 'Curl Femoral Autoridad Series'
+    SERIES = ((60, 4), (65, 4), (65, 3), (65, 3))
+
+    def setUp(self):
+        self.user = User.objects.create_user('autoridad-series', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        self.rutina = Rutina.objects.create(nombre='_autoridad_series')
+        self.base = EjercicioBase.objects.create(
+            nombre=self.NOMBRE,
+            grupo_muscular='piernas',
+        )
+
+    def crear_entreno_detallado(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=date.today(),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio=self.NOMBRE,
+            peso_kg=Decimal('63.75'),
+            series=4,
+            repeticiones=3,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+        for numero, (peso, reps) in enumerate(self.SERIES, 1):
+            SerieRealizada.objects.create(
+                entreno=entreno,
+                ejercicio=self.base,
+                serie_numero=numero,
+                peso_kg=peso,
+                repeticiones=reps,
+                completado=True,
+            )
+        return entreno
+
+
+class RecordsDesdeSeriesTests(AutoridadSeriesBase):
+    def test_peso_y_volumen_del_record_proceden_de_series_completadas(self):
+        entreno = self.crear_entreno_detallado()
+
+        RecordsService.detectar_records_sesion(entreno)
+
+        self.assertEqual(
+            RecordPersonal.objects.get(tipo_record='peso_maximo').valor,
+            Decimal('65'),
+        )
+        self.assertEqual(
+            RecordPersonal.objects.get(tipo_record='volumen_total').valor,
+            Decimal('890'),
+        )
+
+    def test_sin_series_conserva_fallback_del_agregado_manual(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio='Peso Muerto Legacy Autoridad',
+            peso_kg=100,
+            series=2,
+            repeticiones=5,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+
+        RecordsService.detectar_records_sesion(entreno)
+
+        self.assertEqual(
+            RecordPersonal.objects.get(
+                ejercicio_nombre='Peso Muerto Legacy Autoridad',
+                tipo_record='peso_maximo',
+            ).valor,
+            Decimal('100'),
+        )
+        self.assertEqual(
+            RecordPersonal.objects.get(
+                ejercicio_nombre='Peso Muerto Legacy Autoridad',
+                tipo_record='volumen_total',
+            ).valor,
+            Decimal('1000'),
+        )
+
+
+class VolumenEntrenoDesdeSeriesTests(AutoridadSeriesBase):
+    def test_calcular_volumen_total_no_suma_agregado_y_detalle(self):
+        entreno = self.crear_entreno_detallado()
+
+        self.assertEqual(entreno.calcular_volumen_total(), Decimal('890'))
+
+    def test_sin_series_conserva_fallback_liftin(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
+        )
+        EjercicioLiftinDetallado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio='Press Banca Liftin Autoridad',
+            peso_kg=80,
+            series_realizadas=3,
+            repeticiones_min=5,
+            completado=True,
+        )
+
+        self.assertEqual(entreno.calcular_volumen_total(), Decimal('1200'))
+
+
+class GuardadoSesionDesdeBackendTests(AutoridadSeriesBase):
+    def test_sesion_ignora_volumen_del_front_y_usa_suma_exacta_backend(self):
+        self.client.force_login(self.user)
+        response = self.client.post(
+            reverse('entrenos:guardar_entrenamiento_activo', args=[self.cliente.pk]),
+            {
+                'fecha': date.today().isoformat(),
+                'rutina_nombre': self.rutina.nombre,
+                'ej1_nombre': self.NOMBRE,
+                'ej1_tipo_progresion': 'peso_reps',
+                'ej1_peso_1': '60', 'ej1_reps_1': '4', 'ej1_completado_1': '1',
+                'ej1_peso_2': '65', 'ej1_reps_2': '4', 'ej1_completado_2': '1',
+                'ej1_peso_3': '65', 'ej1_reps_3': '3', 'ej1_completado_3': '1',
+                'ej1_peso_4': '65', 'ej1_reps_4': '3', 'ej1_completado_4': '1',
+                'volumen_total_sesion': '5100',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        entreno = EntrenoRealizado.objects.get(cliente=self.cliente)
+        sesion = SesionEntrenamiento.objects.get(entreno=entreno)
+        self.assertEqual(entreno.volumen_total_kg, Decimal('890'))
+        self.assertEqual(sesion.volumen_sesion, Decimal('890'))
