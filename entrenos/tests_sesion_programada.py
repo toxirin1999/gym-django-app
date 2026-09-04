@@ -498,7 +498,7 @@ class TestCase9_CacheNoBloquea(SesionProgramadaBase):
             cliente=self.cliente,
             fecha_prevista=self.hoy - timedelta(days=1),
             estado=SesionProgramada.ESTADO_PENDIENTE,
-            nombre_sesion='A completar',
+            nombre_sesion=self.rutina.nombre,
         )
         # Simulate an EntrenoRealizado logged for yesterday
         entreno = EntrenoRealizado.objects.create(
@@ -518,6 +518,7 @@ class TestCase9_CacheNoBloquea(SesionProgramadaBase):
 
         sp.refresh_from_db()
         self.assertEqual(sp.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(sp.entreno_realizado_id, entreno.pk)
         # Since the only pending was closed, decision should be rest
         self.assertEqual(decision['tipo'], 'descanso')
 

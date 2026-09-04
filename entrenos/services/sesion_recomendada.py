@@ -164,14 +164,12 @@ def _marcar_completadas(cliente, fecha_hoy):
     Runs on every call to obtener_sesion_recomendada_hoy — not cached — so completing
     a session is reflected immediately on the next panel load.
 
-    Two matching strategies (in order):
-    1. Exact date: EntrenoRealizado on sp.fecha_prevista (original logic).
-    2. Same routine within 7 days after the pending date: catches the case where the
-       user does a pending session on a later date (e.g., pending May 15, done May 18).
-       Only closes if there's exactly ONE matching entreno in the window (no ambiguity).
+    A session is only closed by one unambiguous EntrenoRealizado with the same routine
+    identity. A date by itself is not evidence of session identity: a postponed workout
+    can legitimately be executed on the original date of another session.
 
-    Batch-optimized: prefetches all entrenos and actividades in the window in 2-3 queries
-    instead of 1-2 per pending session.
+    Batch-optimized: prefetches the workouts in the window instead of querying once
+    per pending session.
     """
     from collections import defaultdict
     from django.db.models import Q
@@ -187,32 +185,14 @@ def _marcar_completadas(cliente, fecha_hoy):
     if not pendientes:
         return
 
-    # Strategy 1 batch: dates with any completed gym session in the window
-    entrenos_en_ventana = EntrenoRealizado.objects.filter(cliente=cliente).filter(
-        Q(fecha_ejecucion__gte=fecha_inicio, fecha_ejecucion__lt=fecha_hoy)
-        | Q(fecha_ejecucion__isnull=True, fecha__gte=fecha_inicio, fecha__lt=fecha_hoy)
+    # An EntrenoRealizado already linked to any session is consumed and cannot close
+    # another one, even if name and date happen to coincide.
+    ids_consumidos = set(
+        SesionProgramada.objects.filter(
+            cliente=cliente, entreno_realizado__isnull=False,
+        ).values_list('entreno_realizado_id', flat=True)
     )
-    fechas_entrenos = {
-        fecha_ejecucion if fecha_ejecucion is not None else fecha
-        for fecha, fecha_ejecucion in entrenos_en_ventana.values_list('fecha', 'fecha_ejecucion')
-    }
-    fechas_actividades: set = set()
-    try:
-        fechas_actividades = set(
-            fecha_realizado if fecha_realizado is not None else fecha
-            for fecha, fecha_realizado in ActividadRealizada.objects.filter(
-                cliente=cliente,
-                tipo='gym',
-            ).filter(
-                Q(fecha_realizado__gte=fecha_inicio, fecha_realizado__lt=fecha_hoy)
-                | Q(fecha_realizado__isnull=True, fecha__gte=fecha_inicio, fecha__lt=fecha_hoy)
-            ).values_list('fecha', 'fecha_realizado')
-        )
-    except Exception:
-        pass
-    fechas_completadas = fechas_entrenos | fechas_actividades
 
-    # Strategy 2 batch: entrenos with rutina name in the full window (includes today)
     entrenos_con_rutina = list(
         EntrenoRealizado.objects.filter(
             cliente=cliente,
@@ -228,21 +208,16 @@ def _marcar_completadas(cliente, fecha_hoy):
             rutina_a_entrenos[e.rutina.nombre.lower()].append(e)
 
     for sp in pendientes:
-        # Strategy 1: exact date match
-        if sp.fecha_prevista in fechas_completadas:
-            sp.estado = SesionProgramada.ESTADO_COMPLETADA
-            sp.fecha_realizada = sp.fecha_prevista
-            sp.save(update_fields=['estado', 'fecha_realizada', 'actualizada_en'])
-            continue
-
-        # Strategy 2: same routine done within 7 days after the pending date
         if sp.nombre_sesion:
-            fecha_desde = sp.fecha_prevista + timedelta(days=1)
+            fecha_desde = sp.fecha_prevista
             ventana_hasta = min(sp.fecha_prevista + timedelta(days=7), fecha_hoy)
             nombre_lower = sp.nombre_sesion.lower()
             candidatos = [
                 e for e in rutina_a_entrenos.get(nombre_lower, [])
-                if fecha_desde <= (e.fecha_ejecucion or e.fecha) <= ventana_hasta
+                if (
+                    e.pk not in ids_consumidos
+                    and fecha_desde <= (e.fecha_ejecucion or e.fecha) <= ventana_hasta
+                )
             ]
             if len(candidatos) == 1:
                 entreno = candidatos[0]
@@ -251,6 +226,7 @@ def _marcar_completadas(cliente, fecha_hoy):
                 sp.fecha_realizada = fecha_efectiva
                 sp.entreno_realizado = entreno
                 sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
+                ids_consumidos.add(entreno.pk)
 
 
 def _reconciliar_pendientes_semana(cliente, fecha_hoy):
