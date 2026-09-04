@@ -8,6 +8,7 @@ Flujo:
 """
 
 from datetime import timedelta
+from decimal import Decimal, ROUND_HALF_UP
 from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
@@ -38,12 +39,11 @@ def _tecnicas_sesion(entreno, ejercicio_normalizado):
 
 
 def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
-    """Devuelve el peso de referencia y su serie completada más limitante.
+    """Devuelve el peso de referencia y la media exacta de reps a ese peso.
 
     ``EjercicioRealizado`` conserva un resumen compatible con históricos, pero
-    una media de repeticiones puede ocultar la serie que realmente limita una
-    progresión. Cuando existe detalle, la autoridad es la carga más alta
-    ejecutada y el mínimo de repeticiones completadas con esa carga.
+    cuando existe detalle la autoridad causal son las series completadas. Las
+    aproximaciones con menos peso no deben diluir el rendimiento de trabajo.
     """
     from entrenos.models import SerieRealizada
 
@@ -60,12 +60,37 @@ def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
         return None
 
     peso_referencia = max(serie.peso_kg for serie in series)
-    reps_referencia = min(
-        serie.repeticiones
+    reps_referencia = [
+        Decimal(serie.repeticiones)
         for serie in series
         if serie.peso_kg == peso_referencia
-    )
-    return peso_referencia, reps_referencia
+    ]
+    reps_media = sum(reps_referencia, Decimal('0')) / Decimal(len(reps_referencia))
+    return peso_referencia, reps_media
+
+
+def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
+    """Lee el objetivo que gobernó la sesión desde su versión inmutable."""
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    entrenamiento = snapshot.get('entrenamiento') or {}
+    for ejercicio in entrenamiento.get('ejercicios') or []:
+        if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
+            continue
+        try:
+            return Decimal(str(ejercicio.get('reps_objetivo')))
+        except (TypeError, ValueError, ArithmeticError):
+            return None
+    return None
+
+
+def _reps_para_log(reps_media):
+    """Mantiene el campo entero legacy sin perder la media para decidir."""
+    return int(reps_media.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
+
+
+def _formatear_reps(reps):
+    return format(reps.normalize(), 'f').replace('.', ',')
 
 
 def _tope_sin_margen(ejercicio, historial):
@@ -157,11 +182,13 @@ def generar_decisiones_para_entreno(entreno):
             confianza = 'alta'
 
         rendimiento_series = _rendimiento_representativo_desde_series(entreno, nombre)
+        reps_media = None
         if rendimiento_series is None:
             peso = ej.peso_kg or 0
             reps = ej.repeticiones
         else:
-            peso, reps = rendimiento_series
+            peso, reps_media = rendimiento_series
+            reps = _reps_para_log(reps_media)
         rpe = float(ej.rpe) if ej.rpe is not None else None
         fallo = ej.fallo_muscular
         es_tope = ej.es_tope_maquina
@@ -174,6 +201,34 @@ def generar_decisiones_para_entreno(entreno):
             ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
         )
         motivo_codigo = ''
+
+        objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
+        progresion_por_reps = tipo_progresion in (
+            'peso_reps', 'peso_corporal_lastre', 'progresion_reps',
+        )
+        if reps_media is not None and objetivo_reps is not None and progresion_por_reps:
+            lectura = (
+                f'Media {_formatear_reps(reps_media)} frente al objetivo '
+                f'{_formatear_reps(objetivo_reps)}'
+            )
+            if reps_media < objetivo_reps and accion in ('subir_peso', 'subir_reps'):
+                accion = 'mantener'
+                valor_cambio = None
+                motivo = f'{lectura} — completar el objetivo antes de progresar'
+            elif (
+                reps_media > objetivo_reps
+                and not fallo
+                and not es_tope
+                and rpe is not None
+                and rpe <= 8
+            ):
+                if tipo_progresion == 'progresion_reps':
+                    accion = 'subir_reps'
+                    valor_cambio = 1
+                else:
+                    accion = 'subir_peso'
+                    valor_cambio = perfil.incremento_peso_pct
+                motivo = f'{lectura} — objetivo superado con esfuerzo controlado'
 
         if accion == 'subir_reps' and es_tope:
             motivo_codigo = 'tope_maquina'

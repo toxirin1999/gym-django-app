@@ -14,6 +14,7 @@ from entrenos.models import (
     SerieRealizada,
     SesionEntrenamiento,
     GymDecisionLog,
+    GymDecisionVersion,
 )
 from entrenos.services.decision_log_service import generar_decisiones_para_entreno
 from entrenos.services.records_service import RecordsService
@@ -130,11 +131,34 @@ class VolumenEntrenoDesdeSeriesTests(AutoridadSeriesBase):
 
 
 class DecisionProgresionDesdeSeriesTests(AutoridadSeriesBase):
-    def test_decision_usa_la_serie_limitante_al_peso_de_referencia(self):
+    def crear_version_con_objetivo(self, repeticiones=8):
+        return GymDecisionVersion.objects.create(
+            cliente=self.cliente,
+            fecha=date.today(),
+            version=1,
+            decision_id='gym-objetivo-series',
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            vigente=True,
+            fingerprint='objetivo-series',
+            base_fingerprint='objetivo-series-base',
+            postura='empujar',
+            snapshot={
+                'entrenamiento': {
+                    'ejercicios': [{
+                        'nombre': self.NOMBRE,
+                        'reps_objetivo': repeticiones,
+                        'peso_recomendado_kg': 45,
+                    }],
+                },
+            },
+        )
+
+    def test_media_superior_al_objetivo_considera_superado_el_ejercicio(self):
         entreno = EntrenoRealizado.objects.create(
             cliente=self.cliente,
             rutina=self.rutina,
             fecha=date.today(),
+            gym_decision_version=self.crear_version_con_objetivo(8),
         )
         EjercicioRealizado.objects.create(
             entreno=entreno,
@@ -161,7 +185,61 @@ class DecisionProgresionDesdeSeriesTests(AutoridadSeriesBase):
 
         decision = GymDecisionLog.objects.get(entreno_origen=entreno)
         self.assertEqual(decision.peso_anterior, 45)
-        self.assertEqual(decision.reps_anteriores, 6)
+        self.assertEqual(decision.reps_anteriores, 8)
+        self.assertEqual(decision.accion, 'subir_peso')
+        self.assertIn('media 8,4', decision.motivo.lower())
+        self.assertIn('objetivo 8', decision.motivo)
+
+    def test_media_inferior_al_objetivo_bloquea_una_subida(self):
+        anterior = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=date.today(),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=anterior,
+            nombre_ejercicio=self.NOMBRE,
+            peso_kg=45,
+            series=5,
+            repeticiones=8,
+            rpe=7,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+        version = self.crear_version_con_objetivo(8)
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=date.today(),
+            gym_decision_version=version,
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio=self.NOMBRE,
+            peso_kg=45,
+            series=5,
+            repeticiones=7,
+            rpe=7,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+        for numero, reps in enumerate((8, 8, 7, 7, 7), 1):
+            SerieRealizada.objects.create(
+                entreno=entreno,
+                ejercicio=self.base,
+                serie_numero=numero,
+                peso_kg=45,
+                repeticiones=reps,
+                rpe_real=7,
+                completado=True,
+            )
+
+        generar_decisiones_para_entreno(entreno)
+
+        decision = GymDecisionLog.objects.get(entreno_origen=entreno)
+        self.assertEqual(decision.accion, 'mantener')
+        self.assertIn('media 7,4', decision.motivo.lower())
+        self.assertIn('objetivo 8', decision.motivo)
 
     def test_decision_sin_series_conserva_el_resumen_legacy(self):
         entreno = EntrenoRealizado.objects.create(
