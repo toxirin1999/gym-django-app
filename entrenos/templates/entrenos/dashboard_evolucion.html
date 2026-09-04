@@ -100,6 +100,17 @@ body {
 
 /* ── SECTION ─────────────────────────────────── */
 .rb-section { padding: 20px 0 4px; }
+.rb-performance { border:1px solid var(--line-2); border-left:4px solid #0891b2; padding:20px; margin:22px 0; background:rgba(8,145,178,.035); }
+.rb-performance-head { display:flex; justify-content:space-between; gap:16px; align-items:end; border-bottom:1px solid var(--line); padding-bottom:14px; }
+.rb-performance-title { font-family:var(--font-disp); font-size:clamp(25px,6vw,38px); line-height:1; }
+.rb-performance-source { font-family:var(--font-mono); color:var(--ink-3); font-size:9px; text-transform:uppercase; letter-spacing:.1em; }
+.rb-performance-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--line); margin-top:16px; }
+.rb-performance-axis { background:var(--paper); padding:16px; min-height:150px; }
+.rb-performance-axis small { display:block; font-family:var(--font-mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); margin-bottom:10px; }
+.rb-performance-axis strong { display:block; font-size:18px; margin-bottom:8px; }
+.rb-performance-axis p { color:var(--ink-3); font-size:12px; line-height:1.55; }
+.rb-performance-foot { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:16px; font-family:var(--font-mono); font-size:10px; }
+@media(max-width:620px){.rb-performance-grid{grid-template-columns:1fr}.rb-performance-axis{min-height:0}.rb-performance-head,.rb-performance-foot{align-items:flex-start;flex-direction:column}}
 .rb-section-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
 .rb-section-num { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   color: var(--ink-4); letter-spacing: 0.15em; }
@@ -621,6 +632,46 @@ body {
     <div class="rb-bib-lectura">{{ lectura_periodo }}</div>
     {% endif %}
   </div>
+
+  <!-- Lectura retrospectiva canónica: observado, no proyectado. -->
+  <section class="rb-performance" aria-labelledby="rendimiento-global-title">
+    <div class="rb-performance-head">
+      <div>
+        <div class="rb-performance-source">Rendimiento · evidencia del periodo</div>
+        <h1 id="rendimiento-global-title" class="rb-performance-title">Rendimiento global</h1>
+      </div>
+      <div class="rb-performance-source">{{ rendimiento_global.sesiones_observadas }} sesiones observadas</div>
+    </div>
+    {% if rendimiento_global.sesiones_observadas %}
+    <div class="rb-performance-grid">
+      <article class="rb-performance-axis">
+        <small>01 · Progresión observada</small>
+        {% if rendimiento_global.progresion.estado == 'sin_evidencia' %}
+          <strong>En construcción</strong><p>Hace falta repetir algún ejercicio en ambos tramos para comparar.</p>
+        {% else %}
+          <strong>{{ rendimiento_global.progresion.estado|capfirst }}</strong>
+          <p>{{ rendimiento_global.progresion.ejercicio }} · e1RM estimado {{ rendimiento_global.progresion.e1rm_anterior }} → {{ rendimiento_global.progresion.e1rm_reciente }} kg ({{ rendimiento_global.progresion.cambio_pct }}%).</p>
+        {% endif %}
+      </article>
+      <article class="rb-performance-axis">
+        <small>02 · Esfuerzo sostenible</small>
+        <strong>{{ rendimiento_global.esfuerzo.estado|capfirst }}</strong>
+        <p>{% if rendimiento_global.esfuerzo.rpe_reciente != None %}RPE observado reciente: {{ rendimiento_global.esfuerzo.rpe_reciente }}{% else %}No hay RPE suficiente en el periodo.{% endif %}</p>
+      </article>
+      <article class="rb-performance-axis">
+        <small>03 · Constancia</small>
+        <strong>{{ rendimiento_global.constancia.estado|capfirst }}</strong>
+        <p>{{ rendimiento_global.constancia.sesiones_recientes }} sesiones en el tramo reciente frente a {{ rendimiento_global.constancia.sesiones_anteriores }} en el anterior.</p>
+      </article>
+    </div>
+    {% else %}
+      <div class="rb-empty" style="margin-top:16px">Aún no hay sesiones suficientes para construir una tendencia fiable.</div>
+    {% endif %}
+    <div class="rb-performance-foot">
+      <span>Cobertura: {{ rendimiento_global.cobertura.con_volumen }}/{{ rendimiento_global.cobertura.sesiones }} con volumen · {{ rendimiento_global.cobertura.con_duracion }}/{{ rendimiento_global.cobertura.sesiones }} con duración</span>
+      <a href="{% url 'clientes:trayectoria_plan' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Trayectoria del plan →</a>
+    </div>
+  </section>
 
   <!-- ── ACCIONES ── -->
   <div class="rb-actions">

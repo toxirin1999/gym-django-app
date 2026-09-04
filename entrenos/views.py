@@ -7364,6 +7364,8 @@ def dashboard_evolucion(request, cliente_id):
 
     cliente = get_object_or_404(Cliente, id=cliente_id)
     rango = request.GET.get('rango', '30d')
+    from entrenos.services.rendimiento_global_service import construir_rendimiento_global
+    rendimiento_global = construir_rendimiento_global(cliente, rango)
 
     # 1. Usar servicios de estadísticas para cálculos pesados
     stats = EstadisticasService.calcular_estadisticas_globales(cliente, rango)
@@ -7590,6 +7592,7 @@ def dashboard_evolucion(request, cliente_id):
         # Phase Evolución UI 2: tabs como relatos separados
         'lectura_carga_tab': lectura_carga_tab,
         'lectura_progresion_tab': lectura_progresion_tab,
+        'rendimiento_global': rendimiento_global,
     }
 
     return render(request, 'entrenos/dashboard_evolucion.html', context)
