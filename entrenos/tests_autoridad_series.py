@@ -13,7 +13,9 @@ from entrenos.models import (
     RecordPersonal,
     SerieRealizada,
     SesionEntrenamiento,
+    GymDecisionLog,
 )
+from entrenos.services.decision_log_service import generar_decisiones_para_entreno
 from entrenos.services.records_service import RecordsService
 from rutinas.models import EjercicioBase, Rutina
 
@@ -125,6 +127,64 @@ class VolumenEntrenoDesdeSeriesTests(AutoridadSeriesBase):
         )
 
         self.assertEqual(entreno.calcular_volumen_total(), Decimal('1200'))
+
+
+class DecisionProgresionDesdeSeriesTests(AutoridadSeriesBase):
+    def test_decision_usa_la_serie_limitante_al_peso_de_referencia(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=date.today(),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio=self.NOMBRE,
+            peso_kg=45,
+            series=5,
+            repeticiones=8,  # promedio legacy: no es la autoridad causal
+            rpe=8,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+        for numero, reps in enumerate((9, 9, 9, 9, 6), 1):
+            SerieRealizada.objects.create(
+                entreno=entreno,
+                ejercicio=self.base,
+                serie_numero=numero,
+                peso_kg=45,
+                repeticiones=reps,
+                rpe_real=8,
+                completado=True,
+            )
+
+        generar_decisiones_para_entreno(entreno)
+
+        decision = GymDecisionLog.objects.get(entreno_origen=entreno)
+        self.assertEqual(decision.peso_anterior, 45)
+        self.assertEqual(decision.reps_anteriores, 6)
+
+    def test_decision_sin_series_conserva_el_resumen_legacy(self):
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=date.today(),
+        )
+        EjercicioRealizado.objects.create(
+            entreno=entreno,
+            nombre_ejercicio=self.NOMBRE,
+            peso_kg=45,
+            series=5,
+            repeticiones=8,
+            rpe=8,
+            grupo_muscular='piernas',
+            completado=True,
+        )
+
+        generar_decisiones_para_entreno(entreno)
+
+        decision = GymDecisionLog.objects.get(entreno_origen=entreno)
+        self.assertEqual(decision.peso_anterior, 45)
+        self.assertEqual(decision.reps_anteriores, 8)
 
 
 class GuardadoSesionDesdeBackendTests(AutoridadSeriesBase):

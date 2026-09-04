@@ -37,6 +37,37 @@ def _tecnicas_sesion(entreno, ejercicio_normalizado):
     ]
 
 
+def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
+    """Devuelve el peso de referencia y su serie completada más limitante.
+
+    ``EjercicioRealizado`` conserva un resumen compatible con históricos, pero
+    una media de repeticiones puede ocultar la serie que realmente limita una
+    progresión. Cuando existe detalle, la autoridad es la carga más alta
+    ejecutada y el mínimo de repeticiones completadas con esa carga.
+    """
+    from entrenos.models import SerieRealizada
+
+    series = [
+        serie
+        for serie in SerieRealizada.objects.filter(
+            entreno=entreno,
+            completado=True,
+            peso_kg__isnull=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
+    ]
+    if not series:
+        return None
+
+    peso_referencia = max(serie.peso_kg for serie in series)
+    reps_referencia = min(
+        serie.repeticiones
+        for serie in series
+        if serie.peso_kg == peso_referencia
+    )
+    return peso_referencia, reps_referencia
+
+
 def _tope_sin_margen(ejercicio, historial):
     """Tres topes consecutivos idénticos indican que +reps dejó de avanzar."""
     if not ejercicio.es_tope_maquina:
@@ -125,8 +156,12 @@ def generar_decisiones_para_entreno(entreno):
         else:
             confianza = 'alta'
 
-        peso = ej.peso_kg or 0
-        reps = ej.repeticiones
+        rendimiento_series = _rendimiento_representativo_desde_series(entreno, nombre)
+        if rendimiento_series is None:
+            peso = ej.peso_kg or 0
+            reps = ej.repeticiones
+        else:
+            peso, reps = rendimiento_series
         rpe = float(ej.rpe) if ej.rpe is not None else None
         fallo = ej.fallo_muscular
         es_tope = ej.es_tope_maquina
@@ -409,8 +444,16 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
     fallo_nuevo = nueva_sesion.fallo_muscular
-    peso_nuevo = nueva_sesion.peso_kg or 0
-    reps_nuevas = nueva_sesion.repeticiones
+    nombre = normalizar_ejercicio(nueva_sesion.nombre_ejercicio)
+    rendimiento_series = _rendimiento_representativo_desde_series(
+        nueva_sesion.entreno,
+        nombre,
+    )
+    if rendimiento_series is None:
+        peso_nuevo = nueva_sesion.peso_kg or 0
+        reps_nuevas = nueva_sesion.repeticiones
+    else:
+        peso_nuevo, reps_nuevas = rendimiento_series
 
     peso_anterior = log.peso_anterior or 0
     reps_anteriores = log.reps_anteriores or 0
