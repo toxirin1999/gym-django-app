@@ -686,7 +686,10 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         else:
             resultado = 'neutra'
             notas = 'Reducción aplicada pero RPE sigue alto'
-    elif log.accion == 'mantener' and abs(peso_nuevo - peso_anterior) < 0.5:
+    elif (
+        log.accion == 'mantener'
+        and abs(float(peso_nuevo) - float(peso_anterior)) < 0.5
+    ):
         resultado = 'validada'
         notas = 'Peso mantenido según la recomendación'
     else:

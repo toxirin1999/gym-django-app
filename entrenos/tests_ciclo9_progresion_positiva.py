@@ -139,6 +139,36 @@ class CicloProgresionPositivaTests(TestCase):
         self.assertEqual(decision.resultado, 'fallida')
         self.assertIn('técnica', decision.notas_resultado.lower())
 
+    def test_decision_historica_mantener_acepta_peso_decimal_del_entreno(self):
+        """El cierre del guardado no debe mezclar Decimal con float."""
+        decision = GymDecisionLog.objects.create(
+            cliente=self.cliente,
+            ejercicio='press banca',
+            ejercicio_normalizado='press banca',
+            accion='mantener',
+            motivo_codigo='',
+            peso_anterior=80.0,
+            reps_anteriores=8,
+            rpe_anterior=7,
+            motivo='Mantener la carga actual',
+        )
+        siguiente = self.sesion(date(2026, 8, 8), peso=80, rpe=7)
+        SerieRealizada.objects.create(
+            entreno=siguiente,
+            ejercicio=self.base,
+            serie_numero=1,
+            repeticiones=8,
+            peso_kg='80.00',
+            rpe_real=7,
+            completado=True,
+        )
+
+        evaluar_decisiones_para_entreno(siguiente)
+
+        decision.refresh_from_db()
+        self.assertEqual(decision.resultado, 'validada')
+        self.assertIn('mantenido', decision.notas_resultado.lower())
+
     def test_progresion_por_distancia_exige_el_incremento_completo(self):
         EjercicioBase.objects.create(
             nombre='Farmer walk', tipo_progresion='progresion_distancia',
