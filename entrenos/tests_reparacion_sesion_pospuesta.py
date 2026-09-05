@@ -2,12 +2,16 @@ from datetime import date
 from io import StringIO
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.core.management import CommandError, call_command
 from django.test import TestCase
 
 from clientes.models import Cliente
 from entrenos.models import EntrenoRealizado, SesionProgramada
-from entrenos.services.sesion_recomendada import _marcar_completadas
+from entrenos.services.sesion_recomendada import (
+    _marcar_completadas,
+    obtener_sesion_recomendada_hoy,
+)
 from rutinas.models import Rutina
 
 
@@ -108,9 +112,30 @@ class RepararSesionesProgramadasCommandTest(TestCase):
         self.assertEqual(self.dia5.fecha_realizada, date(2026, 9, 4))
         self.assertEqual(self.dia5.entreno_realizado_id, self.entreno5.pk)
 
+    def test_sesion_restaurada_sigue_siendo_autoridad_el_sabado(self):
+        self._call(apply=True)
+        # Las señales de creación del Cliente pueden materializar sesiones de apoyo
+        # ajenas a este escenario. La regresión solo compara las dos sesiones del
+        # contrato que estamos reparando.
+        SesionProgramada.objects.filter(cliente=self.cliente).exclude(
+            pk__in=[self.dia4.pk, self.dia5.pk],
+        ).update(estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        cache.set(f"sesion_sync_{self.cliente.pk}_2026-09-05", True, 60)
+
+        decision = obtener_sesion_recomendada_hoy(
+            self.cliente,
+            date(2026, 9, 5),
+        )
+
+        self.dia4.refresh_from_db()
+        self.assertEqual(decision["tipo"], "pendiente")
+        self.assertEqual(decision["estado"], "entrenar")
+        self.assertEqual(decision["sesion_programada"].pk, self.dia4.pk)
+        self.assertEqual(self.dia4.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertIsNone(self.dia4.entreno_realizado_id)
+
     def test_rechaza_entreno_incompatible_por_nombre(self):
         self.entreno5.rutina.nombre = "Dia 3 - Fuerza — Avanzada"
         self.entreno5.rutina.save(update_fields=["nombre"])
         with self.assertRaises(CommandError):
             self._call(apply=True)
-
