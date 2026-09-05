@@ -3747,7 +3747,13 @@ def vista_entrenamiento_activo(request, cliente_id):
                     reps_alias = 8
                 ejercicio.setdefault('reps_objetivo', reps_alias)
                 ejercicio.setdefault('peso_recomendado_kg', ejercicio.get('peso_kg', 0.0))
-                ejercicio.setdefault('peso_inicial_kg', ejercicio.get('peso_recomendado_kg', 0.0))
+                # La ejecución debe partir del mismo peso contractual que muestra
+                # el briefing. Un ``peso_inicial_kg`` serializado en una versión
+                # anterior del snapshot puede quedar obsoleto (p. ej. 100 kg)
+                # después de materializar la progresión canónica (105 kg).
+                # Las excepciones ejecutivas, como el tope de máquina, se aplican
+                # explícitamente más abajo y pueden volver a sobrescribirlo.
+                ejercicio['peso_inicial_kg'] = ejercicio.get('peso_recomendado_kg', 0.0)
                 ejercicio.setdefault('descanso_minutos', 2)
                 ejercicio.setdefault('tipo_progresion', 'peso_reps')
                 ejercicio.setdefault('usa_tiempo', ejercicio['tipo_progresion'] == 'progresion_tiempo')

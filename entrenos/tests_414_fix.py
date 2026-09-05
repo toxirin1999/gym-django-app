@@ -319,7 +319,7 @@ class AutoridadMaterializadaEnEjecucionTests(_Base):
                 'ejercicios': json.dumps(ejercicios),
             })
 
-    def test_canonica_preserva_inputs_identidad_y_enriquece_ui(self):
+    def test_canonica_usa_el_peso_contractual_en_la_ejecucion(self):
         ejercicio = {
             'nombre': 'Press Banca canónico',
             'series': 4,
@@ -341,10 +341,11 @@ class AutoridadMaterializadaEnEjecucionTests(_Base):
         actual = resp.context['ejercicios_planificados'][0]
         for campo in (
             'nombre', 'series', 'repeticiones', 'reps_objetivo', 'peso_kg',
-            'peso_recomendado_kg', 'peso_inicial_kg', 'rpe_objetivo',
+            'peso_recomendado_kg', 'rpe_objetivo',
             '_autoridad_gym_decision_id', '_deload_aplicado',
         ):
             self.assertEqual(actual[campo], ejercicio[campo], campo)
+        self.assertEqual(actual['peso_inicial_kg'], 80.0)
         self.assertEqual(actual['form_id'], 'ejercicio_0')
         self.assertTrue(actual['es_principal'])
         self.assertIn('tempo', actual)
