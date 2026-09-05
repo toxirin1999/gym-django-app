@@ -13,6 +13,13 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument('decision_id', type=int)
+        parser.add_argument(
+            '--objetivo-reps',
+            help=(
+                'Objetivo verificado para registros legacy cuyo snapshot no lo '
+                'conserva. Se rechaza si contradice un snapshot existente.'
+            ),
+        )
         parser.add_argument('--apply', action='store_true')
 
     def handle(self, *args, **options):
@@ -20,6 +27,7 @@ class Command(BaseCommand):
             resultado = reparar_decision_progresion_series(
                 decision_id=options['decision_id'],
                 apply=options['apply'],
+                objetivo_reps=options['objetivo_reps'],
             )
         except ReparacionDecisionSeriesError as exc:
             raise CommandError(str(exc)) from exc

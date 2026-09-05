@@ -1,3 +1,5 @@
+from decimal import Decimal, InvalidOperation
+
 from django.db import transaction
 
 from entrenos.models import EjercicioRealizado, GymAdaptationProfile, GymDecisionLog
@@ -17,7 +19,9 @@ class ReparacionDecisionSeriesError(ValueError):
 
 
 @transaction.atomic
-def reparar_decision_progresion_series(*, decision_id, apply=False):
+def reparar_decision_progresion_series(
+    *, decision_id, apply=False, objetivo_reps=None,
+):
     """Revalida una progresión legacy aún pendiente con sus series canónicas."""
     decisiones = GymDecisionLog.objects.select_related(
         'entreno_origen', 'entreno_origen__gym_decision_version',
@@ -60,10 +64,41 @@ def reparar_decision_progresion_series(*, decision_id, apply=False):
         )
 
     rendimiento = _rendimiento_representativo_desde_series(entreno, nombre)
-    objetivo = _objetivo_repeticiones_snapshot(entreno, nombre)
-    if rendimiento is None or objetivo is None:
+    if rendimiento is None:
         raise ReparacionDecisionSeriesError(
-            'faltan series canónicas o el objetivo inmutable de repeticiones'
+            'faltan series canónicas'
+        )
+    objetivo_snapshot = _objetivo_repeticiones_snapshot(entreno, nombre)
+    objetivo_explicito = None
+    if objetivo_reps is not None:
+        try:
+            objetivo_explicito = Decimal(str(objetivo_reps))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise ReparacionDecisionSeriesError(
+                'el objetivo explícito de repeticiones no es válido'
+            ) from exc
+        if objetivo_explicito <= 0:
+            raise ReparacionDecisionSeriesError(
+                'el objetivo explícito de repeticiones debe ser positivo'
+            )
+    if (
+        objetivo_snapshot is not None
+        and objetivo_explicito is not None
+        and objetivo_snapshot != objetivo_explicito
+    ):
+        raise ReparacionDecisionSeriesError(
+            'el objetivo explícito contradice el snapshot inmutable'
+        )
+    if objetivo_snapshot is not None:
+        objetivo = objetivo_snapshot
+        objetivo_origen = 'snapshot_inmutable'
+    elif objetivo_explicito is not None:
+        objetivo = objetivo_explicito
+        objetivo_origen = 'argumento_explicito'
+    else:
+        raise ReparacionDecisionSeriesError(
+            'falta el objetivo inmutable de repeticiones; '
+            'usa --objetivo-reps solo después de verificarlo'
         )
     peso, media = rendimiento
     rpe = float(ejercicio.rpe) if ejercicio.rpe is not None else None
@@ -126,6 +161,7 @@ def reparar_decision_progresion_series(*, decision_id, apply=False):
         'estado': 'ya_consistente' if ya_consistente else ('aplicada' if apply else 'candidata'),
         'media_reps': str(media.normalize()),
         'objetivo_reps': str(objetivo.normalize()),
+        'objetivo_origen': objetivo_origen,
         'antes': antes,
         'propuesto': propuesto,
     }

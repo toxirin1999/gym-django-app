@@ -135,6 +135,26 @@ class RepararDecisionProgresionSeriesTests(TestCase):
         repetido = self.ejecutar('--apply')
         self.assertEqual(repetido['estado'], 'ya_consistente')
 
+    def test_permite_objetivo_explicito_si_el_snapshot_legacy_no_lo_conserva(self):
+        version = self.decision.entreno_origen.gym_decision_version
+        version.snapshot = {'entrenamiento': {'ejercicios': []}}
+        version.save(update_fields=['snapshot'])
+
+        with self.assertRaisesMessage(CommandError, 'objetivo inmutable'):
+            self.ejecutar()
+
+        resultado = self.ejecutar('--objetivo-reps', '8')
+
+        self.assertEqual(resultado['estado'], 'candidata')
+        self.assertEqual(resultado['objetivo_reps'], '8')
+        self.assertEqual(resultado['objetivo_origen'], 'argumento_explicito')
+        self.decision.refresh_from_db()
+        self.assertEqual(self.decision.accion, 'mantener')
+
+    def test_rechaza_objetivo_explicito_que_contradice_el_snapshot(self):
+        with self.assertRaisesMessage(CommandError, 'contradice el snapshot'):
+            self.ejecutar('--objetivo-reps', '9')
+
     def test_rechaza_una_decision_que_ya_fue_aplicada(self):
         self.decision.estado_aplicacion = 'aplicada'
         self.decision.save(update_fields=['estado_aplicacion'])
