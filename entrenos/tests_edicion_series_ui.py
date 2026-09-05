@@ -27,6 +27,9 @@ class EdicionSeriesUIRegressionTests(TestCase):
         cls.confirmar = cls.source.split(
             "document.getElementById('btn-confirmar-guardar')", 1
         )[1].split("// Aviso al salir sin guardar", 1)[0]
+        cls.tecnica = cls.source.split("function selTecnica", 1)[1].split(
+            "function _resetTecnica", 1
+        )[0]
 
     def test_editar_preserva_state_y_filas_posteriores(self):
         self.assertNotIn(".splice(", self.editar)
@@ -74,3 +77,27 @@ class EdicionSeriesUIRegressionTests(TestCase):
         self.assertIn("rpe-hid-'+fid+'-'+sn", self.sincronizar)
         self.assertIn("check-'+fid+'-'+sn", self.sincronizar)
         self.assertIn("checkbox.checked = true", self.sincronizar)
+
+    def test_sincronizacion_recrea_el_input_de_tecnica_si_la_sesion_fue_recuperada(self):
+        self.assertIn("fid+'_tecnica_'+sn", self.sincronizar)
+        self.assertIn("document.createElement('input')", self.sincronizar)
+        self.assertIn("tecnicaInput.name", self.sincronizar)
+        self.assertIn("serie.tecnica", self.sincronizar)
+
+    def test_seleccionar_tecnica_actualiza_el_borrador_recuperable(self):
+        self.assertIn("s.tecnica = val", self.tecnica)
+        self.assertIn("guardarCheckpoint()", self.tecnica)
+
+    def test_confirmar_conserva_borrador_y_reloj_hasta_confirmacion_del_servidor(self):
+        success = self.confirmar.index("if (data.success")
+        limpiar = self.confirmar.index("limpiarCheckpoint()")
+        quitar_reloj = self.confirmar.index("localStorage.removeItem(_WK_KEY)")
+
+        self.assertGreater(limpiar, success)
+        self.assertGreater(quitar_reloj, success)
+
+    def test_error_de_red_no_hace_post_tradicional_ni_pierde_el_reintento(self):
+        catch = self.confirmar.split(".catch", 1)[1]
+        self.assertNotIn("form.submit()", catch)
+        self.assertIn("_sessionGuardada = false", catch)
+        self.assertIn("ov.style.display = 'none'", catch)

@@ -266,6 +266,28 @@ class DecisionProgresionDesdeSeriesTests(AutoridadSeriesBase):
 
 
 class GuardadoSesionDesdeBackendTests(AutoridadSeriesBase):
+    def test_sesion_persiste_la_tecnica_enviada_por_cada_serie(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            reverse('entrenos:guardar_entrenamiento_activo', args=[self.cliente.pk]),
+            {
+                'fecha': date.today().isoformat(),
+                'rutina_nombre': self.rutina.nombre,
+                'ej1_nombre': self.NOMBRE,
+                'ej1_tipo_progresion': 'peso_reps',
+                'ej1_peso_1': '60',
+                'ej1_reps_1': '4',
+                'ej1_rpe_1': '8',
+                'ej1_tecnica_1': 'buena',
+                'ej1_completado_1': '1',
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        serie = SerieRealizada.objects.get(entreno__cliente=self.cliente)
+        self.assertEqual(serie.tecnica_calidad, 'buena')
+
     def test_sesion_ignora_volumen_del_front_y_usa_suma_exacta_backend(self):
         self.client.force_login(self.user)
         response = self.client.post(

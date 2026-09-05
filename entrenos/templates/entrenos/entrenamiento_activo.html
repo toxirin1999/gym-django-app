@@ -2920,6 +2920,10 @@ function selTecnica(fid, val){
   const s = STATE.seriesCompletadas[fid]?.[sn-1];
   if(s) s.tecnica = val;
 
+  // La elección sucede después de guardar la serie. Actualiza también el
+  // borrador para que una recarga o un reintento conserve el valor elegido.
+  guardarCheckpoint();
+
   const badge = document.getElementById('tecnica-badge-'+fid+'-'+sn);
   if(badge){
     badge.innerHTML = val==='buena'
@@ -3006,13 +3010,19 @@ function sincronizarSeriesConfirmadasConFormulario(form){
         || form.elements.namedItem(fid+'_rpe_'+sn);
       const checkbox=document.getElementById('check-'+fid+'-'+sn)
         || form.elements.namedItem(fid+'_completado_'+sn);
-      const tecnicaInput=form.elements.namedItem(fid+'_tecnica_'+sn);
+      let tecnicaInput=form.elements.namedItem(fid+'_tecnica_'+sn);
+      if(!tecnicaInput){
+        tecnicaInput=document.createElement('input');
+        tecnicaInput.type='hidden';
+        tecnicaInput.name=fid+'_tecnica_'+sn;
+        form.appendChild(tecnicaInput);
+      }
 
       if(pesoInput)pesoInput.value=serie.peso;
       if(repsInput)repsInput.value=serie.reps;
       if(rpeInput)rpeInput.value=serie.rpe;
       if(checkbox)checkbox.checked = true;
-      if(tecnicaInput && serie.tecnica)tecnicaInput.value=serie.tecnica;
+      if(serie.tecnica)tecnicaInput.value=serie.tecnica;
     });
   });
 }
@@ -3020,8 +3030,6 @@ function sincronizarSeriesConfirmadasConFormulario(form){
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   _sessionGuardada = true;
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
-  limpiarCheckpoint();
-  localStorage.removeItem(_WK_KEY);
   const ov = document.getElementById('saving-overlay');
   if (ov) ov.style.display = 'flex';
 
@@ -3038,21 +3046,29 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   })
   .then(response => response.json())
   .then(data => {
-    if (data.success && data.refresh_joi) {
+    if (data.success) {
+      // El borrador y el inicio del reloj solo dejan de ser necesarios cuando
+      // el servidor confirma que la sesión quedó persistida.
+      limpiarCheckpoint();
+      localStorage.removeItem(_WK_KEY);
       // Refresh JOI estado in parallel (non-blocking)
-      fetch('/joi/api/pulso-actual/').catch(() => {});
+      if (data.refresh_joi) {
+        fetch('/joi/api/pulso-actual/').catch(() => {});
+      }
       // Redirect to post-session summary
       setTimeout(() => {
         window.location.href = `/entrenos/cliente/${clienteId}/entreno/${data.entreno_id}/cierre/`;
       }, 200);
     } else {
-      // Fallback on unexpected response
-      form.submit();
+      throw new Error(data.error || 'No se pudo confirmar el guardado');
     }
   })
   .catch(() => {
-    // Network error: fallback to traditional POST
-    form.submit();
+    // Conserva series, técnica y hora inicial para que el usuario reintente
+    // sin convertir el segundo intento en una sesión nueva o más corta.
+    _sessionGuardada = false;
+    if (ov) ov.style.display = 'none';
+    window.alert('No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
   });
 });
 
