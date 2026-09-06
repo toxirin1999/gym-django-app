@@ -14,8 +14,9 @@ from entrenos.services.evaluacion_semanal_gym_service import (
 
 def _base(
     referencia, aplicar, operacion, resultados, *, semana=None, solo_lectura=None,
+    **extras,
 ):
-    return {
+    payload = {
         'fecha': referencia.isoformat(),
         'modo': 'apply' if aplicar else 'dry-run',
         'operacion': operacion,
@@ -23,10 +24,11 @@ def _base(
         'semana': semana,
         'solo_lectura': (not aplicar if solo_lectura is None else solo_lectura),
     }
+    payload.update(extras)
+    return payload
 
 
-def _cerrar_semana_anterior(referencia, aplicar):
-    semana = referencia - timedelta(days=7)
+def _cerrar_semana(semana, referencia, aplicar, *, solo_si_concluida=False):
     contratos = list(
         ContratoSemanalGym.objects.filter(semana=semana)
         .select_related('cliente')
@@ -48,6 +50,40 @@ def _cerrar_semana_anterior(referencia, aplicar):
                     'estado_revision': existente.estado_revision,
                     'evaluacion_id': existente.pk,
                 })
+            elif solo_si_concluida:
+                sesiones_total = contrato.sesiones.count()
+                sesiones_pendientes = contrato.sesiones.filter(estado='pendiente').count()
+                if not sesiones_total or sesiones_pendientes:
+                    fila.update({
+                        'estado': 'pendiente_hasta_lunes',
+                        'sesiones_pendientes': sesiones_pendientes,
+                    })
+                    resultados.append(fila)
+                    continue
+                if aplicar:
+                    # El evaluador considera la semana abierta durante el propio
+                    # domingo. Aquí solo llegamos cuando todas sus sesiones ya
+                    # concluyeron, así que usamos el instante lógico de cierre
+                    # (lunes) sin alterar la fecha real de referencia del ciclo.
+                    hoy_evaluacion = referencia + timedelta(days=1)
+                    evaluacion = evaluar_y_persistir_contrato_semanal_gym(
+                        contrato, hoy=hoy_evaluacion,
+                    )
+                    fila.update({
+                        'estado': 'evaluada',
+                        'estado_cumplimiento': evaluacion.estado_cumplimiento,
+                        'estado_revision': evaluacion.estado_revision,
+                        'evaluacion_id': evaluacion.pk,
+                        'sesiones_completadas': evaluacion.sesiones_completadas,
+                    })
+                else:
+                    evidencia = _snapshot(contrato)
+                    fila.update({
+                        'estado': 'previsualizada',
+                        'estado_cumplimiento': evidencia['estado_cumplimiento'],
+                        'evaluacion_id': None,
+                        'sesiones_completadas': evidencia['sesiones_completadas'],
+                    })
             elif aplicar:
                 evaluacion = evaluar_y_persistir_contrato_semanal_gym(
                     contrato, hoy=referencia,
@@ -77,10 +113,23 @@ def _cerrar_semana_anterior(referencia, aplicar):
     return resultados
 
 
+def _cerrar_semana_anterior(referencia, aplicar):
+    return _cerrar_semana(
+        referencia - timedelta(days=7), referencia, aplicar,
+    )
+
+
 def operar_semana_gym(*, fecha_referencia=None, aplicar=False):
-    """Abre el domingo, cierra el lunes y no opera el resto de días."""
+    """Cierra si procede y abre el domingo; el lunes completa el cierre pendiente."""
     referencia = fecha_referencia or timezone.localdate()
     if referencia.weekday() == 6:
+        semana_actual = referencia - timedelta(days=6)
+        cierre = _cerrar_semana(
+            semana_actual,
+            referencia,
+            aplicar,
+            solo_si_concluida=True,
+        )
         apertura = preparar_semana_gym(
             fecha_referencia=referencia,
             aplicar=aplicar,
@@ -89,6 +138,7 @@ def operar_semana_gym(*, fecha_referencia=None, aplicar=False):
         return _base(
             referencia, aplicar, 'apertura_semanal', apertura.get('resultados', []),
             semana=apertura.get('semana'),
+            cierre_semana_actual=cierre,
         )
     if referencia.weekday() == 0:
         return _base(

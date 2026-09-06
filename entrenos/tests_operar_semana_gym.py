@@ -58,6 +58,51 @@ class OperarSemanaGymTests(TestCase):
         })
         self.assertTrue(preparar.call_args_list[1].kwargs['aplicar'])
 
+    @patch('entrenos.services.ciclo_semanal_gym_service.preparar_semana_gym')
+    def test_domingo_cierra_semana_concluida_antes_de_abrir_la_siguiente(self, preparar):
+        contrato = self._contrato('domingo_completo')
+        contrato.sesiones.update(estado='completada', fecha_realizada=date(2026, 8, 29))
+        preparar.return_value = {
+            'resultados': [{'estado': 'ya_materializada'}],
+            'semana': '2026-08-31',
+        }
+        from entrenos.services.ciclo_semanal_gym_service import operar_semana_gym
+
+        resultado = operar_semana_gym(
+            fecha_referencia=date(2026, 8, 30), aplicar=True,
+        )
+
+        evaluacion = EvaluacionSemanalGym.objects.get(contrato=contrato)
+        self.assertEqual(evaluacion.estado_revision, 'pendiente')
+        self.assertEqual(resultado['operacion'], 'apertura_semanal')
+        self.assertEqual(resultado['cierre_semana_actual'][0]['estado'], 'evaluada')
+        self.assertEqual(resultado['resultados'][0]['estado'], 'ya_materializada')
+
+        repetido = operar_semana_gym(
+            fecha_referencia=date(2026, 8, 30), aplicar=True,
+        )
+        self.assertEqual(EvaluacionSemanalGym.objects.filter(contrato=contrato).count(), 1)
+        self.assertEqual(repetido['cierre_semana_actual'][0]['estado'], 'ya_evaluada')
+
+    @patch('entrenos.services.ciclo_semanal_gym_service.preparar_semana_gym')
+    def test_domingo_no_cierra_semana_con_sesiones_pendientes(self, preparar):
+        contrato = self._contrato('domingo_pendiente')
+        preparar.return_value = {
+            'resultados': [{'estado': 'previsualizada'}],
+            'semana': '2026-08-31',
+        }
+        from entrenos.services.ciclo_semanal_gym_service import operar_semana_gym
+
+        resultado = operar_semana_gym(
+            fecha_referencia=date(2026, 8, 30), aplicar=True,
+        )
+
+        self.assertFalse(EvaluacionSemanalGym.objects.filter(contrato=contrato).exists())
+        cierre = resultado['cierre_semana_actual'][0]
+        self.assertEqual(cierre['estado'], 'pendiente_hasta_lunes')
+        self.assertEqual(cierre['sesiones_pendientes'], 1)
+        preparar.assert_called_once()
+
     def test_lunes_dry_run_no_crea_y_apply_crea_pendiente(self):
         contrato = self._contrato('uno')
         from entrenos.services.ciclo_semanal_gym_service import operar_semana_gym

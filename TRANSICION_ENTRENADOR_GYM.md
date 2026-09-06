@@ -371,9 +371,11 @@ python manage.py preparar_semana_gym \
 `operar_semana_gym` unifica la apertura y el cierre en una entrada operativa
 invocable. Es *dry-run* por defecto y solo escribe con `--apply`; acepta
 `--fecha-referencia YYYY-MM-DD` para ejecuciones reproducibles. El domingo
-prepara la semana cuyo lunes es el día siguiente, el lunes evalúa los contratos
-elegibles de la semana anterior y de martes a sábado responde como *no-op* de
-solo lectura.
+cierra la semana actual si todas sus sesiones ya están resueltas y después
+prepara la semana cuyo lunes es el día siguiente. Si todavía hay una sesión
+pendiente —por ejemplo, una recuperación movida al fin de semana— mantiene la
+semana abierta. El lunes actúa como respaldo: evalúa los contratos elegibles de
+la semana anterior. De martes a sábado responde como *no-op* de solo lectura.
 
 El cierre aplicado crea, cuando procede, una `EvaluacionSemanalGym` pendiente.
 Nunca la acepta ni la rechaza automáticamente y tampoco cambia el plan, el
@@ -1908,3 +1910,55 @@ python manage.py auditar_revision_memoria \
   `details`, tres grupos recientes visibles y trazabilidad técnica cerrada.
 - Las acciones colaborativas 3E permanecen operativas; el GET continúa sin
   materializar contratos, semanas, sesiones ni entrenamientos.
+
+# Tarea aplazada — sistema visual común de la app (2026-09-06)
+
+## Frase de reanudación
+
+Cuando el usuario diga **«volvemos al aspecto visual»**, retomar esta tarea
+desde este punto. Antes de implementarla se completarán las comprobaciones
+funcionales y de datos que estén en curso.
+
+## Objetivo
+
+Extender al resto de la aplicación el lenguaje visual de
+`/clientes/mi-panel/trayectoria-plan/`, sin copiar literalmente su cronología
+en pantallas donde no corresponde y sin alterar la lógica funcional.
+
+## Dirección acordada
+
+- Unificar fondo técnico oscuro, bordes finos, títulos editoriales condensados,
+  metadatos monoespaciados, secciones numeradas y tarjetas con rail semántico.
+- Mantener un vocabulario cromático estable: cian para sistema, verde para
+  completado, amarillo/dorado para planificación, rojo para riesgo y violeta
+  reservado para JOI.
+- Conservar la identidad y la ergonomía de cada dominio: entrenamiento debe
+  seguir siendo operativo y táctil; Trayectoria y Centro, causales; Diario,
+  contemplativo; Hyrox, naranja; JOI, concentrada en su presencia canónica.
+- Reutilizar y ampliar los tokens y componentes existentes en
+  `static/css/jds.css`; reducir progresivamente los valores duplicados e inline
+  de `clientes/templates/clientes/trayectoria_plan.html`.
+- Hacer la migración de forma opt-in, pantalla a pantalla. No aplicar una
+  reescritura global de CSS.
+- Incluir accesibilidad consistente: foco visible, objetivos táctiles mínimos
+  de 44 px, navegación semántica y respeto por `prefers-reduced-motion`.
+
+## Fases previstas
+
+1. Consolidar Trayectoria como referencia y extraer sus primitivas visuales
+   compartidas sin cambiar su apariencia.
+2. Aplicar el sistema al panel principal y al Centro de decisiones.
+3. Adaptar briefing, entrenamiento activo y cierre, preservando controles
+   grandes y legibilidad durante el entreno.
+4. Adaptar Diario, JOI e Hyrox respetando sus identidades propias y la regla de
+   presencia canónica de JOI.
+5. Verificar cada superficie en iPhone y escritorio antes de continuar con la
+   siguiente.
+
+## Puntos de partida localizados
+
+- Referencia: `clientes/templates/clientes/trayectoria_plan.html`.
+- Sistema compartido actual: `static/css/jds.css`.
+- Ruta y vista: `clientes/urls.py` y `clientes/views.py`.
+- Accesos existentes: `clientes/templates/clientes/mockup_demo.html` y
+  `entrenos/templates/entrenos/dashboard_evolucion.html`.
