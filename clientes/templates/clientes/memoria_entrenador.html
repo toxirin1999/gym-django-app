@@ -80,6 +80,14 @@
   .mem-row .v{font:700 20px/1 var(--font-mono);text-align:right;white-space:nowrap}
   .mem-row .v small{color:var(--ink-faint);font-size:10px;margin-left:4px}
 
+  .mem-collapse{border-top:1px solid var(--line);margin-top:16px}
+  .mem-collapse summary{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;list-style:none;font-size:14px;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+  .mem-collapse summary::-webkit-details-marker{display:none}
+  .mem-collapse summary::after{content:"+";color:var(--mem-accent,var(--cyan));font:700 20px/1 var(--font-mono)}
+  .mem-collapse[open] summary::after{content:"–"}
+  .mem-collapse .mem-count{color:var(--ink-faint);font:700 9px/1 var(--font-mono);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+  .mem-collapse .mem-list{border-top:0;margin-top:8px}
+
   .mem-big{display:grid;grid-template-columns:220px 1fr;gap:18px;margin-top:16px;align-items:start}
   .mem-big .n{font:700 clamp(52px,14vw,88px)/.9 var(--font-display);letter-spacing:-.03em}
   .mem-big .n small{display:block;color:var(--ink-faint);font:9px/1.6 var(--font-mono);text-transform:uppercase;letter-spacing:.1em;margin-top:6px}
@@ -217,16 +225,21 @@
     {% if perfil_atletico %}
     <article class="mem-node mem-node--good">
       <div class="mem-label">§03 · Perfil de fuerza</div>
-      <h2 class="mem-heading">1RM estimado</h2>
-      <div class="mem-list">
-        {% for item in perfil_atletico %}
-        <div class="mem-row">
-          <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
-          <div><div class="name">{{ item.ejercicio }}</div></div>
-          <div class="v">{{ item.rm }}<small>KG</small></div>
+      <details class="mem-collapse">
+        <summary>
+          1RM estimado
+          <span class="mem-count">{{ perfil_atletico|length }} {{ perfil_atletico|length|pluralize:"ejercicio,ejercicios" }}</span>
+        </summary>
+        <div class="mem-list">
+          {% for item in perfil_atletico %}
+          <div class="mem-row">
+            <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+            <div><div class="name">{{ item.ejercicio }}</div></div>
+            <div class="v">{{ item.rm }}<small>KG</small></div>
+          </div>
+          {% endfor %}
         </div>
-        {% endfor %}
-      </div>
+      </details>
     </article>
     {% endif %}
 
