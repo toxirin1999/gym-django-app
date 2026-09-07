@@ -2215,42 +2215,45 @@ function guardarSeriePanel(fid,sn,total){
   actualizarDots();
   actualizarSetPills(fid);
 
-  // Una corrección termina aquí: no crea otro descanso ni vuelve a recorrer
-  // las series posteriores. El ejercicio conserva exactamente su progreso.
+  let snFlujo=sn+1;
   if(esEdicion){
     delete _serieEnEdicion[fid];
     const panelEditado=document.getElementById('reg-'+fid+'-'+sn);
     if(panelEditado)panelEditado.style.display='none';
-    actualizarProgreso();
-    actualizarSticky();
-    return;
+    // La edición reemplaza la serie en su índice. Para reanudar, buscamos la
+    // primera serie realmente pendiente; si S3 ya existía al corregir S2, el
+    // descanso debe conducir a S4 y no volver a registrar S3.
+    const seriesGuardadas=STATE.seriesCompletadas[fid]||[];
+    const primeraPendiente=seriesGuardadas.slice(0,total).findIndex(serie => !serie);
+    snFlujo = primeraPendiente >= 0 ? primeraPendiente + 1 : seriesGuardadas.length + 1;
+  }else{
+    document.getElementById('reg-'+fid+'-'+sn).style.display='none';
   }
 
   // Ocultar panel actual, mostrar descanso
-  document.getElementById('reg-'+fid+'-'+sn).style.display='none';
   const pdesc=document.getElementById('desc-'+fid);
   pdesc.style.display='flex';pdesc.style.flexDirection='column';
 
   // Aplicar primero cualquier ajuste (incluido congelar el peso por tope)
   // para que el resumen de descanso muestre la próxima serie efectiva.
-  aplicarSugerenciaSiguienteSerie(fid, sn, total, peso, rpe, reps);
+  if(!esEdicion)aplicarSugerenciaSiguienteSerie(fid, sn, total, peso, rpe, reps);
 
   // Info próxima serie
   const proxEl=document.getElementById('pd-prox-'+fid);
   if(proxEl){
-    const _regProxEl = document.getElementById('reg-'+fid+'-'+(sn+1));
+    const _regProxEl = document.getElementById('reg-'+fid+'-'+snFlujo);
     const usaDistProx = _regProxEl?.dataset.usaDistancia === '1';
     const usaTiempoProx = _regProxEl?.dataset.usaTiempo === '1';
-    const recPeso = document.getElementById('peso-'+fid+'-'+(sn+1))?.value || peso;
-    const recReps = document.getElementById('reps-hid-'+fid+'-'+(sn+1))?.value || reps;
+    const recPeso = document.getElementById('peso-'+fid+'-'+snFlujo)?.value || peso;
+    const recReps = document.getElementById('reps-hid-'+fid+'-'+snFlujo)?.value || reps;
     const proxResumen = usaDistProx
       ? (recPeso > 0 ? '<span class="pd-prox-kg">'+recPeso+'kg</span> | '+recReps+'m' : recReps+'m')
       : usaTiempoProx
         ? recReps+'s'
         : '<span class="pd-prox-kg">'+recPeso+'kg</span> × '+recReps+' reps';
-    proxEl.innerHTML=sn>=total
+    proxEl.innerHTML=snFlujo>total
       ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
-      :'Serie <span class="pd-prox-kg">'+(sn+1)+'</span> de '+total+' — '+proxResumen;
+      :'Serie <span class="pd-prox-kg">'+snFlujo+'</span> de '+total+' — '+proxResumen;
   }
 
   calcularDiscos(fid,peso);
@@ -2259,7 +2262,8 @@ function guardarSeriePanel(fid,sn,total){
   const descSeg=parseInt(card?.dataset.descansoSeg||'0');
   const descMin=parseFloat(card?.dataset.descanso)||2;
   const descansoSeg=descSeg>0?descSeg:Math.round(descMin*60);
-  iniciarDescanso(fid,descansoSeg,sn,total);
+  const snDescanso = snFlujo - 1;
+  iniciarDescanso(fid,descansoSeg,snDescanso,total);
   actualizarProgreso();
   actualizarSticky();
 }

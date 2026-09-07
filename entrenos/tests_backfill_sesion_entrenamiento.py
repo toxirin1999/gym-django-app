@@ -68,13 +68,19 @@ class BackfillSesionEntrenamientoTestBase(TestCase):
         call_command('backfill_sesion_entrenamiento', *args, stdout=out)
         return out.getvalue()
 
+    def _crear_entreno(self, **kwargs):
+        """Crea el entreno y su snapshot explícito con valores iniciales zombi."""
+        entreno = EntrenoRealizado.objects.create(**kwargs)
+        SesionEntrenamiento.objects.create(entreno=entreno, duracion_minutos=0)
+        return entreno
+
     def _crear_entreno_gana_perfeccion(self, cliente=None, numero_ejercicios=1, fecha=None):
         """EntrenoRealizado con 1 EjercicioRealizado (4 series, completado) y
         snapshot con series_completadas=0 (resto correcto): el backfill lo
         pasaría de series 0/4 a 4/4, ganando perfección."""
         cliente = cliente or self.cliente
         fecha = fecha or date.today()
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=cliente, rutina=self.rutina, fecha=fecha,
             fuente_datos='manual',
         )
@@ -107,7 +113,7 @@ class BackfillSesionEntrenamientoTestBase(TestCase):
         (series_completadas == series_totales > 0, sin cambios)."""
         cliente = cliente or self.cliente
         fecha = fecha or date.today()
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=cliente, rutina=self.rutina, fecha=fecha,
             fuente_datos='manual',
         )
@@ -131,7 +137,7 @@ class ZombieSnapshotBackfillTest(BackfillSesionEntrenamientoTestBase):
     """Test 1 (el más importante): snapshot zombi se corrige con datos reales (caso id=303)."""
 
     def test_snapshot_zombi_se_corrige_con_datos_reales(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -179,7 +185,7 @@ class SnapshotCorrectoSinCambiosTest(BackfillSesionEntrenamientoTestBase):
     """Test 2: snapshot que ya coincide con EntrenoRealizado no se modifica."""
 
     def test_snapshot_correcto_no_se_modifica(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -219,7 +225,7 @@ class SesionIncompletaNoSeCorrigeTest(BackfillSesionEntrenamientoTestBase):
     """Test 3: sesión incompleta real (caso id=306) mantiene su snapshot 0/0/0/0/None."""
 
     def test_sesion_incompleta_no_se_corrige(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual', numero_ejercicios=0, volumen_total_kg=0,
         )
@@ -242,7 +248,7 @@ class DryRunNoEscribeTest(BackfillSesionEntrenamientoTestBase):
     """Test 4: --dry-run no modifica la BD, solo reporta."""
 
     def test_dry_run_no_modifica_bd(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -274,7 +280,7 @@ class FiltroClienteIdTest(BackfillSesionEntrenamientoTestBase):
             user=otro_user, defaults={'nombre': 'TestBackfillData5Otro', 'dias_disponibles': 3},
         )
 
-        entreno_propio = EntrenoRealizado.objects.create(
+        entreno_propio = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -288,7 +294,7 @@ class FiltroClienteIdTest(BackfillSesionEntrenamientoTestBase):
         entreno_propio.duracion_minutos = 20
         entreno_propio.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
 
-        entreno_ajeno = EntrenoRealizado.objects.create(
+        entreno_ajeno = self._crear_entreno(
             cliente=otro_cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -317,7 +323,7 @@ class InformeImpactoClasificacionTest(BackfillSesionEntrenamientoTestBase):
 
     def test_clasificacion_zombi_mixto_solo_series(self):
         # Zombi completo: snapshot 0/0/0/0/None, EntrenoRealizado con datos reales.
-        entreno_zombi = EntrenoRealizado.objects.create(
+        entreno_zombi = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -337,7 +343,7 @@ class InformeImpactoClasificacionTest(BackfillSesionEntrenamientoTestBase):
         entreno_zombi.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
 
         # Mixto: duracion ya correcta (como id=303), el resto desincronizado.
-        entreno_mixto = EntrenoRealizado.objects.create(
+        entreno_mixto = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -355,7 +361,7 @@ class InformeImpactoClasificacionTest(BackfillSesionEntrenamientoTestBase):
         sesion_mixto.save(update_fields=['duracion_minutos'])
 
         # Solo series: todo correcto salvo series_completadas/series_totales.
-        entreno_series = EntrenoRealizado.objects.create(
+        entreno_series = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -396,7 +402,7 @@ class InformeImpactoSesionesPerfectasTest(BackfillSesionEntrenamientoTestBase):
         # Dos sesiones zombi (0/0/0/0/None): "perfectas" antes (0==0), pero con
         # un ejercicio no completado, NO serán perfectas después (3 != 6).
         for _ in range(2):
-            entreno = EntrenoRealizado.objects.create(
+            entreno = self._crear_entreno(
                 cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
                 fuente_datos='manual',
             )
@@ -416,7 +422,7 @@ class InformeImpactoSesionesPerfectasTest(BackfillSesionEntrenamientoTestBase):
             entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
 
         # Una sesión ya correcta y perfecta (series_completadas == series_totales > 0).
-        entreno_ok = EntrenoRealizado.objects.create(
+        entreno_ok = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -452,7 +458,7 @@ class InformeImpactoPorClienteTest(BackfillSesionEntrenamientoTestBase):
         )
 
         # Cliente propio: 1 sesión zombi corregible.
-        entreno_propio = EntrenoRealizado.objects.create(
+        entreno_propio = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -467,7 +473,7 @@ class InformeImpactoPorClienteTest(BackfillSesionEntrenamientoTestBase):
         entreno_propio.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
 
         # Cliente ajeno: 1 sesión ya correcta (no corregible).
-        entreno_ajeno = EntrenoRealizado.objects.create(
+        entreno_ajeno = self._crear_entreno(
             cliente=otro_cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -497,7 +503,7 @@ class InformeImpactoTopCambiosTest(BackfillSesionEntrenamientoTestBase):
     def test_top_cambios_perfeccion_y_volumen(self):
         # Pierde perfección: zombi (0==0 antes) con un ejercicio no completado
         # → 3/6 después, no perfecta.
-        entreno_pierde = EntrenoRealizado.objects.create(
+        entreno_pierde = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -518,7 +524,7 @@ class InformeImpactoTopCambiosTest(BackfillSesionEntrenamientoTestBase):
 
         # Gana perfección: snapshot dice series 2/4 (no perfecta), real es 4/4
         # (único ejercicio completado con 4 series).
-        entreno_gana = EntrenoRealizado.objects.create(
+        entreno_gana = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -563,7 +569,7 @@ class InformeImpactoNoEscribeTest(BackfillSesionEntrenamientoTestBase):
     """Test 10: --informe-impacto no modifica la BD, incluso sin --dry-run explícito."""
 
     def test_informe_impacto_no_modifica_bd(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -665,7 +671,7 @@ class AplicarBackfillZombiCompletoTest(BackfillSesionEntrenamientoTestBase):
     muestra la línea [aplicado] + el informe de impacto."""
 
     def test_aplicar_corrige_zombi_completo(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -702,7 +708,7 @@ class AplicarBackfillMixtoTest(BackfillSesionEntrenamientoTestBase):
     resto desincronizado)."""
 
     def test_aplicar_corrige_mixto(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -738,7 +744,7 @@ class AplicarBackfillSoloSeriesTest(BackfillSesionEntrenamientoTestBase):
     cuando es lo único desincronizado."""
 
     def test_aplicar_corrige_solo_series(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -782,7 +788,7 @@ class AplicarBackfillIdempotenteTest(BackfillSesionEntrenamientoTestBase):
     """Test 19: una segunda ejecución de --aplicar no vuelve a corregir nada."""
 
     def test_segunda_ejecucion_no_corrige_nada(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -823,7 +829,7 @@ class AplicarConDryRunNoEscribeTest(BackfillSesionEntrenamientoTestBase):
     prioridad) pero muestra el informe de impacto."""
 
     def test_aplicar_con_dry_run_no_escribe(self):
-        entreno = EntrenoRealizado.objects.create(
+        entreno = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -857,7 +863,7 @@ class InformeAntesDespuesCoherenteTest(BackfillSesionEntrenamientoTestBase):
 
         # Zombi (0==0 antes) con un ejercicio no completado → 3/6 después,
         # no perfecta.
-        entreno_zombi = EntrenoRealizado.objects.create(
+        entreno_zombi = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )
@@ -877,7 +883,7 @@ class InformeAntesDespuesCoherenteTest(BackfillSesionEntrenamientoTestBase):
         entreno_zombi.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
 
         # Sesión ya correcta y perfecta (series_completadas == series_totales > 0).
-        entreno_ok = EntrenoRealizado.objects.create(
+        entreno_ok = self._crear_entreno(
             cliente=self.cliente, rutina=self.rutina, fecha=date.today(),
             fuente_datos='manual',
         )

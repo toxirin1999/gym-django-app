@@ -49,7 +49,7 @@ class EdicionSeriesUIRegressionTests(TestCase):
         self.assertLess(reemplazo, checkpoint)
         self.assertLess(checkpoint, fin_edicion)
 
-    def test_guardar_edicion_actualiza_log_y_no_inicia_descanso(self):
+    def test_guardar_edicion_actualiza_log_y_reanuda_descanso(self):
         buscar_fila = self.guardar.index("querySelector('[data-sn=\"'+sn+'\"]')")
         crear_fila = self.guardar.index("document.createElement('div')")
         self.assertLess(buscar_fila, crear_fila)
@@ -58,7 +58,28 @@ class EdicionSeriesUIRegressionTests(TestCase):
         iniciar_descanso = self.guardar.index("iniciarDescanso(")
         self.assertLess(fin_edicion, iniciar_descanso)
         self.assertIn("delete _serieEnEdicion[fid]", self.guardar[fin_edicion:iniciar_descanso])
-        self.assertIn("return", self.guardar[fin_edicion:iniciar_descanso])
+        self.assertNotIn("return", self.guardar[fin_edicion:iniciar_descanso])
+        self.assertIn("pdesc.style.display='flex'", self.guardar)
+
+    def test_editar_serie_intermedia_continua_tras_las_series_posteriores(self):
+        self.assertIn(
+            "findIndex(serie => !serie)",
+            self.guardar,
+        )
+        self.assertIn(
+            "snFlujo = primeraPendiente >= 0 ? primeraPendiente + 1 : seriesGuardadas.length + 1",
+            self.guardar,
+        )
+        self.assertIn("const snDescanso = snFlujo - 1", self.guardar)
+        self.assertIn("iniciarDescanso(fid,descansoSeg,snDescanso,total)", self.guardar)
+        self.assertNotIn("STATE.serieActual[fid]++", self.guardar)
+
+    def test_reanudar_edicion_no_borra_checkpoint_y_descanso_sigue_saltable(self):
+        rama_edicion = self.guardar.split("if(esEdicion)", 1)[1]
+        self.assertNotIn("limpiarCheckpoint()", rama_edicion)
+        self.assertIn("document.getElementById('desc-'+fid)", self.guardar)
+        self.assertIn("iniciarDescanso(fid,descansoSeg,snDescanso,total)", self.guardar)
+        self.assertIn("onclick=\"saltarDescanso", self.source)
 
     def test_confirmar_sincroniza_state_antes_de_construir_formdata(self):
         sincronizar = self.confirmar.index(
