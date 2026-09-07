@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -136,4 +137,29 @@ class AvisoRevisionesGymTests(TestCase):
         self.assertNotContains(
             response,
             reverse('clientes:aceptar_cierre_semanal', args=[respondida.pk]),
+        )
+
+    @patch('clientes.views.timezone.localdate', return_value=date(2026, 9, 6))
+    def test_centro_muestra_pendiente_de_semana_que_concluye_hoy_sobre_confirmada_anterior(
+        self, _localdate,
+    ):
+        confirmada = self._evaluacion_semanal(
+            date(2026, 8, 24),
+            EvaluacionSemanalGym.ESTADO_ACEPTADA,
+        )
+        pendiente = self._evaluacion_semanal(
+            date(2026, 8, 31),
+            EvaluacionSemanalGym.ESTADO_PENDIENTE,
+        )
+
+        response = self.client.get(reverse('clientes:plan_decisiones'))
+
+        self.assertEqual(response.context['cierre_semanal'].pk, pendiente.pk)
+        self.assertContains(
+            response,
+            reverse('clientes:aceptar_cierre_semanal', args=[pendiente.pk]),
+        )
+        self.assertNotContains(
+            response,
+            reverse('clientes:aceptar_cierre_semanal', args=[confirmada.pk]),
         )

@@ -5488,7 +5488,7 @@ def plan_decisiones_view(request):
     cierres_semanales = (
         EvaluacionSemanalGym.objects.filter(
             contrato__cliente=cliente,
-            contrato__semana__lt=hoy - timedelta(days=6),
+            contrato__semana__lte=hoy - timedelta(days=6),
         )
         .select_related('contrato')
     )
