@@ -1,7 +1,8 @@
 # Estado canónico de la transición al entrenador Gym
 
-**Fecha de corte:** 29 de agosto de 2026.  
-**Ámbito:** estado editorial contrastado con el repositorio local.  
+**Fecha de corte:** 7 de septiembre de 2026.
+**Ámbito:** estado editorial contrastado con el repositorio local y con tres
+recibos de consultas de solo lectura ejecutadas en PythonAnywhere.
 **Autoridad de producto:** [PRODUCTO_ENTRENADOR_GYM.md](PRODUCTO_ENTRENADOR_GYM.md).  
 **Historia técnica detallada:** [TRANSICION_ENTRENADOR_GYM.md](TRANSICION_ENTRENADOR_GYM.md).
 
@@ -10,6 +11,64 @@ ha recibido alguna comprobación real comunicada durante la transición y qué s
 ha aplazado de forma deliberada. No demuestra por sí mismo que una migración se
 haya desplegado, que una tarea esté programada o que el comportamiento de
 PythonAnywhere coincida con el entorno local.
+
+## Auditoría de corte — 7 de septiembre de 2026
+
+Este corte distingue dos fuentes. La comprobación **local y no productiva** tomó
+como origen `db_local.sqlite3`, cuya fecha de modificación es
+**18 de agosto de 2026**, y trabajó sobre una copia temporal migrada para no
+alterar la base original. En ella se localizó `Cliente 2` (`david`). Además se
+recibió la salida de tres comandos de solo lectura ejecutados en
+**PythonAnywhere** para `--cliente 2` y la ventana
+**31/08/2026–06/09/2026**. Un segundo recibo productivo confirmó mediante
+consulta ORM que `Cliente 2` corresponde al usuario `david` y que la consulta
+por cliente y semana resuelve un único contrato, con id `3`. El tercer recibo
+contrastó la evaluación persistida, su snapshot y la fase Helms en solo lectura.
+
+| Evidencia auditada | Resultado local | Recibo productivo PythonAnywhere |
+|---|---|---|
+| Ventana y autoridad diaria | **0** días con datos o decisión | **7** días con datos y **7** con decisión; **19** versiones de decisión |
+| Sesiones Gym | **0** | **5** contractualmente completadas, **2** reubicadas y **0** pendientes, omitidas, saltadas o canceladas; solo **3/5** tienen `EntrenoRealizado` explícito |
+| Recuperación y carga externa | **0** check-ins | **7** check-ins y una actividad Strava de bicicleta de **300,6 UA** |
+| Cierre semanal | Sin evaluación | Evaluación id `2`, contrato id `3`, aceptada por `david` (usuario id `3`) el `2026-09-07T04:23:34.798934Z`; cumplimiento `objetivo` |
+| Contrato semanal y bloque | Sin evidencia | `Cliente 2` = `david`; contrato id `3`, **5 objetivo / 3 mínimo**, cinco sesiones; bloque id `1` activo del **24/08/2026** al **20/09/2026** |
+| Snapshot y fase Helms | Sin evidencia | Snapshot persistido = recalculado; SHA-256 iguales: `423e53b1cae27dbdb00ed516c50940c44dd4936bed419f1076204ad454b83628`. **Fuerza — Avanzada**, objetivo `fuerza`, fase `11`, **24/08–20/09**, semana **2/4**, fuente `PlanificadorHelms.generar_plan_anual`, sin limitaciones |
+| Auditor JOI | `contract_ok`, pero **0 evaluados** | Corte real `2026-09-07T17:11:13+00:00`: `contract_ok: false`; **33** evaluados, **32** pendientes, **1** publicado, backlog **32**, **0** procesando y **26** `pending_over_48h`; los **6** `future_occurred_at` anteriores desaparecen |
+
+Los recibos productivos demuestran actividad real y cumplimiento contractual
+de la semana: **5/5** sesiones completadas, **2** reubicadas y ninguna
+pendiente, omitida, saltada o cancelada. Solo **3/5** sesiones tienen enlace
+explícito a `EntrenoRealizado`: ids `356`, `360` y `357`; las sesiones
+programadas `38` y `39` conservan ese enlace a `null`. Por ello las métricas
+del snapshot cubren las tres enlazadas: **18 040 kg**, **123 min**, energía
+media **7,0** y RPE medio **8,03**, con cobertura **3/3** para esas métricas y
+**3/5** para enlaces. Separadamente, `auditar_semana` reportó totales globales
+de **36 870 kg** y **1728 UA**; esos totales no prueban cobertura completa de
+cinco entrenos enlazados ni deben atribuirse así.
+
+La evaluación id `2` del contrato id `3` está aceptada por `david` (usuario id
+`3`) desde `2026-09-07T04:23:34.798934Z`. Su snapshot persistido coincide con
+el recalculado y ambos producen el SHA-256
+`423e53b1cae27dbdb00ed516c50940c44dd4936bed419f1076204ad454b83628`.
+La fase Helms también queda confirmada: **Fuerza — Avanzada**, objetivo
+`fuerza`, fase `11`, del **24/08/2026** al **20/09/2026**, semana **2 de 4**,
+fuente `PlanificadorHelms.generar_plan_anual` y sin limitaciones. La consulta
+con `get` devolvió el contrato id `3` sin multiplicidad para ese cliente y
+semana. La idempotencia de la materialización sigue sin demostrarse: el
+`dry-run` propuso cinco fechas, pero no se repitió. El inventario resultó
+correcto y declaró `solo_lectura: true`, pero no prueba que las migraciones
+estén aplicadas en producción. También deja hallazgos que no deben
+inferirse ni repararse automáticamente: el `decision_id` de las versiones 1 y
+3 del **05/09** está repetido; la evidencia Strava `WeightTraining` del
+**05/09** permanece `pending`; ningún check-in trae HRV o FC en reposo y tres
+no traen calidad de sueño. Las ausencias se conservan como ausencias.
+
+El preflight local detectó **12 migraciones pendientes** en esa base. El smoke
+suite ejecutó **424 tests**, con **4 fallos y 1 skipped**; por tanto, este corte
+no permite declarar el entorno verde. Durante la auditoría ya existían cambios
+locales en `clientes/views.py` y
+`clientes/tests_aviso_revisiones_gym.py`; no forman parte de esta actualización
+ni fueron modificados para obtener estas conclusiones.
 
 ## Leyenda
 
@@ -56,7 +115,7 @@ PythonAnywhere coincida con el entorno local.
 | **3D. Operación semanal unificada** | **Implementado; pendiente de observación** | [`ciclo_semanal_gym_service.py`](entrenos/services/ciclo_semanal_gym_service.py) y `operar_semana_gym`: dry-run por defecto, `--apply` explícito; domingo abre, lunes cierra y martes–sábado no opera. | La evaluación queda pendiente y nunca se acepta automáticamente. La repetición preserva semanas/evaluaciones existentes, respuestas y timestamps. Para programarlo, usar una única tarea externa diaria. |
 | **3E. Activación colaborativa** | **Terminado** | [`forms_bloque_gym.py`](clientes/forms_bloque_gym.py), [`tests_bloque_gym_colaborativo.py`](clientes/tests_bloque_gym_colaborativo.py) y Centro de decisiones. | Las acciones estratégicas siguen requiriendo aprobación humana. |
 | **4. Ciclos de adaptación Gym** | **En observación** | Ciclos persistidos y pruebas para variante, molestia, deload, versión esencial, técnica, tope, fallo, RPE, progresión, perfil causal, cierre semanal, molestia reciente y distribución contractual. | Código amplio no equivale a aprendizaje demostrado: observar resultados reales y cobertura por ciclo. |
-| **4. Resumen semanal semántico** | **Terminado** | [`analisis_semanal_service.py`](entrenos/services/analisis_semanal_service.py), [`evaluacion_semanal_gym_service.py`](entrenos/services/evaluacion_semanal_gym_service.py) y sus tests. | Una sesión reubicada conserva 5/5, pero debe nombrarse como adaptación y no como “sin adaptaciones”. |
+| **4. Resumen semanal semántico** | **Terminado** | [`analisis_semanal_service.py`](entrenos/services/analisis_semanal_service.py), [`evaluacion_semanal_gym_service.py`](entrenos/services/evaluacion_semanal_gym_service.py) y sus tests. | La evidencia real confirma que dos sesiones reubicadas conservan cumplimiento objetivo 5/5; deben nombrarse como adaptaciones y no como “sin adaptaciones”. |
 
 ### Fases 5–7 — evidencia física, seguridad y campañas
 
@@ -84,7 +143,7 @@ PythonAnywhere coincida con el entorno local.
 | **10D–E Apertura canónica** | **En observación** | Resolver compartido por web/tarea, reconciliación transaccional y `auditar_outbox_entrenador_joi`; pruebas 10D/10E. | Verificar en producción que no haya aperturas duplicadas, claims abandonados ni backlog envejecido. |
 | **11A–C Portada y Centro contractuales** | **En observación** | [`proyeccion_bloque_gym_service.py`](entrenos/services/proyeccion_bloque_gym_service.py), [`portada_hoy_service.py`](clientes/portada_hoy_service.py), tests de portada, cierre semanal/bloque y UX móvil. | Continuar evaluación visual en móvil sin retirar paneles de memoria, sesiones, plan o vida. |
 | **11D Trayectoria del plan** | **Implementado; pendiente de observación** | [`trayectoria_plan_service.py`](entrenos/services/trayectoria_plan_service.py), GET autoservicio y línea temporal año → bloque → semana → sesiones. Compone el plan anual Helms y autoridad contractual sin materializar ni evaluar. | Validar legibilidad móvil y coincidencia con producción durante el bloque activo. Los límites explícitos no se sustituyen por ceros. |
-| **11E Evolución de rendimiento** | **Pendiente** | El usuario ha comunicado que producción conserva más de 200 sesiones históricas, útiles para tendencias y líneas base retrospectivas; este conteo no ha sido verificado desde el repositorio. | Abrir diseño e implementación después de aceptar el cierre del primer bloque contractual. Debe separar tendencia histórica de atribución causal por contratos nuevos. |
+| **11E Evolución de rendimiento** | **Pendiente; bloqueada** | El usuario ha comunicado que producción conserva más de 200 sesiones históricas, útiles para tendencias y líneas base retrospectivas; este conteo no ha sido verificado desde el repositorio. La Semana 2 sí tiene evaluación contractual productiva revisada y aceptada. | No abrir diseño ni implementación hasta cerrar y aceptar todo el primer bloque contractual con evidencia productiva. Debe separar tendencia histórica de atribución causal por contratos nuevos. |
 | **12.1 Auditoría de superficies** | **Terminado** | [`auditar_superficies_archivo.py`](entrenos/management/commands/auditar_superficies_archivo.py) y [docs/fase12_archive_audit.md](docs/fase12_archive_audit.md). | Repetir antes de retirar una nueva superficie. |
 | **12.2 Gestión multi-cliente** | **Terminado** | Política staff/superusuario y pruebas de autorización. | La app sigue siendo de un solo usuario; conservar la superficie protegida, no convertirla en prioridad. |
 | **12.3 Liftin** | **Pospuesto conscientemente** | UX archivada por flag, rutas reversibles e historia conservada. | No borrar modelos o sesiones históricas. |
@@ -101,13 +160,15 @@ esas piezas sobreviven al uso continuado sin contradicciones.
 
 Los pendientes reales son:
 
-1. completar una ventana real suficiente del bloque activo;
-2. observar la apertura y evaluación de semanas consecutivas;
-3. confirmar la misma identidad causal desde portada hasta cierre;
-4. acumular resultados reales para los ciclos de adaptación, no solo tests;
-5. auditar el outbox JOI y la autoridad física con datos posteriores al corte;
-6. mantener Rehab, gamificación, Liftin y nutrición fuera del camino crítico;
-7. aplazar cualquier borrado físico hasta medir dependencias y reversibilidad.
+1. comprobar la idempotencia de la materialización sin escribir y observar la
+   apertura y evaluación de semanas consecutivas;
+2. confirmar la misma identidad causal desde portada hasta cierre, incluido el
+   `decision_id` repetido del 05/09;
+3. inventariar por ORM y en solo lectura los 33 eventos del outbox JOI, junto
+   con el estado de sus mensajes y aperturas, y verificar Celery Beat, worker y
+   logs; conservar el JSONL y un backup antes de cualquier mutación;
+4. mantener Rehab, gamificación, Liftin y nutrición fuera del camino crítico;
+5. aplazar cualquier borrado físico hasta medir dependencias y reversibilidad.
 
 ## 11D — Trayectoria del plan
 
@@ -121,8 +182,8 @@ No abre contratos, no materializa sesiones, no evalúa y no cierra ciclos.
 
 ## Pantalla futura — Evolución de rendimiento (11E)
 
-**Estado:** pendiente planificado; no es urgente antes de cerrar el primer
-bloque contractual.
+**Estado:** pendiente planificado y bloqueado; no se abre antes de cerrar y
+aceptar el primer bloque contractual con evidencia productiva.
 
 La futura pantalla debe responder preguntas concretas del entrenador, no
 convertirse en otro dashboard genérico:
@@ -161,7 +222,38 @@ terminado, tenga todas sus semanas contractuales cerradas y su
 un contrato de lectura único antes de diseñar el template: métricas, cobertura,
 comparadores válidos, niveles causales y tratamiento del histórico legacy.
 
-## Próximo hito exacto — Semana 2
+## Recibo actual del outbox JOI y próximo paso exacto
+
+La reauditoría productiva de solo lectura, con corte real
+`2026-09-07T17:11:13+00:00`, devolvió `contract_ok: false`: **33** eventos
+evaluados, **32** pendientes, **1** publicado, backlog **32** y **0** en
+procesamiento. El único código que rompe el contrato es `pending_over_48h`,
+presente en **26** eventos. Los **6** `future_occurred_at` del recibo anterior
+desaparecen con este corte y se consideran un artefacto de haber usado entonces
+un `as_of` anterior a su `occurred_at`, no un defecto vigente de los eventos.
+
+Todos los eventos envejecidos son `gym_decision_outcome`, proceden de
+`entrenos.GymDecisionLog` y pertenecen al usuario id `3`. La auditoría no
+detectó duplicados, diferencias de payload, claims obsoletos, publicados sin
+mensaje ni intentos incoherentes. La interpretación operativa es por tanto:
+**el productor mantiene la integridad, pero el consumidor no está drenando la
+cola**.
+
+El próximo paso es un inventario ORM, exclusivamente de lectura, de los **33**
+eventos y del estado de los mensajes/aperturas asociados, seguido de la
+verificación de Celery Beat, worker y logs. Se debe conservar la salida JSONL y
+crear un backup antes de cualquier mutación. No usar la UI como prueba, ni
+procesar o reintentar eventos durante el diagnóstico: no existe un comando de
+drenaje con modos `dry-run`/`apply` que permita hacerlo de forma controlada.
+
+El primer preview de cierre permaneció en `dry-run` e informó
+`evaluacion_id: null`; la evaluación id `2` ya existe y su aceptación ya
+ocurrió. Ejecutar ahora `cerrar_semana_gym --apply` sería potencialmente un
+no-op y es innecesario. La Semana 2 queda contractualmente revisada y aceptada.
+**11E continúa bloqueada** hasta el cierre y la aceptación de todo el primer
+bloque contractual.
+
+## Ventana objetivo auditada — Semana 2
 
 **Inicio:** lunes 31 de agosto de 2026.  
 **Objetivo:** validar la segunda semana operativa consecutiva del bloque Gym,
@@ -169,17 +261,21 @@ sin ampliar alcance ni reabrir módulos pospuestos.
 
 ### Checklist previo — domingo 30 / lunes 31
 
-- [ ] Confirmar que el bloque aprobado sigue activo y cubre el 31/08/2026.
+- [x] Confirmar que el bloque aprobado sigue activo y cubre el 31/08/2026:
+      bloque id `1`, activo del 24/08/2026 al 20/09/2026.
 - [ ] Previsualizar la apertura semanal; comprobar que propone exactamente una
       semana y no materializa nada en dry-run.
 - [ ] Aplicar la apertura una sola vez desde el flujo operativo autorizado.
-- [ ] Confirmar un único `ContratoSemanalGym` para el lunes 31/08/2026.
-- [ ] Confirmar **5 sesiones objetivo** y **3 como mínimo válido** desde el
+- [x] Confirmar un único `ContratoSemanalGym` para el lunes 31/08/2026: la
+      consulta con `get` resolvió el contrato id `3`.
+- [x] Confirmar **5 sesiones objetivo** y **3 como mínimo válido** desde el
       snapshot contractual.
-- [ ] Verificar que las sesiones corresponden a la fase anual Helms vigente;
-      el bloque no debe sustituir ni renombrar esa periodización.
+- [x] Verificar que las sesiones corresponden a la fase anual Helms vigente:
+      Fuerza — Avanzada, objetivo `fuerza`, fase `11`, semana 2/4, fuente
+      `PlanificadorHelms.generar_plan_anual`, sin limitaciones.
 - [ ] Confirmar que repetir la operación responde de forma idempotente y no
-      duplica contratos o sesiones.
+      duplica contratos o sesiones; el `dry-run` recibido propuso cinco fechas,
+      pero no fue repetido.
 
 ### Checklist durante la semana
 
@@ -196,13 +292,20 @@ sin ampliar alcance ni reabrir módulos pospuestos.
 
 ### Checklist de cierre — después del domingo 6 de septiembre
 
-- [ ] Previsualizar `cerrar_semana_gym` antes de escribir.
-- [ ] Confirmar que cumplimiento, reubicaciones, protecciones y omisiones se
-      clasifican desde las sesiones del contrato, no por coincidencia de fecha.
-- [ ] Revisar cobertura de RPE, energía, duración y volumen sin rellenar
-      ausencias con valores inventados.
-- [ ] Aceptar o rechazar la evaluación desde el flujo colaborativo solo después
-      de leer su evidencia.
+- [x] Previsualizar `cerrar_semana_gym` antes de escribir: el primer resultado
+      fue `objetivo`, 5 sesiones y `evaluacion_id: null`; la consulta posterior
+      encontró la evaluación id `2` ya existente.
+- [x] Comparar el snapshot persistido de la evaluación id `2` con `_snapshot`
+      y revisar `estado_revision`: snapshot igual, hashes iguales y estado
+      `aceptada`.
+- [x] Confirmar la clasificación contractual: cumplimiento `objetivo`, 5
+      completadas, 2 reubicadas y 0 pendientes, omitidas, saltadas o canceladas.
+- [x] Revisar cobertura de RPE, energía, duración y volumen: las tres sesiones
+      enlazadas suman 18 040 kg y 123 min, con energía media 7,0 y RPE medio
+      8,03; los totales globales de `auditar_semana` (36 870 kg/1728 UA) se
+      conservan separados.
+- [x] Registrar la aceptación colaborativa: evaluación id `2` aceptada por
+      `david` (usuario id `3`) el `2026-09-07T04:23:34.798934Z`.
 - [ ] Registrar cualquier contradicción como hallazgo de producto; no parchear
       datos productivos sin auditoría y backup.
 

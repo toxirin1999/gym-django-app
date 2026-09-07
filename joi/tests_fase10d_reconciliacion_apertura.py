@@ -47,23 +47,56 @@ class ReconciliacionApertura10DTests(TestCase):
             payload=payload,
         )
 
-    def test_primero_devuelve_mensaje_no_leido_sin_reclamar_eventos(self):
+    def test_mensaje_antiguo_no_oculta_evento_pendiente_y_usa_resolvedor_canonico(self):
         from joi.context_processors import _get_mensaje_gym
 
         historico = MensajeJOI.objects.create(
             user=self.user, trigger="decision_plan", mensaje="Sigo pendiente.", contexto={}
         )
         self.evento()
+        nuevo = MensajeJOI.objects.create(
+            user=self.user, trigger="decision_plan", mensaje="Aprendizaje nuevo.", contexto={}
+        )
         with patch(
-            "joi.services_eventos_entrenador.reconciliar_eventos_en_apertura",
-        ) as reconciliar, patch(
-            "joi.services_eventos_entrenador.procesar_eventos_entrenador_pendientes",
-        ) as decision:
+            "joi.services_eventos_entrenador.resolver_apertura_diaria_entrenador",
+            return_value=nuevo,
+        ) as resolver:
+            resultado = _get_mensaje_gym(self.user)
+
+        self.assertEqual(resultado.pk, nuevo.pk)
+        resolver.assert_called_once_with(self.cliente)
+
+    def test_fallo_del_proveedor_conserva_mensaje_antiguo_y_evento_pendiente(self):
+        from joi.context_processors import _get_mensaje_gym
+
+        historico = MensajeJOI.objects.create(
+            user=self.user, trigger="decision_plan", mensaje="Sigo pendiente.", contexto={}
+        )
+        evento = self.evento()
+        with patch(
+            "joi.services_eventos_entrenador.resolver_apertura_diaria_entrenador",
+            return_value=None,
+        ):
             resultado = _get_mensaje_gym(self.user)
 
         self.assertEqual(resultado.pk, historico.pk)
-        reconciliar.assert_not_called()
-        decision.assert_not_called()
+        evento.refresh_from_db()
+        self.assertEqual(evento.estado, EventoEntrenadorJOI.ESTADO_PENDIENTE)
+
+    def test_sin_evento_pendiente_devuelve_mensaje_antiguo_sin_generar(self):
+        from joi.context_processors import _get_mensaje_gym
+
+        historico = MensajeJOI.objects.create(
+            user=self.user, trigger="decision_plan", mensaje="Sigo pendiente.", contexto={}
+        )
+        with patch("joi.context_processors._apertura_on_demand") as apertura, patch(
+            "joi.services_eventos_entrenador.resolver_apertura_diaria_entrenador",
+        ) as resolver:
+            resultado = _get_mensaje_gym(self.user)
+
+        self.assertEqual(resultado.pk, historico.pk)
+        apertura.assert_not_called()
+        resolver.assert_not_called()
 
     def test_apertura_nueva_integra_lote_reciente_ordenado_y_publica_recibos(self):
         from joi.context_processors import _get_mensaje_gym
@@ -141,17 +174,21 @@ class ReconciliacionApertura10DTests(TestCase):
         procesar.assert_called_once()
         reconciliar.assert_not_called()
 
-    def test_evento_mayor_de_48h_no_entra_ni_se_pierde(self):
+    def test_evento_mayor_de_48h_se_intenta_y_si_falla_no_se_pierde(self):
         from joi.context_processors import _get_mensaje_gym
 
         antiguo = self.evento(occurred_at=timezone.now() - timedelta(hours=49))
         apertura = MensajeJOI.objects.create(
             user=self.user, trigger="apertura_manana", mensaje="Apertura limpia.", contexto={}
         )
-        with patch("joi.context_processors._apertura_on_demand", return_value=apertura):
+        with patch(
+            "joi.services_eventos_entrenador.resolver_apertura_diaria_entrenador",
+            return_value=None,
+        ) as resolver:
             resultado = _get_mensaje_gym(self.user)
 
         self.assertEqual(resultado.pk, apertura.pk)
+        resolver.assert_called_once_with(self.cliente)
         antiguo.refresh_from_db()
         self.assertEqual(antiguo.estado, EventoEntrenadorJOI.ESTADO_PENDIENTE)
         self.assertNotIn("events", resultado.contexto)

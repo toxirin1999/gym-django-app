@@ -62,21 +62,21 @@ def _get_mensaje_gym(user):
         .order_by('-creado_en')
         .first()
     )
-    if mensaje:
-        return mensaje
-
-    # Con hechos ejecutivos pendientes entramos directamente por el resolvedor
-    # canónico: un fallo no debe caer después en una apertura limpia. Sin cola
-    # conservamos el seam histórico de apertura bajo demanda.
     from joi.models import EventoEntrenadorJOI
-    if EventoEntrenadorJOI.objects.filter(user=user, estado='pendiente').exists():
+    hay_pendientes = EventoEntrenadorJOI.objects.filter(
+        user=user, estado=EventoEntrenadorJOI.ESTADO_PENDIENTE,
+    ).exists()
+    if hay_pendientes:
         try:
             from clientes.models import Cliente
             from joi.services_eventos_entrenador import resolver_apertura_diaria_entrenador
             cliente = Cliente.objects.filter(user=user).first()
-            return resolver_apertura_diaria_entrenador(cliente) if cliente else None
+            resuelto = resolver_apertura_diaria_entrenador(cliente) if cliente else None
+            return resuelto or mensaje
         except Exception:
-            return None
+            return mensaje
+    if mensaje:
+        return mensaje
     return _apertura_on_demand(user)
 
 
