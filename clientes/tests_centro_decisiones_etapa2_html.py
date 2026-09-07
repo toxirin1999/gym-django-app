@@ -127,7 +127,7 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         source = self.source
         self.assertIn("@media (max-width: 640px)", source)
         self.assertIn("@media (min-width: 900px)", source)
-        self.assertRegex(source, r"(?s)\.dc-wrap\s*\{[^}]*max-width:\s*1040px")
+        self.assertRegex(source, r"(?s)\.dc-wrap\s*\{[^}]*width:\s*min\(100%,\s*720px\)")
         self.assertRegex(source, r"(?s)\.dc-wrap\s*\{[^}]*width:\s*100%")
         self.assertIn("overflow-wrap: anywhere", source)
         self.assertIn("min-width: 0", source)

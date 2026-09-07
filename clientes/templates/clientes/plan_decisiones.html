@@ -133,15 +133,74 @@
     }
 
     .dc-wrap {
-      width: min(100%, 880px);
+      width: min(100%, 720px);
       margin: 0 auto;
       padding: 18px clamp(16px, 4vw, 40px) 64px;
+    }
+
+    /* ── timeline ── */
+    .dc-timeline {
+      position: relative;
+      margin-left: 7px;
+      padding-left: 29px;
+    }
+
+    .dc-timeline::before {
+      content: "";
+      position: absolute;
+      inset: 7px auto 0 5px;
+      width: 1px;
+      background: linear-gradient(var(--cyan), var(--purple) 35%, var(--gold) 65%, transparent);
+    }
+
+    .dc-node {
+      position: relative;
+      margin-bottom: 16px;
+      border: 1px solid var(--line);
+      background: var(--surface);
+      padding: 18px;
+      overflow-wrap: anywhere;
+    }
+
+    .dc-node::before {
+      content: "";
+      position: absolute;
+      left: -29px;
+      top: 22px;
+      width: 11px;
+      height: 11px;
+      border: 2px solid var(--bg);
+      border-radius: 50%;
+      background: var(--node-accent, var(--cyan));
+      box-shadow: 0 0 0 1px var(--node-accent, var(--cyan));
+    }
+
+    .dc-node--state  { --node-accent: var(--cyan); }
+    .dc-node--next   { --node-accent: var(--gold); }
+    .dc-node--active { --node-accent: var(--purple); }
+    .dc-node--active.is-clean { --node-accent: var(--cyan); }
+    .dc-node--decisions { --node-accent: var(--cyan); }
+    .dc-node--evidence { --node-accent: var(--cyan); }
+
+    .dc-node .dc-label {
+      color: var(--node-accent, var(--cyan));
+      font-family: var(--font-mono);
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+    }
+
+    .dc-node .dc-heading {
+      margin: 8px 0 5px;
+      font-size: 21px;
+      line-height: 1.15;
     }
 
     .dc-hero {
       position: relative;
       min-width: 0;
-      margin-bottom: 34px;
+      margin-bottom: 0;
       padding: 0;
       overflow: visible;
       border: 0;
@@ -1059,6 +1118,7 @@
       }
 
       .dc-wrap {
+        width: 100%;
         padding-right: 14px;
         padding-left: 14px;
       }
@@ -1107,6 +1167,20 @@
       }
     }
 
+    @media (min-width: 640px) {
+      .dc-timeline {
+        padding-left: 38px;
+      }
+
+      .dc-node::before {
+        left: -38px;
+      }
+
+      .dc-node {
+        padding: 22px 24px;
+      }
+    }
+
     @media (min-width: 900px) {
       .dc-evidence-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1152,9 +1226,12 @@
       {% for message in messages %}<div class="dc-message">{{ message }}</div>{% endfor %}
     </div>
     {% endif %}
+
+    <section class="dc-timeline" aria-label="Línea del plan">
+    <article class="dc-node dc-node--state">
     <section class="dc-hero is-compact" data-contract='class="dc-hero"' aria-labelledby="titulo-centro">
       <div class="dc-hero-head">
-        <p class="dc-eyebrow">Estado actual</p>
+        <div class="dc-label">Estado actual</div>
         <h1 id="titulo-centro">Centro de decisiones</h1>
         <p class="dc-purpose">
           Qué está usando el plan, qué decidió recientemente y en qué evidencia se apoya.
@@ -1207,12 +1284,12 @@
       </ul>
       </details>
     </section>
+    </article>
 
+    <article class="dc-node dc-node--next">
     <section class="dc-next" id="siguiente-paso" aria-labelledby="titulo-siguiente">
-      <header class="dc-section-head">
-        <span class="dc-section-number" aria-hidden="true">NEXT</span>
-        <h2 class="dc-section-title" id="titulo-siguiente">Siguiente paso</h2>
-      </header>
+      <div class="dc-label">Siguiente paso</div>
+      <h2 class="dc-heading" id="titulo-siguiente">{{ resumen_operativo.proxima_sesion.nombre|default:"Plan" }}</h2>
       <div class="dc-next-grid">
         <div class="dc-next-cell">
           <span class="dc-next-label">Próxima sesión</span>
@@ -1251,12 +1328,12 @@
         </div>
       </div>
     </section>
+    </article>
 
+    <article class="dc-node dc-node--active{% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas %} is-clean{% endif %}">
     <section class="dc-section" id="activo-ahora" aria-labelledby="titulo-activo">
-      <header class="dc-section-head">
-        <span class="dc-section-number" aria-hidden="true">01</span>
-        <h2 class="dc-section-title" id="titulo-activo">Activo ahora</h2>
-      </header>
+      <div class="dc-label">Activo ahora</div>
+      <h2 class="dc-heading" id="titulo-activo">Señales del plan</h2>
 
       {% if bloque_colaborativo.bloque %}
       <article class="dc-card is-temporary" aria-labelledby="bloque-colaborativo-titulo">
@@ -1573,13 +1650,13 @@
       </details>
       {% endif %}
     </section>
+    </article>
 
     {% if resultados_contractuales %}
+    <article class="dc-node dc-node--decisions">
     <section class="dc-section" aria-labelledby="titulo-resultados-ajustes">
-      <header class="dc-section-head">
-        <span class="dc-section-number" aria-hidden="true">↳</span>
-        <h2 class="dc-section-title" id="titulo-resultados-ajustes">Qué aprendió el plan</h2>
-      </header>
+      <div class="dc-label">Lectura del plan</div>
+      <h2 class="dc-heading" id="titulo-resultados-ajustes">Qué aprendió el plan</h2>
       <div class="dc-card-grid">
       {% for iv in resultados_contractuales %}
         <article class="dc-card">
@@ -1607,13 +1684,13 @@
       {% endfor %}
       </div>
     </section>
+    </article>
     {% endif %}
 
+    <article class="dc-node dc-node--decisions">
     <section class="dc-section" id="decisiones-recientes" aria-labelledby="titulo-decisiones">
-      <header class="dc-section-head">
-        <span class="dc-section-number" aria-hidden="true">02</span>
-        <h2 class="dc-section-title" id="titulo-decisiones">Decisiones recientes</h2>
-      </header>
+      <div class="dc-label">Historial del plan</div>
+      <h2 class="dc-heading" id="titulo-decisiones">Decisiones recientes</h2>
 
       <div class="dc-subsection">
         <h3 class="dc-subtitle">Qué decidió últimamente</h3>
@@ -1656,12 +1733,12 @@
         {% endif %}
       </div>
     </section>
+    </article>
 
+    <article class="dc-node dc-node--evidence">
     <section class="dc-section" id="evidencia-tecnica" aria-labelledby="titulo-evidencia">
-      <header class="dc-section-head">
-        <span class="dc-section-number" aria-hidden="true">03</span>
-        <h2 class="dc-section-title" id="titulo-evidencia">Evidencia técnica</h2>
-      </header>
+      <div class="dc-label">Trazabilidad</div>
+      <h2 class="dc-heading" id="titulo-evidencia">Evidencia técnica</h2>
 
       <details class="dc-technical-shell">
         <summary>Abrir detalle técnico y trazabilidad</summary>
@@ -1879,6 +1956,8 @@
       </div>
       {% endif %}
       </details>
+    </section>
+    </article>
     </section>
   </main>
 
