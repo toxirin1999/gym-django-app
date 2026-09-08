@@ -156,7 +156,17 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         ).order_by('-entreno__fecha').first()
         if tope_ej:
             reps_tope = int(tope_ej.repeticiones or 0)
-            alertas.append({'tipo': 'tope', 'icono': '🔝', 'texto': f'Tope de máquina — mismo peso, apunta a {reps_tope + 1} reps'})
+            peso_tope = float(tope_ej.peso_kg or 0)
+            alertas.append({
+                'tipo': 'tope',
+                'icono': '🔝',
+                'texto': (
+                    f'Tope de máquina — conserva {peso_tope:g} kg y apunta a '
+                    f'{reps_tope + 1} reps'
+                ),
+                'peso_kg': peso_tope,
+                'reps_objetivo': reps_tope + 1,
+            })
 
         # Técnica comprometida reciente
         from entrenos.models import SerieRealizada, EjercicioBase
@@ -240,7 +250,18 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                         'molestia_reciente':            'hubo molestia reciente en el primer ejercicio',
                     }.get(permiso_local_primero['motivo'], 'el plan mantiene la carga en el primer ejercicio')
 
-            if _frenado:
+            hay_tope_hoy = any(
+                alerta['tipo'] == 'tope'
+                for nombre in nombres_hoy
+                for alerta in alertas_por_ejercicio.get(nombre, [])
+            )
+            if hay_tope_hoy:
+                mensajes.append({
+                    'icono': '🔝',
+                    'tipo': 'carga',
+                    'texto': f'RPE medio {rpe_medio} — conserva la carga de los topes y progresa por repeticiones.',
+                })
+            elif _frenado:
                 mensajes.append({
                     'icono': '⚡',
                     'tipo': 'carga',

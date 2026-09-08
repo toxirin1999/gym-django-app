@@ -159,8 +159,9 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         mostrarse con la cadena flotante completa.
         """
         from entrenos.models import SesionEntrenamiento
-        SesionEntrenamiento.objects.filter(entreno=self.entreno).update(
-            rpe_medio=6.181818181818182,
+        SesionEntrenamiento.objects.update_or_create(
+            entreno=self.entreno,
+            defaults={'duracion_minutos': 1, 'rpe_medio': 6.181818181818182},
         )
         with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
                    return_value=_permiso('progresion_permitida')):

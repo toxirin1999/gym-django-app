@@ -128,9 +128,19 @@ def _resumen_sesion(entreno, ejercicios):
     sesion_tipo = '· Sesión ajustada' if entreno.modo_reducido else None
 
     if sesion:
+        n_ejercicios_persistidos = len(ejercicios)
+        # numero_ejercicios se calcula al final del guardado desde los
+        # EjercicioRealizado creados. Cuando coincide con la consulta es una
+        # segunda evidencia y prevalece sobre el contador enviado por JS.
+        # En registros legacy incompletos conservamos la métrica de sesión.
+        n_ejercicios = (
+            n_ejercicios_persistidos
+            if entreno.numero_ejercicios == n_ejercicios_persistidos
+            else (sesion.ejercicios_completados or n_ejercicios_persistidos)
+        )
         return {
             'titulo': titulo,
-            'n_ejercicios': sesion.ejercicios_completados or len(ejercicios),
+            'n_ejercicios': n_ejercicios,
             # La señal de gamificación crea sesion_detalle en cuanto se guarda
             # el entreno, antes de que existan ejercicios — series_completadas
             # puede quedar en 0 si nadie la recalculó después.

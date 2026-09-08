@@ -1280,7 +1280,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
         <div class="sa-obj-wrap">
           {% if ejercicio.usa_peso %}
-            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
+            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
@@ -1303,7 +1303,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
       {% if ejercicio.usa_peso %}
       <div class="peso-zona">
-        <div class="peso-label">Peso de trabajo</div>
+        <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% endif %}</div>
         <div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">
           <button type="button" class="peso-btn menos"
                   onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-2.5)">−</button>
@@ -1848,13 +1848,11 @@ const FRASES_MOTI={
   medio: [{e:'⚡',t:'Buen trabajo',s:'Intensidad controlada, resultados seguros'},
           {e:'🔥',t:'En tu zona',s:'Así se construye la base'},
           {e:'🎯',t:'Ejecutado',s:'Cada serie suma, cada rep importa'}],
-  alto:  [{e:'💥',t:'¡Al límite!',s:'Has dejado todo en el gym hoy'},
-          {e:'🏆',t:'Sesión de élite',s:'RPE alto + volumen = adaptación máxima'},
-          {e:'⚔️',t:'Sin cuartel',s:'El trabajo duro de hoy es el rendimiento de mañana'}]
+  alto:  [{e:'✓',t:'Sesión exigente registrada',s:'El esfuerzo fue alto. Prioriza la recuperación antes de la próxima sesión.'}]
 };
 function elegirFrase(rpeAvg){
   const pool=rpeAvg<7?FRASES_MOTI.bajo:rpeAvg<9?FRASES_MOTI.medio:FRASES_MOTI.alto;
-  return pool[Math.floor(Math.random()*pool.length)];
+  return pool[0];
 }
 
 const STATE={ejActual:0,serieActual:{},seriesCompletadas:{},timers:{}};

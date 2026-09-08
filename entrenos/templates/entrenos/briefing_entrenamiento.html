@@ -575,8 +575,8 @@
           {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <s style="color:var(--tdm);">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
           <span style="color:{% if ej.motivo_bloqueo == 'lesion_activa' %}rgba(239,68,68,0.85){% elif ej.motivo_bloqueo == 'lesion_retorno' %}rgba(245,158,11,0.85){% elif ej.motivo_bloqueo == 'retorno_pausa' %}rgba(96,165,250,0.90){% else %}rgba(180,140,255,0.8){% endif %};">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
-          {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg
-          {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg
+          {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg{% if ej.peso_formato == 'total_ambas' %} total de ambas{% elif ej.peso_formato == 'por_lado' %} por lado{% endif %}
+          {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg{% if ej.peso_formato == 'total_ambas' %} total de ambas{% elif ej.peso_formato == 'por_lado' %} por lado{% endif %}
           {% endif %}
           {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>

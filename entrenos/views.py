@@ -3865,6 +3865,8 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
                     peso_trabajo, ejercicio.get('usa_peso', True),
                 )
+                from entrenos.services.peso_semantica_service import normalizar_semantica_carga
+                ejercicio.update(normalizar_semantica_carga(ejercicio))
                 continue
 
             # --- Validación en Tiempo Real (Bio-Safety) + Ajuste de Volumen ---
@@ -4048,6 +4050,8 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['tipo_equipo'] = 'otro'
                 ejercicio['barra_kg'] = 0
             ejercicio['usa_barra'] = ejercicio['tipo_equipo'] in ('barra', 'maquina_discos')
+            from entrenos.services.peso_semantica_service import normalizar_semantica_carga
+            ejercicio.update(normalizar_semantica_carga(ejercicio))
 
             # --- Ajuste de intensidad (Bio-Safety Max RPE) ---
             base_rpe = int(ejercicio.get('rpe_objetivo', 8))
@@ -8930,6 +8934,15 @@ def briefing_entrenamiento(request, cliente_id):
     # Inyectar alertas y calentamiento (aproximaciones) en cada ejercicio
     for ej in ejercicios_mod:
         ej['alertas'] = briefing['alertas_por_ejercicio'].get(ej.get('nombre', ''), [])
+        alerta_tope = next((a for a in ej['alertas'] if a.get('tipo') == 'tope'), None)
+        if alerta_tope:
+            # El historial real del tope es la autoridad de carga; el plan
+            # anual no conoce el límite físico de una máquina concreta.
+            ej['peso_recomendado_kg'] = alerta_tope['peso_kg']
+            ej['peso_kg'] = alerta_tope['peso_kg']
+            ej['repeticiones'] = alerta_tope['reps_objetivo']
+        from entrenos.services.peso_semantica_service import normalizar_semantica_carga
+        ej.update(normalizar_semantica_carga(ej))
         try:
             peso_trabajo = float(ej.get('peso_recomendado_kg') or ej.get('peso_kg') or 0)
         except (TypeError, ValueError):
