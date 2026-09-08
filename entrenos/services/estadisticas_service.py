@@ -932,7 +932,10 @@ class EstadisticasService:
 
     @staticmethod
     def detectar_estancamientos(cliente):
-        from entrenos.models import EjercicioRealizado
+        from entrenos.models import EjercicioRealizado, GymDecisionLog
+        from entrenos.services.decision_log_service import normalizar_ejercicio
+        from rutinas.models import EjercicioBase
+
         nombres = EjercicioRealizado.objects.filter(
             entreno__cliente=cliente, completado=True, peso_kg__gt=0
         ).values_list('nombre_ejercicio', flat=True).distinct()
@@ -941,8 +944,42 @@ class EstadisticasService:
             registros = EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente, nombre_ejercicio=nombre,
                 completado=True, peso_kg__isnull=False, peso_kg__gt=0
-            ).order_by('-entreno__fecha')[:4]
+            ).order_by('-entreno__fecha', '-id')[:4]
             if registros.count() < 3: continue
+            registros = list(registros)
+
+            # Distancia/repeticiones pueden progresar manteniendo la carga (en
+            # especial en un tope de máquina). Para estos contratos importa el
+            # avance contra la ejecución inmediatamente anterior, no quedar por
+            # encima del promedio histórico, que puede contener marcas mayores.
+            ejercicio_base = EjercicioBase.objects.filter(nombre__iexact=nombre).only(
+                'tipo_progresion'
+            ).first()
+            tipo_progresion = ejercicio_base.tipo_progresion if ejercicio_base else ''
+            ultima, anterior = registros[0], registros[1]
+            progreso_reps_distancia = (
+                tipo_progresion in ('progresion_reps', 'progresion_distancia')
+                and (ultima.repeticiones or 0) > (anterior.repeticiones or 0)
+                and float(ultima.peso_kg) >= float(anterior.peso_kg)
+            )
+
+            # Datos legacy pueden no enlazar con EjercicioBase. Una decisión
+            # positiva solo cuenta si es causal de la última sesión, evitando
+            # que logs antiguos oculten un estancamiento actual.
+            if not progreso_reps_distancia:
+                nombre_normalizado = normalizar_ejercicio(nombre)
+                progreso_reps_distancia = GymDecisionLog.objects.filter(
+                    cliente=cliente,
+                    entreno_origen=ultima.entreno,
+                    motivo_codigo='progresion_reps',
+                    accion='subir_reps',
+                ).filter(
+                    Q(ejercicio_normalizado=nombre_normalizado)
+                    | Q(ejercicio__iexact=nombre)
+                ).exists()
+            if progreso_reps_distancia:
+                continue
+
             try:
                 volumenes = [float(r.peso_kg) * (r.repeticiones or 1) * (r.series or 1) for r in registros]
             except (TypeError, ValueError):

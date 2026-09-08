@@ -5152,6 +5152,18 @@
             return days[date.getDay()];
         }
 
+        function buildBriefingParams(entrenamiento, fecha) {
+            const params = new URLSearchParams({
+                fecha,
+                rutina_nombre: entrenamiento?.nombre_rutina || '',
+            });
+            const sesionProgramadaId = Number(entrenamiento?.sesion_programada_id);
+            if (Number.isInteger(sesionProgramadaId) && sesionProgramadaId > 0) {
+                params.set('sesion_programada_id', String(sesionProgramadaId));
+            }
+            return params;
+        }
+
         function getWeeksInMonth(year, month) {
             const weeks = [];
             const firstDay = new Date(year, month - 1, 1);
@@ -5373,7 +5385,7 @@
                     ${exerciseRowsHtml}
                 </div>
 
-                <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha=${fecha}&rutina_nombre=${encodeURIComponent(nombreRutina)}"
+                <a href="${urlModal}?${buildBriefingParams(entrenamiento, fecha).toString()}"
                    class="action-button">
                     <i class="fas fa-play"></i>
                     Empezar Entrenamiento
@@ -5971,11 +5983,9 @@
             </div>`;
 
             const btnEmpezar = document.getElementById('btn-empezar-entreno');
-            const params = new URLSearchParams({
-                fecha: fechaSeleccionada,
-                rutina_nombre: entrenamiento.nombre_rutina || '',
-            });
-            if (btnEmpezar) btnEmpezar.href = `${urlModal}?${params.toString()}`;
+            if (btnEmpezar) {
+                btnEmpezar.href = `${urlModal}?${buildBriefingParams(entrenamiento, fechaSeleccionada).toString()}`;
+            }
 
         } else {
             modalBody.innerHTML = `

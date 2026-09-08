@@ -19,6 +19,9 @@ class GrupoMuscular(models.Model):
 
 
 class EjercicioRealizado(models.Model):
+    TIPO_CARGA_CHOICES = [
+        ('total', 'Peso total'), ('por_mano', 'Por mano'), ('por_lado', 'Por lado'),
+    ]
     entreno = models.ForeignKey('EntrenoRealizado', on_delete=models.CASCADE, related_name='ejercicios_realizados')
     experimento_variante = models.ForeignKey(
         'ExperimentoVarianteGym', null=True, blank=True, on_delete=models.SET_NULL,
@@ -33,6 +36,9 @@ class EjercicioRealizado(models.Model):
     grupo_muscular = models.CharField(max_length=50, blank=True, null=True)
 
     peso_kg = models.FloatField(default=0)
+    tipo_carga = models.CharField(max_length=10, choices=TIPO_CARGA_CHOICES, null=True, blank=True)
+    multiplicador_carga = models.PositiveSmallIntegerField(null=True, blank=True)
+    peso_total_kg = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     series = models.PositiveIntegerField(default=1)
     repeticiones = models.PositiveIntegerField(default=1)
     tempo = models.CharField(max_length=10, blank=True, null=True)  # ej: "3-1-1"
@@ -77,7 +83,8 @@ class EjercicioRealizado(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def volumen(self):
-        return self.peso_kg * self.series * self.repeticiones
+        peso = self.peso_total_kg if self.peso_total_kg is not None else self.peso_kg
+        return peso * self.series * self.repeticiones
 
 
 class EjercicioLiftinDetallado(models.Model):
@@ -228,6 +235,7 @@ class DetalleEjercicioRealizado(models.Model):
 
 
 class SerieRealizada(models.Model):
+    TIPO_CARGA_CHOICES = EjercicioRealizado.TIPO_CARGA_CHOICES
     TECNICA_CHOICES = [
         ('buena', 'Buena'),
         ('aceptable', 'Aceptable'),
@@ -240,6 +248,9 @@ class SerieRealizada(models.Model):
     repeticiones = models.PositiveIntegerField()
     completado = models.BooleanField(default=False)
     peso_kg = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
+    tipo_carga = models.CharField(max_length=10, choices=TIPO_CARGA_CHOICES, null=True, blank=True)
+    multiplicador_carga = models.PositiveSmallIntegerField(null=True, blank=True)
+    peso_total_kg = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     rpe_real = models.FloatField(null=True, blank=True, help_text="El RPE que el usuario sintió en esta serie")
     tecnica_calidad = models.CharField(
         max_length=15, choices=TECNICA_CHOICES, null=True, blank=True,
@@ -411,14 +422,16 @@ class EntrenoRealizado(models.Model):
                 ej.completado
                 and ej.nombre_ejercicio.strip().lower() not in nombres_con_detalle
             ):
-                peso = Decimal(str(ej.peso_kg or 0))
+                peso = Decimal(str(ej.peso_total_kg if ej.peso_total_kg is not None else (ej.peso_kg or 0)))
                 series = int(ej.series or 0)
                 reps = int(ej.repeticiones or 0)
                 total += peso * series * reps
 
         # 2. Series Realizadas (modelo SerieRealizada, used when logging sets individually)
         for serie in series_completadas:
-            peso = Decimal(str(serie.peso_kg or 0))
+            peso = Decimal(str(
+                serie.peso_total_kg if serie.peso_total_kg is not None else (serie.peso_kg or 0)
+            ))
             reps = int(serie.repeticiones or 0)
             total += peso * reps
 

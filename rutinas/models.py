@@ -37,6 +37,11 @@ class EjercicioEnRutina(models.Model):
 
 
 class EjercicioBase(models.Model):
+    TIPO_CARGA_CHOICES = [
+        ('total', 'Peso total'),
+        ('por_mano', 'Por mano'),
+        ('por_lado', 'Por lado'),
+    ]
     TIPO_PROGRESION_CHOICES = [
         ('peso_reps', 'Peso + repeticiones'),
         ('progresion_reps', 'Solo repeticiones'),
@@ -49,6 +54,10 @@ class EjercicioBase(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
     grupo_muscular = models.CharField(max_length=100)
     equipo = models.CharField(max_length=100, blank=True, null=True)
+    tipo_carga_default = models.CharField(
+        max_length=10, choices=TIPO_CARGA_CHOICES, default='total',
+        help_text='Cómo debe interpretar la interfaz el peso escrito por el usuario.',
+    )
 
     # Etiquetas de riesgo biomecánico
     risk_tags = models.JSONField(

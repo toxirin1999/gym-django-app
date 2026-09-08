@@ -1,4 +1,30 @@
-"""Semántica canónica del peso mostrado en las superficies de entrenamiento."""
+"""Semántica canónica de carga: presentación y snapshots de persistencia."""
+
+from decimal import Decimal, InvalidOperation
+
+
+TIPOS_CARGA = {"total", "por_mano", "por_lado"}
+ALIASES_TIPO_CARGA = {
+    "total_ambas": "total",
+    "por_mancuerna": "por_mano",
+}
+
+
+def resolver_semantica_carga(tipo_carga, peso_kg, multiplicador_solicitado=None):
+    """Calcula snapshots confiables; nunca acepta el multiplicador del cliente."""
+    tipo = ALIASES_TIPO_CARGA.get(str(tipo_carga or "").strip(), str(tipo_carga or "").strip())
+    if tipo not in TIPOS_CARGA:
+        tipo = "total"
+    multiplicador = 2 if tipo in {"por_mano", "por_lado"} else 1
+    try:
+        peso = Decimal(str(peso_kg or 0))
+    except (InvalidOperation, TypeError, ValueError):
+        peso = Decimal("0")
+    return {
+        "tipo_carga": tipo,
+        "multiplicador_carga": multiplicador,
+        "peso_total_kg": peso * multiplicador,
+    }
 
 
 _MANCUERNA = ("mancuerna", "mancuernas", "dumbbell", "db ", "db-")

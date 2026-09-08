@@ -4396,6 +4396,7 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 @require_http_methods(["POST"])
 @transaction.atomic
 def guardar_entrenamiento_activo(request, cliente_id):
+    from entrenos.services.peso_semantica_service import resolver_semantica_carga
     cliente_qs = Cliente.objects.all()
     if not (request.user.is_staff or request.user.is_superuser):
         cliente_qs = cliente_qs.filter(user=request.user)
@@ -4466,6 +4467,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
             series_data_para_guardar = []
 
+            tipo_carga_solicitado = request.POST.get(f'{form_id}_tipo_carga', 'total')
+
             tipo_progresion = request.POST.get(f'{form_id}_tipo_progresion', 'peso_reps')
             usa_peso = tipo_progresion in ('peso_reps', 'peso_corporal_lastre')
             es_distancia = tipo_progresion == 'progresion_distancia'
@@ -4498,16 +4501,20 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     serie_confirmada = f"{form_id}_completado_{i}" in request.POST
 
                     if serie_valida and serie_confirmada:
+                        semantica_carga = resolver_semantica_carga(tipo_carga_solicitado, peso)
                         if peso > 0:
-                            volumen_ejercicio += (Decimal(str(peso)) * Decimal(reps))
+                            volumen_ejercicio += semantica_carga['peso_total_kg'] * Decimal(reps)
                         if peso > 0 and reps > 0:
                             rpe_a_usar = rpe_real if rpe_real is not None else 8
                             rm_serie_actual = estimar_1rm_con_rpe(peso, reps, rpe_a_usar)
                             if rm_serie_actual > mejor_rm_ejercicio:
                                 mejor_rm_ejercicio = rm_serie_actual
                                 mejor_serie_rm = {'peso': peso, 'reps': reps, 'rpe_real': rpe_real}
-                        series_data_para_guardar.append(
-                            {'peso': peso, 'reps': reps, 'rpe_real': rpe_real, 'tipo_progresion': tipo_progresion, 'tecnica': tecnica})
+                        series_data_para_guardar.append({
+                            'peso': peso, 'reps': reps, 'rpe_real': rpe_real,
+                            'tipo_progresion': tipo_progresion, 'tecnica': tecnica,
+                            **semantica_carga,
+                        })
                         if rpe_real is not None:
                             todos_rpes_sesion.append(rpe_real)
 
@@ -4580,6 +4587,12 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     molestia_severidad=molestia_severidad,
                     molestia_descripcion=molestia_descripcion,
                     es_bloque_principal=_es_bloque_principal,
+                    tipo_carga=series_data_para_guardar[0]['tipo_carga'],
+                    multiplicador_carga=series_data_para_guardar[0]['multiplicador_carga'],
+                    peso_total_kg=(
+                        sum(s['peso_total_kg'] for s in series_data_para_guardar)
+                        / len(series_data_para_guardar)
+                    ),
                 )
 
                 # CREAR SERIES REALIZADAS INDIVIDUALES (Importante para gráficas de detalle)
@@ -4593,7 +4606,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             peso_kg=Decimal(str(s_data['peso'])),
                             rpe_real=s_data['rpe_real'],
                             tecnica_calidad=s_data.get('tecnica'),
-                            completado=True
+                            completado=True,
+                            tipo_carga=s_data['tipo_carga'],
+                            multiplicador_carga=s_data['multiplicador_carga'],
+                            peso_total_kg=s_data['peso_total_kg'],
                         )
 
                 # Acumulamos el volumen de este ejercicio al total del entreno
@@ -5881,6 +5897,7 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
     """
     Vista AJAX que devuelve TODOS los entrenamientos de un mes.
     """
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
     try:
         # Conversión robusta para evitar NaN
         try:
@@ -5942,9 +5959,6 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                             from core.bio_context import BioContextProvider
                             from analytics.planificador_helms.ejercicios.selector import SelectorEjercicios
                             from analytics.planificador_helms.database.ejercicios import EJERCICIOS_DATABASE
-                            from clientes.models import Cliente
-
-                            cliente = Cliente.objects.get(id=cliente_id)
                             bio_data = BioContextProvider.get_current_restrictions(cliente)
                             restricted_tags = bio_data.get('tags', set())
 
@@ -6000,6 +6014,26 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
                         entrenamiento['fase_css'] = f"fase-{fase_base}"
                     except (IndexError, AttributeError, KeyError):
                         entrenamiento['fase_css'] = "fase-default"
+
+                    # El calendario debe transportar la identidad de la sesión
+                    # concreta que está mostrando. La resolución canónica evita
+                    # enlazar por accidente una sesión ajena, cerrada o ambigua.
+                    entrenamiento.pop("sesion_programada_id", None)
+                    try:
+                        from entrenos.services.sesion_recomendada import (
+                            resolver_sesion_programada_portal,
+                        )
+                        sesion_programada = resolver_sesion_programada_portal(
+                            cliente,
+                            fecha_obj,
+                            entrenamiento.get("nombre_rutina", ""),
+                        )
+                        if sesion_programada is not None:
+                            entrenamiento["sesion_programada_id"] = sesion_programada.pk
+                    except Exception:
+                        logger.exception(
+                            "No se pudo resolver la sesión programada del calendario"
+                        )
 
                     # Cachear ejercicios procesados para transporte sin URL (fix 414).
                     # La clave determinista permite que briefing_entrenamiento los
