@@ -1781,6 +1781,8 @@ class AusenciaPlanificadaGym(models.Model):
     deuda_generada = models.PositiveIntegerField(default=0, editable=False)
     creada_en = models.DateTimeField(auto_now_add=True)
     confirmada_en = models.DateTimeField(auto_now_add=True)
+    cancelada_en = models.DateTimeField(null=True, blank=True)
+    fecha_cancelacion_efectiva = models.DateField(null=True, blank=True)
 
     class Meta:
         ordering = ['-inicio', '-id']

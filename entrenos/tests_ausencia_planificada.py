@@ -8,7 +8,10 @@ from django.urls import reverse
 from clientes.models import Cliente
 from entrenos.models import AusenciaPlanificadaGym, SesionProgramada
 from entrenos.services.ausencia_planificada_service import (
+    ampliar_ausencia_planificada,
+    cancelar_tramo_restante_ausencia,
     confirmar_ausencia_planificada,
+    previsualizar_ampliacion_ausencia,
     previsualizar_ausencia_planificada,
 )
 from entrenos.services.distribucion_semanal_contractual_service import _clasificar_sesion
@@ -82,6 +85,80 @@ class AusenciaPlanificadaServiceTests(TestCase):
                 )
         self.assertFalse(AusenciaPlanificadaGym.objects.exists())
 
+    def test_ampliacion_solo_admite_extender_fin_y_anexa_sesiones_sin_duplicar(self):
+        ya_vinculada = self._sesion(self.fin, nombre_sesion='Ya omitida')
+        ausencia = confirmar_ausencia_planificada(
+            cliente=self.cliente, inicio=self.inicio, fin=self.fin,
+            motivo='viaje', nota='',
+        )
+        nueva = self._sesion(self.fin + timedelta(days=2), nombre_sesion='Nueva')
+
+        preview = previsualizar_ampliacion_ausencia(
+            ausencia, self.fin + timedelta(days=3), cliente=self.cliente,
+        )
+        self.assertEqual([item['id'] for item in preview], [nueva.id])
+        ampliada = ampliar_ausencia_planificada(
+            ausencia=ausencia, nuevo_fin=self.fin + timedelta(days=3), cliente=self.cliente,
+        )
+
+        ampliada.refresh_from_db()
+        nueva.refresh_from_db()
+        self.assertEqual(ampliada.inicio, self.inicio)
+        self.assertEqual(ampliada.fin, self.fin + timedelta(days=3))
+        self.assertEqual(ampliada.sesiones_afectadas, 2)
+        self.assertEqual({item['id'] for item in ampliada.sesiones_snapshot}, {ya_vinculada.id, nueva.id})
+        self.assertEqual(nueva.ausencia_planificada, ampliada)
+        with self.assertRaisesMessage(ValueError, 'posterior'):
+            ampliar_ausencia_planificada(
+                ausencia=ampliada, nuevo_fin=self.fin, cliente=self.cliente,
+            )
+
+    @patch('entrenos.services.ausencia_planificada_service.timezone.localdate', return_value=date(2026, 9, 12))
+    def test_cancelar_solo_reabre_tramo_futuro_intacto_y_deja_auditoria(self, _localdate):
+        ausencia = AusenciaPlanificadaGym.objects.create(
+            cliente=self.cliente, inicio=self.inicio, fin=self.fin,
+            motivo='vacaciones', sesiones_afectadas=4,
+        )
+        pasada = self._sesion(date(2026, 9, 11), estado='omitida_usuario', ausencia_planificada=ausencia,
+                              motivo_estado='Ausencia planificada: Vacaciones.')
+        futura = self._sesion(date(2026, 9, 12), estado='omitida_usuario', ausencia_planificada=ausencia,
+                              motivo_estado='Ausencia planificada: Vacaciones.')
+        completada = self._sesion(date(2026, 9, 13), estado='completada', ausencia_planificada=ausencia)
+        modificada = self._sesion(date(2026, 9, 14), pospuesta_hasta=date(2026, 9, 15),
+                                  estado='omitida_usuario', ausencia_planificada=ausencia,
+                                  motivo_estado='Ausencia planificada: Vacaciones.')
+        ausencia.sesiones_snapshot = [
+            {'id': pasada.id, 'fecha_prevista': '2026-09-11', 'pospuesta_hasta': None},
+            {'id': futura.id, 'fecha_prevista': '2026-09-12', 'pospuesta_hasta': None},
+            {'id': completada.id, 'fecha_prevista': '2026-09-13', 'pospuesta_hasta': None},
+            # Se pospuso después de confirmar la ausencia: ya fue modificada.
+            {'id': modificada.id, 'fecha_prevista': '2026-09-14', 'pospuesta_hasta': None},
+        ]
+        ausencia.save(update_fields=['sesiones_snapshot'])
+
+        restauradas = cancelar_tramo_restante_ausencia(ausencia=ausencia, cliente=self.cliente)
+
+        self.assertEqual(restauradas, 1)
+        for sesion in (pasada, futura, completada, modificada):
+            sesion.refresh_from_db()
+        ausencia.refresh_from_db()
+        self.assertEqual(futura.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertIsNone(futura.ausencia_planificada_id)
+        self.assertEqual(pasada.estado, SesionProgramada.ESTADO_OMITIDA_USUARIO)
+        self.assertEqual(completada.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(modificada.estado, SesionProgramada.ESTADO_OMITIDA_USUARIO)
+        self.assertIsNotNone(ausencia.cancelada_en)
+        self.assertEqual(ausencia.fecha_cancelacion_efectiva, date(2026, 9, 12))
+
+    def test_operaciones_rechazan_cliente_ajeno(self):
+        ausencia = AusenciaPlanificadaGym.objects.create(
+            cliente=self.cliente, inicio=self.inicio, fin=self.fin, motivo='otro',
+        )
+        with self.assertRaises(PermissionError):
+            previsualizar_ampliacion_ausencia(ausencia, self.fin + timedelta(days=1), cliente=self.otro)
+        with self.assertRaises(PermissionError):
+            cancelar_tramo_restante_ausencia(ausencia=ausencia, cliente=self.otro)
+
 
 class AusenciaPlanificadaViewTests(TestCase):
     def setUp(self):
@@ -130,7 +207,46 @@ class AusenciaPlanificadaViewTests(TestCase):
         respuesta = self.client.get(reverse('clientes:mockup_demo'))
         self.assertContains(respuesta, 'Ausencia planificada')
         self.assertContains(respuesta, 'Regresas el 13/09/2026')
+        self.assertContains(respuesta, 'Gestionar ausencia')
+        self.assertContains(respuesta, '09/09/2026–12/09/2026')
         self.assertNotContains(respuesta, 'Abrir sesión Gym')
+
+    @patch('clientes.views.timezone.localdate', return_value=date(2026, 9, 10))
+    def test_pantalla_gestiona_ampliacion_con_preview_y_cancelacion_explicita(self, _localdate):
+        ausencia = AusenciaPlanificadaGym.objects.create(
+            cliente=self.cliente, inicio=date(2026, 9, 9), fin=date(2026, 9, 12),
+            motivo='viaje', sesiones_afectadas=0,
+        )
+        nueva = SesionProgramada.objects.create(
+            cliente=self.cliente, fecha_prevista=date(2026, 9, 14), nombre_sesion='Fuerza B',
+        )
+        url = reverse('clientes:ausencia_planificada_gym')
+        pantalla = self.client.get(url)
+        self.assertContains(pantalla, 'Ausencia activa')
+        self.assertContains(pantalla, 'Ampliar hasta')
+        preview = self.client.post(url, {'accion': 'previsualizar_ampliacion', 'nuevo_fin': '2026-09-15'})
+        self.assertContains(preview, 'Fuerza B')
+        nueva.refresh_from_db()
+        self.assertEqual(nueva.estado, SesionProgramada.ESTADO_PENDIENTE)
+        confirmar = self.client.post(url, {'accion': 'confirmar_ampliacion', 'nuevo_fin': '2026-09-15'})
+        self.assertRedirects(confirmar, url)
+        ausencia.refresh_from_db()
+        self.assertEqual(ausencia.fin, date(2026, 9, 15))
+        cancelar = self.client.post(url, {'accion': 'cancelar_tramo', 'confirmar_cancelacion': 'si'})
+        self.assertRedirects(cancelar, reverse('clientes:mockup_demo'))
+        ausencia.refresh_from_db()
+        self.assertIsNotNone(ausencia.cancelada_en)
+
+    @patch('clientes.views.timezone.localdate', return_value=date(2026, 9, 10))
+    def test_cancelacion_sin_confirmacion_no_cambia_nada(self, _localdate):
+        ausencia = AusenciaPlanificadaGym.objects.create(
+            cliente=self.cliente, inicio=date(2026, 9, 9), fin=date(2026, 9, 12), motivo='otro',
+        )
+        respuesta = self.client.post(reverse('clientes:ausencia_planificada_gym'), {'accion': 'cancelar_tramo'})
+        self.assertEqual(respuesta.status_code, 200)
+        ausencia.refresh_from_db()
+        self.assertIsNone(ausencia.cancelada_en)
+        self.assertContains(respuesta, 'Confirma explícitamente')
 
 
 class BalanceAusenciaTests(TestCase):

@@ -940,7 +940,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
     <a href="{% url 'clientes:ausencia_planificada_gym' %}" class="rb-session-calendar-btn"
        style="display:inline-flex;align-items:center;min-height:44px;margin-top:8px;">
-      No estaré disponible unos días
+      {% if ausencia_gym_activa %}
+        Gestionar ausencia · {{ ausencia_gym_activa.inicio|date:"d/m/Y" }}–{{ ausencia_gym_activa.fin|date:"d/m/Y" }} · regreso {{ regreso_gym|date:"d/m/Y" }}
+      {% else %}No estaré disponible unos días{% endif %}
     </a>
     {% comment %}
     Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"

@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django import forms
 from .models import Cliente, Medida
 from .models import RevisionProgreso
@@ -461,3 +463,20 @@ class AusenciaPlanificadaGymForm(forms.Form):
         if datos.get('inicio') and datos.get('fin') and datos['fin'] < datos['inicio']:
             self.add_error('fin', 'La fecha final debe ser igual o posterior al inicio.')
         return datos
+
+
+class AmpliarAusenciaPlanificadaGymForm(forms.Form):
+    nuevo_fin = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date'}), label='Ampliar hasta',
+    )
+
+    def __init__(self, *args, ausencia, **kwargs):
+        self.ausencia = ausencia
+        super().__init__(*args, **kwargs)
+        self.fields['nuevo_fin'].widget.attrs['min'] = (ausencia.fin + timedelta(days=1)).isoformat()
+
+    def clean_nuevo_fin(self):
+        nuevo_fin = self.cleaned_data['nuevo_fin']
+        if nuevo_fin <= self.ausencia.fin:
+            raise forms.ValidationError('La nueva fecha final debe ser posterior a la actual; nunca puede acortarse.')
+        return nuevo_fin

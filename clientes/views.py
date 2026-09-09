@@ -1846,7 +1846,7 @@ def mockup_demo(request):
 
     from entrenos.models import AusenciaPlanificadaGym
     context['ausencia_gym_activa'] = AusenciaPlanificadaGym.objects.filter(
-        cliente=cliente, inicio__lte=_hoy, fin__gte=_hoy,
+        cliente=cliente, inicio__lte=_hoy, fin__gte=_hoy, cancelada_en__isnull=True,
     ).order_by('-confirmada_en').first()
     if context['ausencia_gym_activa']:
         regreso = context['ausencia_gym_activa'].fin + timedelta(days=1)
@@ -5145,13 +5145,55 @@ def memoria_entrenador(request, cliente_id):
 
 @login_required
 def ausencia_planificada_gym_view(request):
-    from clientes.forms import AusenciaPlanificadaGymForm
+    from clientes.forms import AmpliarAusenciaPlanificadaGymForm, AusenciaPlanificadaGymForm
+    from entrenos.models import AusenciaPlanificadaGym
     from entrenos.services.ausencia_planificada_service import (
-        confirmar_ausencia_planificada, previsualizar_ausencia_planificada,
+        ampliar_ausencia_planificada, cancelar_tramo_restante_ausencia,
+        confirmar_ausencia_planificada, previsualizar_ampliacion_ausencia,
+        previsualizar_ausencia_planificada,
     )
 
     cliente = get_object_or_404(Cliente, user=request.user)
     hoy = timezone.localdate()
+    ausencia_activa = AusenciaPlanificadaGym.objects.filter(
+        cliente=cliente, inicio__lte=hoy, fin__gte=hoy, cancelada_en__isnull=True,
+    ).order_by('-confirmada_en').first()
+    if ausencia_activa:
+        ampliar_form = AmpliarAusenciaPlanificadaGymForm(
+            request.POST or None, ausencia=ausencia_activa,
+            initial={'nuevo_fin': ausencia_activa.fin + timedelta(days=1)},
+        )
+        preview_ampliacion = None
+        error_cancelacion = None
+        if request.method == 'POST':
+            accion = request.POST.get('accion')
+            if accion in ('previsualizar_ampliacion', 'confirmar_ampliacion') and ampliar_form.is_valid():
+                nuevo_fin = ampliar_form.cleaned_data['nuevo_fin']
+                preview_ampliacion = previsualizar_ampliacion_ausencia(
+                    ausencia_activa, nuevo_fin, cliente=cliente,
+                )
+                if accion == 'confirmar_ampliacion':
+                    ampliar_ausencia_planificada(
+                        ausencia=ausencia_activa, nuevo_fin=nuevo_fin, cliente=cliente,
+                    )
+                    cache.delete(f'dashboard_resumen_gym_{cliente.id}')
+                    messages.info(request, 'Ausencia ampliada y nuevas sesiones incorporadas.')
+                    return redirect('clientes:ausencia_planificada_gym')
+            elif accion == 'cancelar_tramo':
+                if request.POST.get('confirmar_cancelacion') != 'si':
+                    error_cancelacion = 'Confirma explícitamente que quieres cancelar el tramo restante.'
+                else:
+                    restauradas = cancelar_tramo_restante_ausencia(
+                        ausencia=ausencia_activa, cliente=cliente,
+                    )
+                    cache.delete(f'dashboard_resumen_gym_{cliente.id}')
+                    messages.info(request, f'Ausencia cancelada. {restauradas} sesiones futuras vuelven a pendientes.')
+                    return redirect('clientes:mockup_demo')
+        return render(request, 'clientes/ausencia_planificada_gym.html', {
+            'ausencia_activa': ausencia_activa, 'ampliar_form': ampliar_form,
+            'preview_ampliacion': preview_ampliacion, 'error_cancelacion': error_cancelacion,
+            'regreso_gym': ausencia_activa.fin + timedelta(days=1),
+        })
     initial = {'inicio': hoy}
     form = AusenciaPlanificadaGymForm(request.POST or None, initial=initial)
     preview = None

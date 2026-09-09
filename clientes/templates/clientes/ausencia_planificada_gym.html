@@ -44,12 +44,37 @@
   .ax-guarantee{margin:16px 0;color:var(--ink-faint);font:700 10px/1.6 var(--font-mono);letter-spacing:.06em;text-transform:uppercase}
   .ax-guarantee strong{color:var(--green)}
   .ax-note{margin:18px 0 0;color:var(--ink-faint);font:9px/1.6 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
+  .ax-card--danger{--ax-accent:var(--red)}
+  .ax-button--danger{border-color:var(--red);background:transparent;color:var(--red)}
+  .ax-check{display:flex;gap:10px;align-items:flex-start;margin:16px 0;color:var(--ink-muted);font-size:13px;line-height:1.5}
+  .ax-check input{width:22px;height:22px;flex:0 0 auto}
 </style>
 {% endblock %}
 {% block content %}
 <main class="ax">
   <a href="{% url 'clientes:mockup_demo' %}" class="ax-back">← Volver al panel</a>
 
+  {% if ausencia_activa %}
+  <p class="ax-kicker">Ausencia activa</p>
+  <h1 class="ax-title">Tu pausa sigue protegida</h1>
+  <p class="ax-copy">{{ ausencia_activa.inicio|date:"d/m/Y" }}–{{ ausencia_activa.fin|date:"d/m/Y" }} · regreso {{ regreso_gym|date:"d/m/Y" }}. {{ ausencia_activa.sesiones_afectadas }} sesiones omitidas sin deuda.</p>
+  <section class="ax-card">
+    <p class="ax-card-label">01 · Ampliar ausencia</p><h2 class="ax-card-title">Conservar el mismo inicio</h2>
+    <form method="post" class="ax-form">{% csrf_token %}{{ ampliar_form.as_p }}<button name="accion" value="previsualizar_ampliacion" class="ax-button">Ver nuevas sesiones pendientes</button></form>
+  </section>
+  {% if preview_ampliacion is not None %}
+  <section class="ax-card ax-card--preview"><p class="ax-card-label">02 · Vista previa</p><h2 class="ax-card-title">Nuevas sesiones pendientes</h2>
+    {% if preview_ampliacion %}<ul class="ax-list">{% for sesion in preview_ampliacion %}<li><span class="n">{{ sesion.nombre }}</span><span class="ax-date">{{ sesion.fecha_efectiva|date:"d/m/Y" }}</span></li>{% endfor %}</ul>{% else %}<p class="ax-zero">No hay nuevas sesiones pendientes.</p>{% endif %}
+    <p class="ax-guarantee"><strong>El inicio no cambia.</strong> Las sesiones se incorporan al mismo registro sin duplicados.</p>
+    <form method="post">{% csrf_token %}<input type="hidden" name="nuevo_fin" value="{{ ampliar_form.nuevo_fin.value }}"><button name="accion" value="confirmar_ampliacion" class="ax-button ax-button--ok">Confirmar ampliación</button></form>
+  </section>
+  {% endif %}
+  <section class="ax-card ax-card--danger"><p class="ax-card-label">Cancelar tramo restante</p><h2 class="ax-card-title">Volver antes</h2>
+    <p class="ax-copy">Solo vuelven a pendientes las sesiones de hoy en adelante que esta ausencia omitió y que nadie ha modificado. El pasado, las completadas y las saltadas permanecen intactas.</p>
+    {% if error_cancelacion %}<p class="errorlist">{{ error_cancelacion }}</p>{% endif %}
+    <form method="post">{% csrf_token %}<label class="ax-check"><input type="checkbox" name="confirmar_cancelacion" value="si"><span>Confirmo que quiero cancelar únicamente el tramo restante.</span></label><button name="accion" value="cancelar_tramo" class="ax-button ax-button--danger">Cancelar tramo restante</button></form>
+  </section>
+  {% else %}
   <p class="ax-kicker">Gym · pausa planificada</p>
   <h1 class="ax-title">No estaré disponible unos días</h1>
   <p class="ax-copy">Indica el intervalo. Antes de confirmar verás exactamente qué sesiones pendientes quedarán omitidas, sin deuda y sin mover sus fechas.</p>
@@ -83,6 +108,7 @@
     </form>
     <p class="ax-note">Se necesita el botón "Ver sesiones afectadas" para llegar aquí.</p>
   </section>
+  {% endif %}
   {% endif %}
 </main>
 {% endblock %}
