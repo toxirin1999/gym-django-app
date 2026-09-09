@@ -14,7 +14,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, RecordPersonal
+from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymDecisionLog, RecordPersonal
 from joi.models import MensajeJOI
 from rutinas.models import Rutina
 
@@ -211,3 +211,31 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
                    return_value=_permiso('progresion_permitida')):
             resp = self.client.get(url)
         self.assertEqual(resp.status_code, 404)
+
+    def test_renderiza_decisiones_del_entrenador_sin_duplicar_proxima_vez(self):
+        GymDecisionLog.objects.create(
+            cliente=self.cliente,
+            entreno_origen=self.entreno,
+            ejercicio='press banca',
+            ejercicio_normalizado='press banca',
+            accion='subir_peso',
+            valor_cambio=2.5,
+            motivo='Completaste el rango con margen y buena técnica.',
+        )
+        GymDecisionLog.objects.create(
+            cliente=self.cliente,
+            ejercicio='press banca',
+            accion='mantener',
+            motivo='Decisión legacy que no pertenece a este cierre.',
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        self.assertContains(resp, 'Decisiones del entrenador')
+        self.assertContains(resp, 'Subir peso')
+        self.assertContains(resp, 'Completaste el rango con margen y buena técnica.')
+        self.assertContains(resp, 'Añadirá 2.5 kg')
+        self.assertNotContains(resp, 'Decisión legacy')
+        self.assertNotContains(resp, 'Próxima vez')

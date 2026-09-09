@@ -424,6 +424,68 @@ class TestProximaVezDecisiones(CierreEntrenamientoBase):
         self.assertIn('elevaciones', proxima)
 
 
+class TestDecisionesEntrenador(CierreEntrenamientoBase):
+    def _crear_log(self, entreno, ejercicio, accion, motivo, valor_cambio=None):
+        return GymDecisionLog.objects.create(
+            cliente=self.cliente,
+            entreno_origen=entreno,
+            ejercicio=ejercicio,
+            ejercicio_normalizado=ejercicio.strip().lower(),
+            accion=accion,
+            motivo=motivo,
+            valor_cambio=valor_cambio,
+        )
+
+    def test_solo_incluye_decisiones_originadas_por_el_entreno_actual(self):
+        anterior = self._crear_entreno(date(2026, 5, 25))
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Press banca')
+        self._crear_log(anterior, 'press banca', 'mantener', 'Motivo anterior')
+        GymDecisionLog.objects.create(
+            cliente=self.cliente, ejercicio='press banca', accion='subir_peso',
+            motivo='Motivo legacy', valor_cambio=2.5,
+        )
+        actual = self._crear_log(
+            entreno, 'press banca', 'bajar_peso', 'La técnica se comprometió', 5,
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            ctx = construir_contexto_cierre(self.cliente, entreno)
+
+        self.assertEqual(ctx['decisiones_entrenador'], [{
+            'ejercicio': 'press banca',
+            'accion': actual.get_accion_display(),
+            'motivo': 'La técnica se comprometió',
+            'efecto': 'Reducirá 5 kg',
+        }])
+        self.assertIsNone(ctx['proxima_vez'])
+
+    def test_subir_reps_distingue_distancia_y_repeticiones(self):
+        from rutinas.models import EjercicioBase
+        EjercicioBase.objects.create(
+            nombre='Farmer Walk', grupo_muscular='full_body',
+            tipo_progresion='progresion_distancia',
+        )
+        EjercicioBase.objects.create(
+            nombre='Curl femoral', grupo_muscular='piernas',
+            tipo_progresion='progresion_reps',
+        )
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        self._crear_ejercicio(entreno, nombre_ejercicio='Farmer Walk')
+        self._crear_ejercicio(entreno, nombre_ejercicio='Curl femoral', orden=1)
+        self._crear_log(entreno, 'farmer walk', 'subir_reps', 'Margen suficiente', 10)
+        self._crear_log(entreno, 'curl femoral', 'subir_reps', 'Margen suficiente', 2)
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            decisiones = construir_contexto_cierre(self.cliente, entreno)['decisiones_entrenador']
+
+        efectos = {item['ejercicio']: item['efecto'] for item in decisiones}
+        self.assertEqual(efectos['farmer walk'], 'Añadirá 10 m')
+        self.assertEqual(efectos['curl femoral'], 'Añadirá 2 repeticiones')
+
+
 # ── Caso 5: PRs ────────────────────────────────────────────────────────────────
 
 class TestPRs(CierreEntrenamientoBase):

@@ -65,6 +65,60 @@ _PROXIMA_VEZ_ACCION = {
 }
 
 
+def _formatear_magnitud(valor):
+    return f'{valor:g}'
+
+
+def _efecto_decision(log, tipo_progresion):
+    """Describe el cambio operativo solo cuando el log aporta una magnitud."""
+    if log.valor_cambio is None:
+        return None
+
+    valor = _formatear_magnitud(abs(log.valor_cambio))
+    if log.accion == 'subir_peso':
+        return f'Añadirá {valor} kg'
+    if log.accion == 'bajar_peso':
+        return f'Reducirá {valor} kg'
+    if log.accion == 'subir_reps':
+        if tipo_progresion == 'progresion_distancia':
+            return f'Añadirá {valor} m'
+        return f'Añadirá {valor} repeticiones'
+    return None
+
+
+def _decisiones_entrenador(cliente, entreno):
+    """Decisiones causadas exclusivamente por la sesión que se está cerrando."""
+    from django.db.models.functions import Lower
+    from rutinas.models import EjercicioBase
+
+    logs = list(
+        GymDecisionLog.objects
+        .filter(cliente=cliente, entreno_origen=entreno)
+        .order_by('fecha_creacion', 'id')
+    )
+    if not logs:
+        return []
+
+    nombres = [log.ejercicio.strip().lower() for log in logs]
+    tipos_progresion = dict(
+        EjercicioBase.objects
+        .annotate(nombre_lower=Lower('nombre'))
+        .filter(nombre_lower__in=nombres)
+        .values_list('nombre_lower', 'tipo_progresion')
+    )
+    return [
+        {
+            'ejercicio': log.ejercicio,
+            'accion': log.get_accion_display(),
+            'motivo': log.motivo,
+            'efecto': _efecto_decision(
+                log, tipos_progresion.get(log.ejercicio.strip().lower()),
+            ),
+        }
+        for log in logs
+    ]
+
+
 def _proxima_vez_decisiones(cliente, ejercicios):
     """
     Deriva "próxima vez" de las decisiones de progresión (GymDecisionLog)
@@ -281,7 +335,8 @@ def construir_contexto_cierre(cliente, entreno):
         lectura_plan = _MENSAJES_PROGRESION.get(motivo)
         proxima_vez = _PROXIMA_VEZ.get(motivo)
 
-    if proxima_vez is None:
+    decisiones_entrenador = _decisiones_entrenador(cliente, entreno)
+    if proxima_vez is None and not decisiones_entrenador:
         proxima_vez = _proxima_vez_decisiones(cliente, ejercicios)
 
     # Mostrar todos los PRs reales sin eliminar duplicados (ej: peso máximo + volumen total del mismo ejercicio).
@@ -298,6 +353,7 @@ def construir_contexto_cierre(cliente, entreno):
         'resumen': _resumen_sesion(entreno, ejercicios),
         'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy),
         'lectura_plan': lectura_plan,
+        'decisiones_entrenador': decisiones_entrenador,
         'proxima_vez': proxima_vez,
         'prs': prs,
         'joi_mensaje': joi_mensaje,

@@ -238,6 +238,22 @@
   </div>
   {% endif %}
 
+  {% if decisiones_entrenador %}
+  <!-- DECISIONES DEL ENTRENADOR -->
+  <div class="sec-hdr"><span class="sec-tag">Decisiones del entrenador</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for decision in decisiones_entrenador %}
+    <div class="cambio-row">
+      <span class="cambio-nombre">
+        {{ decision.ejercicio }}<br>
+        <span style="color:var(--td);font-size:12px;">{{ decision.accion }} · {{ decision.motivo }}</span>
+      </span>
+      {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if proxima_vez %}
   <!-- PRÓXIMA VEZ -->
   <div class="sec-hdr"><span class="sec-tag">Próxima vez</span><div class="sec-line"></div></div>
