@@ -1,99 +1,87 @@
 {% extends "base.html" %}
 {% block extra_css %}
 <style>
-  :root {
-    --absence-bg: var(--jds-bg, #07090c);
-    --absence-panel: var(--jds-surface, #11151a);
-    --absence-panel-2: var(--jds-surface-subtle, #171c22);
-    --absence-text: var(--jds-text, #f4f7fa);
-    --absence-muted: var(--jds-text-muted, #89939f);
-    --absence-line: var(--jds-border, #2a3139);
-    --absence-accent: var(--jds-accent, #38bdf8);
-    --absence-ok: #22c55e;
+  :root { color-scheme: dark; }
+  .ax {
+    --cyan:#72ddff; --green:#53d88b; --gold:#d1a732; --red:#ff5d5d;
+    --ink:#f2f3f5; --ink-muted:#9da5ad; --ink-faint:#7f8992;
+    --surface:#0d1115; --surface-raised:#141a20;
+    --line:#273039; --line-strong:#36424e;
+    --font-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+    max-width:min(100%,720px); margin:0 auto; padding:18px 18px 56px;
   }
-  body { background: var(--absence-bg); color: var(--absence-text); }
-  .absence-shell { max-width: 680px; margin: 0 auto; padding: 20px 16px 56px; }
-  .absence-back {
-    display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 14px;
-    color: var(--absence-muted); text-decoration: none; font-size: 13px;
+  .ax *{box-sizing:border-box}
+  .ax a{color:inherit;text-decoration:none}
+  .ax-back{display:inline-flex;align-items:center;gap:6px;min-height:44px;color:var(--cyan);font:700 10px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase}
+  .ax-kicker{margin:34px 0 10px;color:var(--cyan);font:700 10px/1 var(--font-mono);letter-spacing:.18em;text-transform:uppercase}
+  .ax-title{margin:0;font:700 clamp(30px,8vw,54px)/.95 Arial,sans-serif;letter-spacing:-.045em;text-transform:uppercase}
+  .ax-copy{max-width:52ch;margin:16px 0 0;color:var(--ink-muted);font-size:14px;line-height:1.65}
+  .ax-card{position:relative;margin-top:22px;border:1px solid var(--line);background:var(--surface);padding:22px 20px}
+  .ax-card::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--ax-accent,var(--cyan))}
+  .ax-card--preview{--ax-accent:var(--gold);margin-top:16px}
+  .ax-card-label{color:var(--ax-accent,var(--cyan));font:700 9px/1.3 var(--font-mono);letter-spacing:.15em;text-transform:uppercase;margin-bottom:8px}
+  .ax-card-title{margin:0;font-size:18px;line-height:1.2;text-transform:uppercase;letter-spacing:-.01em}
+  .ax-form{margin-top:16px}
+  .ax-form p{margin:0 0 16px}
+  .ax-form label{display:block;margin-bottom:7px;color:var(--ink-muted);font:700 9px/1.4 var(--font-mono);letter-spacing:.14em;text-transform:uppercase}
+  .ax-form input,.ax-form select,.ax-form textarea{
+    width:100%;min-height:48px;padding:12px 13px;border:1px solid var(--line);
+    background:var(--surface-raised);color:var(--ink);font:400 14px/1.4 Arial,sans-serif;
   }
-  .absence-card {
-    position: relative; overflow: hidden; padding: 22px 20px;
-    background: var(--absence-panel); border: 1px solid var(--absence-line); border-radius: 3px;
-  }
-  .absence-card::before {
-    content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
-    background: var(--absence-accent);
-  }
-  .absence-kicker {
-    margin: 0 0 10px; color: var(--absence-accent); font-size: 10px;
-    font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
-  }
-  .absence-title { margin: 0; font-size: clamp(26px, 7vw, 40px); line-height: .98; }
-  .absence-copy { margin: 16px 0 22px; color: var(--absence-muted); line-height: 1.55; }
-  .absence-form p { margin: 0 0 16px; }
-  .absence-form label {
-    display: block; margin-bottom: 7px; color: var(--absence-muted); font-size: 10px;
-    font-weight: 800; letter-spacing: .13em; text-transform: uppercase;
-  }
-  .absence-form input, .absence-form select, .absence-form textarea {
-    box-sizing: border-box; width: 100%; min-height: 48px; padding: 12px 13px;
-    border: 1px solid var(--absence-line); border-radius: 3px;
-    background: var(--absence-panel-2); color: var(--absence-text); color-scheme: dark;
-  }
-  .absence-form textarea { min-height: 88px; resize: vertical; }
-  .absence-form input:focus, .absence-form select:focus, .absence-form textarea:focus {
-    outline: 2px solid color-mix(in srgb, var(--absence-accent) 55%, transparent);
-    outline-offset: 2px; border-color: var(--absence-accent);
-  }
-  .absence-errors, .errorlist { color: #fb7185; font-size: 12px; }
-  .absence-button {
-    width: 100%; min-height: 52px; padding: 12px 16px; border: 1px solid var(--absence-accent);
-    border-radius: 3px; background: var(--absence-accent); color: #041018;
-    font-weight: 900; letter-spacing: .05em; text-transform: uppercase; cursor: pointer;
-  }
-  .absence-preview { margin-top: 16px; }
-  .absence-preview-list { list-style: none; margin: 16px 0 20px; padding: 0; }
-  .absence-preview-list li {
-    display: flex; justify-content: space-between; gap: 14px; padding: 13px 0;
-    border-bottom: 1px solid var(--absence-line);
-  }
-  .absence-date { color: var(--absence-accent); white-space: nowrap; }
-  .absence-zero { padding: 14px; background: var(--absence-panel-2); color: var(--absence-muted); }
-  .absence-guarantee { margin: 16px 0; color: var(--absence-muted); font-size: 12px; }
-  .absence-guarantee strong { color: var(--absence-ok); }
+  .ax-form textarea{min-height:88px;resize:vertical}
+  .ax-form input:focus,.ax-form select:focus,.ax-form textarea:focus{outline:2px solid color-mix(in srgb,var(--cyan) 55%,transparent);outline-offset:2px;border-color:var(--cyan)}
+  .ax-form .errorlist{list-style:none;margin:0 0 10px;padding:0;color:var(--red);font:700 11px/1.5 var(--font-mono)}
+  .ax-button{width:100%;min-height:52px;margin-top:4px;padding:12px 16px;border:1px solid var(--cyan);background:var(--cyan);color:#041018;font:900 11px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;cursor:pointer}
+  .ax-button:hover{background:#9ceaff;border-color:#9ceaff}
+  .ax-button:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+  .ax-button--ok{border-color:var(--green);background:var(--green)}
+  .ax-button--ok:hover{background:#7ee8ab;border-color:#7ee8ab}
+  .ax-list{list-style:none;margin:16px 0 0;padding:0;border-top:1px solid var(--line)}
+  .ax-list li{display:flex;justify-content:space-between;gap:14px;align-items:baseline;padding:13px 0;border-bottom:1px solid var(--line)}
+  .ax-list .n{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+  .ax-date{color:var(--cyan);font:700 11px/1 var(--font-mono);white-space:nowrap}
+  .ax-zero{margin-top:16px;padding:18px;border:1px dashed var(--line);color:var(--ink-faint);text-align:center;font:700 10px/1.6 var(--font-mono);letter-spacing:.1em;text-transform:uppercase}
+  .ax-guarantee{margin:16px 0;color:var(--ink-faint);font:700 10px/1.6 var(--font-mono);letter-spacing:.06em;text-transform:uppercase}
+  .ax-guarantee strong{color:var(--green)}
+  .ax-note{margin:18px 0 0;color:var(--ink-faint);font:9px/1.6 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}
 </style>
 {% endblock %}
 {% block content %}
-<main class="absence-shell">
-  <a href="{% url 'clientes:mockup_demo' %}" class="absence-back">← Volver al panel</a>
-  <section class="absence-card">
-    <p class="absence-kicker">Gym · pausa planificada</p>
-    <h1 class="absence-title">No estaré disponible unos días</h1>
-    <p class="absence-copy">Indica el intervalo. Antes de confirmar verás exactamente qué sesiones pendientes quedarán omitidas, sin deuda y sin mover sus fechas.</p>
-    <form method="post" class="absence-form">
+<main class="ax">
+  <a href="{% url 'clientes:mockup_demo' %}" class="ax-back">← Volver al panel</a>
+
+  <p class="ax-kicker">Gym · pausa planificada</p>
+  <h1 class="ax-title">No estaré disponible unos días</h1>
+  <p class="ax-copy">Indica el intervalo. Antes de confirmar verás exactamente qué sesiones pendientes quedarán omitidas, sin deuda y sin mover sus fechas.</p>
+
+  <section class="ax-card">
+    <p class="ax-card-label">01 · Intervalo</p>
+    <h2 class="ax-card-title">Delimita la ausencia</h2>
+    <form method="post" class="ax-form">
       {% csrf_token %}
       {{ form.as_p }}
-      <button type="submit" name="accion" value="previsualizar" class="absence-button">Ver sesiones afectadas</button>
+      <button type="submit" name="accion" value="previsualizar" class="ax-button">Ver sesiones afectadas</button>
     </form>
   </section>
+
   {% if preview is not None %}
-  <section aria-labelledby="preview-title" class="absence-card absence-preview">
-    <p class="absence-kicker">Vista previa · sin cambios todavía</p>
-    <h2 id="preview-title">Sesiones pendientes afectadas</h2>
+  <section aria-labelledby="preview-title" class="ax-card ax-card--preview">
+    <p class="ax-card-label">02 · Vista previa · sin cambios todavía</p>
+    <h2 id="preview-title" class="ax-card-title">Sesiones pendientes afectadas</h2>
     {% if preview %}
-    <ul class="absence-preview-list">
+    <ul class="ax-list">
       {% for sesion in preview %}
-      <li><strong>{{ sesion.nombre }}</strong><span class="absence-date">{{ sesion.fecha_efectiva|date:"d/m/Y" }}</span></li>
+      <li><span class="n">{{ sesion.nombre }}</span><span class="ax-date">{{ sesion.fecha_efectiva|date:"d/m/Y" }}</span></li>
       {% endfor %}
     </ul>
-    {% else %}<p class="absence-zero">No hay sesiones pendientes en este intervalo.</p>{% endif %}
-    <p class="absence-guarantee"><strong>0 sesiones trasladadas.</strong> El siguiente bloque conserva su lugar.</p>
+    {% else %}<p class="ax-zero">No hay sesiones pendientes en este intervalo.</p>{% endif %}
+    <p class="ax-guarantee"><strong>0 sesiones trasladadas.</strong> El siguiente bloque conserva su lugar.</p>
     <form method="post">
       {% csrf_token %}
       {% for field in form %}<input type="hidden" name="{{ field.name }}" value="{{ field.value|default:'' }}">{% endfor %}
-      <button type="submit" name="accion" value="confirmar" class="absence-button">Confirmar ausencia</button>
+      <button type="submit" name="accion" value="confirmar" class="ax-button ax-button--ok">Confirmar ausencia</button>
     </form>
+    <p class="ax-note">Se necesita el botón "Ver sesiones afectadas" para llegar aquí.</p>
   </section>
   {% endif %}
 </main>
