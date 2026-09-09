@@ -38,6 +38,8 @@ def _clasificar_sesion(sesion):
         return {**base, 'resultado': resultado, 'causa': None}
     if sesion.estado == SesionProgramada.ESTADO_SALTADA_USUARIO:
         return {**base, 'resultado': 'omitida', 'causa': 'usuario'}
+    if sesion.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO:
+        return {**base, 'resultado': 'omitida', 'causa': 'ausencia_planificada'}
     if sesion.estado == SesionProgramada.ESTADO_OMITIDA_SISTEMA:
         return {**base, 'resultado': 'omitida', 'causa': 'sistema'}
     if sesion.estado == SesionProgramada.ESTADO_CANCELADA_LESION:

@@ -27,8 +27,9 @@ def get_resumen_semanal_gym(cliente, inicio=None, fin=None):
     """
     from entrenos.models import (
         EntrenoRealizado, EjercicioRealizado, SerieRealizada, GymDecisionLog,
-        RecordPersonal,
+        RecordPersonal, SesionProgramada,
     )
+    from django.db.models import Q
 
     if inicio is None and fin is None:
         hoy = date.today()
@@ -43,11 +44,44 @@ def get_resumen_semanal_gym(cliente, inicio=None, fin=None):
         cliente=cliente, fecha__range=(lunes, domingo)
     ).prefetch_related('ejercicios_realizados', 'series')
 
-    if not entrenos.exists():
-        return []
-
     items = []
     meta = {'lunes': lunes, 'domingo': domingo}
+
+    candidatas_ausencia = (
+        SesionProgramada.objects.filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_OMITIDA_USUARIO,
+            ausencia_planificada__isnull=False,
+        )
+        .filter(
+            Q(fecha_prevista__range=(lunes, domingo))
+            | Q(pospuesta_hasta__range=(lunes, domingo))
+        )
+        .select_related('ausencia_planificada')
+        .order_by('ausencia_planificada_id')
+    )
+    omitidas_ausencia = [
+        sesion for sesion in candidatas_ausencia
+        if lunes <= (sesion.pospuesta_hasta or sesion.fecha_prevista) <= domingo
+    ]
+    if omitidas_ausencia:
+        motivos = []
+        for sesion in omitidas_ausencia:
+            etiqueta = sesion.ausencia_planificada.get_motivo_display()
+            if etiqueta not in motivos:
+                motivos.append(etiqueta)
+        cantidad = len(omitidas_ausencia)
+        items.append({
+            'tipo': 'ausencia_planificada', 'icono': '🗓️', 'color': 'info', 'meta': meta,
+            'texto': (
+                f'{cantidad} sesión{"es" if cantidad != 1 else ""} omitida'
+                f'{"s" if cantidad != 1 else ""} por ausencia planificada'
+                f' · {", ".join(motivos)} · sin deuda.'
+            ),
+        })
+
+    if not entrenos.exists():
+        return items
 
     # ── 1. Sesiones + volumen ──────────────────────────────────────
     num_sesiones = entrenos.count()

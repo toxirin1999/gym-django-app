@@ -816,7 +816,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     {% elif portada_hoy.sesion_pospuesta %}
     <div class="rb-bib-sub" data-postponed-session-date style="margin-top:6px;">
-      Sesión guardada · {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}
+      Sesión guardada para mañana · {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}
     </div>
     {% else %}
     <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
@@ -938,6 +938,10 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
     </form>
     {% endif %}
+    <a href="{% url 'clientes:ausencia_planificada_gym' %}" class="rb-session-calendar-btn"
+       style="display:inline-flex;align-items:center;min-height:44px;margin-top:8px;">
+      No estaré disponible unos días
+    </a>
     {% comment %}
     Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
     operativo, subordinado aquí. Solo relevante si el módulo dominante
@@ -1639,6 +1643,13 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <div style="font-size:11px;color:var(--td);opacity:0.5;">
           <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_saltadas }}</span>
           saltada{{ analisis_semanal.sesiones_saltadas|pluralize:"s" }}
+        </div>
+        {% endif %}
+        {% if analisis_semanal.sesiones_omitidas_ausencia %}
+        <div style="font-size:11px;color:var(--td);opacity:0.75;">
+          <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_omitidas_ausencia }}</span>
+          omitida{{ analisis_semanal.sesiones_omitidas_ausencia|pluralize:"s" }} por ausencia
+          {% if analisis_semanal.motivos_ausencia %}· {{ analisis_semanal.motivos_ausencia|join:", " }}{% endif %}
         </div>
         {% endif %}
         {% if analisis_semanal.bloques_principales_completos and analisis_semanal.sesiones_esenciales %}

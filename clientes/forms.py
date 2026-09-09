@@ -445,3 +445,19 @@ class MiCuerpoForm(forms.ModelForm):
             'cintura': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': 'cm'}),
             'grasa_corporal': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1', 'placeholder': '%'}),
         }
+
+
+class AusenciaPlanificadaGymForm(forms.Form):
+    inicio = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label='Desde')
+    fin = forms.DateField(widget=forms.DateInput(attrs={'type': 'date'}), label='Hasta')
+    motivo = forms.ChoiceField(choices=(
+        ('vacaciones', 'Vacaciones'), ('viaje', 'Viaje'),
+        ('enfermedad', 'Enfermedad'), ('otro', 'Otro'),
+    ))
+    nota = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3}))
+
+    def clean(self):
+        datos = super().clean()
+        if datos.get('inicio') and datos.get('fin') and datos['fin'] < datos['inicio']:
+            self.add_error('fin', 'La fecha final debe ser igual o posterior al inicio.')
+        return datos

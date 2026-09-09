@@ -1844,6 +1844,21 @@ def mockup_demo(request):
         sesion_pospuesta=_proyeccion_sesion_pospuesta(cliente, _hoy),
     )
 
+    from entrenos.models import AusenciaPlanificadaGym
+    context['ausencia_gym_activa'] = AusenciaPlanificadaGym.objects.filter(
+        cliente=cliente, inicio__lte=_hoy, fin__gte=_hoy,
+    ).order_by('-confirmada_en').first()
+    if context['ausencia_gym_activa']:
+        regreso = context['ausencia_gym_activa'].fin + timedelta(days=1)
+        context['regreso_gym'] = regreso
+        context['portada_hoy']['decision'] = {
+            'estado': 'Ausencia planificada',
+            'frase': f'Regresas el {regreso:%d/%m/%Y}. El plan no genera deuda durante estos días.',
+        }
+        context['portada_hoy']['accion_principal'] = None
+        context['portada_hoy']['sesion_dominante'] = None
+        context['portada_hoy']['sesion_alternativa'] = None
+
     # Recibo factual de la supervisión vigente; no recalcula autoridad.
     from clientes.recibo_supervision_gym_service import construir_recibo_supervision_gym
     context['recibo_supervision_gym'] = construir_recibo_supervision_gym(
@@ -5127,6 +5142,34 @@ def memoria_entrenador(request, cliente_id):
 
 
 # ── Phase 1.3 — Acciones sobre SesionProgramada ──────────────────────────────
+
+@login_required
+def ausencia_planificada_gym_view(request):
+    from clientes.forms import AusenciaPlanificadaGymForm
+    from entrenos.services.ausencia_planificada_service import (
+        confirmar_ausencia_planificada, previsualizar_ausencia_planificada,
+    )
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+    initial = {'inicio': hoy}
+    form = AusenciaPlanificadaGymForm(request.POST or None, initial=initial)
+    preview = None
+    if request.method == 'POST' and form.is_valid():
+        datos = form.cleaned_data
+        preview = previsualizar_ausencia_planificada(cliente, datos['inicio'], datos['fin'])
+        if request.POST.get('accion') == 'confirmar':
+            ausencia = confirmar_ausencia_planificada(cliente=cliente, **datos)
+            messages.info(
+                request,
+                f'Ausencia guardada. {ausencia.sesiones_afectadas} sesiones quedan omitidas sin deuda.',
+            )
+            cache.delete(f'dashboard_resumen_gym_{cliente.id}')
+            return redirect('clientes:mockup_demo')
+    return render(request, 'clientes/ausencia_planificada_gym.html', {
+        'form': form, 'preview': preview,
+    })
+
 
 @login_required
 @require_POST

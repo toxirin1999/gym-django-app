@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block extra_css %}
+<style>
+  :root {
+    --absence-bg: var(--jds-bg, #07090c);
+    --absence-panel: var(--jds-surface, #11151a);
+    --absence-panel-2: var(--jds-surface-subtle, #171c22);
+    --absence-text: var(--jds-text, #f4f7fa);
+    --absence-muted: var(--jds-text-muted, #89939f);
+    --absence-line: var(--jds-border, #2a3139);
+    --absence-accent: var(--jds-accent, #38bdf8);
+    --absence-ok: #22c55e;
+  }
+  body { background: var(--absence-bg); color: var(--absence-text); }
+  .absence-shell { max-width: 680px; margin: 0 auto; padding: 20px 16px 56px; }
+  .absence-back {
+    display: inline-flex; align-items: center; min-height: 44px; margin-bottom: 14px;
+    color: var(--absence-muted); text-decoration: none; font-size: 13px;
+  }
+  .absence-card {
+    position: relative; overflow: hidden; padding: 22px 20px;
+    background: var(--absence-panel); border: 1px solid var(--absence-line); border-radius: 3px;
+  }
+  .absence-card::before {
+    content: ""; position: absolute; inset: 0 auto 0 0; width: 3px;
+    background: var(--absence-accent);
+  }
+  .absence-kicker {
+    margin: 0 0 10px; color: var(--absence-accent); font-size: 10px;
+    font-weight: 800; letter-spacing: .18em; text-transform: uppercase;
+  }
+  .absence-title { margin: 0; font-size: clamp(26px, 7vw, 40px); line-height: .98; }
+  .absence-copy { margin: 16px 0 22px; color: var(--absence-muted); line-height: 1.55; }
+  .absence-form p { margin: 0 0 16px; }
+  .absence-form label {
+    display: block; margin-bottom: 7px; color: var(--absence-muted); font-size: 10px;
+    font-weight: 800; letter-spacing: .13em; text-transform: uppercase;
+  }
+  .absence-form input, .absence-form select, .absence-form textarea {
+    box-sizing: border-box; width: 100%; min-height: 48px; padding: 12px 13px;
+    border: 1px solid var(--absence-line); border-radius: 3px;
+    background: var(--absence-panel-2); color: var(--absence-text); color-scheme: dark;
+  }
+  .absence-form textarea { min-height: 88px; resize: vertical; }
+  .absence-form input:focus, .absence-form select:focus, .absence-form textarea:focus {
+    outline: 2px solid color-mix(in srgb, var(--absence-accent) 55%, transparent);
+    outline-offset: 2px; border-color: var(--absence-accent);
+  }
+  .absence-errors, .errorlist { color: #fb7185; font-size: 12px; }
+  .absence-button {
+    width: 100%; min-height: 52px; padding: 12px 16px; border: 1px solid var(--absence-accent);
+    border-radius: 3px; background: var(--absence-accent); color: #041018;
+    font-weight: 900; letter-spacing: .05em; text-transform: uppercase; cursor: pointer;
+  }
+  .absence-preview { margin-top: 16px; }
+  .absence-preview-list { list-style: none; margin: 16px 0 20px; padding: 0; }
+  .absence-preview-list li {
+    display: flex; justify-content: space-between; gap: 14px; padding: 13px 0;
+    border-bottom: 1px solid var(--absence-line);
+  }
+  .absence-date { color: var(--absence-accent); white-space: nowrap; }
+  .absence-zero { padding: 14px; background: var(--absence-panel-2); color: var(--absence-muted); }
+  .absence-guarantee { margin: 16px 0; color: var(--absence-muted); font-size: 12px; }
+  .absence-guarantee strong { color: var(--absence-ok); }
+</style>
+{% endblock %}
+{% block content %}
+<main class="absence-shell">
+  <a href="{% url 'clientes:mockup_demo' %}" class="absence-back">← Volver al panel</a>
+  <section class="absence-card">
+    <p class="absence-kicker">Gym · pausa planificada</p>
+    <h1 class="absence-title">No estaré disponible unos días</h1>
+    <p class="absence-copy">Indica el intervalo. Antes de confirmar verás exactamente qué sesiones pendientes quedarán omitidas, sin deuda y sin mover sus fechas.</p>
+    <form method="post" class="absence-form">
+      {% csrf_token %}
+      {{ form.as_p }}
+      <button type="submit" name="accion" value="previsualizar" class="absence-button">Ver sesiones afectadas</button>
+    </form>
+  </section>
+  {% if preview is not None %}
+  <section aria-labelledby="preview-title" class="absence-card absence-preview">
+    <p class="absence-kicker">Vista previa · sin cambios todavía</p>
+    <h2 id="preview-title">Sesiones pendientes afectadas</h2>
+    {% if preview %}
+    <ul class="absence-preview-list">
+      {% for sesion in preview %}
+      <li><strong>{{ sesion.nombre }}</strong><span class="absence-date">{{ sesion.fecha_efectiva|date:"d/m/Y" }}</span></li>
+      {% endfor %}
+    </ul>
+    {% else %}<p class="absence-zero">No hay sesiones pendientes en este intervalo.</p>{% endif %}
+    <p class="absence-guarantee"><strong>0 sesiones trasladadas.</strong> El siguiente bloque conserva su lugar.</p>
+    <form method="post">
+      {% csrf_token %}
+      {% for field in form %}<input type="hidden" name="{{ field.name }}" value="{{ field.value|default:'' }}">{% endfor %}
+      <button type="submit" name="accion" value="confirmar" class="absence-button">Confirmar ausencia</button>
+    </form>
+  </section>
+  {% endif %}
+</main>
+{% endblock %}

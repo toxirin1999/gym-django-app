@@ -49,10 +49,23 @@ def _snapshot(contrato):
     sesiones = list(
         contrato.sesiones.select_related('entreno_realizado').order_by('id')
     )
+    # Contrato v1: estas claves son evidencia persistida y no deben variar al
+    # ampliar choices. Las ausencias planificadas viven en su campo explícito.
+    estados_contrato_v1 = (
+        SesionProgramada.ESTADO_PENDIENTE,
+        SesionProgramada.ESTADO_COMPLETADA,
+        SesionProgramada.ESTADO_SALTADA_USUARIO,
+        SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+        SesionProgramada.ESTADO_CANCELADA_LESION,
+    )
     conteos = {
         codigo: sum(sesion.estado == codigo for sesion in sesiones)
-        for codigo, _ in SesionProgramada.ESTADOS
+        for codigo in estados_contrato_v1
     }
+    omitidas_ausencia = [
+        sesion for sesion in sesiones
+        if sesion.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO
+    ]
     completadas = [
         sesion for sesion in sesiones
         if sesion.estado == SesionProgramada.ESTADO_COMPLETADA
@@ -96,6 +109,7 @@ def _snapshot(contrato):
         'minimo_valido': contrato.minimo_valido,
         'estado_cumplimiento': resultado_base['estado_cumplimiento'],
         'conteos_estado': conteos,
+        'sesiones_omitidas_ausencia': len(omitidas_ausencia),
         'sesiones_completadas': len(completadas),
         'sesiones_reubicadas': reubicadas,
         'sesiones': [

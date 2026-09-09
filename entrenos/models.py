@@ -1757,10 +1757,46 @@ class EvaluacionBloqueGym(models.Model):
         return super().save(*args, **kwargs)
 
 
+class AusenciaPlanificadaGym(models.Model):
+    MOTIVO_VACACIONES = 'vacaciones'
+    MOTIVO_VIAJE = 'viaje'
+    MOTIVO_ENFERMEDAD = 'enfermedad'
+    MOTIVO_OTRO = 'otro'
+    MOTIVOS = [
+        (MOTIVO_VACACIONES, 'Vacaciones'),
+        (MOTIVO_VIAJE, 'Viaje'),
+        (MOTIVO_ENFERMEDAD, 'Enfermedad'),
+        (MOTIVO_OTRO, 'Otro'),
+    ]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.PROTECT, related_name='ausencias_planificadas_gym',
+    )
+    inicio = models.DateField(db_index=True)
+    fin = models.DateField(db_index=True)
+    motivo = models.CharField(max_length=20, choices=MOTIVOS)
+    nota = models.TextField(blank=True)
+    sesiones_afectadas = models.PositiveIntegerField(default=0)
+    sesiones_snapshot = models.JSONField(default=list, blank=True)
+    deuda_generada = models.PositiveIntegerField(default=0, editable=False)
+    creada_en = models.DateTimeField(auto_now_add=True)
+    confirmada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-inicio', '-id']
+        indexes = [models.Index(fields=['cliente', 'inicio', 'fin'])]
+
+    def clean(self):
+        super().clean()
+        if self.inicio and self.fin and self.fin < self.inicio:
+            raise ValidationError({'fin': 'La fecha final debe ser igual o posterior al inicio.'})
+
+
 class SesionProgramada(models.Model):
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_COMPLETADA = "completada"
     ESTADO_SALTADA_USUARIO = "saltada_usuario"
+    ESTADO_OMITIDA_USUARIO = "omitida_usuario"
     ESTADO_OMITIDA_SISTEMA = "omitida_sistema"
     ESTADO_CANCELADA_LESION = "cancelada_lesion"
 
@@ -1771,6 +1807,7 @@ class SesionProgramada(models.Model):
         (ESTADO_PENDIENTE, "Pendiente"),
         (ESTADO_COMPLETADA, "Completada"),
         (ESTADO_SALTADA_USUARIO, "Saltada por usuario"),
+        (ESTADO_OMITIDA_USUARIO, "Omitida por ausencia planificada"),
         (ESTADO_OMITIDA_SISTEMA, "Omitida por sistema"),
         (ESTADO_CANCELADA_LESION, "Cancelada por lesión"),
     ]
@@ -1826,6 +1863,10 @@ class SesionProgramada(models.Model):
     )
 
     motivo_estado = models.TextField(blank=True)
+    ausencia_planificada = models.ForeignKey(
+        AusenciaPlanificadaGym, on_delete=models.PROTECT, null=True, blank=True,
+        related_name='sesiones',
+    )
 
     creada_en = models.DateTimeField(auto_now_add=True)
     actualizada_en = models.DateTimeField(auto_now=True)

@@ -22,6 +22,7 @@ CONTRACT (do not break):
    Only an explicit review converts a pattern into stable narrative.
 ────────────────────────────────────────────────────────────────────────────
 """
+from django.db.models import Q
 
 from datetime import timedelta
 
@@ -51,10 +52,10 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         EntrenoRealizado.objects.filter(cliente=cliente, fecha__range=(lunes, domingo))
     )
     sesiones_sp = list(
-        SesionProgramada.objects.filter(
-            cliente=cliente,
-            fecha_prevista__range=(lunes, domingo),
-        )
+        SesionProgramada.objects.filter(cliente=cliente).filter(
+            Q(fecha_prevista__range=(lunes, domingo))
+            | Q(pospuesta_hasta__range=(lunes, domingo))
+        ).select_related('ausencia_planificada').distinct()
     )
 
     sesiones_completadas = len(entrenos_semana)
@@ -62,6 +63,16 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
     sesiones_normales = sesiones_completadas - sesiones_esenciales
     sesiones_saltadas = sum(1 for sp in sesiones_sp if sp.estado == SesionProgramada.ESTADO_SALTADA_USUARIO)
     sesiones_omitidas = sum(1 for sp in sesiones_sp if sp.estado == SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+    sesiones_omitidas_ausencia_items = [
+        sp for sp in sesiones_sp
+        if sp.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO
+        and lunes <= (sp.pospuesta_hasta or sp.fecha_prevista) <= domingo
+    ]
+    sesiones_omitidas_ausencia = len(sesiones_omitidas_ausencia_items)
+    motivos_ausencia = list(dict.fromkeys(
+        sp.ausencia_planificada.get_motivo_display()
+        for sp in sesiones_omitidas_ausencia_items if sp.ausencia_planificada_id
+    ))
     sesiones_pospuestas = sum(
         1 for sp in sesiones_sp
         if sp.estado == SesionProgramada.ESTADO_PENDIENTE and sp.pospuesta_hasta is not None
@@ -112,7 +123,10 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         if pct_opcional_list else None
     )
 
-    hay_datos = sesiones_completadas > 0 or sesiones_saltadas > 0 or sesiones_omitidas > 0
+    hay_datos = (
+        sesiones_completadas > 0 or sesiones_saltadas > 0
+        or sesiones_omitidas > 0 or sesiones_omitidas_ausencia > 0
+    )
 
     lectura = _generar_lectura(
         sesiones_completadas=sesiones_completadas,
@@ -156,6 +170,8 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
         'sesiones_reubicadas': sesiones_reubicadas,
         'sesiones_saltadas': sesiones_saltadas,
         'sesiones_omitidas': sesiones_omitidas,
+        'sesiones_omitidas_ausencia': sesiones_omitidas_ausencia,
+        'motivos_ausencia': motivos_ausencia,
         'bloques_principales_completos': bloques_principales_completos,
         'bloques_principales_parciales': bloques_principales_parciales,
         'porcentaje_principal_medio': pct_principal_medio,
