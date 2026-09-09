@@ -96,6 +96,20 @@ class TrayectoriaPlanTests(TestCase):
         self.assertEqual(resultado['semana']['evaluacion']['id'], evaluacion.id)
         self.assertEqual(resultado['semana']['evaluacion']['estado_revision'], 'pendiente')
 
+    def test_balance_informativo_no_crea_hito_de_revision(self):
+        EvaluacionSemanalGym.objects.create(
+            contrato=self.contrato, estado_cumplimiento='minima_valida',
+            sesiones_completadas=3,
+            estado_revision=EvaluacionSemanalGym.ESTADO_INFORMATIVA,
+        )
+
+        resultado = self._proyectar(fecha=date(2026, 8, 29))
+
+        self.assertNotEqual(
+            (resultado.get('proximo_hito') or {}).get('tipo'),
+            'revision_semanal',
+        )
+
     def test_semana_completa_sin_semana_siguiente_materializada_anuncia_su_apertura(self):
         for dia in range(5):
             fecha_sesion = self.inicio + timedelta(days=dia)

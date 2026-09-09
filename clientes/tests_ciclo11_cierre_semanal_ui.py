@@ -201,6 +201,25 @@ class CierreSemanalCentroTests(TestCase):
         self.assertNotContains(response, reverse('clientes:aceptar_cierre_semanal', args=[evaluacion.pk]))
         self.assertNotContains(response, reverse('clientes:rechazar_cierre_semanal', args=[evaluacion.pk]))
 
+    def test_informativa_es_balance_automatico_sin_formularios(self):
+        evaluacion = self._evaluacion(EvaluacionSemanalGym.ESTADO_INFORMATIVA)
+        response = self._get()
+
+        self.assertContains(response, 'Balance automático')
+        self.assertContains(response, 'no requiere confirmación')
+        self.assertNotContains(response, reverse('clientes:aceptar_cierre_semanal', args=[evaluacion.pk]))
+        self.assertNotContains(response, reverse('clientes:rechazar_cierre_semanal', args=[evaluacion.pk]))
+
+    def test_endpoints_legacy_no_pueden_responder_informativa(self):
+        evaluacion = self._evaluacion(EvaluacionSemanalGym.ESTADO_INFORMATIVA)
+        self.client.force_login(self.user)
+
+        for nombre in ('aceptar_cierre_semanal', 'rechazar_cierre_semanal'):
+            response = self.client.post(reverse(f'clientes:{nombre}', args=[evaluacion.pk]))
+            self.assertRedirects(response, reverse('clientes:plan_decisiones'))
+            evaluacion.refresh_from_db()
+            self.assertEqual(evaluacion.estado_revision, EvaluacionSemanalGym.ESTADO_INFORMATIVA)
+
 
 class CerrarSemanaGymCommandTests(CierreSemanalCentroTests):
     def test_dry_run_no_persiste_y_apply_si_persiste_json_determinista(self):

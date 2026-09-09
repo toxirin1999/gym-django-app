@@ -95,6 +95,15 @@ class CierreBloqueGymTests(TestCase):
         with self.assertRaises(EvidenciaBloqueIncompleta):
             cerrar_bloque_gym(self.bloque, hoy=date(2026, 8, 17))
 
+    def test_evaluaciones_informativas_son_evidencia_valida_para_cerrar_bloque(self):
+        from entrenos.services.contrato_bloque_gym_service import cerrar_bloque_gym
+        self._semana(1, revision='informativa')
+        self._semana(2, revision='informativa')
+
+        cierre = cerrar_bloque_gym(self.bloque, hoy=date(2026, 8, 17))
+
+        self.assertEqual(cierre.estado_resultado, 'objetivo_sostenido')
+
     def test_clasifica_objetivo_minimo_deriva_y_seguridad_sin_recalcular_entrenos(self):
         from entrenos.services.contrato_bloque_gym_service import previsualizar_cierre_bloque_gym
         self._semana(1, 'objetivo')

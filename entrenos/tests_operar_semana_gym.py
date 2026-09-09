@@ -73,7 +73,7 @@ class OperarSemanaGymTests(TestCase):
         )
 
         evaluacion = EvaluacionSemanalGym.objects.get(contrato=contrato)
-        self.assertEqual(evaluacion.estado_revision, 'pendiente')
+        self.assertEqual(evaluacion.estado_revision, 'informativa')
         self.assertEqual(resultado['operacion'], 'apertura_semanal')
         self.assertEqual(resultado['cierre_semana_actual'][0]['estado'], 'evaluada')
         self.assertEqual(resultado['resultados'][0]['estado'], 'ya_materializada')
@@ -103,7 +103,7 @@ class OperarSemanaGymTests(TestCase):
         self.assertEqual(cierre['sesiones_pendientes'], 1)
         preparar.assert_called_once()
 
-    def test_lunes_dry_run_no_crea_y_apply_crea_pendiente(self):
+    def test_lunes_dry_run_no_crea_y_apply_crea_informativa(self):
         contrato = self._contrato('uno')
         from entrenos.services.ciclo_semanal_gym_service import operar_semana_gym
 
@@ -116,7 +116,7 @@ class OperarSemanaGymTests(TestCase):
 
         aplicado = operar_semana_gym(fecha_referencia=self.lunes, aplicar=True)
         evaluacion = EvaluacionSemanalGym.objects.get(contrato=contrato)
-        self.assertEqual(evaluacion.estado_revision, 'pendiente')
+        self.assertEqual(evaluacion.estado_revision, 'informativa')
         self.assertEqual(aplicado['resultados'][0]['estado'], 'evaluada')
 
     def test_repeticion_y_evaluacion_respondida_preservan_identidad_y_timestamps(self):

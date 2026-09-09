@@ -148,7 +148,11 @@ def evaluar_y_persistir_contrato_semanal_gym(contrato, force=False, hoy=None):
     ).first()
     if existente is not None and existente.evidencia_snapshot == evidencia:
         return existente
-    if existente is not None and existente.estado_revision != EvaluacionSemanalGym.ESTADO_PENDIENTE:
+    estados_automaticos = {
+        EvaluacionSemanalGym.ESTADO_PENDIENTE,
+        EvaluacionSemanalGym.ESTADO_INFORMATIVA,
+    }
+    if existente is not None and existente.estado_revision not in estados_automaticos:
         raise EvaluacionSemanalRevisada(
             'La evaluación ya fue revisada y su evidencia original queda preservada.'
         )
@@ -159,6 +163,7 @@ def evaluar_y_persistir_contrato_semanal_gym(contrato, force=False, hoy=None):
         'sesiones_completadas': evidencia['sesiones_completadas'],
         'sesiones_reubicadas': evidencia['sesiones_reubicadas'],
         'evidencia_snapshot': evidencia,
+        'estado_revision': EvaluacionSemanalGym.ESTADO_INFORMATIVA,
     }
     evaluacion, _ = EvaluacionSemanalGym.objects.update_or_create(
         contrato=contrato,

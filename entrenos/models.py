@@ -1645,10 +1645,12 @@ class EvaluacionSemanalGym(models.Model):
     ]
 
     ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_INFORMATIVA = 'informativa'
     ESTADO_ACEPTADA = 'aceptada'
     ESTADO_RECHAZADA = 'rechazada'
     ESTADOS_REVISION = [
         (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_INFORMATIVA, 'Informativa'),
         (ESTADO_ACEPTADA, 'Aceptada'),
         (ESTADO_RECHAZADA, 'Rechazada'),
     ]
@@ -1664,9 +1666,9 @@ class EvaluacionSemanalGym(models.Model):
     sesiones_reubicadas = models.PositiveSmallIntegerField(default=0)
     evidencia_snapshot = models.JSONField(default=dict)
     estado_revision = models.CharField(
-        max_length=10,
+        max_length=11,
         choices=ESTADOS_REVISION,
-        default=ESTADO_PENDIENTE,
+        default=ESTADO_INFORMATIVA,
         db_index=True,
     )
     respondida_por = models.ForeignKey(

@@ -177,6 +177,20 @@ class ProyeccionBloqueGymTests(TestCase):
         self.assertNotIn('url_decision', resultado)
         self.assertNotIn('cierre_bloque', resultado)
 
+    def test_balance_semanal_informativo_no_requiere_decision(self):
+        bloque = self._bloque()
+        contrato = self._contrato(bloque)
+        EvaluacionSemanalGym.objects.create(
+            contrato=contrato, estado_cumplimiento='minima_valida',
+            sesiones_completadas=3,
+            estado_revision=EvaluacionSemanalGym.ESTADO_INFORMATIVA,
+        )
+
+        resultado = proyectar_bloque_gym(self.cliente, fecha=date(2026, 8, 18))
+
+        self.assertFalse(resultado['requiere_decision'])
+        self.assertNotIn('url_decision', resultado)
+
     def test_privacidad_no_mezcla_bloques_ajenos(self):
         self._bloque()
         resultado = proyectar_bloque_gym(self.otro, fecha=date(2026, 8, 18))

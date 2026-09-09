@@ -90,6 +90,24 @@ class DistribucionSemanalContractualTests(TestCase):
         self.assertEqual(resultado['minimo_semanas'], 3)
         self.assertEqual(resultado['semanas'], [])
 
+    def test_balance_informativo_cuenta_como_evidencia_cerrada(self):
+        from entrenos.services.distribucion_semanal_contractual_service import (
+            analizar_distribucion_semanal_contractual,
+        )
+        for lunes in (date(2026, 7, 6), date(2026, 7, 13), date(2026, 7, 20)):
+            self._semana(
+                lunes,
+                [(SesionProgramada.ESTADO_COMPLETADA, 0)],
+                revision=EvaluacionSemanalGym.ESTADO_INFORMATIVA,
+            )
+
+        resultado = analizar_distribucion_semanal_contractual(
+            self.cliente, hasta=date(2026, 8, 1),
+        )
+
+        self.assertEqual(resultado['estado'], 'evaluada')
+        self.assertEqual(resultado['semanas_aceptadas'], 3)
+
     def test_clasifica_identidades_sin_reinterpretar_proteccion(self):
         from entrenos.services.distribucion_semanal_contractual_service import (
             analizar_distribucion_semanal_contractual,

@@ -2,6 +2,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.apps import apps
 from django.test import TestCase
 
 from clientes.models import Cliente
@@ -170,6 +171,46 @@ class EvaluacionSemanalGymTests(TestCase):
         self.assertEqual(segunda.evidencia_snapshot, snapshot)
         self.assertEqual(EvaluacionSemanalGym.objects.count(), 1)
 
+    def test_nueva_evaluacion_automatica_nace_informativa(self):
+        self._materializar(3)
+        evaluacion = self._evaluar()
+
+        self.assertEqual(
+            evaluacion.estado_revision,
+            EvaluacionSemanalGym.ESTADO_INFORMATIVA,
+        )
+        self.assertIsNone(evaluacion.respondida_por)
+        self.assertIsNone(evaluacion.respondida_en)
+
+    def test_migracion_convierte_pendientes_y_es_reversible(self):
+        from importlib import import_module
+        migracion = import_module(
+            'entrenos.migrations.0051_evaluacionsemanalgym_informativa'
+        )
+        self._materializar(3)
+        evaluacion = EvaluacionSemanalGym.objects.create(
+            contrato=self.contrato,
+            estado_cumplimiento=EvaluacionSemanalGym.CUMPLIMIENTO_MINIMA_VALIDA,
+            estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+        )
+
+        migracion.pendientes_a_informativas(apps, None)
+        evaluacion.refresh_from_db()
+        self.assertEqual(evaluacion.estado_revision, 'informativa')
+
+        migracion.informativas_a_pendientes(apps, None)
+        evaluacion.refresh_from_db()
+        self.assertEqual(evaluacion.estado_revision, 'pendiente')
+
+    def test_evaluacion_informativa_no_admite_respuesta_legacy(self):
+        self._materializar(3)
+        evaluacion = self._evaluar()
+
+        with self.assertRaises(EvaluacionSemanalRevisada):
+            responder_evaluacion_semanal_gym(
+                evaluacion, actor=self.user, aceptar=True,
+            )
+
     def test_rechaza_semana_abierta_y_materializacion_incompleta(self):
         self._materializar(3)
         with self.assertRaises(SemanaAbierta):
@@ -182,6 +223,8 @@ class EvaluacionSemanalGymTests(TestCase):
     def test_evaluacion_revisada_no_se_sobrescribe_si_cambia_la_evidencia(self):
         sesiones = self._materializar(3)
         evaluacion = self._evaluar()
+        evaluacion.estado_revision = EvaluacionSemanalGym.ESTADO_PENDIENTE
+        evaluacion.save(update_fields=['estado_revision'])
         responder_evaluacion_semanal_gym(evaluacion, actor=self.user, aceptar=True)
         sesiones[3].estado = SesionProgramada.ESTADO_COMPLETADA
         sesiones[3].fecha_realizada = sesiones[3].fecha_prevista
@@ -196,6 +239,8 @@ class EvaluacionSemanalGymTests(TestCase):
     def test_respuesta_es_atomica_idempotente_y_no_muta_el_plan(self):
         self._materializar(3)
         evaluacion = self._evaluar()
+        evaluacion.estado_revision = EvaluacionSemanalGym.ESTADO_PENDIENTE
+        evaluacion.save(update_fields=['estado_revision'])
         estrategia_antes = (self.estrategia.estado, self.estrategia.objetivo_sesiones, self.estrategia.minimo_valido)
         dias_antes = self.cliente.dias_disponibles
 
@@ -221,4 +266,4 @@ class EvaluacionSemanalGymTests(TestCase):
         with self.assertRaises(ActorNoAutorizado):
             responder_evaluacion_semanal_gym(evaluacion, actor=self.otro, aceptar=True)
         evaluacion.refresh_from_db()
-        self.assertEqual(evaluacion.estado_revision, EvaluacionSemanalGym.ESTADO_PENDIENTE)
+        self.assertEqual(evaluacion.estado_revision, EvaluacionSemanalGym.ESTADO_INFORMATIVA)

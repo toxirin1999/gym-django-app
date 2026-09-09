@@ -448,7 +448,10 @@ def previsualizar_cierre_bloque_gym(bloque, *, hoy=None):
                 'cumplimiento': 'sin_evidencia', 'protegidas_seguridad': 0,
             })
             continue
-        if evaluacion.estado_revision != evaluacion.ESTADO_ACEPTADA:
+        if evaluacion.estado_revision not in (
+            evaluacion.ESTADO_ACEPTADA,
+            evaluacion.ESTADO_INFORMATIVA,
+        ):
             impedimentos.append(f'evaluacion_no_aceptada:{indice}')
         snapshot = evaluacion.evidencia_snapshot or {}
         conteos = snapshot.get('conteos_estado') or {}
@@ -521,7 +524,7 @@ def cerrar_bloque_gym(bloque, *, hoy=None):
         raise BloqueAbierto('El bloque todavía no ha alcanzado su fecha de fin.')
     if previo['impedimentos']:
         raise EvidenciaBloqueIncompleta(
-            'El cierre exige todas las semanas materializadas y sus evaluaciones aceptadas.'
+            'El cierre exige todas las semanas materializadas y con evidencia semanal cerrada.'
         )
     existente = EvaluacionBloqueGym.objects.select_for_update().filter(
         bloque=bloque, fingerprint_evidencia=previo['fingerprint_evidencia'],

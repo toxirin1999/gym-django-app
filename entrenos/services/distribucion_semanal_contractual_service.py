@@ -1,5 +1,6 @@
-"""Lectura explicable de la distribución de contratos semanales aceptados."""
+"""Lectura explicable de la distribución de contratos semanales cerrados."""
 
+from django.db.models import Q
 from django.utils import timezone
 
 from entrenos.models import ContratoSemanalGym, EvaluacionSemanalGym, SesionProgramada
@@ -53,9 +54,10 @@ def analizar_distribucion_semanal_contractual(cliente, *, hasta=None):
     hasta = hasta or timezone.localdate()
     contratos = list(
         ContratoSemanalGym.objects.filter(
+            Q(evaluacion__estado_revision=EvaluacionSemanalGym.ESTADO_ACEPTADA)
+            | Q(evaluacion__estado_revision=EvaluacionSemanalGym.ESTADO_INFORMATIVA),
             cliente=cliente,
             semana__lte=hasta,
-            evaluacion__estado_revision=EvaluacionSemanalGym.ESTADO_ACEPTADA,
         )
         .select_related('evaluacion')
         .prefetch_related('sesiones')

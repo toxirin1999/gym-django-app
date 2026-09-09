@@ -1431,6 +1431,8 @@
           <h3 class="dc-close-title" id="cierre-semanal-titulo">Cierre semanal</h3>
           {% if cierre_semanal.estado_revision == 'pendiente' %}
           <span class="dc-pill is-learned">Requiere tu revisión</span>
+          {% elif cierre_semanal.estado_revision == 'informativa' %}
+          <span class="dc-pill is-learned">Balance automático</span>
           {% elif cierre_semanal.estado_revision == 'aceptada' %}
           <span class="dc-pill is-learned">Lectura confirmada</span>
           {% else %}
@@ -1450,6 +1452,9 @@
           {{ cierre_semanal.sesiones_reubicadas }} reubicada{{ cierre_semanal.sesiones_reubicadas|pluralize:"s" }}.
           Esta lectura compara el acuerdo de la semana con las sesiones vinculadas realmente ejecutadas.
         </p>
+        {% if cierre_semanal.estado_revision == 'informativa' %}
+        <p class="dc-card-note">Es un balance factual automático y no requiere confirmación.</p>
+        {% endif %}
 
         {% if metricas %}
         <ul class="dc-close-metrics" aria-label="Métricas con evidencia disponible">
