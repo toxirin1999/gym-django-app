@@ -253,6 +253,76 @@ no-op y es innecesario. La Semana 2 queda contractualmente revisada y aceptada.
 **11E continúa bloqueada** hasta el cierre y la aceptación de todo el primer
 bloque contractual.
 
+
+## Actualización — 15 de septiembre de 2026: el backlog del outbox JOI se vació
+
+Nueva comprobación de solo lectura, ejecutada en la consola de PythonAnywhere,
+sobre el mismo modelo `EventoEntrenadorJOI` que dio origen al corte del 7 de
+septiembre. No sustituye el recibo anterior (regla 6 de esta matriz): se añade
+como una comprobación posterior sobre el mismo objeto de auditoría.
+
+**Recibo de hoy:**
+
+- Reproducción pura de `_construir_lote(eventos)` con los eventos pendientes
+  vigentes → devolvió `events: []` (lista vacía; no había eventos pendientes
+  que agrupar en el momento de la prueba).
+- `EventoEntrenadorJOI.objects.values('estado').annotate(n=Count('id'))` →
+  `[{'estado': 'publicado', 'n': 54}]`.
+- Mismo agregado filtrado por `user_id=3` → `[{'user_id': 3, 'estado':
+  'publicado', 'n': 54}]`.
+
+Es decir: **54** eventos totales (frente a los 33 del corte anterior), **0**
+pendientes, **0** procesando, **54** publicados. El backlog de 32 pendientes y
+26 `pending_over_48h` documentado el 7 de septiembre ya no existe en el estado
+actual de la tabla.
+
+**Qué prueba esto y qué no.** Prueba que, a fecha de hoy, la cola está drenada
+y que el consumidor sí llegó a procesar los eventos atascados en algún momento
+entre el 7 y el 15 de septiembre. No prueba cuándo ni por qué se drenó: no se
+consultó `updated_at`/intentos evento a evento, no se revisó si Celery Beat o
+el worker llegaron a ejecutarse, y no se revisaron logs de aplicación en esa
+ventana (el error log de PythonAnywhere no contenía líneas para la búsqueda
+`generar_mensaje_joi(decision_plan)`, lo que es un dato negativo débil, no una
+confirmación).
+
+**Hipótesis no confirmada.** Durante la investigación se localizó, en
+`joi/context_processors.py`, un comentario preexistente en el código que
+sugiere que ya se había anticipado algún corte transitorio del proveedor de
+LLM (Anthropic) como causa plausible de fallos silenciosos al consumir el
+outbox. Es razonable *sospechar* que una interrupción transitoria de la API de
+Anthropic entre el 5 y el 7 de septiembre explique el backlog observado el 7
+de septiembre, y que el drenaje se completara solo al reintentarse en cargas
+de página posteriores. **Esta hipótesis no está confirmada con evidencia
+directa** — no hay logs de error capturados de ese periodo ni un identificador
+de incidente de Anthropic — y no debe tratarse como causa demostrada. Queda
+registrada únicamente como explicación candidata a validar si el patrón se
+repite.
+
+**Hallazgo separado, aún abierto: dos rutas silenciosas sin registro.** Con
+independencia de que el backlog se haya vaciado, la lectura de código durante
+esta investigación encontró dos puntos donde una excepción se traga sin dejar
+rastro en logs:
+
+1. La llamada a `_construir_lote(candidatos)` dentro de
+   `procesar_eventos_entrenador_pendientes`
+   (`joi/services_eventos_entrenador.py`) ocurre fuera de cualquier
+   `try/except` propio.
+2. `_get_mensaje_gym` en `joi/context_processors.py` tiene un `except
+   Exception: return mensaje` genérico, sin `logger.exception` ni equivalente.
+
+Ninguno de los dos se ha modificado. Es una recomendación de endurecimiento
+(añadir registro explícito en ambos puntos), no un hallazgo urgente, y
+requiere su propia fase con contrato y TDD antes de tocar código de
+producción, según las reglas de este documento.
+
+**Próximo paso revisado.** El punto 3 de "Lectura ejecutiva" — inventariar por
+ORM y en solo lectura los 33 eventos del outbox JOI — queda parcialmente
+superado por este recibo: ya no hay 33 eventos pendientes que inventariar,
+porque el backlog se drenó por completo. Sigue sin verificarse si Celery Beat
+y el worker están realmente en ejecución en producción (el script de
+despliegue no los arranca), y esa comprobación sigue pendiente si se quiere
+entender el mecanismo real de drenaje y no solo su resultado.
+
 ## Ventana objetivo auditada — Semana 2
 
 **Inicio:** lunes 31 de agosto de 2026.  
