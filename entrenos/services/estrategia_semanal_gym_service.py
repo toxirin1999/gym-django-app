@@ -185,10 +185,13 @@ def evaluar_contrato_semanal_gym(contrato):
     """Evalúa adherencia sin trasladar sesiones pendientes como deuda futura."""
     sesiones = contrato.sesiones.all()
     completadas = sesiones.filter(estado=SesionProgramada.ESTADO_COMPLETADA)
+    parciales = sesiones.filter(estado=SesionProgramada.ESTADO_PARCIAL)
     numero_completadas = completadas.count()
-    if numero_completadas >= contrato.objetivo_sesiones:
+    numero_parciales = parciales.count()
+    numero_realizadas = numero_completadas + numero_parciales
+    if numero_realizadas >= contrato.objetivo_sesiones:
         estado = 'objetivo'
-    elif numero_completadas >= contrato.minimo_valido:
+    elif numero_realizadas >= contrato.minimo_valido:
         estado = 'minima_valida'
     else:
         estado = 'insuficiente'
@@ -196,7 +199,12 @@ def evaluar_contrato_semanal_gym(contrato):
     return {
         'estado_cumplimiento': estado,
         'sesiones_completadas': numero_completadas,
-        'sesiones_reubicadas': completadas.filter(fecha_realizada__isnull=False).exclude(fecha_realizada=F('fecha_prevista')).count(),
+        'sesiones_parciales': numero_parciales,
+        'sesiones_realizadas': numero_realizadas,
+        'sesiones_reubicadas': sesiones.filter(
+            estado__in=[SesionProgramada.ESTADO_COMPLETADA, SesionProgramada.ESTADO_PARCIAL],
+            fecha_realizada__isnull=False,
+        ).exclude(fecha_realizada=F('fecha_prevista')).count(),
         'sesiones_pendientes': sesiones.filter(estado=SesionProgramada.ESTADO_PENDIENTE).count(),
         'deuda_generada': 0,
     }
@@ -265,10 +273,10 @@ def materializar_contrato_semanal_gym(cliente, semana):
             semana_prescrita=semana,
             fecha_prevista=fecha,
             fecha_realizada=(entreno.fecha_ejecucion or entreno.fecha) if entreno else None,
-            estado=(
-                SesionProgramada.ESTADO_COMPLETADA
-                if entreno else SesionProgramada.ESTADO_PENDIENTE
-            ),
+            estado=(SesionProgramada.ESTADO_PARCIAL if entreno and
+                    entreno.estado_cierre == EntrenoRealizado.ESTADO_PARCIAL else
+                    SesionProgramada.ESTADO_COMPLETADA if entreno else
+                    SesionProgramada.ESTADO_PENDIENTE),
             prioridad=(
                 inferir_prioridad_sesion(entrenamiento)
                 or SesionProgramada.PRIORIDAD_ALTA

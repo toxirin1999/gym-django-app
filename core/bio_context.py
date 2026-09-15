@@ -110,9 +110,8 @@ class BioContextProvider:
     @staticmethod
     def get_bio_signals(cliente) -> Dict[str, Any]:
         """
-        Devuelve los datos más recientes del checkin matutino (BitacoraDiaria)
-        dentro de una ventana de 3 días. Si no hay registro en ese periodo,
-        todos los campos son None (no se penaliza la ausencia).
+        Devuelve exclusivamente el check-in de hoy. Un registro histórico sirve
+        para tendencias, pero nunca describe la energía actual.
 
         Returns:
             dict con:
@@ -131,7 +130,7 @@ class BioContextProvider:
         hoy = timezone.now().date()
         entrada = (
             BitacoraDiaria.objects
-            .filter(cliente=cliente, fecha__gte=hoy - timezone.timedelta(days=3), fecha__lte=hoy)
+            .filter(cliente=cliente, fecha=hoy)
             .order_by('-fecha')
             .first()
         )
@@ -143,7 +142,7 @@ class BioContextProvider:
             }
         return {
             'energia':       entrada.energia_subjetiva,
-            'horas_sueno':   float(entrada.horas_sueno) if entrada.horas_sueno else None,
+            'horas_sueno':   float(entrada.horas_sueno) if entrada.horas_sueno is not None else None,
             'calidad_sueno': entrada.calidad_sueno,
             'dolor':         entrada.dolor_articular,
             'fc_reposo':     entrada.fc_reposo,

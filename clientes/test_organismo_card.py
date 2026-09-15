@@ -14,6 +14,7 @@ from unittest.mock import patch
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.urls import reverse
+from django.core.cache import cache
 from clientes.models import Cliente
 from hyrox.models import UserInjury
 from datetime import date
@@ -24,6 +25,7 @@ class TestOrganismoCardView(TestCase):
 
     def setUp(self):
         """Crear usuario y cliente para tests."""
+        cache.clear()
         self.user = User.objects.create_user('test_organismo_card', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         self.client = Client()
@@ -71,7 +73,14 @@ class TestOrganismoCardView(TestCase):
             gravedad=5
         )
 
-        response = self.client.get(reverse('clientes:mockup_demo'))
+        estado_protegiendo = {
+            'estado': 'PROTEGIENDO', 'estado_label': 'Protegiendo',
+            'motivo': 'lesion_activa', 'texto': 'El sistema baja el tono hoy.',
+            'accion_label': 'Ver zona afectada', 'accion_url': '/hyrox/lesiones/',
+            'modulo_principal': 'hyrox', 'modulo_operativo': True,
+        }
+        with patch('core.organismo.resolver_estado_sistema_hoy', return_value=estado_protegiendo):
+            response = self.client.get(reverse('clientes:mockup_demo'))
 
         estado_sistema = response.context['estado_sistema']
         self.assertEqual(estado_sistema['estado'], 'PROTEGIENDO')
@@ -94,12 +103,15 @@ class TestOrganismoCardView(TestCase):
 
         content1 = response1.content.decode()
         # Buscar la sección de la card después del BIB HERO y antes del TOGGLE
-        # No debe haber botón real con enlace para SILENCIO
+        # SILENCIO no ofrece CTA principal del organismo. Los enlaces de
+        # gestión auxiliares (p. ej. ausencia planificada) siguen disponibles.
         card_start = content1.find('<div class="rb-organismo-card">')
         card_end = content1.find('<!-- ── TOGGLE GYM / HYROX', card_start)
         card_html1 = content1[card_start:card_end]
-        # Buscar <a con rb-organismo-btn
-        self.assertNotIn('<a href=', card_html1, "SILENCIO no debe tener botón de acción")
+        self.assertNotIn('data-primary-action', card_html1,
+                         "SILENCIO no debe tener CTA principal")
+        self.assertIn(reverse('clientes:ausencia_planificada_gym'), card_html1)
+        self.assertIn('No estaré disponible unos días', card_html1)
 
         # Caso 2: Con lesión → PROTEGIENDO con acción
         UserInjury.objects.create(
@@ -119,7 +131,8 @@ class TestOrganismoCardView(TestCase):
         card_start2 = content2.find('<div class="rb-organismo-card">')
         card_end2 = content2.find('<!-- ── TOGGLE GYM / HYROX', card_start2)
         card_html2 = content2[card_start2:card_end2]
-        self.assertIn('<a href=', card_html2, "PROTEGIENDO debe tener botón de acción")
+        self.assertIn('data-primary-action', card_html2,
+                      "PROTEGIENDO debe tener CTA principal")
 
     def test_estado_color_mapping(self):
         """Verificar que clases CSS de color se aplican correctamente."""
@@ -190,6 +203,7 @@ class TestOrganismoCardTemplate(TestCase):
 
     def setUp(self):
         """Crear usuario de prueba."""
+        cache.clear()
         self.user = User.objects.create_user('test_template', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         self.client = Client()

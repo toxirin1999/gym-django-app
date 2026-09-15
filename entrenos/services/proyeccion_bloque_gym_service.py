@@ -100,15 +100,21 @@ def proyectar_bloque_gym(cliente, *, fecha=None):
             cliente=cliente,
             estado=SesionProgramada.ESTADO_COMPLETADA,
         ).count()
+        parciales = contrato.sesiones.filter(
+            cliente=cliente, estado=SesionProgramada.ESTADO_PARCIAL,
+        ).count()
+        realizadas = completadas + parciales
         resultado.update({
             'contrato_semanal_id': contrato.pk,
             'progreso_disponible': True,
             'estado_evidencia': 'evidencia_disponible',
             'sesiones_completadas': completadas,
+            'sesiones_parciales': parciales,
+            'sesiones_realizadas': realizadas,
             'objetivo_sesiones': contrato.objetivo_sesiones,
             'minimo_valido': contrato.minimo_valido,
             'estado_cumplimiento': _estado_cumplimiento(
-                completadas, contrato.objetivo_sesiones, contrato.minimo_valido,
+                realizadas, contrato.objetivo_sesiones, contrato.minimo_valido,
             ),
         })
         evaluacion = EvaluacionSemanalGym.objects.filter(contrato=contrato).first()

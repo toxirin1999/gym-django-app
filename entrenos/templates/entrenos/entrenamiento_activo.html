@@ -985,6 +985,13 @@ input{background:transparent!important;border:none!important;outline:none!import
 </div>
 {% endif %}
 
+{% if retorno_tras_ausencia %}
+<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.22);border-radius:12px;">
+  <div style="font-size:12px;font-weight:700;color:#4ade80;margin-bottom:4px;">Vuelta progresiva</div>
+  <div style="font-size:12px;color:var(--td);opacity:.75;">Hoy hacemos como máximo el 75% de las series. Conservamos los movimientos principales y recortamos accesorios primero.</div>
+</div>
+{% endif %}
+
 <!-- ══ BANNER REDUCIR ACCESORIOS — Phase 11 ══ -->
 {% if not modo_reducido and permiso_progresion and permiso_progresion.accion == 'reducir_accesorios' %}
 <div style="margin:0 16px 12px;padding:14px 16px;background:rgba(180,140,255,0.07);border:1px solid rgba(180,140,255,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
@@ -1559,8 +1566,12 @@ function actualizarPreviewCarga(formId) {
     if (!preview) return;
     const peso = Number(input.value || 0);
     const total = tipo === 'total' ? peso : peso * 2;
-    const unidad = tipo === 'por_mano' ? 'por mano' : tipo === 'por_lado' ? 'por lado' : 'total';
-    preview.textContent = `${peso.toFixed(1)} kg ${unidad} · ${total.toFixed(1)} kg totales`;
+    if (tipo === 'total') {
+      preview.textContent = `${peso.toFixed(1)} kg totales`;
+    } else {
+      const unidad = tipo === 'por_mano' ? 'por mano' : 'por lado';
+      preview.textContent = `${peso.toFixed(1)} kg ${unidad} · ${total.toFixed(1)} kg totales`;
+    }
     input.oninput = () => actualizarPreviewCarga(formId);
   });
 }
@@ -1825,6 +1836,19 @@ document.addEventListener('DOMContentLoaded', () => {
         </button>
       </div>
       <input type="hidden" name="rpe_global_sesion" id="hid-rpe-global" value="">
+    </div>
+
+    <div id="motivo-cierre-wrap" style="display:none;margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
+      <label for="motivo-cierre" style="display:block;font-size:12px;color:var(--td);margin-bottom:8px;">¿Por qué terminas antes?</label>
+      <select id="motivo-cierre" name="motivo_cierre" style="width:100%;padding:10px;border-radius:8px;background:var(--panel);color:var(--td);border:1px solid var(--bd);">
+        <option value="">Selecciona un motivo</option>
+        <option value="fatiga">Fatiga</option>
+        <option value="tiempo">Falta de tiempo</option>
+        <option value="molestia">Molestia</option>
+        <option value="equipo">Equipo no disponible</option>
+        <option value="otro">Otro</option>
+      </select>
+      <div id="motivo-cierre-error" role="alert" style="display:none;color:#ff8b8b;font-size:11px;margin-top:7px;"></div>
     </div>
 
     <!-- Botones -->
@@ -2715,6 +2739,12 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     scs.forEach(s=>{vol+=s.peso*s.reps;reps+=parseInt(s.reps)||0;if(s.rpe)rpes.push(s.rpe);});
   });
   const rpeAvg=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length):0;
+  if(comp<1){
+    alert('No puedes cerrar una sesión sin completar al menos una serie');
+    return;
+  }
+  const motivoWrap=document.getElementById('motivo-cierre-wrap');
+  if(motivoWrap)motivoWrap.style.display=comp<total?'block':'none';
   document.getElementById('hid-series-comp').value=comp;
   document.getElementById('hid-series-tot').value=total;
   document.getElementById('hid-ej-comp').value=ejComp;
@@ -2994,6 +3024,7 @@ function selEnergiaPreSesion(val){
 }
 
 let _sessionGuardada = false;
+let _envioCierreEnCurso = false;
 
 // RPE global — se muestra en el modal si ninguna serie tiene RPE registrado
 (function(){
@@ -3060,6 +3091,23 @@ function sincronizarSeriesConfirmadasConFormulario(form){
 }
 
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
+  if (_envioCierreEnCurso) return;
+  const completadas=Object.values(STATE.seriesCompletadas).reduce((n,series)=>n+series.length,0);
+  const totalPlanificadas=cards.reduce((n,card)=>n+(parseInt(card.dataset.totalSets)||0),0);
+  const motivo=document.getElementById('motivo-cierre');
+  const errorMotivo=document.getElementById('motivo-cierre-error');
+  if(completadas<1){
+    alert('No puedes cerrar una sesión sin completar al menos una serie');
+    return;
+  }
+  if(completadas<totalPlanificadas && (!motivo || !motivo.value)){
+    if(errorMotivo){errorMotivo.textContent='Selecciona un motivo para el cierre parcial.';errorMotivo.style.display='block';}
+    return;
+  }
+  if(errorMotivo)errorMotivo.style.display='none';
+  const confirmarBtn=document.getElementById('btn-confirmar-guardar');
+  _envioCierreEnCurso = true;
+  confirmarBtn.disabled = true;
   _sessionGuardada = true;
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
   const ov = document.getElementById('saving-overlay');
@@ -3099,6 +3147,8 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     // Conserva series, técnica y hora inicial para que el usuario reintente
     // sin convertir el segundo intento en una sesión nueva o más corta.
     _sessionGuardada = false;
+    _envioCierreEnCurso = false;
+    confirmarBtn.disabled = false;
     if (ov) ov.style.display = 'none';
     window.alert('No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
   });

@@ -30,6 +30,7 @@ from entrenos.models import EntrenoRealizado, SesionProgramada, IntervencionPlan
 _COLOR_MAP = {
     'completada_normal':    'verde',
     'completada_esencial':  'ambar',
+    'parcial':              'naranja',
     'saltada':              'gris',
     'omitida_sistema':      'gris_tenue',
     'pendiente':            'azul',
@@ -43,11 +44,15 @@ def _determinar_estado(sp, er, fecha, hoy):
     Priority: completada > saltada > omitida > pendiente > pospuesta > sin_registro
     """
     if er:
+        if er.estado_cierre == EntrenoRealizado.ESTADO_PARCIAL:
+            return 'parcial'
         return 'completada_esencial' if er.modo_reducido else 'completada_normal'
 
     if sp:
         if sp.estado == SesionProgramada.ESTADO_COMPLETADA:
             return 'completada_normal'  # completed via sesion_programada link but no er today
+        if sp.estado == SesionProgramada.ESTADO_PARCIAL:
+            return 'parcial'
         if sp.estado == SesionProgramada.ESTADO_SALTADA_USUARIO:
             return 'saltada'
         if sp.estado == SesionProgramada.ESTADO_OMITIDA_SISTEMA:

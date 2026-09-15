@@ -1921,6 +1921,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;font-size:10px;color:var(--td);opacity:0.55;">
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(46,204,113,0.8);margin-right:3px;vertical-align:middle;"></span>Completada</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(255,200,100,0.8);margin-right:3px;vertical-align:middle;"></span>Esencial</span>
+        <span><span class="cal-dot--parcial" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(255,145,70,0.85);margin-right:3px;vertical-align:middle;"></span>Parcial</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(100,160,255,0.7);margin-right:3px;vertical-align:middle;"></span>Pendiente</span>
         <span><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.4);margin-right:3px;vertical-align:middle;"></span>Saltada / Sistema</span>
       </div>
@@ -1935,12 +1936,14 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:4px;">
         {% for dia in semana.dias %}
         <div style="display:flex;align-items:center;justify-content:center;height:28px;position:relative;"
-             title="{% if dia.detalle.nombre_sesion %}{{ dia.detalle.nombre_sesion }} — {% endif %}{{ dia.fecha|date:'d N' }}{% if dia.estado == 'completada_esencial' %} (esencial){% elif dia.estado == 'saltada' %} (saltada){% elif dia.estado == 'omitida_sistema' %} (omitida){% elif dia.estado == 'pendiente' %} (pendiente){% endif %}"
+             title="{% if dia.detalle.nombre_sesion %}{{ dia.detalle.nombre_sesion }} — {% endif %}{{ dia.fecha|date:'d N' }}{% if dia.estado == 'completada_esencial' %} (esencial){% elif dia.estado == 'parcial' %} (parcial){% elif dia.estado == 'saltada' %} (saltada){% elif dia.estado == 'omitida_sistema' %} (omitida){% elif dia.estado == 'pendiente' %} (pendiente){% endif %}"
              onclick="mostrarDetalleDia(this, '{{ dia.fecha|date:'d N' }}', '{{ dia.detalle.nombre_sesion|default:'' }}', '{{ dia.estado }}', '{{ dia.detalle.fecha_realizada|date:'d N'|default:'' }}', {{ dia.detalle.modo_reducido|yesno:'true,false' }}, {{ dia.carga_mantenida|yesno:'true,false' }})">
           {% if dia.estado == 'completada_normal' %}
           <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(46,204,113,0.85);{% if dia.es_hoy %}box-shadow:0 0 0 2px rgba(46,204,113,0.3);{% endif %}cursor:pointer;"></span>
           {% elif dia.estado == 'completada_esencial' %}
           <span style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(255,200,100,0.85);cursor:pointer;"></span>
+          {% elif dia.estado == 'parcial' %}
+          <span class="cal-dot--parcial" style="display:block;width:10px;height:10px;border-radius:50%;background:rgba(255,145,70,0.85);cursor:pointer;"></span>
           {% elif dia.estado == 'saltada' %}
           <span style="display:block;width:8px;height:8px;border-radius:50%;background:rgba(180,180,180,0.45);cursor:pointer;"></span>
           {% elif dia.estado == 'omitida_sistema' %}
@@ -2894,6 +2897,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
   var estadoTexto = {
     'completada_normal': 'Completada',
     'completada_esencial': 'Versión esencial completada',
+    'parcial': 'Ejecutada parcialmente',
     'saltada': 'Saltada por el usuario',
     'omitida_sistema': 'Omitida por el sistema',
     'pendiente': 'Pendiente',

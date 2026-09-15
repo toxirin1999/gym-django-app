@@ -56,15 +56,21 @@ def construir_resumen_operativo_centro(
         semana_dto = {
             'estado': 'desconocido',
             'completadas': None,
+            'sesiones_completadas': None,
+            'sesiones_parciales': None,
+            'sesiones_realizadas': None,
             'objetivo': None,
             'minimo': None,
         }
     else:
+        completadas = contrato.sesiones.filter(estado=SesionProgramada.ESTADO_COMPLETADA).count()
+        parciales = contrato.sesiones.filter(estado=SesionProgramada.ESTADO_PARCIAL).count()
         semana_dto = {
             'estado': 'materializada',
-            'completadas': contrato.sesiones.filter(
-                estado=SesionProgramada.ESTADO_COMPLETADA,
-            ).count(),
+            'completadas': completadas,
+            'sesiones_completadas': completadas,
+            'sesiones_parciales': parciales,
+            'sesiones_realizadas': completadas + parciales,
             'objetivo': contrato.objetivo_sesiones,
             'minimo': contrato.minimo_valido,
         }

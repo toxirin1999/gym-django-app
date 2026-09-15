@@ -38,7 +38,9 @@ def medir_ventana(cliente, desde, hasta):
         'entreno_realizado', 'contrato_semanal',
     ).prefetch_related('entreno_realizado__ejercicios_realizados')
     elegibles = []
+    realizadas = []
     completadas = []
+    parciales = []
     for sesion in programadas:
         efectiva_programada = sesion.pospuesta_hasta or sesion.fecha_prevista
         if sesion.estado in excluidos or not (desde <= efectiva_programada <= hasta):
@@ -50,33 +52,36 @@ def medir_ventana(cliente, desde, hasta):
             else sesion.fecha_realizada
         )
         if (
-            sesion.estado == SesionProgramada.ESTADO_COMPLETADA
+            sesion.estado in (SesionProgramada.ESTADO_COMPLETADA, SesionProgramada.ESTADO_PARCIAL)
             and entreno is not None and efectiva_real is not None
             and desde <= efectiva_real <= hasta
         ):
-            completadas.append(entreno)
+            realizadas.append(entreno)
+            (completadas if sesion.estado == SesionProgramada.ESTADO_COMPLETADA else parciales).append(entreno)
 
     # Un vínculo accidentalmente duplicado no duplica una sesión realizada.
+    realizadas = list({entreno.pk: entreno for entreno in realizadas}.values())
     completadas = list({entreno.pk: entreno for entreno in completadas}.values())
-    esenciales = sum(bool(entreno.modo_reducido) for entreno in completadas)
+    parciales = list({entreno.pk: entreno for entreno in parciales}.values())
+    esenciales = sum(bool(entreno.modo_reducido) for entreno in realizadas)
     planificados = sum(
         entreno.principales_planificados
-        for entreno in completadas if entreno.principales_planificados
+        for entreno in realizadas if entreno.principales_planificados
     )
     principales_completados = sum(
-        1 for entreno in completadas
+        1 for entreno in realizadas
         for ejercicio in entreno.ejercicios_realizados.all()
         if ejercicio.es_bloque_principal is True and ejercicio.completado
     )
     rpes = []
-    for entreno in completadas:
+    for entreno in realizadas:
         try:
             rpe_sesion = entreno.sesion_detalle.rpe_medio
         except EntrenoRealizado.sesion_detalle.RelatedObjectDoesNotExist:
             rpe_sesion = None
         if rpe_sesion is not None:
             rpes.append(rpe_sesion)
-    energias = [entreno.energia_pre_sesion for entreno in completadas if entreno.energia_pre_sesion is not None]
+    energias = [entreno.energia_pre_sesion for entreno in realizadas if entreno.energia_pre_sesion is not None]
 
     contratos = list(ContratoSemanalGym.objects.filter(
         cliente=cliente, semana__lte=hasta, semana__gte=desde - timedelta(days=6),
@@ -92,9 +97,9 @@ def medir_ventana(cliente, desde, hasta):
         fuente = 'fallback_historico_5_3'
     if len(elegibles) < 3:
         estado_continuidad = 'no_evaluable'
-    elif len(completadas) >= objetivo:
+    elif len(realizadas) >= objetivo:
         estado_continuidad = 'objetivo'
-    elif len(completadas) >= minimo:
+    elif len(realizadas) >= minimo:
         estado_continuidad = 'minima_valida'
     else:
         estado_continuidad = 'insuficiente'
@@ -102,8 +107,10 @@ def medir_ventana(cliente, desde, hasta):
         'ventana': {'desde': desde.isoformat(), 'hasta': hasta.isoformat()},
         'sesiones_elegibles': len(elegibles),
         'sesiones_completadas': len(completadas),
+        'sesiones_parciales': len(parciales),
+        'sesiones_realizadas': len(realizadas),
         'sesiones_esenciales': esenciales,
-        'porcentaje_esenciales': round(esenciales * 100 / len(completadas)) if completadas else None,
+        'porcentaje_esenciales': round(esenciales * 100 / len(realizadas)) if realizadas else None,
         'principales': {
             'planificados': planificados,
             'completados': principales_completados,
@@ -114,8 +121,8 @@ def medir_ventana(cliente, desde, hasta):
         'continuidad': {
             'objetivo_sesiones': objetivo, 'minimo_valido': minimo, 'fuente': fuente,
             'estado': estado_continuidad,
-            'cumple_minimo': len(completadas) >= minimo,
-            'cumple_objetivo': len(completadas) >= objetivo,
+            'cumple_minimo': len(realizadas) >= minimo,
+            'cumple_objetivo': len(realizadas) >= objetivo,
         },
     }
 
@@ -136,7 +143,9 @@ def construir_evaluacion_v1(cliente, inicio, fin):
 
 
 def _atribucion(baseline, medicion):
-    if baseline.get('sesiones_completadas', 0) < 2 or medicion.get('sesiones_completadas', 0) < 2:
+    base_realizadas = baseline.get('sesiones_realizadas', baseline.get('sesiones_completadas', 0))
+    medicion_realizadas = medicion.get('sesiones_realizadas', medicion.get('sesiones_completadas', 0))
+    if base_realizadas < 2 or medicion_realizadas < 2:
         return 'no_evaluable'
     porcentaje_base = baseline.get('porcentaje_esenciales')
     porcentaje_actual = medicion.get('porcentaje_esenciales')

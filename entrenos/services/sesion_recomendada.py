@@ -222,7 +222,11 @@ def _marcar_completadas(cliente, fecha_hoy):
             if len(candidatos) == 1:
                 entreno = candidatos[0]
                 fecha_efectiva = entreno.fecha_ejecucion or entreno.fecha
-                sp.estado = SesionProgramada.ESTADO_COMPLETADA
+                sp.estado = (
+                    SesionProgramada.ESTADO_PARCIAL
+                    if entreno.estado_cierre == EntrenoRealizado.ESTADO_PARCIAL
+                    else SesionProgramada.ESTADO_COMPLETADA
+                )
                 sp.fecha_realizada = fecha_efectiva
                 sp.entreno_realizado = entreno
                 sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])
@@ -1122,7 +1126,11 @@ def cerrar_sesion_programada(sesion_programada_id, entreno_realizado):
             raise CierreSesionProgramadaInvalido('La semana prescrita no coincide con el contrato.')
 
     fecha_real = entreno_realizado.fecha_ejecucion or entreno_realizado.fecha
-    sp.estado = SesionProgramada.ESTADO_COMPLETADA
+    sp.estado = (
+        SesionProgramada.ESTADO_PARCIAL
+        if entreno_realizado.estado_cierre == EntrenoRealizado.ESTADO_PARCIAL
+        else SesionProgramada.ESTADO_COMPLETADA
+    )
     sp.fecha_realizada = fecha_real
     sp.entreno_realizado = entreno_realizado
     sp.save(update_fields=['estado', 'fecha_realizada', 'entreno_realizado', 'actualizada_en'])

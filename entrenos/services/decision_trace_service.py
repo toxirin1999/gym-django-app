@@ -89,6 +89,8 @@ def humanizar_trace(trace) -> dict | None:
             from entrenos.models import SesionProgramada
             if sesion.estado == SesionProgramada.ESTADO_COMPLETADA:
                 execution_state = 'executed'
+            elif sesion.estado == SesionProgramada.ESTADO_PARCIAL:
+                execution_state = 'executed_partial'
             elif sesion.estado == SesionProgramada.ESTADO_PENDIENTE:
                 execution_state = 'planned'
                 decision_label = 'Sesión planificada'
@@ -96,6 +98,8 @@ def humanizar_trace(trace) -> dict | None:
     explicacion = trace.get_explicacion_humana()
     if execution_state == 'planned':
         explicacion = 'Sesión prevista por el plan; todavía no consta como completada.'
+    elif execution_state == 'executed_partial':
+        explicacion = 'Sesión ejecutada parcialmente; aporta evidencia sin constar como completada.'
 
     capas_usadas = [
         _CAPA_LABELS[c] for c in (trace.capas_visibles or [])
@@ -127,7 +131,7 @@ def humanizar_trace(trace) -> dict | None:
     except Exception:
         pass
 
-    return {
+    resultado = {
         'fecha':              trace.fecha,
         'fecha_label':        fecha_label,
         'decision_label':     decision_label,
@@ -139,6 +143,11 @@ def humanizar_trace(trace) -> dict | None:
         'evaluacion_label':   evaluacion_label,
         'evaluacion_resumen': evaluacion_resumen,
     }
+    # `planned` y `not_applicable` conservan el contrato legacy. El campo es
+    # aditivo únicamente cuando existe una ejecución observable.
+    if execution_state == 'executed_partial':
+        resultado['execution_state'] = execution_state
+    return resultado
 
 
 def get_traces_recientes(cliente, n: int = 5) -> list[dict]:

@@ -137,6 +137,20 @@ def generar_decisiones_para_entreno(entreno):
     from entrenos.models import EjercicioRealizado, GymDecisionLog, GymAdaptationProfile
 
     cliente = entreno.cliente
+
+    # Una omisión es evidencia de tolerancia/viabilidad, no de rendimiento.
+    # Crea un freno idempotente sin fabricar peso, reps ni RPE.
+    for omitido in entreno.ejercicios_omitidos.all():
+        nombre = normalizar_ejercicio(omitido.nombre_normalizado or omitido.nombre_ejercicio)
+        GymDecisionLog.objects.get_or_create(
+            cliente=cliente, entreno_origen=entreno, ejercicio_normalizado=nombre,
+            defaults={
+                'ejercicio': omitido.nombre_ejercicio,
+                'accion': 'mantener', 'valor_cambio': None,
+                'motivo': f'Ejercicio omitido por {omitido.get_motivo_display().lower()} — no progresar sin evidencia.',
+                'confianza': 'alta' if omitido.motivo == 'fatiga' else 'media',
+            },
+        )
     ejercicios = EjercicioRealizado.objects.filter(
         entreno=entreno, completado=True
     ).order_by('nombre_ejercicio')
@@ -300,6 +314,19 @@ def generar_decisiones_para_entreno(entreno):
             motivo_codigo = 'progresion_peso'
         elif not motivo_codigo and accion == 'subir_reps':
             motivo_codigo = 'progresion_reps'
+
+        # Un cierre por fatiga invalida una subida para toda la sesión. El
+        # rendimiento observado sigue guardado, pero no se extrapola mientras
+        # el usuario está diciendo que la dosis completa no fue tolerable.
+        if (
+            entreno.estado_cierre == entreno.ESTADO_PARCIAL
+            and entreno.motivo_cierre == 'fatiga'
+            and accion in ('subir_peso', 'subir_reps')
+        ):
+            accion = 'mantener'
+            valor_cambio = None
+            motivo = 'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.'
+            motivo_codigo = ''
 
         GymDecisionLog.objects.get_or_create(
             cliente=cliente,

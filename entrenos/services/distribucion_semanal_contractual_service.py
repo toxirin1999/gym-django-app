@@ -36,6 +36,8 @@ def _clasificar_sesion(sesion):
             else 'completada'
         )
         return {**base, 'resultado': resultado, 'causa': None}
+    if sesion.estado == SesionProgramada.ESTADO_PARCIAL:
+        return {**base, 'resultado': 'parcial', 'causa': None}
     if sesion.estado == SesionProgramada.ESTADO_SALTADA_USUARIO:
         return {**base, 'resultado': 'omitida', 'causa': 'usuario'}
     if sesion.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO:
@@ -88,6 +90,9 @@ def analizar_distribucion_semanal_contractual(cliente, *, hasta=None):
         ]
         conteos_semana = dict(_CONTEOS_VACIOS)
         for sesion in sesiones:
+            if sesion['resultado'] == 'parcial':
+                conteos_semana.setdefault('parcial', 0)
+                conteos.setdefault('parcial', 0)
             if sesion['resultado'] in conteos_semana:
                 conteos_semana[sesion['resultado']] += 1
                 conteos[sesion['resultado']] += 1

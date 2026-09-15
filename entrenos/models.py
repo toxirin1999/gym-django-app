@@ -307,6 +307,19 @@ class LogroDesbloqueado(models.Model):
 
 
 class EntrenoRealizado(models.Model):
+    ESTADO_COMPLETA = 'completa'
+    ESTADO_PARCIAL = 'parcial'
+    ESTADOS_CIERRE = [
+        (ESTADO_COMPLETA, 'Completa'),
+        (ESTADO_PARCIAL, 'Parcial'),
+    ]
+    MOTIVOS_CIERRE = [
+        ('fatiga', 'Fatiga'),
+        ('tiempo', 'Falta de tiempo'),
+        ('molestia', 'Molestia'),
+        ('equipo', 'Equipo no disponible'),
+        ('otro', 'Otro'),
+    ]
     cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE)
     rutina = models.ForeignKey('rutinas.Rutina', on_delete=models.CASCADE)
     fecha = models.DateField(default=timezone.now)
@@ -333,6 +346,8 @@ class EntrenoRealizado(models.Model):
         ],
     )
     procesado_gamificacion = models.BooleanField(default=False)
+    estado_cierre = models.CharField(max_length=12, choices=ESTADOS_CIERRE, default=ESTADO_COMPLETA, db_index=True)
+    motivo_cierre = models.CharField(max_length=20, choices=MOTIVOS_CIERRE, blank=True, default='')
 
     # Campos adicionales opcionales
     fuente_datos = models.CharField(
@@ -1429,6 +1444,25 @@ class ExperimentoVarianteGym(models.Model):
         ]
 
 
+class EjercicioOmitidoEntreno(models.Model):
+    """Ejercicio prescrito que no aporta evidencia de rendimiento al cierre."""
+    entreno = models.ForeignKey(
+        EntrenoRealizado, on_delete=models.CASCADE, related_name='ejercicios_omitidos',
+    )
+    nombre_ejercicio = models.CharField(max_length=200)
+    nombre_normalizado = models.CharField(max_length=120)
+    motivo = models.CharField(max_length=20, choices=EntrenoRealizado.MOTIVOS_CIERRE)
+    es_principal = models.BooleanField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['entreno', 'nombre_normalizado'], name='uniq_omitido_entreno_nombre_norm',
+            ),
+        ]
+
+
 class IntervencionMolestiaGym(models.Model):
     ESTADO_ACTIVA = 'activa'
     ESTADO_FAVORABLE = 'favorable'
@@ -1797,6 +1831,7 @@ class AusenciaPlanificadaGym(models.Model):
 class SesionProgramada(models.Model):
     ESTADO_PENDIENTE = "pendiente"
     ESTADO_COMPLETADA = "completada"
+    ESTADO_PARCIAL = "parcial"
     ESTADO_SALTADA_USUARIO = "saltada_usuario"
     ESTADO_OMITIDA_USUARIO = "omitida_usuario"
     ESTADO_OMITIDA_SISTEMA = "omitida_sistema"
@@ -1808,6 +1843,7 @@ class SesionProgramada(models.Model):
     ESTADOS = [
         (ESTADO_PENDIENTE, "Pendiente"),
         (ESTADO_COMPLETADA, "Completada"),
+        (ESTADO_PARCIAL, "Parcial"),
         (ESTADO_SALTADA_USUARIO, "Saltada por usuario"),
         (ESTADO_OMITIDA_USUARIO, "Omitida por ausencia planificada"),
         (ESTADO_OMITIDA_SISTEMA, "Omitida por sistema"),

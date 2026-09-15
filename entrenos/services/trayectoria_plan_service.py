@@ -74,6 +74,8 @@ def _serializar_evaluacion_semanal(contrato):
 
 def _serializar_sesion(sesion):
     efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
+    completa = sesion.estado == SesionProgramada.ESTADO_COMPLETADA
+    parcial = sesion.estado == SesionProgramada.ESTADO_PARCIAL
     return {
         'id': sesion.pk,
         'nombre': sesion.nombre_sesion or f'Sesión {sesion.dia_numero or sesion.pk}',
@@ -82,7 +84,9 @@ def _serializar_sesion(sesion):
         'fecha_pospuesta': sesion.pospuesta_hasta,
         'fecha_efectiva': efectiva,
         'fecha_realizada': sesion.fecha_realizada,
-        'realizada': sesion.estado == SesionProgramada.ESTADO_COMPLETADA,
+        'realizada': completa or parcial,
+        'completa': completa,
+        'parcial': parcial,
     }
 
 

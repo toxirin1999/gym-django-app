@@ -3677,6 +3677,13 @@ def vista_entrenamiento_activo(request, cliente_id):
         if ejercicios_planificados is None:
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
+        from entrenos.services.retorno_ausencia_service import (
+            es_primera_sesion_tras_ausencia, limitar_series_retorno,
+        )
+        _retorno_tras_ausencia = es_primera_sesion_tras_ausencia(cliente, fecha_obj)
+        if _retorno_tras_ausencia:
+            limitar_series_retorno(ejercicios_planificados)
+
         if decision_id_recibida:
             ids_payload = {
                 ejercicio.get('_autoridad_gym_decision_id')
@@ -4364,6 +4371,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         'modo_reducido': modo_reducido,
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
         'permiso_progresion': _permiso_prog_template,
+        'retorno_tras_ausencia': _retorno_tras_ausencia,
     }
 
     return render(request, 'entrenos/entrenamiento_activo.html', context)
@@ -4404,6 +4412,41 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
     try:
 
+        # El servidor, no los contadores del navegador, decide si el cierre es
+        # completo. Todo ejercicio prescrito viaja con ``*_nombre``.
+        _ids_planificados = [
+            key[:-7] for key in request.POST
+            if key.endswith('_nombre') and key != 'rutina_nombre'
+        ]
+        _ids_con_serie = {
+            fid for fid in _ids_planificados
+            if any(bool(request.POST.get(f'{fid}_completado_{i}')) for i in range(1, 11))
+        }
+        _es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        if not _ids_con_serie and _es_ajax:
+            return JsonResponse(
+                {'success': False, 'error': 'No puedes cerrar una sesión sin completar al menos una serie.'},
+                status=400,
+            )
+        _ids_omitidos = [fid for fid in _ids_planificados if fid not in _ids_con_serie]
+        _hay_series_pendientes = any(
+            sum(1 for i in range(1, 11) if f'{fid}_reps_{i}' in request.POST)
+            > sum(1 for i in range(1, 11) if bool(request.POST.get(f'{fid}_completado_{i}')))
+            for fid in _ids_planificados
+        )
+        _motivo_cierre = request.POST.get('motivo_cierre', '').strip()
+        _estado_cierre = (
+            EntrenoRealizado.ESTADO_PARCIAL if (_ids_omitidos or _hay_series_pendientes)
+            else EntrenoRealizado.ESTADO_COMPLETA
+        )
+        if _estado_cierre == EntrenoRealizado.ESTADO_PARCIAL:
+            motivos_validos = {value for value, _label in EntrenoRealizado.MOTIVOS_CIERRE}
+            if _motivo_cierre not in motivos_validos:
+                return JsonResponse(
+                    {'success': False, 'error': 'Indica por qué terminas la sesión antes de completar el plan.'},
+                    status=400,
+                )
+
         # --- PASO 1: Crear el EntrenoRealizado ---
         fecha = datetime.strptime(request.POST.get('fecha'), '%Y-%m-%d').date()
         sello_autoridad = request.POST.get('sello_autoridad_gym', '').strip()
@@ -4434,6 +4477,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
             duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip(),
+            estado_cierre=_estado_cierre,
+            motivo_cierre=_motivo_cierre if _estado_cierre == EntrenoRealizado.ESTADO_PARCIAL else '',
             gym_decision_version=(
                 autoridad_ejecucion.version if autoridad_ejecucion else None
             ),
@@ -4498,7 +4543,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     # de un ejercicio nunca tocado también viajan en el POST
                     # (un solo <form> para todo el entreno) y se guardan como si
                     # fueran series reales.
-                    serie_confirmada = f"{form_id}_completado_{i}" in request.POST
+                    serie_confirmada = bool(request.POST.get(f"{form_id}_completado_{i}"))
 
                     if serie_valida and serie_confirmada:
                         semantica_carga = resolver_semantica_carga(tipo_carga_solicitado, peso)
@@ -4616,11 +4661,33 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 volumen_total_entreno += volumen_ejercicio
                 ejercicios_procesados_count += 1
 
+        if ejercicios_procesados_count == 0 and _es_ajax:
+            raise ValueError('No puedes cerrar una sesión sin completar al menos una serie.')
+
+        if _ids_omitidos:
+            from entrenos.models import EjercicioOmitidoEntreno
+            from entrenos.services.decision_log_service import normalizar_ejercicio
+            for form_id in _ids_omitidos:
+                nombre_omitido = request.POST.get(f'{form_id}_nombre', '').strip()
+                if nombre_omitido:
+                    EjercicioOmitidoEntreno.objects.get_or_create(
+                        entreno=entreno,
+                        nombre_normalizado=normalizar_ejercicio(nombre_omitido),
+                        defaults={
+                            'nombre_ejercicio': nombre_omitido,
+                            'motivo': _motivo_cierre,
+                            'es_principal': (
+                                request.POST.get(f'{form_id}_es_principal') == '1'
+                                if request.POST.get(f'{form_id}_es_principal') in ('0', '1') else None
+                            ),
+                        },
+                    )
+
         # =======================================================
         # ¡PASO 3: ACTUALIZAR EL ENTRENAMIENTO CON LOS TOTALES!
         # =======================================================
         energia_pre_str = request.POST.get('energia_pre_sesion', '').strip()
-        energia_pre = int(energia_pre_str) if energia_pre_str.isdigit() and 1 <= int(energia_pre_str) <= 10 else None
+        energia_pre = int(energia_pre_str) if energia_pre_str.isdigit() and 0 <= int(energia_pre_str) <= 10 else None
 
         update_fields = ['volumen_total_kg', 'numero_ejercicios']
         if ejercicios_procesados_count > 0:
@@ -4925,6 +4992,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # en una respuesta HTTP, debemos marcar explícitamente el rollback para
         # no confirmar una sesión o hijos creados antes del fallo tardío.
         transaction.set_rollback(True)
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
         messages.error(request, f"Hubo un error crítico al guardar: {e}")
         return redirect('clientes:panel_cliente')
 

@@ -80,7 +80,7 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
     sesiones_reubicadas_items = [
         sp for sp in sesiones_sp
         if (
-            sp.estado == SesionProgramada.ESTADO_COMPLETADA
+            sp.estado in (SesionProgramada.ESTADO_COMPLETADA, SesionProgramada.ESTADO_PARCIAL)
             and sp.fecha_realizada is not None
             and (
                 sp.fecha_realizada != sp.fecha_prevista

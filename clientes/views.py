@@ -848,8 +848,11 @@ def _consistencia_semanal_programada(cliente, hoy):
     planificadas = sesiones.count()
     if planificadas == 0:
         return None
-    completadas = sesiones.filter(estado=SesionProgramada.ESTADO_COMPLETADA).count()
-    return round(completadas / planificadas * 100)
+    realizadas = sesiones.filter(estado__in=(
+        SesionProgramada.ESTADO_COMPLETADA,
+        SesionProgramada.ESTADO_PARCIAL,
+    )).count()
+    return round(realizadas / planificadas * 100)
 
 
 def _lesion_sliders_desde_evidencia(lesion):

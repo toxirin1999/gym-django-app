@@ -49,19 +49,22 @@ def _snapshot(contrato):
     sesiones = list(
         contrato.sesiones.select_related('entreno_realizado').order_by('id')
     )
-    # Contrato v1: estas claves son evidencia persistida y no deben variar al
-    # ampliar choices. Las ausencias planificadas viven en su campo explícito.
-    estados_contrato_v1 = (
+    estados_contrato_v2 = (
         SesionProgramada.ESTADO_PENDIENTE,
         SesionProgramada.ESTADO_COMPLETADA,
+        SesionProgramada.ESTADO_PARCIAL,
         SesionProgramada.ESTADO_SALTADA_USUARIO,
         SesionProgramada.ESTADO_OMITIDA_SISTEMA,
         SesionProgramada.ESTADO_CANCELADA_LESION,
     )
     conteos = {
         codigo: sum(sesion.estado == codigo for sesion in sesiones)
-        for codigo in estados_contrato_v1
+        for codigo in estados_contrato_v2
     }
+    # Compatibilidad del snapshot v1: una semana sin parciales conserva el
+    # diccionario histórico exacto. La nueva clave solo aparece con evidencia.
+    if not conteos[SesionProgramada.ESTADO_PARCIAL]:
+        conteos.pop(SesionProgramada.ESTADO_PARCIAL)
     omitidas_ausencia = [
         sesion for sesion in sesiones
         if sesion.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO
@@ -70,6 +73,8 @@ def _snapshot(contrato):
         sesion for sesion in sesiones
         if sesion.estado == SesionProgramada.ESTADO_COMPLETADA
     ]
+    parciales = [sesion for sesion in sesiones if sesion.estado == SesionProgramada.ESTADO_PARCIAL]
+    realizadas = completadas + parciales
     reubicadas = sum(
         sesion.fecha_realizada is not None
         and (
@@ -79,7 +84,7 @@ def _snapshot(contrato):
                 and sesion.pospuesta_hasta != sesion.fecha_prevista
             )
         )
-        for sesion in completadas
+        for sesion in realizadas
     )
 
     # Un entrenamiento solo puede contribuir una vez aunque un dato corrupto lo
@@ -87,7 +92,7 @@ def _snapshot(contrato):
     # única puerta de entrada; nunca se buscan coincidencias por fecha.
     entrenos = []
     vistos = set()
-    for sesion in completadas:
+    for sesion in realizadas:
         entreno = sesion.entreno_realizado
         if entreno is not None and entreno.pk not in vistos:
             entrenos.append(entreno)
@@ -102,7 +107,7 @@ def _snapshot(contrato):
     volumen_total = sum(volumenes, Decimal('0')) if volumenes else None
     resultado_base = evaluar_contrato_semanal_gym(contrato)
     return {
-        'version_calculo': 1,
+        'version_calculo': 2,
         'contrato_id': contrato.pk,
         'semana': contrato.semana.isoformat(),
         'objetivo_sesiones': contrato.objetivo_sesiones,
@@ -111,6 +116,8 @@ def _snapshot(contrato):
         'conteos_estado': conteos,
         'sesiones_omitidas_ausencia': len(omitidas_ausencia),
         'sesiones_completadas': len(completadas),
+        'sesiones_parciales': len(parciales),
+        'sesiones_realizadas': len(realizadas),
         'sesiones_reubicadas': reubicadas,
         'sesiones': [
             {
@@ -129,7 +136,7 @@ def _snapshot(contrato):
             'energia_pre_sesion_media': _media(energias),
             'rpe_medio': _media(rpes_disponibles),
             'cobertura': {
-                'entrenos_enlazados': {'disponibles': len(entrenos), 'total': len(completadas)},
+                'entrenos_enlazados': {'disponibles': len(entrenos), 'total': len(realizadas)},
                 'volumen': {'disponibles': len(volumenes), 'total': len(entrenos)},
                 'duracion': {'disponibles': len(duraciones), 'total': len(entrenos)},
                 'energia_pre_sesion': {'disponibles': len(energias), 'total': len(entrenos)},
@@ -172,7 +179,7 @@ def evaluar_y_persistir_contrato_semanal_gym(contrato, force=False, hoy=None):
         )
 
     defaults = {
-        'version_calculo': 1,
+        'version_calculo': 2,
         'estado_cumplimiento': evidencia['estado_cumplimiento'],
         'sesiones_completadas': evidencia['sesiones_completadas'],
         'sesiones_reubicadas': evidencia['sesiones_reubicadas'],
