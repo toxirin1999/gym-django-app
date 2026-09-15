@@ -1096,6 +1096,7 @@ input{background:transparent!important;border:none!important;outline:none!import
      data-reps-min="{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}"
      data-reps-max="{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}"
      data-inc-kg="{{ ejercicio.incremento_kg|default:2.5 }}"
+     data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
      data-total-sets="{{ ejercicio.series }}"
      data-descanso="{{ ejercicio.descanso_minutos|default:3 }}"
      data-barra-kg="{{ ejercicio.barra_kg|default:0 }}"
@@ -1124,7 +1125,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   <input type="hidden" name="{{ ejercicio.form_id }}_molestia_zona" id="mol-zona-{{ ejercicio.form_id }}" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_molestia_severidad" id="mol-sev-{{ ejercicio.form_id }}" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_molestia_descripcion" id="mol-desc-{{ ejercicio.form_id }}" value="">
-  <!-- Tope de máquina -->
+  <!-- Tope de peso -->
   <input type="hidden" name="{{ ejercicio.form_id }}_es_tope_maquina" id="tope-{{ ejercicio.form_id }}" value="{% if ejercicio.sugerencia_tope %}true{% else %}false{% endif %}">
   <input type="hidden" name="{{ ejercicio.form_id }}_fallo_tipo" id="fallo-{{ ejercicio.form_id }}" value="">
 
@@ -1296,7 +1297,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
         <div class="sa-obj-wrap">
           {% if ejercicio.usa_peso %}
-            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
+            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
@@ -1319,12 +1320,12 @@ input{background:transparent!important;border:none!important;outline:none!import
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
       {% if ejercicio.usa_peso %}
       <div class="peso-zona">
-        <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% endif %}</div>
+        <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} · por mano{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% endif %}</div>
         <div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">
           <button type="button" class="peso-btn menos"
-                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-2.5)">−</button>
+                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-incrementoPeso('{{ ejercicio.form_id }}'))">−</button>
           <div class="peso-num-wrap">
-            <input type="number" step="0.5"
+            <input type="number" step="any"
                    class="peso-input weight-input"
                    id="peso-{{ ejercicio.form_id }}-{{ sn }}"
                    name="{{ ejercicio.form_id }}_peso_{{ sn }}"
@@ -1334,7 +1335,7 @@ input{background:transparent!important;border:none!important;outline:none!import
             <span class="peso-kg">kg</span>
           </div>
           <button type="button" class="peso-btn mas"
-                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},2.5)">+</button>
+                  onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},incrementoPeso('{{ ejercicio.form_id }}'))">+</button>
         </div>
         <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
         <div class="orm-display" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
@@ -2010,13 +2011,18 @@ function ajustarPesoPanel(fid,sn,delta){
   const inp=document.getElementById('peso-'+fid+'-'+sn);
   if(!inp)return;
   const actual=parseFloat((inp.value||'0').replace(',','.'))||0;
-  const nuevo=Math.max(0,Math.round((actual+delta)*10)/10);
-  inp.value=nuevo.toFixed(1);
+  const nuevo=Math.max(0,actual+delta);
+  inp.value=String(Number(nuevo.toFixed(2)));
   inp.dispatchEvent(new Event('input',{bubbles:true}));
   if(navigator.vibrate)navigator.vibrate(20);
   actualizarORM(fid,sn);
   calcularDiscosInline(fid,sn,nuevo);
   detectarPR(fid,sn,nuevo);
+}
+
+function incrementoPeso(fid){
+  const card=document.getElementById('card-'+fid);
+  return parseFloat(card?.dataset.incKg||'2.5')||2.5;
 }
 
 // Navegación ejercicios
@@ -2073,7 +2079,7 @@ cards.forEach(card=>actualizarSetPills(card.dataset.formId));
 
 // Guardar serie — marca el checkbox y avanza al panel siguiente
 // ── AUTOREGULACIÓN: sugerencia de peso para la siguiente serie ──────────────
-function calcularPesoSiguienteSerie(peso, rpe, repsReales, rpeObj, repsObj) {
+function calcularPesoSiguienteSerie(fid, peso, rpe, repsReales, rpeObj, repsObj) {
   if (!peso || peso <= 0) return null;
   const deltaRpe = rpe - rpeObj;      // positivo = demasiado duro, negativo = demasiado fácil
   const deltaReps = repsReales - repsObj; // positivo = más reps de las objetivo
@@ -2089,11 +2095,12 @@ function calcularPesoSiguienteSerie(peso, rpe, repsReales, rpeObj, repsObj) {
 
   if (Math.abs(factor) < 0.012) return null; // Diferencia insignificante, no sugerir
 
-  // Redondear al múltiplo de 2.5kg más cercano: hacia arriba si subimos, hacia abajo si bajamos
+  // Redondear al salto realmente disponible para este ejercicio/material.
   const pesoRaw = peso * (1 + factor);
+  const incremento = incrementoPeso(fid);
   const pesoSugerido = factor > 0
-    ? Math.ceil(pesoRaw / 2.5) * 2.5
-    : Math.floor(pesoRaw / 2.5) * 2.5;
+    ? Math.ceil(pesoRaw / incremento) * incremento
+    : Math.floor(pesoRaw / incremento) * incremento;
   const diff = +(pesoSugerido - peso).toFixed(1);
   return { pesoSugerido, diff, deltaRpe, deltaReps };
 }
@@ -2131,7 +2138,7 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     return;
   }
 
-  const resultado = calcularPesoSiguienteSerie(peso, rpe, reps, rpeObj, repsObj);
+  const resultado = calcularPesoSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsObj);
 
   // ── Banner en la pantalla de descanso ────────────────────────────────────
   if (bannerDescanso) {
@@ -2217,10 +2224,16 @@ function guardarSeriePanel(fid,sn,total){
   }
   if(!esEdicion) tecnicaInput.value = '';
 
+  const tipoCarga = document.getElementById('tipo-carga-'+fid)?.value || 'total';
+  const multiplicador = (tipoCarga === 'por_mano' || tipoCarga === 'por_lado') ? 2 : 1;
+  const usaDistancia = document.getElementById('card-'+fid)?.dataset.usaDistancia === '1';
   STATE.seriesCompletadas[fid][sn-1] = {
     peso,
     reps,
     rpe,
+    tipoCarga,
+    multiplicador,
+    usaDistancia,
     tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null
   };
 
@@ -2666,20 +2679,36 @@ function actualizarProgreso(){
   if(pctEl)pctEl.textContent=pct+'%';
 }
 
+function metricasSerie(s){
+  const multiplicador = Number(s.multiplicador || 1);
+  const pesoTotal = Number(s.peso || 0) * multiplicador;
+  const cantidad = Number(s.reps || 0);
+  return s.usaDistancia
+    ? {tonelaje:0, cargaDistancia:pesoTotal*cantidad, reps:0, distancia:cantidad}
+    : {tonelaje:pesoTotal*cantidad, cargaDistancia:0, reps:cantidad, distancia:0};
+}
+
+function textoMetricas(tonelaje, cargaDistancia){
+  const partes=[];
+  if(tonelaje>0)partes.push(Math.round(tonelaje)+' kg');
+  if(cargaDistancia>0)partes.push(Math.round(cargaDistancia)+' kg·m');
+  return partes.join(' · ')||'0 kg';
+}
+
 function actualizarSticky(){
-  let comp=0,total=0,vol=0;
+  let comp=0,total=0,vol=0,cargaDistancia=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
     total+=parseInt(card.dataset.totalSets)||0;
     const scs=STATE.seriesCompletadas[fid]||[];
     comp+=scs.length;
-    vol+=scs.reduce((a,s)=>a+s.peso*s.reps,0);
+    scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;});
   });
   const elS=document.getElementById('series-completadas-sticky');
   const elV=document.getElementById('volumen-acumulado');
   const elE=document.getElementById('ejercicio-actual');
   if(elS)elS.textContent=comp+'/'+total;
-  if(elV)elV.textContent=Math.round(vol)+' kg';
+  if(elV)elV.textContent=textoMetricas(vol,cargaDistancia);
   if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
 }
 
@@ -2728,7 +2757,7 @@ document.querySelectorAll('.weight-input').forEach(inp=>{
 });
 
 document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
-  let comp=0,total=0,vol=0,reps=0,rpes=[],ejComp=0,ejTot=0;
+  let comp=0,total=0,vol=0,cargaDistancia=0,reps=0,distanciaTotal=0,rpes=[],ejComp=0,ejTot=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
     const t=parseInt(card.dataset.totalSets)||0;
@@ -2736,7 +2765,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const scs=STATE.seriesCompletadas[fid]||[];
     comp+=scs.length;
     if(scs.length>=t)ejComp++;
-    scs.forEach(s=>{vol+=s.peso*s.reps;reps+=parseInt(s.reps)||0;if(s.rpe)rpes.push(s.rpe);});
+    scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;reps+=m.reps;distanciaTotal+=m.distancia;if(s.rpe)rpes.push(s.rpe);});
   });
   const rpeAvg=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length):0;
   if(comp<1){
@@ -2757,7 +2786,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('hid-duracion').value=mins;
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
-  document.getElementById('modal-reps').textContent=reps;
+  document.getElementById('modal-reps').textContent=distanciaTotal?reps+' reps · '+distanciaTotal+' m':reps;
 
   // Animar anillos SVG
   setTimeout(()=>{
@@ -2787,12 +2816,13 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const t=parseInt(card.dataset.totalSets)||0;
     const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent||'';
     const scs=STATE.seriesCompletadas[fid]||[];
-    const volEj=scs.reduce((a,s)=>a+s.peso*s.reps,0);
+    let volEj=0,cargaDistanciaEj=0;
+    scs.forEach(s=>{const m=metricasSerie(s);volEj+=m.tonelaje;cargaDistanciaEj+=m.cargaDistancia;});
     const completo=scs.length>=t&&t>0;
     if(volEj>mejorVol){mejorVol=volEj;mejorNombre=nombre;}
     const icon=completo?'<span style="color:var(--ok);margin-right:4px;">✓</span>':'<span style="color:var(--td);margin-right:4px;">○</span>';
     html+='<div class="modal-ej">'+icon+'<span class="modal-ej-nombre">'+nombre+'</span>'
-      +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+Math.round(volEj)+'kg</span></div>';
+      +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+textoMetricas(volEj,cargaDistanciaEj)+'</span></div>';
   });
   document.getElementById('modal-ejercicios-lista').innerHTML=html;
   if(mejorNombre&&mejorVol>0){

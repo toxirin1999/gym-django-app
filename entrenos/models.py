@@ -246,6 +246,7 @@ class SerieRealizada(models.Model):
     ejercicio = models.ForeignKey('rutinas.EjercicioBase', on_delete=models.CASCADE)
     serie_numero = models.PositiveIntegerField()
     repeticiones = models.PositiveIntegerField()
+    distancia_metros = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
     completado = models.BooleanField(default=False)
     peso_kg = models.DecimalField(max_digits=6, decimal_places=2, null=True, blank=True)
     tipo_carga = models.CharField(max_length=10, choices=TIPO_CARGA_CHOICES, null=True, blank=True)
@@ -259,6 +260,20 @@ class SerieRealizada(models.Model):
 
     def __str__(self):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
+
+    @property
+    def tonelaje_kg(self):
+        if self.distancia_metros is not None:
+            return Decimal('0')
+        peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
+        return Decimal(str(peso)) * int(self.repeticiones or 0)
+
+    @property
+    def carga_distancia_kg_m(self):
+        if self.distancia_metros is None:
+            return Decimal('0')
+        peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
+        return Decimal(str(peso)) * Decimal(str(self.distancia_metros))
 
     class Meta:
         indexes = [
@@ -447,8 +462,9 @@ class EntrenoRealizado(models.Model):
             peso = Decimal(str(
                 serie.peso_total_kg if serie.peso_total_kg is not None else (serie.peso_kg or 0)
             ))
-            reps = int(serie.repeticiones or 0)
-            total += peso * reps
+            if serie.distancia_metros is None:
+                reps = int(serie.repeticiones or 0)
+                total += peso * reps
 
         # 3. Ejercicios Liftin Detallados (Específicos de importación)
         if hasattr(self, 'ejercicios_liftin_detallados'):

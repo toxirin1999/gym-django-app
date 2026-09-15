@@ -222,7 +222,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             cambios.append({
                 'nombre': ej.nombre_ejercicio,
                 'tipo': 'tope',
-                'detalle': 'tope de máquina · progresó por reps',
+                'detalle': 'tope de peso · progresó por reps',
             })
             continue
 

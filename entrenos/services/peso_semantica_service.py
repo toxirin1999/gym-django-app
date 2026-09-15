@@ -37,6 +37,11 @@ def normalizar_semantica_carga(ejercicio):
     nombre = str(out.get("nombre") or "")
     nombre_normalizado = nombre.casefold()
 
+    tipo_explicito = out.get("tipo_carga_default") or out.get("tipo_carga")
+    if tipo_explicito in {"por_mano", "por_lado"}:
+        out["peso_formato"] = tipo_explicito
+        return out
+
     if not any(token in nombre_normalizado for token in _MANCUERNA):
         out.setdefault("peso_formato", "total")
         return out

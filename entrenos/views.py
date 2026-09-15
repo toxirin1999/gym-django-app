@@ -153,7 +153,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
     o None si no se encuentra.
     """
     from clientes.models import Cliente
-    from .models import EntrenoRealizado, EjercicioRealizado, EjercicioLiftinDetallado
+    from .models import EntrenoRealizado, EjercicioRealizado, EjercicioLiftinDetallado, SerieRealizada
     from django.db.models import Q
 
     try:
@@ -182,7 +182,18 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
             peso = round(float(ej.peso_kg or 0), 2)
             series = ej.series or 1
             repeticiones = ej.repeticiones or 0
-            volumen = round(peso * series * repeticiones, 2)
+            distancias = SerieRealizada.objects.filter(
+                entreno=ej.entreno,
+                ejercicio__nombre__iexact=ej.nombre_ejercicio,
+                completado=True,
+                distancia_metros__isnull=False,
+            ).values_list('distancia_metros', flat=True)
+            mejor_distancia = max(distancias, default=None)
+            if mejor_distancia is not None:
+                repeticiones = int(mejor_distancia)
+                volumen = 0
+            else:
+                volumen = round(peso * series * repeticiones, 2)
             return {
                 'peso': peso,
                 'fecha': ej.entreno.fecha,
@@ -4057,6 +4068,10 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['tipo_equipo'] = 'otro'
                 ejercicio['barra_kg'] = 0
             ejercicio['usa_barra'] = ejercicio['tipo_equipo'] in ('barra', 'maquina_discos')
+            _base_carga = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
+            if _base_carga:
+                ejercicio.setdefault('tipo_carga_default', _base_carga.tipo_carga_default)
+                ejercicio.setdefault('incremento_kg', float(_base_carga.incremento_kg))
             from entrenos.services.peso_semantica_service import normalizar_semantica_carga
             ejercicio.update(normalizar_semantica_carga(ejercicio))
 
@@ -4547,9 +4562,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
                     if serie_valida and serie_confirmada:
                         semantica_carga = resolver_semantica_carga(tipo_carga_solicitado, peso)
-                        if peso > 0:
+                        if peso > 0 and not es_distancia:
                             volumen_ejercicio += semantica_carga['peso_total_kg'] * Decimal(reps)
-                        if peso > 0 and reps > 0:
+                        if peso > 0 and reps > 0 and not es_distancia:
                             rpe_a_usar = rpe_real if rpe_real is not None else 8
                             rm_serie_actual = estimar_1rm_con_rpe(peso, reps, rpe_a_usar)
                             if rm_serie_actual > mejor_rm_ejercicio:
@@ -4620,7 +4635,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 ej_realizado = EjercicioRealizado.objects.create(
                     entreno=entreno, nombre_ejercicio=ejercicio_nombre,
                     peso_kg=peso_promedio, series=len(series_data_para_guardar),
-                    repeticiones=reps_promedio, fuente_datos='manual',
+                    repeticiones=0 if es_distancia else reps_promedio, fuente_datos='manual',
                     grupo_muscular=grupo, completado=True,
                     rpe=rpe_promedio_ejercicio,
                     is_recovery_load=is_recovery_load,
@@ -4647,7 +4662,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             entreno=entreno,
                             ejercicio=ej_base,
                             serie_numero=idx,
-                            repeticiones=int(s_data['reps']),
+                            repeticiones=0 if es_distancia else int(s_data['reps']),
+                            distancia_metros=(Decimal(s_data['reps']) if es_distancia else None),
                             peso_kg=Decimal(str(s_data['peso'])),
                             rpe_real=s_data['rpe_real'],
                             tecnica_calidad=s_data.get('tecnica'),

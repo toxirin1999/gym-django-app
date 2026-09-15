@@ -136,6 +136,8 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     permisos_locales_por_ejercicio = {}
     for nombre in nombres_hoy:
         alertas = []
+        from entrenos.models import SerieRealizada, EjercicioBase
+        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
 
         # Estancamiento
         if GymDecisionLog.objects.filter(
@@ -155,22 +157,30 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             entreno__fecha__gte=dos_semanas,
         ).order_by('-entreno__fecha').first()
         if tope_ej:
-            reps_tope = int(tope_ej.repeticiones or 0)
+            usa_distancia = bool(ej_base and ej_base.tipo_progresion == 'progresion_distancia')
+            distancia_tope = 0
+            if usa_distancia and ej_base:
+                distancia_tope = SerieRealizada.objects.filter(
+                    entreno=tope_ej.entreno,
+                    ejercicio=ej_base,
+                    completado=True,
+                    distancia_metros__isnull=False,
+                ).order_by('-distancia_metros').values_list('distancia_metros', flat=True).first() or 0
+            reps_tope = int(distancia_tope or tope_ej.repeticiones or 0)
             peso_tope = float(tope_ej.peso_kg or 0)
+            objetivo = reps_tope + (5 if usa_distancia else 1)
             alertas.append({
                 'tipo': 'tope',
                 'icono': '🔝',
                 'texto': (
-                    f'Tope de máquina — conserva {peso_tope:g} kg y apunta a '
-                    f'{reps_tope + 1} reps'
+                    f'Tope de peso — conserva {peso_tope:g} kg y apunta a '
+                    f'{objetivo} {"m" if usa_distancia else "reps"}'
                 ),
                 'peso_kg': peso_tope,
-                'reps_objetivo': reps_tope + 1,
+                'reps_objetivo': objetivo,
             })
 
         # Técnica comprometida reciente
-        from entrenos.models import SerieRealizada, EjercicioBase
-        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
         if ej_base:
             tecnica_comprometida = SerieRealizada.objects.filter(
                 entreno__cliente=cliente,

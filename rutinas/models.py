@@ -58,6 +58,10 @@ class EjercicioBase(models.Model):
         max_length=10, choices=TIPO_CARGA_CHOICES, default='total',
         help_text='Cómo debe interpretar la interfaz el peso escrito por el usuario.',
     )
+    incremento_kg = models.DecimalField(
+        max_digits=5, decimal_places=2, default=2.5,
+        help_text='Salto real disponible para los controles de carga (p. ej. 4 kg).',
+    )
 
     # Etiquetas de riesgo biomecánico
     risk_tags = models.JSONField(
