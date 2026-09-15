@@ -160,6 +160,36 @@
     }
     @keyframes shimmer-entrada { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
 
+    /* ── VITALIDAD JOI (constancia) ──────────────────────────────────────────
+       Eje aparte del estado de atención de arriba (SILENCIO/OBSERVANDO/
+       PRESENTE/PROTEGIENDO): modula el mismo orbe según cuánta constancia
+       de entrenamiento hay detrás, sin introducir un personaje nuevo.
+       'plena' y 'estable' usan el ritmo por defecto de arriba; solo
+       'bajando' e 'hibernando' atenúan el brillo y ralentizan el pulso. */
+    .joi-vitalidad-bajando .vigilia-anillo-ext { animation-duration: 15s; border-color: rgba(140, 195, 230, 0.10); }
+    .joi-vitalidad-bajando .vigilia-anillo-med { animation-duration: 13s; animation-delay: 1.2s; border-color: rgba(140, 195, 230, 0.20); }
+    .joi-vitalidad-bajando .vigilia-anillo-int { animation-duration: 13s; animation-delay: 2.4s; border-color: rgba(140, 195, 230, 0.34); }
+    .joi-vitalidad-bajando .vigilia-punto {
+      animation: pulso-punto-bajando 13s ease-in-out infinite 3.6s;
+      background: rgba(160, 190, 210, 0.72);
+    }
+    @keyframes pulso-punto-bajando {
+      0%,100%{opacity:.30;box-shadow:0 0 5px 2px rgba(110, 150, 185, .12)}
+      50%{opacity:.60;box-shadow:0 0 11px 3px rgba(110, 150, 185, .28)}
+    }
+
+    .joi-vitalidad-hibernando .vigilia-anillo-ext { animation-duration: 20s; border-color: rgba(130, 155, 170, 0.07); }
+    .joi-vitalidad-hibernando .vigilia-anillo-med { animation-duration: 17s; animation-delay: 1.5s; border-color: rgba(130, 155, 170, 0.14); }
+    .joi-vitalidad-hibernando .vigilia-anillo-int { animation-duration: 17s; animation-delay: 3s; border-color: rgba(130, 155, 170, 0.24); }
+    .joi-vitalidad-hibernando .vigilia-punto {
+      animation: pulso-punto-hibernando 17s ease-in-out infinite 4.5s;
+      background: rgba(140, 165, 180, 0.5);
+    }
+    @keyframes pulso-punto-hibernando {
+      0%,100%{opacity:.20;box-shadow:0 0 4px 1px rgba(90, 120, 145, .08)}
+      50%{opacity:.42;box-shadow:0 0 8px 2px rgba(90, 120, 145, .18)}
+    }
+
     /* ── HABLA ── */
     .joi-mensaje-wrap {
       max-width: 480px; width: 100%;
@@ -705,7 +735,7 @@
   </style>
 </head>
 <body>
-<div class="habitacion-wrap joi-estado-{{ joi_estado|lower }}" data-joi-estado="{{ joi_estado }}" aria-label="JOI Habitación estado {{ joi_estado }}">
+<div class="habitacion-wrap joi-estado-{{ joi_estado|lower }} joi-vitalidad-{{ joi_vitalidad.nivel_visual }}" data-joi-estado="{{ joi_estado }}" data-joi-vitalidad="{{ joi_vitalidad.nivel_visual }}" aria-label="JOI Habitación estado {{ joi_estado }}">
 
   {% if hay_sedimento %}
   <div class="sedimento-shimmer" aria-hidden="true"></div>

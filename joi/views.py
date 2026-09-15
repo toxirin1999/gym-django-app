@@ -204,6 +204,12 @@ def habitacion_joi(request):
     from joi.services import determinar_estado_habitacion_joi
     joi_estado, joi_motivo = determinar_estado_habitacion_joi(request.user)
 
+    # ── Vitalidad JOI: eje de constancia, independiente del estado de arriba ──
+    # Puramente visual (modula el brillo del orbe en la plantilla). No debe
+    # leerse ni alterar nada de determinar_estado_habitacion_joi.
+    from joi.context_builders.vitalidad_context import calcular_vitalidad_joi
+    joi_vitalidad = calcular_vitalidad_joi(cliente, timezone.localdate())
+
     # Mapeo de motivos a textos humanos
     _motivo_textos = {
         'sin_senales': "No hay señales nuevas que leer ahora.",
@@ -289,6 +295,7 @@ def habitacion_joi(request):
         'entrenos_totales':    entrenos_totales,
         'memoria_revision':    memoria_revision,
         'revision_feedback':   revision_feedback,
+        'joi_vitalidad':       joi_vitalidad,
     })
 
 
