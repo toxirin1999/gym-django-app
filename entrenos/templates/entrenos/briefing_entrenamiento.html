@@ -11,8 +11,8 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { height: 100%; background: var(--jds-bg); }
   body {
-    /* JDS — las vars locales del briefing ahora apuntan al sistema único.
-       Migración por aliasing: re-skinea la pantalla sin reescribir los inline. */
+    /* JDS — las vars locales del briefing apuntan al sistema único.
+       Redisño 2026-09 (aliasing): re-skinea la pantalla sin abandonar JDS. */
     --bg:      var(--jds-bg);
     --surf:    var(--jds-surface);
     --surf2:   var(--jds-surface-strong);
@@ -27,6 +27,11 @@
     --fd: var(--jds-font);
     --fu: var(--jds-font);
     --fm: var(--jds-mono);
+    /* Radios unificados del rediseño: tarjetas grandes ~18px, tags ~8px, píldoras completas. */
+    --rad-card: 18px;
+    --rad-tag: 8px;
+    --rad-icon: 12px;
+    --rad-pill: 999px;
     font-family: var(--fu);
     color: var(--ink);
     -webkit-font-smoothing: antialiased;
@@ -36,253 +41,336 @@
   /* ── LAYOUT ──────────────────────────────────── */
   .wrap {
     max-width: 480px; margin: 0 auto;
-    padding: 0 16px 120px;
+    padding: 0 16px 130px;
     min-height: 100vh;
   }
 
   /* ── TOPBAR ──────────────────────────────────── */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 16px 0 12px; gap: 12px;
+    padding: 22px 0 16px;
   }
   .tb-back {
-    display: flex; align-items: center; gap: 6px;
-    font-family: var(--fm); font-size: 11px; font-weight: 700;
-    color: var(--td); text-decoration: none; letter-spacing: .05em;
-  }
-  .tb-back svg { width: 16px; height: 16px; }
-  .tb-label {
-    font-family: var(--fm); font-size: 10px; font-weight: 700;
-    color: var(--tdm); letter-spacing: .12em; text-transform: uppercase;
-  }
-
-  /* ── BIB ─────────────────────────────────────── */
-  .bib {
+    display: flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: var(--rad-pill);
     background: var(--surf); border: 1px solid var(--bd);
-    border-radius: 16px; padding: 20px;
-    margin-bottom: 16px; position: relative; overflow: hidden;
+    color: var(--td); text-decoration: none; flex-shrink: 0;
+    transition: color .15s, border-color .15s;
   }
-  .bib::before {
-    content: ''; position: absolute; inset: 0;
-    background: linear-gradient(135deg, rgba(0,200,255,0.06) 0%, transparent 60%);
-    pointer-events: none;
-  }
-  .bib-meta {
-    display: flex; justify-content: space-between; align-items: center;
-    font-family: var(--fm); font-size: 10px; color: var(--tdm);
-    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 14px;
-  }
-  .bib-num {
-    font-family: var(--fd); font-size: clamp(40px, 12vw, 64px);
-    color: var(--accent); line-height: 1; letter-spacing: -.02em;
-  }
-  .bib-body { display: flex; align-items: flex-end; gap: 16px; }
-  .bib-info { flex: 1; }
-  .bib-title {
-    font-family: var(--fd); font-size: 22px; line-height: 1.1;
-    color: var(--ink); letter-spacing: -.01em;
-  }
-  .bib-sub {
-    font-family: var(--fm); font-size: 11px; color: var(--td);
-    letter-spacing: .08em; text-transform: uppercase; margin-top: 6px;
+  .tb-back:active { color: var(--ink); border-color: var(--bd-strong, var(--bd)); }
+  .tb-back svg { width: 17px; height: 17px; }
+  .tb-meta {
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .1em; text-transform: uppercase;
+    text-align: right;
   }
 
-  /* ── SECCIÓN HEADER ──────────────────────────── */
+  /* ── CABECERA DE SESIÓN ──────────────────────── */
+  .head-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 12px; margin-bottom: 6px;
+  }
+  .head-title {
+    font-family: var(--fd); font-size: 22px; font-weight: 800;
+    line-height: 1.15; color: var(--ink); letter-spacing: -.01em;
+  }
+  .head-pill {
+    flex-shrink: 0; font-family: var(--fm); font-size: 10px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase;
+    padding: 5px 11px; border-radius: var(--rad-pill);
+    background: var(--jds-good-soft); border: 1px solid rgba(34,197,94,.32);
+    color: var(--ok);
+  }
+  .head-sub {
+    font-family: var(--fm); font-size: 11px; color: var(--tdm);
+    letter-spacing: .02em; margin-bottom: 18px;
+  }
+
+  /* ── TARJETAS GENÉRICAS (avisos, pausa, sistema) ── */
+  .card-notice {
+    border-radius: var(--rad-card); padding: 14px 16px; margin-bottom: 12px;
+  }
+
+  /* ── ALERTA / MENSAJES DEL ENTRENADOR (estado general) ── */
+  .msg-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 4px; }
+  .msg-row {
+    border-radius: var(--rad-card);
+    padding: 14px 16px; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .msg-row.carga         { background: var(--jds-warning-soft); border: 1px solid rgba(245,158,11,.28); }
+  .msg-row.energia       { background: var(--jds-warning-soft); border: 1px solid rgba(245,158,11,.28); }
+  .msg-row.estancamiento { background: var(--jds-warning-soft); border: 1px solid rgba(245,158,11,.28); }
+  .msg-row.tecnica       { background: var(--jds-danger-soft);  border: 1px solid rgba(239,68,68,.28); }
+  .msg-row.tope          { background: var(--jds-good-soft);    border: 1px solid rgba(34,197,94,.28); }
+  .msg-row.ok            { background: var(--jds-good-soft);    border: 1px solid rgba(34,197,94,.28); }
+  .msg-icon-wrap {
+    width: 30px; height: 30px; border-radius: var(--rad-icon);
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 15px; margin-top: 1px;
+    background: rgba(255,255,255,.06); border: 1px solid var(--bd);
+  }
+  .msg-body { flex: 1; min-width: 0; }
+  .msg-label {
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 3px;
+  }
+  .msg-row.carga .msg-label,
+  .msg-row.energia .msg-label,
+  .msg-row.estancamiento .msg-label { color: var(--warn); }
+  .msg-row.tecnica .msg-label { color: var(--r); }
+  .msg-row.tope .msg-label,
+  .msg-row.ok .msg-label { color: var(--ok); }
+  .msg-text { font-size: 13px; line-height: 1.5; color: var(--td); }
+
+  /* ── AVISO STRAVA (estático — no hay estado real de conexión) ── */
+  .strava-row {
+    display: flex; align-items: center; gap: 12px;
+    padding: 13px 16px; border-radius: var(--rad-card); margin-bottom: 12px;
+    background: rgba(252,76,2,.08); border: 1px solid rgba(252,76,2,.28);
+  }
+  .strava-icon {
+    width: 32px; height: 32px; border-radius: var(--rad-icon); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(252,76,2,.14); color: #FC4C02;
+  }
+  .strava-icon svg { width: 16px; height: 16px; }
+  .strava-title {
+    font-family: var(--fm); font-size: 10.5px; font-weight: 700;
+    letter-spacing: .07em; text-transform: uppercase; color: #FF7A45;
+    margin-bottom: 2px;
+  }
+  .strava-sub { font-size: 11px; color: var(--td); line-height: 1.4; }
+
+  /* ── SECCIÓN HEADER (separadores de sección) ─── */
   .sec-hdr {
     display: flex; align-items: center; gap: 10px;
-    margin: 20px 0 10px;
+    margin: 22px 0 10px;
   }
   .sec-tag {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    color: var(--tdm); letter-spacing: .15em; text-transform: uppercase;
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .14em; text-transform: uppercase;
     flex-shrink: 0;
   }
   .sec-line { flex: 1; height: 1px; background: var(--bd); }
+  .sec-count {
+    font-family: var(--fm); font-size: 10px; color: var(--tdm);
+    letter-spacing: .05em;
+  }
 
-  /* ── ESTADO FÍSICO ───────────────────────────── */
+  /* ── ESTADO FÍSICO / READINESS ────────────────── */
   .estado-grid {
     display: grid; grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px; margin-bottom: 4px;
+    border-radius: var(--rad-card);
+    background: var(--surf); border: 1px solid var(--bd);
+    padding: 14px 6px;
   }
   .estado-card {
-    background: var(--surf); border: 1px solid var(--bd);
-    border-radius: 12px; padding: 12px 10px; text-align: center;
+    text-align: center; padding: 0 8px;
+    border-left: 1px solid var(--bd);
   }
+  .estado-card:first-child { border-left: none; }
   .estado-val {
     font-family: var(--fm); font-size: 22px; font-weight: 700;
-    color: var(--ink); line-height: 1;
+    color: var(--accent); line-height: 1;
   }
+  .estado-val .unit { font-size: 11px; font-weight: 500; color: var(--tdm); font-family: var(--fu); }
   .estado-val.warn { color: var(--warn); }
   .estado-val.ok   { color: var(--ok); }
   .estado-val.na   { color: var(--tdm); font-size: 16px; }
   .estado-lbl {
-    font-family: var(--fm); font-size: 9px; color: var(--tdm);
-    letter-spacing: .08em; text-transform: uppercase; margin-top: 5px;
+    font-family: var(--fm); font-size: 9.5px; color: var(--tdm);
+    letter-spacing: .08em; text-transform: uppercase; margin-top: 6px;
   }
 
   /* ── PLAN DINÁMICO — cambios aplicados ──────── */
   .plan-cambios {
-    background: rgba(0,200,255,0.06); border: 1px solid rgba(0,200,255,0.2);
-    border-radius: 12px; padding: 12px 14px; margin-bottom: 4px;
+    background: var(--jds-accent-soft); border: 1px solid var(--jds-accent-border);
+    border-radius: var(--rad-card); padding: 14px 16px; margin-bottom: 4px;
   }
   .plan-cambios-hdr {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
   }
   .plan-cambios-hdr-icon { font-size: 13px; }
   .plan-cambios-hdr-lbl {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    color: var(--accent); letter-spacing: .14em; text-transform: uppercase;
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--accent); letter-spacing: .1em; text-transform: uppercase;
   }
   .cambio-row {
-    display: flex; align-items: flex-start; gap: 8px;
-    padding: 5px 0; border-top: 1px solid rgba(0,200,255,0.1);
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 8px 0; border-top: 1px solid rgba(56,189,248,.14);
   }
+  .cambio-row:first-of-type { border-top: none; padding-top: 0; }
   .cambio-tipo {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    letter-spacing: .08em; text-transform: uppercase; flex-shrink: 0; min-width: 80px;
+    font-family: var(--fm); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; min-width: 82px;
   }
   .cambio-tipo.estancamiento { color: var(--warn); }
   .cambio-tipo.molestia      { color: var(--r); }
   .cambio-tipo.deload        { color: var(--accent); }
   .cambio-tipo.progresion    { color: var(--ok); }
   .cambio-tipo.pospuesta     { color: var(--tdm); }
-  .cambio-detalle { font-size: 11px; color: var(--td); line-height: 1.4; }
+  .cambio-detalle { font-size: 12px; color: var(--td); line-height: 1.45; }
   .cambio-arrow { color: var(--ok); font-weight: 700; }
 
   /* ── VOZ DEL ENTRENADOR (instrucciones) ─────── */
   .voz-card {
-    background: var(--surf2); border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 14px; overflow: hidden; margin-bottom: 4px;
+    background: var(--surf2); border: 1px solid var(--bd);
+    border-radius: var(--rad-card); overflow: hidden; margin-bottom: 4px;
   }
   .voz-header {
     display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px 8px; border-bottom: 1px solid var(--bd);
+    padding: 12px 16px 10px; border-bottom: 1px solid var(--bd);
   }
   .voz-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink:0; }
   .voz-label {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    color: var(--accent); letter-spacing: .15em; text-transform: uppercase;
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    color: var(--accent); letter-spacing: .14em; text-transform: uppercase;
   }
   .voz-item {
     display: flex; align-items: flex-start; gap: 12px;
-    padding: 12px 14px;
+    padding: 14px 16px;
     border-bottom: 1px solid var(--bd);
   }
   .voz-item:last-child { border-bottom: none; }
   .voz-icono { font-size: 17px; flex-shrink: 0; margin-top: 2px; }
   .voz-body { flex: 1; min-width: 0; }
   .voz-ejercicio {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    color: var(--td); letter-spacing: .1em; text-transform: uppercase;
+    font-family: var(--fm); font-size: 9.5px; font-weight: 700;
+    color: var(--td); letter-spacing: .08em; text-transform: uppercase;
     margin-bottom: 3px;
   }
   .voz-instruccion {
-    font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.3;
+    font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.35;
     margin-bottom: 3px;
   }
   .voz-razon {
-    font-size: 11px; color: var(--tdm); line-height: 1.4;
+    font-size: 11.5px; color: var(--tdm); line-height: 1.45;
   }
   .voz-item.critica .voz-instruccion { color: var(--r); }
   .voz-item.alerta  .voz-instruccion { color: var(--warn); }
   .voz-item.positivo .voz-instruccion { color: var(--ok); }
 
-  /* ── MENSAJES DEL ENTRENADOR ─────────────────── */
-  .msg-list { display: flex; flex-direction: column; gap: 8px; }
-  .msg-row {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 12px 14px; border-radius: 12px;
-    background: var(--surf); border: 1px solid var(--bd);
-    border-left-width: 3px;
-  }
-  .msg-row.carga        { border-left-color: var(--r); }
-  .msg-row.energia      { border-left-color: var(--warn); }
-  .msg-row.estancamiento{ border-left-color: var(--warn); }
-  .msg-row.tecnica      { border-left-color: var(--r); }
-  .msg-row.tope         { border-left-color: var(--ok); }
-  .msg-row.ok           { border-left-color: var(--ok); }
-  .msg-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
-  .msg-text {
-    font-size: 13px; line-height: 1.5; color: var(--ink);
-    font-family: var(--fu);
-  }
-
-  /* ── PLAN DE EJERCICIOS ──────────────────────── */
-  .plan-list { display: flex; flex-direction: column; gap: 6px; }
-  .plan-row {
+  /* ── EVOLUCIÓN / COMPARATIVAS ─────────────────── */
+  .comp-grid { display: flex; flex-direction: column; gap: 8px; }
+  .comp-row {
     display: flex; align-items: center; gap: 12px;
-    padding: 11px 14px; background: var(--surf);
-    border: 1px solid var(--bd); border-radius: 12px;
+    padding: 13px 16px; background: var(--surf);
+    border: 1px solid var(--bd); border-radius: var(--rad-card);
   }
-  .plan-num {
-    font-family: var(--fm); font-size: 11px; font-weight: 700;
-    color: var(--tdm); flex-shrink: 0; width: 22px; text-align: right;
+  .comp-icon {
+    width: 30px; height: 30px; border-radius: var(--rad-icon); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+    background: var(--jds-good-soft);
   }
-  .plan-body { flex: 1; min-width: 0; }
-  .plan-name {
+  .comp-body { flex: 1; min-width: 0; }
+  .comp-name {
     font-size: 13px; font-weight: 700; color: var(--ink);
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .plan-spec {
-    font-family: var(--fm); font-size: 10px; color: var(--td);
-    margin-top: 2px;
-  }
-  .plan-tempo { color: var(--tdm); }
-  .plan-warmup {
-    font-family: var(--fm); font-size: 9px; color: var(--tdm);
-    margin-top: 3px;
-  }
-  .plan-badges { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 5px; }
-  .badge {
-    font-family: var(--fm); font-size: 9px; font-weight: 700;
-    padding: 2px 7px; border-radius: 6px; border: 1px solid;
-    letter-spacing: .04em; text-transform: uppercase;
-  }
-  .badge.estancado  { color: var(--warn); border-color: rgba(241,196,15,.3); background: rgba(241,196,15,.1); }
-  .badge.tope       { color: var(--ok);   border-color: rgba(46,204,113,.3); background: rgba(46,204,113,.1); }
-  .badge.tecnica    { color: var(--r);    border-color: rgba(231,76,60,.3);  background: rgba(231,76,60,.1); }
-  .badge.molestia   { color: var(--warn); border-color: rgba(241,196,15,.3); background: rgba(241,196,15,.1); }
-
-  /* ── COMPARATIVA TEMPORAL ────────────────────── */
-  .comp-grid {
-    display: flex; flex-direction: column; gap: 6px;
-  }
-  .comp-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 10px 14px; background: var(--surf);
-    border: 1px solid var(--bd); border-radius: 12px;
-    border-left: 3px solid var(--ok);
-  }
-  .comp-icon { font-size: 16px; flex-shrink: 0; }
-  .comp-body { flex: 1; min-width: 0; }
-  .comp-name {
-    font-size: 12px; font-weight: 700; color: var(--ink);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
   .comp-detail {
-    font-family: var(--fm); font-size: 10px; color: var(--td); margin-top: 2px;
+    font-family: var(--fm); font-size: 10.5px; color: var(--td); margin-top: 2px;
   }
   .comp-pct {
-    font-family: var(--fm); font-size: 18px; font-weight: 700;
+    font-family: var(--fm); font-size: 17px; font-weight: 700;
     color: var(--ok); flex-shrink: 0;
+  }
+
+  /* ── PLAN DE SESIÓN ──────────────────────────── */
+  .plan-list { display: flex; flex-direction: column; gap: 10px; }
+  .plan-row {
+    padding: 15px 16px; background: var(--surf);
+    border: 1px solid var(--bd); border-radius: var(--rad-card);
+    transition: border-color .15s;
+  }
+  .plan-row:active { border-color: var(--bd-strong, var(--bd)); }
+  .plan-top {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; margin-bottom: 8px;
+  }
+  .plan-name-wrap { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+  .plan-num {
+    font-family: var(--fm); font-size: 11px; font-weight: 700;
+    color: var(--tdm); flex-shrink: 0;
+  }
+  .plan-name {
+    font-size: 14.5px; font-weight: 700; color: var(--ink); line-height: 1.3;
+  }
+  .plan-name-original {
+    font-family: var(--fm); font-size: 9.5px; color: var(--tdm); margin-top: 2px;
+  }
+
+  /* Píldoras de estado del ejercicio (sustituido / deload / progresión / bloqueo) */
+  .tag {
+    display: inline-flex; align-items: center; gap: 3px; flex-shrink: 0;
+    font-family: var(--fm); font-size: 9.5px; font-weight: 700;
+    padding: 3px 9px; border-radius: var(--rad-pill);
+    letter-spacing: .04em; text-transform: uppercase; border: 1px solid; white-space: nowrap;
+  }
+  .tag.ok      { color: var(--ok);   border-color: rgba(34,197,94,.32);  background: var(--jds-good-soft); }
+  .tag.warn    { color: var(--warn); border-color: rgba(245,158,11,.32); background: var(--jds-warning-soft); }
+  .tag.accent  { color: var(--accent); border-color: var(--jds-accent-border); background: var(--jds-accent-soft); }
+  .tag.danger  { color: var(--r);    border-color: rgba(239,68,68,.32);  background: var(--jds-danger-soft); }
+  .tag.joi     { color: var(--jds-joi); border-color: var(--jds-joi-border); background: var(--jds-joi-soft); }
+  .tag.muted   { color: var(--tdm);  border-color: var(--bd); background: var(--surf); }
+
+  .plan-spec-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    gap: 10px; font-size: 12.5px; color: var(--td); flex-wrap: wrap;
+  }
+  .plan-spec-left { flex: 1; min-width: 0; }
+  .plan-tempo { color: var(--tdm); }
+  .plan-objetivo { text-align: right; white-space: nowrap; }
+  .plan-objetivo-lbl { font-size: 10.5px; color: var(--tdm); margin-right: 4px; }
+  .plan-objetivo-val { font-family: var(--fm); font-size: 15px; font-weight: 700; color: var(--ink); }
+  .plan-objetivo-prev { color: var(--tdm); text-decoration: line-through; margin-right: 4px; }
+  .plan-objetivo-up   { color: var(--ok); }
+  .plan-objetivo-down { color: var(--warn); }
+  .plan-objetivo-hold { color: var(--jds-joi); }
+  .plan-objetivo-lock-lesion  { color: var(--r); }
+  .plan-objetivo-lock-retorno-lesion { color: var(--warn); }
+  .plan-objetivo-lock-pausa  { color: var(--accent); }
+
+  .plan-motivo {
+    font-family: var(--fm); font-size: 9.5px; color: var(--accent);
+    margin-top: 6px; line-height: 1.4;
+  }
+  .plan-warmup {
+    display: flex; align-items: center; gap: 6px;
+    font-family: var(--fm); font-size: 10.5px; color: var(--td);
+    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd);
+  }
+  .plan-warmup svg { width: 13px; height: 13px; color: var(--tdm); flex-shrink: 0; }
+  .plan-warmup b { color: var(--ink); font-weight: 600; }
+  .plan-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* ── PAUSA DE RETORNO / SISTEMA (avisos generales) ── */
+  .aviso-card {
+    border-radius: var(--rad-card); padding: 14px 16px; margin-bottom: 12px;
+    font-size: 13px; line-height: 1.5;
+  }
+  .aviso-label {
+    font-family: var(--fm); font-size: 10px; font-weight: 700;
+    letter-spacing: .1em; text-transform: uppercase; margin-bottom: 6px;
   }
 
   /* ── CTA ─────────────────────────────────────── */
   .cta-wrap {
     position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 16px; background: linear-gradient(to top, var(--bg) 70%, transparent);
+    padding: 16px; background: linear-gradient(to top, var(--bg) 65%, transparent);
     max-width: 480px; margin: 0 auto;
   }
   .btn-comenzar {
     display: flex; align-items: center; justify-content: center; gap: 10px;
-    width: 100%; height: 58px; border-radius: 16px; border: none;
-    background: var(--ok); color: #0E0E0F;
-    font-family: var(--fd); font-size: 16px; letter-spacing: .04em;
-    text-transform: uppercase; text-decoration: none;
-    cursor: pointer; transition: filter .15s;
+    width: 100%; height: 58px; border-radius: var(--rad-card); border: none;
+    background: var(--ok); color: #06170d;
+    font-family: var(--fd); font-size: 16px; font-weight: 700; letter-spacing: .01em;
+    text-decoration: none;
+    cursor: pointer; transition: filter .15s, transform .1s;
+    box-shadow: 0 14px 34px -12px rgba(34,197,94,.45);
   }
-  .btn-comenzar:active { filter: brightness(.9); }
-  .btn-comenzar svg { width: 20px; height: 20px; }
+  .btn-comenzar:active { filter: brightness(.94); transform: scale(.99); }
+  .btn-comenzar svg { width: 19px; height: 19px; }
+  .btn-comenzar .chev { width: 16px; height: 16px; margin-left: -2px; }
 </style>
 </head>
 <body>
@@ -290,22 +378,29 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <a href="{% url 'home' %}" class="tb-back">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <a href="{% url 'home' %}" class="tb-back" aria-label="Volver">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 18l-6-6 6-6"/>
       </svg>
-      Volver
     </a>
-    <span class="tb-label">Briefing · Preparación</span>
-    <span style="min-width:48px;"></span>
+    <span class="tb-meta">{{ fecha|date:"D d M Y"|upper }} · Preparación</span>
+  </div>
+
+  <!-- CABECERA DE SESIÓN -->
+  <div class="head-row">
+    <h1 class="head-title">{{ rutina_nombre|default:"Sesión de Fuerza" }}</h1>
+    <span class="head-pill">{{ ejercicios|length }} ejercicios</span>
+  </div>
+  <div class="head-sub">
+    {% if briefing.rpe_medio %}RPE medio 2 sem: {{ briefing.rpe_medio }}{% else %}Sin datos previos{% endif %}
   </div>
 
   {% if pausa_pregunta %}
   <!-- Phase Continuidad 1.3b — pregunta única del motivo de pausa (opcional) -->
-  <div id="pausa-panel"
-       style="margin:14px 0;padding:14px 16px;background:rgba(96,165,250,0.05);border:1px solid rgba(96,165,250,0.25);border-radius:12px;transition:opacity .25s;">
-    <div style="font-family:var(--fm);font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(96,165,250,0.9);margin-bottom:6px;">↩ Retorno</div>
-    <div style="font-size:13px;color:var(--td);line-height:1.5;margin-bottom:10px;">
+  <div id="pausa-panel" class="aviso-card"
+       style="background:rgba(56,189,248,0.07);border:1px solid rgba(56,189,248,0.28);transition:opacity .25s;">
+    <div class="aviso-label" style="color:rgba(56,189,248,0.95);">↩ Retorno</div>
+    <div style="color:var(--td);margin-bottom:10px;">
       Hubo una pausa de {{ pausa_pregunta.dias_sin_gym }} días. El plan retoma con margen.
       ¿Quieres indicar qué tipo de pausa fue?
     </div>
@@ -313,12 +408,12 @@
       {% for val, label in motivo_choices %}
       <button type="button" data-motivo="{{ val }}"
               onclick="registrarMotivoPausa(this)"
-              style="font-family:var(--fm);font-size:11px;padding:6px 11px;border-radius:8px;cursor:pointer;color:var(--td);
-                     background:{% if val == 'prefiero_no_decirlo' %}transparent{% else %}rgba(96,165,250,0.10){% endif %};
-                     border:1px solid rgba(96,165,250,0.28);transition:background .15s,opacity .15s;">{{ label }}</button>
+              style="font-family:var(--fm);font-size:11px;padding:7px 12px;border-radius:var(--rad-pill);cursor:pointer;color:var(--td);
+                     background:{% if val == 'prefiero_no_decirlo' %}transparent{% else %}rgba(56,189,248,0.12){% endif %};
+                     border:1px solid rgba(56,189,248,0.3);transition:background .15s,opacity .15s;">{{ label }}</button>
       {% endfor %}
     </div>
-    <div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:8px;">Solo ajusta cómo interpreta el plan la vuelta. No es obligatorio.</div>
+    <div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:9px;">Solo ajusta cómo interpreta el plan la vuelta. No es obligatorio.</div>
   </div>
   <script>
   function registrarMotivoPausa(btn) {
@@ -327,8 +422,8 @@
     // feedback visual inmediato
     botones.forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
     btn.style.opacity = '1';
-    btn.style.background = 'rgba(96,165,250,0.35)';
-    btn.style.borderColor = 'rgba(96,165,250,0.7)';
+    btn.style.background = 'rgba(56,189,248,0.35)';
+    btn.style.borderColor = 'rgba(56,189,248,0.7)';
 
     fetch("{% url 'entrenos:guardar_motivo_pausa' pausa_pregunta.id %}", {
       method: 'POST',
@@ -350,51 +445,28 @@
 
   <!-- Phase Organismo 3: Continuidad de postura -->
   {% if estado_sistema and estado_sistema.estado != 'SILENCIO' %}
-  <div style="margin:12px 16px;padding:10px 12px;
-              background:rgba(96,165,250,0.08);border-left:3px solid rgba(96,165,250,0.4);
-              border-radius:2px;font-size:13px;line-height:1.4;">
-    <div style="font-family:var(--fm);font-size:10px;font-weight:700;letter-spacing:.05em;color:var(--td);margin-bottom:4px;">
+  <div class="aviso-card" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);">
+    <div class="aviso-label" style="color:var(--td);">
       SISTEMA HOY · {{ estado_sistema.estado_label|upper }}
     </div>
-    <div style="color:var(--ink);font-size:13px;">{{ estado_sistema.texto }}</div>
+    <div style="color:var(--ink);">{{ estado_sistema.texto }}</div>
   </div>
   {% endif %}
 
-  <!-- BIB -->
-  <div class="bib">
-    <div class="bib-meta">
-      <span>SESIÓN GYM · {{ fecha|date:"D d M Y"|upper }}</span>
-      <span>{{ ejercicios|length }} EJERCICIOS</span>
-    </div>
-    <div class="bib-body">
-      <div class="bib-num">{{ fecha|date:"d" }}</div>
-      <div class="bib-info">
-        <div class="bib-title">{{ rutina_nombre|default:"Sesión de Fuerza" }}</div>
-        <div class="bib-sub">
-          {% if briefing.rpe_medio %}RPE medio 2 sem: {{ briefing.rpe_medio }}{% else %}Sin datos previos{% endif %}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- AVISO STRAVA -->
-  <div style="margin:12px 16px;padding:10px 14px;
-              background:rgba(252,76,2,0.12);border:1.5px solid #FC4C02;
-              border-radius:4px;display:flex;align-items:center;gap:10px;">
-    <i class="fab fa-strava" style="color:#FC4C02;font-size:22px;flex-shrink:0;"></i>
+  <!-- AVISO STRAVA (estático: recordatorio, no hay estado real de conexión) -->
+  <div class="strava-row">
+    <span class="strava-icon">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+    </span>
     <div>
-      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;color:#FF6B35;margin-bottom:2px;">
-        ACTIVA STRAVA ANTES DE EMPEZAR
-      </div>
-      <div style="font-size:10px;color:rgba(255,255,255,0.7);line-height:1.4;">
-        FC y tiempo se importarán automáticamente al terminar.
-      </div>
+      <div class="strava-title">Activa Strava antes de empezar</div>
+      <div class="strava-sub">FC y tiempo se importarán automáticamente al terminar.</div>
     </div>
   </div>
 
-  <!-- ESTADO FÍSICO -->
+  <!-- ESTADO FÍSICO / READINESS -->
   <div class="sec-hdr">
-    <span class="sec-tag">Estado</span>
+    <span class="sec-tag">Readiness</span>
     <div class="sec-line"></div>
   </div>
   <div class="estado-grid">
@@ -406,12 +478,12 @@
       {% else %}
         <div class="estado-val na">—</div>
       {% endif %}
-      <div class="estado-lbl">RPE Medio</div>
+      <div class="estado-lbl">RPE medio</div>
     </div>
     <div class="estado-card">
       {% if briefing.energia_media %}
         <div class="estado-val {% if briefing.energia_media <= 4 %}warn{% elif briefing.energia_media >= 7 %}ok{% endif %}">
-          {{ briefing.energia_media }}
+          {{ briefing.energia_media }}<span class="unit">/10</span>
         </div>
       {% else %}
         <div class="estado-val na">—</div>
@@ -422,16 +494,20 @@
       <div class="estado-val {% if briefing.num_sesiones_recientes >= 4 %}ok{% endif %}">
         {{ briefing.num_sesiones_recientes }}
       </div>
-      <div class="estado-lbl">2 semanas</div>
+      <div class="estado-lbl">Sesiones · 2 sem</div>
     </div>
   </div>
 
   <!-- PLAN DINÁMICO — cambios aplicados automáticamente -->
   {% if cambios_plan %}
+  <div class="sec-hdr">
+    <span class="sec-tag">El plan ha cambiado</span>
+    <div class="sec-line"></div>
+  </div>
   <div class="plan-cambios">
     <div class="plan-cambios-hdr">
       <span class="plan-cambios-hdr-icon">⚙️</span>
-      <span class="plan-cambios-hdr-lbl">El plan ha cambiado {{ cambios_plan|length }} ejercicio{{ cambios_plan|length|pluralize:"s" }}</span>
+      <span class="plan-cambios-hdr-lbl">{{ cambios_plan|length }} ejercicio{{ cambios_plan|length|pluralize:"s" }} ajustado{{ cambios_plan|length|pluralize:"s" }}</span>
     </div>
     {% for cambio in cambios_plan %}
     <div class="cambio-row">
@@ -472,10 +548,14 @@
 
   <!-- VOZ DEL ENTRENADOR — instrucciones concretas -->
   {% if briefing.instrucciones %}
+  <div class="sec-hdr">
+    <span class="sec-tag">Tu entrenador dice</span>
+    <div class="sec-line"></div>
+  </div>
   <div class="voz-card">
     <div class="voz-header">
       <div class="voz-dot"></div>
-      <span class="voz-label">Tu entrenador dice</span>
+      <span class="voz-label">Instrucciones de hoy</span>
     </div>
     {% for ins in briefing.instrucciones %}
     <div class="voz-item {{ ins.prioridad }}">
@@ -501,8 +581,13 @@
   <div class="msg-list">
     {% for msg in briefing.mensajes %}
     <div class="msg-row {{ msg.tipo }}">
-      <span class="msg-icon">{{ msg.icono }}</span>
-      <span class="msg-text">{{ msg.texto }}</span>
+      <span class="msg-icon-wrap">{{ msg.icono }}</span>
+      <div class="msg-body">
+        <div class="msg-label">
+          {% if msg.tipo == 'carga' %}En margen{% elif msg.tipo == 'estancamiento' %}Estancamiento{% elif msg.tipo == 'tecnica' %}Técnica{% elif msg.tipo == 'tope' %}Tope{% elif msg.tipo == 'energia' %}Energía{% else %}Al día{% endif %}
+        </div>
+        <div class="msg-text">{{ msg.texto }}</div>
+      </div>
     </div>
     {% endfor %}
   </div>
@@ -533,71 +618,76 @@
   <div class="sec-hdr">
     <span class="sec-tag">Plan de sesión</span>
     <div class="sec-line"></div>
+    <span class="sec-count">01–{{ ejercicios|length|stringformat:"02d" }}</span>
   </div>
   <div class="plan-list">
     {% for ej in ejercicios %}
     <div class="plan-row">
-      <span class="plan-num">{{ forloop.counter|stringformat:"02d" }}</span>
-      <div class="plan-body">
-        <div class="plan-name">
-          {{ ej.nombre|default:"Ejercicio" }}
-          {% if ej.sustituido %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↔ CAMBIADO</span>{% endif %}
-          {% if ej.deload %}<span style="font-family:var(--fm);font-size:8px;color:var(--accent);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ DELOAD</span>{% endif %}
-          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span style="font-family:var(--fm);font-size:8px;color:var(--ok);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↑ SUBIR</span>{% endif %}
-          {% if ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span style="font-family:var(--fm);font-size:8px;color:var(--warn);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">↓ BAJAR</span>{% endif %}
-          {% if ej.progresion_pospuesta %}<span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTENER</span>{% endif %}
-          {% if ej.progresion_bloqueada %}
-            {% if ej.motivo_bloqueo == 'lesion_activa' %}
-              <span style="font-family:var(--fm);font-size:8px;color:rgba(239,68,68,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · LESIÓN</span>
-            {% elif ej.motivo_bloqueo == 'lesion_retorno' %}
-              <span style="font-family:var(--fm);font-size:8px;color:rgba(245,158,11,0.85);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · RETORNO</span>
-            {% elif ej.motivo_bloqueo == 'retorno_pausa' %}
-              <span style="font-family:var(--fm);font-size:8px;color:rgba(96,165,250,0.90);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE · VUELTA</span>
-            {% else %}
-              <span style="font-family:var(--fm);font-size:8px;color:rgba(180,140,255,0.8);letter-spacing:.08em;margin-left:6px;vertical-align:middle;">= MANTIENE</span>
+      <div class="plan-top">
+        <div class="plan-name-wrap">
+          <span class="plan-num">{{ forloop.counter|stringformat:"02d" }}</span>
+          <div>
+            <div class="plan-name">{{ ej.nombre|default:"Ejercicio" }}</div>
+            {% if ej.sustituido and ej.nombre_original %}
+            <div class="plan-name-original"><s>{{ ej.nombre_original }}</s></div>
             {% endif %}
+          </div>
+        </div>
+        {% if ej.sustituido %}<span class="tag accent">↔ CAMBIADO</span>
+        {% elif ej.deload %}<span class="tag accent">↓ DELOAD</span>
+        {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span class="tag ok">↑ SUBIR</span>
+        {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span class="tag warn">↓ BAJAR</span>
+        {% elif ej.progresion_pospuesta %}<span class="tag joi">= MANTENER</span>
+        {% elif ej.progresion_bloqueada %}
+          {% if ej.motivo_bloqueo == 'lesion_activa' %}<span class="tag danger">= MANTIENE · LESIÓN</span>
+          {% elif ej.motivo_bloqueo == 'lesion_retorno' %}<span class="tag warn">= MANTIENE · RETORNO</span>
+          {% elif ej.motivo_bloqueo == 'retorno_pausa' %}<span class="tag accent">= MANTIENE · VUELTA</span>
+          {% else %}<span class="tag joi">= MANTIENE</span>
           {% endif %}
-        </div>
-        {% if ej.sustituido and ej.nombre_original %}
-        <div style="font-family:var(--fm);font-size:9px;color:var(--tdm);margin-bottom:2px;"><s>{{ ej.nombre_original }}</s></div>
-        {% endif %}
-        <div class="plan-spec">
-          {{ ej.series|default:"3" }} series
-          {% if ej.repeticiones %} · {{ ej.repeticiones }} reps{% endif %}
-          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
-          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> →
-          <span style="color:var(--ok);">{{ ej.peso_kg|floatformat:"-1" }} kg ↑</span>
-          {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' and ej.peso_kg_anterior %}
-          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> →
-          <span style="color:var(--warn);">{{ ej.peso_kg|floatformat:"-1" }} kg ↓</span>
-          {% elif ej.progresion_pospuesta and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
-          <s style="color:var(--tdm);">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</s> → <span style="color:rgba(180,140,255,0.8);">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
-          {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
-          <s style="color:var(--tdm);">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</s> →
-          <span style="color:{% if ej.motivo_bloqueo == 'lesion_activa' %}rgba(239,68,68,0.85){% elif ej.motivo_bloqueo == 'lesion_retorno' %}rgba(245,158,11,0.85){% elif ej.motivo_bloqueo == 'retorno_pausa' %}rgba(96,165,250,0.90){% else %}rgba(180,140,255,0.8){% endif %};">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
-          {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %} · {{ ej.peso_recomendado_kg }} kg{% if ej.peso_formato == 'total_ambas' %} total de ambas{% elif ej.peso_formato == 'por_lado' %} por lado{% endif %}
-          {% elif ej.peso_kg and ej.peso_kg > 0 %} · {{ ej.peso_kg }} kg{% if ej.peso_formato == 'total_ambas' %} total de ambas{% elif ej.peso_formato == 'por_lado' %} por lado{% endif %}
-          {% endif %}
-          {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
-        </div>
-        {% if ej.progresion_motivo %}
-        <div style="font-family:var(--fm);font-size:9px;color:var(--accent);margin-top:4px;margin-bottom:4px;">
-          {{ ej.progresion_motivo }}
-        </div>
-        {% endif %}
-        {% if ej.aproximaciones %}
-        <div class="plan-warmup">
-          Calentamiento: {{ ej.aproximaciones.peso1|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso2|floatformat:"-1" }} kg · {{ ej.aproximaciones.peso3|floatformat:"-1" }} kg
-        </div>
-        {% endif %}
-        {% if ej.alertas %}
-        <div class="plan-badges">
-          {% for alerta in ej.alertas %}
-          <span class="badge {{ alerta.tipo }}">{{ alerta.icono }} {{ alerta.texto }}</span>
-          {% endfor %}
-        </div>
         {% endif %}
       </div>
+
+      <div class="plan-spec-row">
+        <div class="plan-spec-left">
+          {{ ej.series|default:"3" }} series
+          {% if ej.repeticiones %} × {{ ej.repeticiones }} reps{% endif %}
+          {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
+        </div>
+        <div class="plan-objetivo">
+          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
+          <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-up">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' and ej.peso_kg_anterior %}
+          <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-down">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {% elif ej.progresion_pospuesta and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
+          <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-hold">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
+          <span class="plan-objetivo-prev">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</span><span class="plan-objetivo-val {% if ej.motivo_bloqueo == 'lesion_activa' %}plan-objetivo-lock-lesion{% elif ej.motivo_bloqueo == 'lesion_retorno' %}plan-objetivo-lock-retorno-lesion{% elif ej.motivo_bloqueo == 'retorno_pausa' %}plan-objetivo-lock-pausa{% else %}plan-objetivo-hold{% endif %}">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_recomendado_kg }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          {% elif ej.peso_kg and ej.peso_kg > 0 %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_kg }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          {% endif %}
+        </div>
+      </div>
+
+      {% if ej.progresion_motivo %}
+      <div class="plan-motivo">{{ ej.progresion_motivo }}</div>
+      {% endif %}
+
+      {% if ej.aproximaciones %}
+      <div class="plan-warmup">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Calentamiento: <b>{{ ej.aproximaciones.peso1|floatformat:"-1" }} · {{ ej.aproximaciones.peso2|floatformat:"-1" }} · {{ ej.aproximaciones.peso3|floatformat:"-1" }} kg</b></span>
+      </div>
+      {% endif %}
+
+      {% if ej.alertas %}
+      <div class="plan-badges">
+        {% for alerta in ej.alertas %}
+        <span class="tag {% if alerta.tipo == 'estancado' %}warn{% elif alerta.tipo == 'tope' %}ok{% elif alerta.tipo == 'tecnica' %}danger{% elif alerta.tipo == 'molestia' %}warn{% elif alerta.tipo == 'fallo_repetido' %}danger{% else %}muted{% endif %}">{{ alerta.icono }} {{ alerta.texto }}</span>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
     {% endfor %}
   </div>
@@ -612,7 +702,8 @@
     <svg viewBox="0 0 24 24" fill="currentColor">
       <polygon points="5,3 19,12 5,21"/>
     </svg>
-    {% if briefing.necesita_deload %}Comenzar descarga{% else %}Comenzar sesión{% endif %}
+    <span>{% if briefing.necesita_deload %}Comenzar descarga{% else %}Comenzar sesión{% endif %}</span>
+    <svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>
   </a>
   {% if briefing.necesita_deload %}
   <div style="text-align:center;margin-top:8px;">
@@ -622,7 +713,7 @@
   </div>
   {% endif %}
   {% else %}
-  <p style="text-align:center;color:rgba(240,238,232,0.8);">La sesión está protegida por la decisión vigente.</p>
+  <p style="text-align:center;color:rgba(240,238,232,0.8);margin-bottom:10px;">La sesión está protegida por la decisión vigente.</p>
   <a href="/panel/" class="btn-comenzar">Volver al plan</a>
   {% endif %}
 </div>
