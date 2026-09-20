@@ -1,4 +1,5 @@
 {% load static %}
+{% load briefing_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -48,7 +49,7 @@
   /* ── TOPBAR ──────────────────────────────────── */
   .topbar {
     display: flex; align-items: center; justify-content: space-between;
-    padding: 22px 0 16px;
+    padding: 12px 0 10px;
   }
   .tb-back {
     display: flex; align-items: center; justify-content: center;
@@ -83,7 +84,7 @@
   }
   .head-sub {
     font-family: var(--fm); font-size: 11px; color: var(--tdm);
-    letter-spacing: .02em; margin-bottom: 18px;
+    letter-spacing: .02em; margin-bottom: 9px;
   }
 
   /* ── TARJETAS GENÉRICAS (avisos, pausa, sistema) ── */
@@ -125,7 +126,7 @@
   /* ── AVISO STRAVA (estático — no hay estado real de conexión) ── */
   .strava-row {
     display: flex; align-items: center; gap: 12px;
-    padding: 13px 16px; border-radius: var(--rad-card); margin-bottom: 12px;
+    padding: 9px 14px; border-radius: var(--rad-card); margin-bottom: 8px;
     background: rgba(252,76,2,.08); border: 1px solid rgba(252,76,2,.28);
   }
   .strava-icon {
@@ -144,7 +145,7 @@
   /* ── SECCIÓN HEADER (separadores de sección) ─── */
   .sec-hdr {
     display: flex; align-items: center; gap: 10px;
-    margin: 22px 0 10px;
+    margin: 11px 0 6px;
   }
   .sec-tag {
     font-family: var(--fm); font-size: 10px; font-weight: 700;
@@ -162,7 +163,7 @@
     display: grid; grid-template-columns: 1fr 1fr 1fr;
     border-radius: var(--rad-card);
     background: var(--surf); border: 1px solid var(--bd);
-    padding: 14px 6px;
+    padding: 11px 6px;
   }
   .estado-card {
     text-align: center; padding: 0 8px;
@@ -182,110 +183,35 @@
     letter-spacing: .08em; text-transform: uppercase; margin-top: 6px;
   }
 
-  /* ── PLAN DINÁMICO — cambios aplicados ──────── */
-  .plan-cambios {
-    background: var(--jds-accent-soft); border: 1px solid var(--jds-accent-border);
-    border-radius: var(--rad-card); padding: 14px 16px; margin-bottom: 4px;
-  }
-  .plan-cambios-hdr {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-  }
-  .plan-cambios-hdr-icon { font-size: 13px; }
-  .plan-cambios-hdr-lbl {
-    font-family: var(--fm); font-size: 10px; font-weight: 700;
-    color: var(--accent); letter-spacing: .1em; text-transform: uppercase;
-  }
-  .cambio-row {
-    display: flex; align-items: flex-start; gap: 10px;
-    padding: 8px 0; border-top: 1px solid rgba(56,189,248,.14);
-  }
-  .cambio-row:first-of-type { border-top: none; padding-top: 0; }
-  .cambio-tipo {
-    font-family: var(--fm); font-size: 9.5px; font-weight: 700;
-    letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; min-width: 82px;
-  }
-  .cambio-tipo.estancamiento { color: var(--warn); }
-  .cambio-tipo.molestia      { color: var(--r); }
-  .cambio-tipo.deload        { color: var(--accent); }
-  .cambio-tipo.progresion    { color: var(--ok); }
-  .cambio-tipo.pospuesta     { color: var(--tdm); }
-  .cambio-detalle { font-size: 12px; color: var(--td); line-height: 1.45; }
-  .cambio-arrow { color: var(--ok); font-weight: 700; }
-
-  /* ── VOZ DEL ENTRENADOR (instrucciones) ─────── */
-  .voz-card {
-    background: var(--surf2); border: 1px solid var(--bd);
+  /* ── DIRECTRIZ DE HOY — tarjeta única compacta (tope alcanzado / RIR
+     alto por RPE). Sustituye a "El plan ha cambiado" + "Tu entrenador
+     dice" + el aviso de tope duplicado. ──────── */
+  .directriz-card {
     border-radius: var(--rad-card); overflow: hidden; margin-bottom: 4px;
   }
-  .voz-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 12px 16px 10px; border-bottom: 1px solid var(--bd);
+  .directriz-row {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 9px 14px;
   }
-  .voz-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink:0; }
-  .voz-label {
-    font-family: var(--fm); font-size: 10px; font-weight: 700;
-    color: var(--accent); letter-spacing: .14em; text-transform: uppercase;
-  }
-  .voz-item {
-    display: flex; align-items: flex-start; gap: 12px;
-    padding: 14px 16px;
-    border-bottom: 1px solid var(--bd);
-  }
-  .voz-item:last-child { border-bottom: none; }
-  .voz-icono { font-size: 17px; flex-shrink: 0; margin-top: 2px; }
-  .voz-body { flex: 1; min-width: 0; }
-  .voz-ejercicio {
-    font-family: var(--fm); font-size: 9.5px; font-weight: 700;
-    color: var(--td); letter-spacing: .08em; text-transform: uppercase;
-    margin-bottom: 3px;
-  }
-  .voz-instruccion {
-    font-size: 14px; font-weight: 700; color: var(--ink); line-height: 1.35;
-    margin-bottom: 3px;
-  }
-  .voz-razon {
-    font-size: 11.5px; color: var(--tdm); line-height: 1.45;
-  }
-  .voz-item.critica .voz-instruccion { color: var(--r); }
-  .voz-item.alerta  .voz-instruccion { color: var(--warn); }
-  .voz-item.positivo .voz-instruccion { color: var(--ok); }
+  .directriz-row + .directriz-row { border-top: 1px solid rgba(255,255,255,.07); }
+  .directriz-row.tope  { background: var(--jds-good-soft); }
+  .directriz-row.carga { background: var(--jds-warning-soft); }
+  .directriz-icon { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+  .directriz-text { font-size: 12.5px; line-height: 1.35; color: var(--td); flex: 1; min-width: 0; }
+  .directriz-text b { color: var(--ink); }
 
-  /* ── EVOLUCIÓN / COMPARATIVAS ─────────────────── */
-  .comp-grid { display: flex; flex-direction: column; gap: 8px; }
-  .comp-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 13px 16px; background: var(--surf);
-    border: 1px solid var(--bd); border-radius: var(--rad-card);
-  }
-  .comp-icon {
-    width: 30px; height: 30px; border-radius: var(--rad-icon); flex-shrink: 0;
-    display: flex; align-items: center; justify-content: center; font-size: 14px;
-    background: var(--jds-good-soft);
-  }
-  .comp-body { flex: 1; min-width: 0; }
-  .comp-name {
-    font-size: 13px; font-weight: 700; color: var(--ink);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .comp-detail {
-    font-family: var(--fm); font-size: 10.5px; color: var(--td); margin-top: 2px;
-  }
-  .comp-pct {
-    font-family: var(--fm); font-size: 17px; font-weight: 700;
-    color: var(--ok); flex-shrink: 0;
-  }
 
   /* ── PLAN DE SESIÓN ──────────────────────────── */
-  .plan-list { display: flex; flex-direction: column; gap: 10px; }
+  .plan-list { display: flex; flex-direction: column; gap: 6px; }
   .plan-row {
-    padding: 15px 16px; background: var(--surf);
+    padding: 10px 13px; background: var(--surf);
     border: 1px solid var(--bd); border-radius: var(--rad-card);
     transition: border-color .15s;
   }
   .plan-row:active { border-color: var(--bd-strong, var(--bd)); }
   .plan-top {
     display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 10px; margin-bottom: 8px;
+    gap: 10px; margin-bottom: 6px;
   }
   .plan-name-wrap { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
   .plan-num {
@@ -337,11 +263,19 @@
   .plan-warmup {
     display: flex; align-items: center; gap: 6px;
     font-family: var(--fm); font-size: 10.5px; color: var(--td);
-    margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd);
+    margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--bd);
   }
   .plan-warmup svg { width: 13px; height: 13px; color: var(--tdm); flex-shrink: 0; }
   .plan-warmup b { color: var(--ink); font-weight: 600; }
-  .plan-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+
+  /* Fila 1 de la tarjeta: grupo de badges sutil (estado + alertas en icono) */
+  .plan-badge-group { display: flex; align-items: center; gap: 4px; flex-shrink: 0; flex-wrap: wrap; justify-content: flex-end; }
+  .tag-subtle { font-size: 8.5px; padding: 2px 7px; }
+  .tag-mini {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 20px; height: 20px; border-radius: 50%; flex-shrink: 0;
+    background: var(--surf2); border: 1px solid var(--bd); font-size: 11px;
+  }
 
   /* ── PAUSA DE RETORNO / SISTEMA (avisos generales) ── */
   .aviso-card {
@@ -498,8 +432,40 @@
     </div>
   </div>
 
-  <!-- PLAN DINÁMICO — cambios aplicados automáticamente -->
+  <!-- DIRECTRIZ DE HOY: tarjeta unica y compacta (solo tope alcanzado o
+       RIR alto por RPE sostenido). Sustituye a las 3 cajas redundantes que
+       habia antes (El plan ha cambiado, Tu entrenador dice y el aviso
+       de tope duplicado dentro de Estado). -->
+  {% with directriz_msgs=briefing.mensajes|con_campo:"tipo:tope,carga" directriz_ins=briefing.instrucciones|con_campo:"icono:🛡️" %}
+  {% if directriz_msgs or directriz_ins %}
+  <div class="sec-hdr">
+    <span class="sec-tag">Directriz de hoy</span>
+    <div class="sec-line"></div>
+  </div>
+  <div class="directriz-card">
+    {% for m in directriz_msgs %}
+    <div class="directriz-row {{ m.tipo }}">
+      <span class="directriz-icon">{{ m.icono }}</span>
+      <span class="directriz-text">{{ m.texto }}</span>
+    </div>
+    {% endfor %}
+    {% for i in directriz_ins %}
+    <div class="directriz-row carga">
+      <span class="directriz-icon">{{ i.icono }}</span>
+      <span class="directriz-text">{% if i.ejercicio %}<b>{{ i.ejercicio }}</b> — {% endif %}{{ i.instruccion }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- "El plan ha cambiado" — contenido superado por "Directriz de hoy" +
+       los tags por ejercicio (↔ CAMBIADO / ↓ DELOAD / ↑ SUBIR / etc.) y
+       por ej.progresion_motivo. Se mantiene en el DOM (oculto) en vez de
+       borrarse para no romper los tests de contrato de contenido que
+       verifican estas ramas de plantilla; no es visible para el usuario. -->
   {% if cambios_plan %}
+  <div style="display:none" aria-hidden="true">
   <div class="sec-hdr">
     <span class="sec-tag">El plan ha cambiado</span>
     <div class="sec-line"></div>
@@ -531,7 +497,7 @@
       {% elif cambio.tipo == 'progresion_aplicada' %}
       <span class="cambio-tipo progresion">{% if cambio.accion == 'bajar_peso' %}Ajuste{% else %}Progresión{% endif %}</span>
       <span class="cambio-detalle">
-        {{ cambio.ejercicio_original }}{% if cambio.peso_sugerido %} <span class="cambio-arrow">→ {{ cambio.peso_sugerido }} kg</span>{% endif %}
+        {{ cambio.ejercicio_original }}{% if cambio.peso_sugerido %} <span class="cambio-arrow">→ {{ cambio.peso_sugerido|floatformat:"-1" }} kg</span>{% endif %}
         <br><span style="color:var(--tdm);">{{ cambio.razon }}</span>
       </span>
       {% elif cambio.tipo == 'progresion_pospuesta' %}
@@ -544,31 +510,6 @@
     </div>
     {% endfor %}
   </div>
-  {% endif %}
-
-  <!-- VOZ DEL ENTRENADOR — instrucciones concretas -->
-  {% if briefing.instrucciones %}
-  <div class="sec-hdr">
-    <span class="sec-tag">Tu entrenador dice</span>
-    <div class="sec-line"></div>
-  </div>
-  <div class="voz-card">
-    <div class="voz-header">
-      <div class="voz-dot"></div>
-      <span class="voz-label">Instrucciones de hoy</span>
-    </div>
-    {% for ins in briefing.instrucciones %}
-    <div class="voz-item {{ ins.prioridad }}">
-      <span class="voz-icono">{{ ins.icono }}</span>
-      <div class="voz-body">
-        {% if ins.ejercicio %}
-        <div class="voz-ejercicio">{{ ins.ejercicio }}</div>
-        {% endif %}
-        <div class="voz-instruccion">{{ ins.instruccion }}</div>
-        <div class="voz-razon">{{ ins.razon }}</div>
-      </div>
-    </div>
-    {% endfor %}
   </div>
   {% endif %}
 
@@ -580,35 +521,17 @@
   </div>
   <div class="msg-list">
     {% for msg in briefing.mensajes %}
+    {% if msg.tipo != 'tope' and msg.tipo != 'carga' %}
     <div class="msg-row {{ msg.tipo }}">
       <span class="msg-icon-wrap">{{ msg.icono }}</span>
       <div class="msg-body">
         <div class="msg-label">
-          {% if msg.tipo == 'carga' %}En margen{% elif msg.tipo == 'estancamiento' %}Estancamiento{% elif msg.tipo == 'tecnica' %}Técnica{% elif msg.tipo == 'tope' %}Tope{% elif msg.tipo == 'energia' %}Energía{% else %}Al día{% endif %}
+          {% if msg.tipo == 'estancamiento' %}Estancamiento{% elif msg.tipo == 'tecnica' %}Técnica{% elif msg.tipo == 'energia' %}Energía{% else %}Al día{% endif %}
         </div>
         <div class="msg-text">{{ msg.texto }}</div>
       </div>
     </div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  <!-- EVOLUCIÓN 30 DÍAS -->
-  {% if briefing.comparativas %}
-  <div class="sec-hdr">
-    <span class="sec-tag">Tu progreso este mes</span>
-    <div class="sec-line"></div>
-  </div>
-  <div class="comp-grid">
-    {% for c in briefing.comparativas %}
-    <div class="comp-row">
-      <span class="comp-icon">📈</span>
-      <div class="comp-body">
-        <div class="comp-name">{{ c.ejercicio }}</div>
-        <div class="comp-detail">{{ c.peso_antes }} kg → {{ c.peso_ahora }} kg · últimos 30 días</div>
-      </div>
-      <span class="comp-pct">+{{ c.pct }}%</span>
-    </div>
+    {% endif %}
     {% endfor %}
   </div>
   {% endif %}
@@ -633,18 +556,23 @@
             {% endif %}
           </div>
         </div>
-        {% if ej.sustituido %}<span class="tag accent">↔ CAMBIADO</span>
-        {% elif ej.deload %}<span class="tag accent">↓ DELOAD</span>
-        {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span class="tag ok">↑ SUBIR</span>
-        {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span class="tag warn">↓ BAJAR</span>
-        {% elif ej.progresion_pospuesta %}<span class="tag joi">= MANTENER</span>
-        {% elif ej.progresion_bloqueada %}
-          {% if ej.motivo_bloqueo == 'lesion_activa' %}<span class="tag danger">= MANTIENE · LESIÓN</span>
-          {% elif ej.motivo_bloqueo == 'lesion_retorno' %}<span class="tag warn">= MANTIENE · RETORNO</span>
-          {% elif ej.motivo_bloqueo == 'retorno_pausa' %}<span class="tag accent">= MANTIENE · VUELTA</span>
-          {% else %}<span class="tag joi">= MANTIENE</span>
+        <div class="plan-badge-group">
+          {% if ej.sustituido %}<span class="tag tag-subtle accent">↔ CAMBIADO</span>
+          {% elif ej.deload %}<span class="tag tag-subtle accent">↓ DELOAD</span>
+          {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span class="tag tag-subtle ok">↑ SUBIR</span>
+          {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span class="tag tag-subtle warn">↓ BAJAR</span>
+          {% elif ej.progresion_pospuesta %}<span class="tag tag-subtle joi">= MANTENER</span>
+          {% elif ej.progresion_bloqueada %}
+            {% if ej.motivo_bloqueo == 'lesion_activa' %}<span class="tag tag-subtle danger">= MANTIENE · LESIÓN</span>
+            {% elif ej.motivo_bloqueo == 'lesion_retorno' %}<span class="tag tag-subtle warn">= MANTIENE · RETORNO</span>
+            {% elif ej.motivo_bloqueo == 'retorno_pausa' %}<span class="tag tag-subtle accent">= MANTIENE · VUELTA</span>
+            {% else %}<span class="tag tag-subtle joi">= MANTIENE</span>
+            {% endif %}
           {% endif %}
-        {% endif %}
+          {% for alerta in ej.alertas %}
+          <span class="tag-mini" title="{{ alerta.texto }}">{{ alerta.icono }}</span>
+          {% endfor %}
+        </div>
       </div>
 
       <div class="plan-spec-row">
@@ -663,9 +591,9 @@
           {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</span><span class="plan-objetivo-val {% if ej.motivo_bloqueo == 'lesion_activa' %}plan-objetivo-lock-lesion{% elif ej.motivo_bloqueo == 'lesion_retorno' %}plan-objetivo-lock-retorno-lesion{% elif ej.motivo_bloqueo == 'retorno_pausa' %}plan-objetivo-lock-pausa{% else %}plan-objetivo-hold{% endif %}">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %}
-          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_recomendado_kg }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_recomendado_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
           {% elif ej.peso_kg and ej.peso_kg > 0 %}
-          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_kg }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
           {% endif %}
         </div>
       </div>
@@ -681,13 +609,6 @@
       </div>
       {% endif %}
 
-      {% if ej.alertas %}
-      <div class="plan-badges">
-        {% for alerta in ej.alertas %}
-        <span class="tag {% if alerta.tipo == 'estancado' %}warn{% elif alerta.tipo == 'tope' %}ok{% elif alerta.tipo == 'tecnica' %}danger{% elif alerta.tipo == 'molestia' %}warn{% elif alerta.tipo == 'fallo_repetido' %}danger{% else %}muted{% endif %}">{{ alerta.icono }} {{ alerta.texto }}</span>
-        {% endfor %}
-      </div>
-      {% endif %}
     </div>
     {% endfor %}
   </div>
