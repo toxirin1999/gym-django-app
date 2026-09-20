@@ -514,14 +514,14 @@
   {% endif %}
 
   <!-- Contexto de estado -->
-  {% if briefing.mensajes %}
+  {% with otros_msgs=briefing.mensajes|sin_campo:"tipo:tope,carga" %}
+  {% if otros_msgs %}
   <div class="sec-hdr">
     <span class="sec-tag">Estado · últimas 2 semanas</span>
     <div class="sec-line"></div>
   </div>
   <div class="msg-list">
-    {% for msg in briefing.mensajes %}
-    {% if msg.tipo != 'tope' and msg.tipo != 'carga' %}
+    {% for msg in otros_msgs %}
     <div class="msg-row {{ msg.tipo }}">
       <span class="msg-icon-wrap">{{ msg.icono }}</span>
       <div class="msg-body">
@@ -531,10 +531,10 @@
         <div class="msg-text">{{ msg.texto }}</div>
       </div>
     </div>
-    {% endif %}
     {% endfor %}
   </div>
   {% endif %}
+  {% endwith %}
 
   <!-- PLAN DE SESIÓN -->
   {% if ejercicios %}
