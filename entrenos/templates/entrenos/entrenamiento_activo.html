@@ -62,7 +62,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── TOPBAR ── */
 .topbar{
-  background:var(--bg);padding:14px 16px 10px;
+  background:var(--bg);padding:10px 16px 6px;
   display:flex;justify-content:space-between;align-items:center;
   position:sticky;top:0;z-index:50;
 }
@@ -72,15 +72,15 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* "DESCARGA ACTIVA" — h1 style: bold/extrabold, tracking negativo */
 .tb-tipo{font-size:20px;font-weight:700;color:#fff;line-height:1.1;letter-spacing:-0.02em;}
 /* progress bar debajo del topbar */
-.tb-progress-wrap{position:sticky;top:58px;z-index:49;background:var(--bg);padding:0 16px 10px;display:flex;align-items:center;gap:10px;}
+.tb-progress-wrap{position:sticky;top:50px;z-index:49;background:var(--bg);padding:0 16px 6px;display:flex;align-items:center;gap:10px;}
 .tb-track{flex:1;height:3px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden;}
 .tb-fill{height:100%;background:var(--green);border-radius:99px;transition:width .5s ease;}
 /* porcentaje: semibold, muted */
 .tb-pct{font-size:11px;font-weight:600;color:var(--td);flex-shrink:0;}
 
 /* ── NOMBRE EJERCICIO ── */
-.exname{background:var(--bg);padding:4px 16px 8px;}
-.exname-toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.exname{background:var(--bg);padding:2px 16px 6px;}
+.exname-toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
 /* "1 de 2" — medium, muted */
 .exname-counter{font-size:12px;font-weight:500;color:var(--td);}
 /* "SISSY SQUAT" — bold, tracking negativo (h-style) */
@@ -90,7 +90,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .exname-chip{font-size:12px;font-weight:500;padding:6px 14px;border-radius:99px;border:none;display:inline-flex;align-items:center;gap:4px;background:var(--surf2);color:var(--td);}
 .chip-g,.chip-b,.chip-n{background:var(--surf2);color:var(--td);}
 /* Navegación: medium */
-.nav-ej{display:flex;align-items:center;justify-content:space-between;padding:6px 16px 12px;background:var(--bg);}
+.nav-ej{display:flex;align-items:center;justify-content:space-between;padding:4px 16px 8px;background:var(--bg);}
 .nav-btn{font-size:14px;font-weight:500;color:var(--td);background:transparent;border:none;padding:4px 0;cursor:pointer;}
 .nav-btn:active,.nav-btn:hover{color:#fff;}
 .nav-centro{display:flex;align-items:center;gap:6px;}
@@ -957,15 +957,23 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .ex-header-card{
   display:flex;align-items:center;gap:10px;
-  margin:0;padding:10px 14px 8px;
+  margin:0;padding:8px 14px 6px;
   background:transparent;border:none;border-radius:0;
 }
 .ex-header-combo .exname-meta{
-  margin:0;padding:8px 14px 10px;
+  margin:0;padding:6px 14px 8px;
   border-top:1px solid rgba(255,255,255,0.06);
+  display:flex;align-items:center;flex-wrap:nowrap;gap:8px;
+}
+.exname-meta-line{
+  flex:1;min-width:0;font-size:11px;font-weight:400;color:var(--td);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.exname-meta-line .chip-g,.exname-meta-line .chip-n{
+  background:transparent;padding:0;border:none;border-radius:0;color:var(--td);font-weight:400;
 }
 .exname-meta .tipo-carga-select{
-  display:inline-flex;align-items:center;margin:0;
+  display:inline-flex;align-items:center;margin:0;flex-shrink:0;
   padding:3px 10px;font-size:10px;font-weight:700;
   background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);
   border-radius:20px;color:var(--td);height:auto;line-height:1.6;
@@ -1009,11 +1017,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* ── Tarjeta única Peso + Reps/Tiempo/Distancia (columnas internas) ── */
 .peso-reps-grid{
   display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
-  align-items:stretch;column-gap:12px;row-gap:8px;
-  margin:6px 16px 0;padding:10px 12px;
+  align-items:stretch;column-gap:12px;row-gap:6px;
+  margin:4px 16px 0;padding:8px 12px;
   background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
 }
-.peso-reps-grid > .peso-zona{margin:0;padding:0;min-width:0;background:transparent;border-radius:0;display:flex;flex-direction:column;height:100%;}
+.peso-reps-grid > .peso-zona{margin:0;padding:0;min-width:0;background:transparent;border:none;border-radius:0;display:flex;flex-direction:column;height:100%;}
 .peso-reps-grid > .slider-row{margin:0;padding:0;min-width:0;background:transparent;border:none;border-radius:0;gap:0;display:flex;flex-direction:column;height:100%;}
 .peso-reps-grid > input[type=hidden] + .slider-row{grid-column:1/-1;}
 
@@ -1044,7 +1052,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .peso-reps-grid .picker-val{font-size:19px!important;min-width:0;flex:1;text-align:center;}
 
 .peso-reps-grid .peso-lado{font-size:9px;margin-top:5px;min-height:auto;text-align:center;}
-.peso-reps-grid .peso-motivo{font-size:9px;margin-top:5px;text-align:center;}
+.peso-reps-grid .peso-motivo{display:none;}
 .peso-ultima-vez{grid-column:1/-1;}
 
 /* ── Números monoespaciados (peso/reps/rpe/tiempo) ── */
@@ -1072,7 +1080,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .orm-module-caption{font-size:11px;color:var(--td);line-height:1.4;}
 
 .sliders-zona{padding:0 0 4px;}
-.sliders-zona .slider-row.rpe-row{padding:10px 12px;gap:8px;}
+.sliders-zona .slider-row.rpe-row{padding:8px 12px;gap:6px;}
 .rpe-pick-btn{height:38px;font-size:14px;}
 
 .btn-molestia,.btn-swap-maquina,.btn-tope-maquina,.btn-fallo{min-height:44px;padding:6px 4px;}
@@ -1327,9 +1335,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       </div>
 
       <div class="exname-meta">
-        <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
-        <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
-        {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
         {% endif %}
