@@ -15,29 +15,29 @@
 :root{
   /* JDS — vars locales aliasadas al sistema único (migración por aliasing,
      sin reescribir inline styles ni tocar lógica/forms/guardado). */
-  --bg:     var(--jds-bg);
+  --bg:     #09090b;
   --surface:var(--jds-surface);
   --surf2:  var(--jds-surface-strong);
   --surf3:  var(--jds-surface-subtle);
   --border: var(--jds-border);
   --bordm:  var(--jds-border-strong);
-  --green:  var(--jds-good);
-  --greend: var(--jds-good-soft);
+  --green:  #10b981;
+  --greend: rgba(16,185,129,0.15);
   --red:    var(--jds-danger);
   --orange: var(--jds-warning);
   --blue:   var(--jds-accent);
   /* Aliases legacy → JDS */
-  --void:   var(--jds-bg);
+  --void:   #09090b;
   --deep:   var(--jds-surface);
   --panel:  var(--jds-surface-strong);
-  --g:      var(--jds-good);
+  --g:      #10b981;
   --gb:     var(--jds-text);
-  --gd:     var(--jds-good);
-  --gdim:   var(--jds-good);
+  --gd:     #10b981;
+  --gdim:   #10b981;
   --r:      var(--jds-danger);
   --rl:     var(--jds-danger);
   --rb:     var(--jds-danger-soft);
-  --ok:     var(--jds-good);
+  --ok:     #10b981;
   --t:      var(--jds-text);
   --tb:     var(--jds-text);
   --td:     var(--jds-text-soft);
@@ -102,7 +102,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* checkmark verde — círculo sólido */
 .sd-check{
   width:28px;height:28px;border-radius:50%;
-  background:rgba(46,204,113,0.15);border:1.5px solid rgba(46,204,113,0.35);
+  background:rgba(16,185,129,0.15);border:1.5px solid rgba(16,185,129,0.35);
   display:flex;align-items:center;justify-content:center;flex-shrink:0;
   font-size:13px;color:var(--green);font-weight:700;
 }
@@ -202,7 +202,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   font-size:16px;font-weight:700;
   border-radius:18px;
   display:flex;align-items:center;justify-content:center;gap:8px;
-  box-shadow:0 14px 34px -14px rgba(46,204,113,.55);
+  box-shadow:0 14px 34px -14px rgba(16,185,129,.55);
   transition:all .15s;
 }
 .btn-guardar:active{filter:brightness(0.9);}
@@ -247,7 +247,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .d15{width:22px;height:34px;background:#E67E22;}
 .d10{width:20px;height:30px;background:#3498DB;}
 .d5{width:18px;height:26px;background:#F1C40F;color:#000;}
-.d25{width:16px;height:22px;background:#2ECC71;color:#000;}
+.d25{width:16px;height:22px;background:#10B981;color:#000;}
 .d1{width:14px;height:18px;background:#888;}
 .pd-calc-txt{font-size:12px;color:var(--td);text-align:center;}
 .pd-calc-txt strong{color:#fff;}
@@ -272,7 +272,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   font-family:var(--fu);letter-spacing:.3px;text-transform:uppercase;
 }
 .btn-tecnica.tec-buena{
-  background:rgba(46,204,113,0.15);color:#2ECC71;border-color:rgba(46,204,113,0.35);
+  background:rgba(16,185,129,0.15);color:#10B981;border-color:rgba(16,185,129,0.35);
 }
 .btn-tecnica.tec-aceptable{
   background:rgba(241,196,15,0.15);color:#F1C40F;border-color:rgba(241,196,15,0.35);
@@ -281,7 +281,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   background:rgba(231,76,60,0.15);color:#E74C3C;border-color:rgba(231,76,60,0.35);
 }
 .btn-tecnica .tec-icon{font-size:22px;line-height:1;}
-.btn-tecnica.sel-buena{background:rgba(46,204,113,0.30);border-color:#2ECC71;box-shadow:0 0 12px rgba(46,204,113,0.4);transform:scale(1.04);}
+.btn-tecnica.sel-buena{background:rgba(16,185,129,0.30);border-color:#10B981;box-shadow:0 0 12px rgba(16,185,129,0.4);transform:scale(1.04);}
 .btn-tecnica.sel-aceptable{background:rgba(241,196,15,0.30);border-color:#F1C40F;box-shadow:0 0 12px rgba(241,196,15,0.4);transform:scale(1.04);}
 .btn-tecnica.sel-comprometida{background:rgba(231,76,60,0.30);border-color:#E74C3C;box-shadow:0 0 12px rgba(231,76,60,0.4);transform:scale(1.04);}
 .btn-tecnica:active{transform:scale(0.97);}
@@ -318,7 +318,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .mr-header{text-align:center;margin-bottom:28px;}
 .mr-trophy-wrap{
   width:64px;height:64px;border-radius:50%;
-  background:rgba(46,204,113,0.15);
+  background:rgba(16,185,129,0.15);
   display:inline-flex;align-items:center;justify-content:center;
   margin-bottom:14px;
 }
@@ -377,6 +377,18 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sticky-item:last-child{border:none;}
 .sticky-val{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--g);line-height:1;}
 .sticky-lbl{font-family:var(--fm);font-size:8px;color:var(--tm);text-transform:uppercase;letter-spacing:1.5px;}
+.sticky{padding:0 14px;justify-content:space-between;align-items:center;gap:10px;}
+.sticky-timer{display:flex;align-items:center;gap:6px;color:var(--green);flex-shrink:0;}
+.sticky-timer .sticky-val{color:var(--green);}
+.sticky-stats{display:flex;align-items:center;gap:18px;}
+.sticky-stat{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.sticky-final-btn{
+  display:flex;align-items:center;gap:6px;flex-shrink:0;
+  padding:8px 14px;border-radius:12px;
+  background:var(--surf2);border:1px solid rgba(255,255,255,0.14);
+  color:var(--td);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
+}
+.sticky-final-btn:hover,.sticky-final-btn:active{color:#fff;border-color:rgba(255,255,255,0.28);}
 
 /* ── LAYOUT ── */
 .wrap{max-width:480px;margin:0 auto;padding-bottom:70px;}
@@ -432,13 +444,13 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .btn-final{
   width:100%;height:52px;
-  background:rgba(46,204,113,0.12);
+  background:rgba(16,185,129,0.12);
   border:1.5px solid var(--green);border-radius:12px;
   color:var(--green);font-size:15px;font-weight:700;
   cursor:pointer;transition:all .15s;
   letter-spacing:0.04em;
 }
-.btn-final:hover{background:rgba(46,204,113,0.22);}
+.btn-final:hover{background:rgba(16,185,129,0.22);}
 .btn-final:active{opacity:0.7;}
 
 /* ── BANNER BIO-SAFETY ── */
@@ -478,7 +490,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .ej-dot.activo{background:var(--green);width:20px;}
 .ej-dot.completado{background:var(--green);}
-.ej-dot.parcial{background:rgba(46,204,113,0.4);}
+.ej-dot.parcial{background:rgba(16,185,129,0.4);}
 
 /* ── SET PILLS S1/S2/S3: bold, text-sm ── */
 .set-pills-row{
@@ -691,8 +703,8 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .mol-sev-btn .sev-emoji{display:block;font-size:1.5rem;margin-bottom:6px;}
 .mol-sev-btn .sev-label{display:block;font-size:11px;font-weight:400;color:var(--td);margin-top:2px;}
-.mol-sev-btn[data-sev="1"].sel{background:rgba(46,204,113,0.15);color:#2ECC71;}
-.mol-sev-btn[data-sev="1"].sel .sev-label{color:rgba(46,204,113,0.7);}
+.mol-sev-btn[data-sev="1"].sel{background:rgba(16,185,129,0.15);color:#10B981;}
+.mol-sev-btn[data-sev="1"].sel .sev-label{color:rgba(16,185,129,0.7);}
 .mol-sev-btn[data-sev="2"].sel{background:rgba(230,126,34,0.15);color:#E67E22;}
 .mol-sev-btn[data-sev="2"].sel .sev-label{color:rgba(230,126,34,0.7);}
 .mol-sev-btn[data-sev="3"].sel{background:rgba(231,76,60,0.15);color:#E74C3C;}
@@ -714,7 +726,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .mol-alt-item:hover{background:var(--surf3);}
 .mol-alt-nombre{font-size:14px;font-weight:600;color:#fff;}
 .mol-alt-motivo{font-size:12px;font-weight:400;color:var(--td);margin-top:2px;}
-.mol-alt-btn{font-size:12px;font-weight:600;color:var(--green);background:rgba(46,204,113,0.1);border:none;padding:4px 12px;border-radius:99px;}
+.mol-alt-btn{font-size:12px;font-weight:600;color:var(--green);background:rgba(16,185,129,0.1);border:none;padding:4px 12px;border-radius:99px;}
 /* Acciones */
 .mol-actions{display:flex;gap:10px;padding:14px 20px 24px;}
 .mol-btn{flex:1;height:50px;font-size:15px;font-weight:600;cursor:pointer;border:none;border-radius:14px;transition:all .15s;}
@@ -930,6 +942,152 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* Calc inline — card */
 .serie-calc-inline { margin: 8px 16px 0; border-radius: 10px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   COMPACTACIÓN 2026-09 — Peso + Reps/Tiempo/Distancia en una sola fila,
+   todo el registro de la serie cabe sin scroll en iPhone 13/14/15/16.
+   ══════════════════════════════════════════════════════════════════ */
+
+.exname h2{font-size:clamp(1.05rem,5.5vw,1.3rem);margin-bottom:0;text-transform:none;letter-spacing:-0.01em;}
+
+.ex-header-card{
+  display:flex;align-items:center;gap:10px;
+  margin:0 0 10px;padding:12px 14px;
+  background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+}
+.ex-header-icon{
+  width:36px;height:36px;border-radius:10px;flex-shrink:0;
+  background:rgba(255,255,255,0.07);
+  display:flex;align-items:center;justify-content:center;color:var(--td);font-size:14px;
+}
+.ex-header-card h2.cyber-ejercicio-nombre{flex:1;min-width:0;}
+.ex-aprox-pill{
+  display:flex;align-items:center;gap:3px;flex-shrink:0;
+  background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);
+  border-radius:20px;padding:6px 12px;color:var(--td);font-size:11px;font-weight:600;
+  cursor:pointer;transition:all .15s;
+}
+.ex-aprox-pill:hover{color:#fff;border-color:rgba(255,255,255,0.28);}
+
+/* ── CONTINGENCIA — grid monocromo de 4 columnas ── */
+.contingencia-grid{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  margin:0 0 10px;
+}
+.contingencia-grid .btn-swap-maquina,
+.contingencia-grid .btn-molestia,
+.contingencia-grid .btn-tope-maquina,
+.contingencia-grid .btn-fallo{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.10);
+  color:rgba(255,255,255,0.75);font-size:9px;font-weight:700;letter-spacing:.02em;
+  min-height:46px;padding:6px 4px;border-radius:12px;cursor:pointer;transition:all .15s;
+}
+.contingencia-grid .btn-swap-maquina:hover,
+.contingencia-grid .btn-molestia:hover,.contingencia-grid .btn-molestia.activa,
+.contingencia-grid .btn-fallo:hover,.contingencia-grid .btn-fallo.activo,
+.contingencia-grid .btn-tope-maquina:hover,.contingencia-grid .btn-tope-maquina.activo{
+  background:rgba(16,185,129,0.14);border-color:rgba(16,185,129,0.35);color:var(--green);
+}
+
+/* ── Tarjeta única Peso + Reps/Tiempo/Distancia (columnas internas) ── */
+.peso-reps-grid{
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;
+  margin:8px 16px 0;padding:12px;
+  background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+}
+.peso-reps-grid > .peso-zona{margin:0;padding:0;min-width:0;background:transparent;border-radius:0;}
+.peso-reps-grid > .slider-row{margin:0;padding:0;min-width:0;background:transparent;border:none;border-radius:0;gap:0;}
+.peso-reps-grid > input[type=hidden] + .slider-row{grid-column:1/-1;}
+
+@media (max-width:340px){
+  .peso-reps-grid{grid-template-columns:1fr;}
+}
+
+.peso-reps-grid .peso-label,.peso-reps-grid .sl-label{
+  font-size:9px;font-weight:700;color:var(--tm);text-transform:uppercase;
+  letter-spacing:.08em;margin-bottom:6px;display:block;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+
+/* La caja del stepper: −  valor  + dentro de un pill con borde propio */
+.peso-reps-grid .peso-ctrl,.peso-reps-grid .picker-ctrl{
+  display:flex!important;align-items:center;justify-content:space-between!important;
+  gap:4px;min-width:0;min-height:0!important;
+  background:var(--surf3);border:1px solid rgba(255,255,255,0.08);border-radius:12px;
+  padding:4px;
+}
+.peso-reps-grid .peso-btn,.peso-reps-grid .picker-btn{
+  width:32px!important;height:32px!important;border-radius:9px!important;
+  font-size:16px!important;flex-shrink:0;background:rgba(255,255,255,0.06)!important;
+}
+.peso-reps-grid .peso-num-wrap{min-width:0;overflow:hidden;display:flex;align-items:baseline;justify-content:center;flex:1;}
+.peso-reps-grid .peso-input{font-size:19px!important;width:auto!important;min-width:0!important;max-width:52px;padding:0!important;}
+.peso-reps-grid .peso-kg{font-size:10px;padding-bottom:0;margin-left:2px;}
+.peso-reps-grid .picker-val{font-size:19px!important;min-width:0;flex:1;text-align:center;}
+
+.peso-reps-grid .peso-lado{font-size:9px;margin-top:5px;min-height:auto;text-align:center;}
+.peso-reps-grid .peso-motivo{font-size:9px;margin-top:5px;text-align:center;}
+.peso-ultima-vez{grid-column:1/-1;}
+
+/* ── Números monoespaciados (peso/reps/rpe/tiempo) ── */
+.peso-input,.picker-val,.sl-val,.sticky-val,.sp-dash,.sd-rpe,.sd-info strong,.orm-module-val{
+  font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace!important;
+}
+
+/* ── "Última vez" compacto dentro de la caja de peso ── */
+.peso-ultima-vez{font-size:11px;color:var(--td);text-align:center;margin-top:6px;}
+
+/* ── Módulo 1RM estimado — independiente, tras Guardar serie ── */
+.orm-module{
+  display:flex;align-items:flex-start;gap:10px;
+  margin:10px 16px 0;padding:12px 14px;
+  background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;
+}
+.orm-module:has(.orm-module-val:empty){display:none;}
+.orm-module-icon{
+  width:28px;height:28px;border-radius:8px;flex-shrink:0;
+  background:rgba(16,185,129,0.14);color:var(--green);
+  display:flex;align-items:center;justify-content:center;
+}
+.orm-module-body{flex:1;min-width:0;}
+.orm-module-val{font-size:13px;font-weight:700;color:var(--green);margin-bottom:3px;}
+.orm-module-caption{font-size:11px;color:var(--td);line-height:1.4;}
+
+.sliders-zona{padding:0 0 4px;}
+.rpe-pick-btn{height:38px;font-size:14px;}
+
+.btn-molestia,.btn-swap-maquina,.btn-tope-maquina,.btn-fallo{min-height:44px;padding:6px 4px;}
+
+.series-log-title{font-size:11px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:0.15em;margin:14px 16px 8px;}
+
+.set-pills-row{
+  margin:0 16px 10px;padding:0;background:var(--surf2);border-radius:16px;overflow:hidden;
+  display:flex;flex-direction:column;
+}
+.set-pill{
+  flex:none;height:auto;width:auto;border-radius:0;
+  display:flex;align-items:center;justify-content:flex-start;gap:12px;
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);
+  font-size:14px;font-weight:500;letter-spacing:0;background:transparent;
+}
+.set-pill:last-child{border-bottom:none;}
+.set-pill.hecha{display:none;}
+.sp-badge{
+  width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;
+  background:rgba(255,255,255,0.06);border:1.5px solid rgba(255,255,255,0.15);color:var(--td);
+}
+.sp-info{flex:1;color:var(--td);}
+.sp-dash{font-size:12px;font-weight:600;color:var(--td);background:var(--surf3);padding:4px 10px;border-radius:10px;}
+.set-pill.activa{background:transparent;color:var(--td);}
+.set-pill.activa .sp-badge{background:rgba(16,185,129,0.15);border-color:var(--green);color:var(--green);}
+.set-pill.activa .sp-info{color:#fff;font-weight:700;}
+.set-pill.pendiente{opacity:0.6;}
+.sp-label-actual,.sp-label-pendiente{display:none;}
+.set-pill.activa .sp-label-actual{display:inline;}
+.set-pill.pendiente .sp-label-pendiente,.set-pill.hecha .sp-label-pendiente{display:inline;}
 </style>
 </head>
 <body>
@@ -1141,33 +1299,19 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
         {% endif %}
       {% endif %}
-      <div style="display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;justify-content:flex-end;">
-        <button type="button" class="btn-swap-maquina"
-                onclick="abrirSwapMaquina('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}')"
-                title="Máquina ocupada - buscar alternativa">
-          🔄 Ocupada
-        </button>
-        <button type="button" class="btn-molestia" id="mol-btn-{{ ejercicio.form_id }}"
-                onclick="abrirModalMolestia('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L1 21h22L12 2zm0 3.5L20.5 19h-17L12 5.5zM11 10v4h2v-4h-2zm0 6v2h2v-2h-2z"/></svg>
-          Molestia
-        </button>
-        <button type="button" class="btn-fallo" id="fallo-btn-{{ ejercicio.form_id }}"
-                onclick="abrirModalFallo('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')"
-                title="Registra si alcanzaste el fallo y si estaba previsto">
-          ◉ Fallo
-        </button>
-        {% if ejercicio.usa_peso %}
-        <button type="button" class="btn-tope-maquina{% if ejercicio.sugerencia_tope %} activo{% endif %}" id="tope-btn-{{ ejercicio.form_id }}"
-                onclick="toggleTopeMaquina('{{ ejercicio.form_id }}')"
-                title="{% if ejercicio.sugerencia_tope %}{% if ejercicio.usa_distancia %}Tope activado: progresa por distancia, no por peso{% else %}Tope activado: progresa por reps, no por peso{% endif %}{% else %}El peso de la máquina no llega al recomendado{% endif %}">
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-          Tope kg
-        </button>
-        {% endif %}
-      </div>
     </div>
-    <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|upper }}</h2>
+
+    <div class="ex-header-card">
+      <div class="ex-header-icon">
+        <i class="fas fa-dumbbell"></i>
+      </div>
+      <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|lower|capfirst }}</h2>
+      {% if ejercicio.aproximaciones %}
+      <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
+        <span>Aproximaciones</span><span>›</span>
+      </button>
+      {% endif %}
+    </div>
 
     {# Phase 10A / 28.2 — Progression brake notice (contextual + lesión) #}
     {% if ejercicio.progresion_bloqueada and ejercicio.peso_kg_propuesto %}
@@ -1235,7 +1379,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
       {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
       {% if ejercicio.sugerencia_tope %}
-      <span class="exname-chip" style="background:rgba(46,204,113,0.15);color:#2ECC71;border:1px solid rgba(46,204,113,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
+      <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
       {% endif %}
       {% if ejercicio.estancado %}
       <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
@@ -1244,12 +1388,37 @@ input{background:transparent!important;border:none!important;outline:none!import
   </div>
 
 
-  <!-- APROXIMACIONES -->
+  <!-- CONTINGENCIA -->
+  <div class="contingencia-grid">
+    <button type="button" class="btn-swap-maquina"
+            onclick="abrirSwapMaquina('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}')"
+            title="Máquina ocupada - buscar alternativa">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      <span>Ocupada</span>
+    </button>
+    <button type="button" class="btn-molestia" id="mol-btn-{{ ejercicio.form_id }}"
+            onclick="abrirModalMolestia('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+      <span>Molestia</span>
+    </button>
+    <button type="button" class="btn-fallo" id="fallo-btn-{{ ejercicio.form_id }}"
+            onclick="abrirModalFallo('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')"
+            title="Registra si alcanzaste el fallo y si estaba previsto">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+      <span>Fallo</span>
+    </button>
+    {% if ejercicio.usa_peso %}
+    <button type="button" class="btn-tope-maquina{% if ejercicio.sugerencia_tope %} activo{% endif %}" id="tope-btn-{{ ejercicio.form_id }}"
+            onclick="toggleTopeMaquina('{{ ejercicio.form_id }}')"
+            title="{% if ejercicio.sugerencia_tope %}{% if ejercicio.usa_distancia %}Tope activado: progresa por distancia, no por peso{% else %}Tope activado: progresa por reps, no por peso{% endif %}{% else %}El peso de la máquina no llega al recomendado{% endif %}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      <span>Tope kg</span>
+    </button>
+    {% endif %}
+  </div>
+
   {% if ejercicio.aproximaciones %}
-  <button type="button" class="aprox-toggle-btn" onclick="this.nextElementSibling.classList.toggle('open');this.querySelector('span:last-child').textContent=this.nextElementSibling.classList.contains('open')?'▴':'▾'">
-    <span>Aproximaciones</span><span>▾</span>
-  </button>
-  <div class="aprox-body" data-aprox>
+  <div class="aprox-body" id="aprox-body-{{ ejercicio.form_id }}" data-aprox>
     <div class="aprox-row serie-row serie-aproximacion">
       <div class="sd-check" style="width:28px;height:28px;background:rgba(255,255,255,0.06);color:var(--td);font-size:11px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">A1</div>
       <div class="sd-info"><strong>{{ ejercicio.aproximaciones.peso1|stringformat:'.1f' }}kg</strong> × <strong>5-8 reps</strong></div>
@@ -1267,17 +1436,6 @@ input{background:transparent!important;border:none!important;outline:none!import
     </div>
   </div>
   {% endif %}
-
-  <!-- LOG DE SERIES COMPLETADAS -->
-  <div class="series-log" id="log-{{ ejercicio.form_id }}"></div>
-
-  <!-- PILLS DE SERIES (indicador visual S1·S2·S3…) -->
-  <div class="set-pills-row" id="pills-{{ ejercicio.form_id }}">
-    {% for i in ""|center:ejercicio.series %}{% with forloop.counter as psn %}
-    <div class="set-pill {% if forloop.first %}activa{% else %}pendiente{% endif %}"
-         id="pill-{{ ejercicio.form_id }}-{{ psn }}">S{{ psn }}</div>
-    {% endwith %}{% endfor %}
-  </div>
 
   <!-- SERIES — una pantalla por serie, generadas por Django -->
   {% for i in ""|center:ejercicio.series %}{% with forloop.counter as sn %}
@@ -1320,6 +1478,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         </div>
       </div>
 
+      <div class="peso-reps-grid">
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
       {% if ejercicio.usa_peso %}
       <div class="peso-zona">
@@ -1341,7 +1500,6 @@ input{background:transparent!important;border:none!important;outline:none!import
                   onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},incrementoPeso('{{ ejercicio.form_id }}'))">+</button>
         </div>
         <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
-        <div class="orm-display" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
         <div class="pr-badge" id="pr-badge-{{ ejercicio.form_id }}-{{ sn }}"
              data-pr="{{ ejercicio.pr_peso|default:0 }}">🏆 NUEVO PR</div>
         {% if ejercicio.motivo_peso.texto %}
@@ -1352,8 +1510,6 @@ input{background:transparent!important;border:none!important;outline:none!import
       {# Input oculto con valor 0 para que la view no falle al leer el campo #}
       <input type="hidden" name="{{ ejercicio.form_id }}_peso_{{ sn }}" value="0">
       {% endif %}
-
-      <div class="sliders-zona">
 
         {# ── TIEMPO ── #}
         {% if ejercicio.usa_tiempo %}
@@ -1409,7 +1565,12 @@ input{background:transparent!important;border:none!important;outline:none!import
           </div>
         </div>
         {% endif %}
+      {% if ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
+      <div class="peso-ultima-vez">Última vez: {{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</div>
+      {% endif %}
+      </div>
 
+      <div class="sliders-zona">
         {# RPE — grid de botones táctiles #}
         <div class="slider-row rpe-row">
           <span class="sl-label" style="padding-top:8px;">Esfuerzo (RPE)</span>
@@ -1469,8 +1630,44 @@ input{background:transparent!important;border:none!important;outline:none!import
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
       <span>Guardar serie</span>
     </button>
+
+    {% if ejercicio.usa_peso %}
+    <div class="orm-module">
+      <div class="orm-module-icon">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+      </div>
+      <div class="orm-module-body">
+        <div class="orm-module-val" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
+        <div class="orm-module-caption">Estimado a partir del peso y las repeticiones registradas hoy.</div>
+      </div>
+    </div>
+    {% endif %}
   </div>
   {% endwith %}{% endfor %}
+
+  <!-- SERIES DE ESTE EJERCICIO — historial (completadas) + placeholders (actual/pendiente) -->
+  <div class="series-log-title" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>Series de este ejercicio</span>
+    <span style="font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;text-transform:none;letter-spacing:0;color:var(--tm);">{{ ejercicio.series }} planificadas</span>
+  </div>
+
+  <!-- LOG DE SERIES COMPLETADAS -->
+  <div class="series-log" id="log-{{ ejercicio.form_id }}"></div>
+
+  <!-- PILLS DE SERIES (placeholder de la serie actual / pendientes) -->
+  <div class="set-pills-row" id="pills-{{ ejercicio.form_id }}">
+    {% for i in ""|center:ejercicio.series %}{% with forloop.counter as psn %}
+    <div class="set-pill {% if forloop.first %}activa{% else %}pendiente{% endif %}"
+         id="pill-{{ ejercicio.form_id }}-{{ psn }}">
+      <div class="sp-badge">S{{ psn }}</div>
+      <div class="sp-info">
+        <span class="sp-label-actual">Serie actual</span>
+        <span class="sp-label-pendiente">Pendiente</span>
+      </div>
+      <div class="sp-dash">—</div>
+    </div>
+    {% endwith %}{% endfor %}
+  </div>
 
     <!-- PANTALLA DESCANSO -->
   <div class="pantalla-descanso" id="desc-{{ ejercicio.form_id }}">
@@ -1527,7 +1724,7 @@ input{background:transparent!important;border:none!important;outline:none!import
     <!-- Banner autoregulación (se muestra si procede) -->
     <div id="pd-sugerencia-{{ ejercicio.form_id }}" style="display:none;
          margin-bottom:10px;padding:10px 14px;border-radius:14px;
-         border-left:3px solid var(--green);background:rgba(46,204,113,0.07);
+         border-left:3px solid var(--green);background:rgba(16,185,129,0.07);
          font-size:11px;letter-spacing:0.5px;line-height:1.5;color:var(--td);">
     </div>
 
@@ -1552,13 +1749,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 </div><!-- /cyber-ejercicio-card -->
 {% endfor %}
-
-<!-- BOTÓN FINALIZAR -->
-<div class="btn-finalizar-wrap">
-  <button type="button" id="btn-mostrar-resumen" class="btn-final">
-    <i class="fas fa-flag-checkered"></i> Finalizar entrenamiento
-  </button>
-</div>
 
 </form><!-- /workout-form -->
 <script>
@@ -1702,7 +1892,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Cabecera -->
     <div class="mr-header">
       <div class="mr-trophy-wrap">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#2ECC71" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/>
           <path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/>
           <path d="M4 22h16"/>
@@ -1725,7 +1915,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <circle cx="100" cy="100" r="40" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
           <!-- Anillo exterior: series (verde) -->
           <circle id="ring-series" cx="100" cy="100" r="80" fill="none"
-                  stroke="#2ECC71" stroke-width="12" stroke-linecap="round"
+                  stroke="#10B981" stroke-width="12" stroke-linecap="round"
                   stroke-dasharray="502.65" stroke-dashoffset="502.65"
                   transform="rotate(-90 100 100)" class="ring-track"/>
           <!-- Anillo medio: volumen/reps (amarillo) -->
@@ -1741,7 +1931,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </svg>
       </div>
       <div class="mr-rings-labels">
-        <span style="color:#2ECC71">SERIES</span>
+        <span style="color:#10B981">SERIES</span>
         <span style="color:#F1C40F">VOLUMEN</span>
         <span style="color:#00C8FF">TIEMPO</span>
       </div>
@@ -1750,7 +1940,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Grid 2×2 estadísticas -->
     <div class="mr-stats-grid">
       <div class="mr-stat-card">
-        <span class="mr-stat-icon" style="color:#2ECC71">
+        <span class="mr-stat-icon" style="color:#10B981">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M3 12h18"/><circle cx="6.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="6.5" r="1.5"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>
         </span>
         <span class="mr-stat-val" id="modal-series">0/0</span>
@@ -1875,22 +2065,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <!-- STICKY BOTTOM -->
 <div class="sticky">
-  <div class="sticky-item">
+  <div class="sticky-timer">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/></svg>
     <span class="sticky-val" id="tiempo-transcurrido">00:00</span>
-    <span class="sticky-lbl">Tiempo</span>
   </div>
-  <div class="sticky-item">
-    <span class="sticky-val" id="series-completadas-sticky">0/0</span>
-    <span class="sticky-lbl">Series</span>
+  <div class="sticky-stats">
+    <div class="sticky-stat">
+      <span class="sticky-val" id="series-completadas-sticky">0/0</span>
+      <span class="sticky-lbl">Series</span>
+    </div>
+    <div class="sticky-stat">
+      <span class="sticky-val" id="volumen-acumulado">0 kg</span>
+      <span class="sticky-lbl">Volumen</span>
+    </div>
+    <span id="ejercicio-actual" style="display:none;">--</span>
   </div>
-  <div class="sticky-item">
-    <span class="sticky-val" id="volumen-acumulado">0 kg</span>
-    <span class="sticky-lbl">Volumen</span>
-  </div>
-  <div class="sticky-item" style="flex:1.3;">
-    <span class="sticky-val" id="ejercicio-actual" style="font-size:11px;max-width:110px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">--</span>
-    <span class="sticky-lbl">Actual</span>
-  </div>
+  <button type="button" id="btn-mostrar-resumen" class="sticky-final-btn" title="Finalizar entrenamiento">
+    <i class="fas fa-flag-checkered"></i>
+    <span>Finalizar</span>
+  </button>
 </div>
 
 <script src="{% static 'entrenos/js/entrenamiento_activo.js' %}"></script>
@@ -2263,7 +2456,7 @@ function guardarSeriePanel(fid,sn,total){
         : peso+'kg × '+reps+' reps';
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
     const tecnicaBadge=tecnicaGuardada==='buena'
-      ? '<span style="font-size:10px;color:#2ECC71;margin-left:4px;">✔ buena</span>'
+      ? '<span style="font-size:10px;color:#10B981;margin-left:4px;">✔ buena</span>'
       : tecnicaGuardada==='aceptable'
         ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
         : tecnicaGuardada==='comprometida'
@@ -2517,7 +2710,7 @@ function actualizarORM(fid,sn){
   if(peso<=0||reps>=15){ormEl.textContent='';return;}
   const factor=1.0278-0.0278*Math.max(1,reps);
   const orm=factor>0?Math.round(peso/factor):Math.round(peso);
-  ormEl.textContent='1RM est.: '+orm+' kg';
+  ormEl.textContent='1RM estimado: '+orm+' kg';
 }
 
 // ── CALCULADORA DISCOS INLINE ───────────────────────────────────
@@ -3028,7 +3221,7 @@ function selTecnica(fid, val){
   const badge = document.getElementById('tecnica-badge-'+fid+'-'+sn);
   if(badge){
     badge.innerHTML = val==='buena'
-      ? '<span style="font-size:10px;color:#2ECC71;margin-left:4px;">✔ buena</span>'
+      ? '<span style="font-size:10px;color:#10B981;margin-left:4px;">✔ buena</span>'
       : val==='aceptable'
         ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
         : '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>';
@@ -3052,9 +3245,9 @@ const ENERGIA_LABELS = {
 function selEnergiaPreSesion(val){
   document.querySelectorAll('.btn-energia-pre').forEach(b=>{
     const active = parseInt(b.dataset.val)===val;
-    b.style.background = active ? 'var(--gb,#2ECC71)' : 'transparent';
+    b.style.background = active ? 'var(--gb,#10B981)' : 'transparent';
     b.style.color = active ? '#111' : 'var(--td)';
-    b.style.borderColor = active ? 'var(--gb,#2ECC71)' : 'var(--bd,rgba(255,255,255,0.1))';
+    b.style.borderColor = active ? 'var(--gb,#10B981)' : 'var(--bd,rgba(255,255,255,0.1))';
     b.style.fontWeight = active ? '700' : 'normal';
   });
   document.getElementById('hid-energia-pre').value = val;
