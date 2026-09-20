@@ -79,7 +79,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .tb-pct{font-size:11px;font-weight:600;color:var(--td);flex-shrink:0;}
 
 /* ── NOMBRE EJERCICIO ── */
-.exname{background:var(--bg);padding:4px 16px 14px;}
+.exname{background:var(--bg);padding:4px 16px 8px;}
 .exname-toprow{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
 /* "1 de 2" — medium, muted */
 .exname-counter{font-size:12px;font-weight:500;color:var(--td);}
@@ -197,7 +197,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* BTN GUARDAR: semibold, text-base */
 .btn-guardar{
-  width:calc(100% - 32px);margin:0 16px 16px;height:54px;
+  width:calc(100% - 32px);margin:0 16px 10px;height:54px;
   background:var(--green);border:none;color:#000;
   font-size:16px;font-weight:700;
   border-radius:18px;
@@ -950,10 +950,26 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 .exname h2{font-size:clamp(1.05rem,5.5vw,1.3rem);margin-bottom:0;text-transform:none;letter-spacing:-0.01em;}
 
+.ex-header-combo{
+  margin:0 0 8px;
+  background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+  overflow:hidden;
+}
 .ex-header-card{
   display:flex;align-items:center;gap:10px;
-  margin:0 0 10px;padding:12px 14px;
-  background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
+  margin:0;padding:10px 14px 8px;
+  background:transparent;border:none;border-radius:0;
+}
+.ex-header-combo .exname-meta{
+  margin:0;padding:8px 14px 10px;
+  border-top:1px solid rgba(255,255,255,0.06);
+}
+.exname-meta .tipo-carga-select{
+  display:inline-flex;align-items:center;margin:0;
+  padding:3px 10px;font-size:10px;font-weight:700;
+  background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.14);
+  border-radius:20px;color:var(--td);height:auto;line-height:1.6;
+  -webkit-appearance:none;appearance:none;
 }
 .ex-header-icon{
   width:36px;height:36px;border-radius:10px;flex-shrink:0;
@@ -972,7 +988,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* ── CONTINGENCIA — grid monocromo de 4 columnas ── */
 .contingencia-grid{
   display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
-  margin:0 0 10px;
+  margin:0 0 8px;
 }
 .contingencia-grid .btn-swap-maquina,
 .contingencia-grid .btn-molestia,
@@ -992,12 +1008,13 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── Tarjeta única Peso + Reps/Tiempo/Distancia (columnas internas) ── */
 .peso-reps-grid{
-  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;
-  margin:8px 16px 0;padding:12px;
+  display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  align-items:stretch;column-gap:12px;row-gap:8px;
+  margin:6px 16px 0;padding:10px 12px;
   background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:16px;
 }
-.peso-reps-grid > .peso-zona{margin:0;padding:0;min-width:0;background:transparent;border-radius:0;}
-.peso-reps-grid > .slider-row{margin:0;padding:0;min-width:0;background:transparent;border:none;border-radius:0;gap:0;}
+.peso-reps-grid > .peso-zona{margin:0;padding:0;min-width:0;background:transparent;border-radius:0;display:flex;flex-direction:column;height:100%;}
+.peso-reps-grid > .slider-row{margin:0;padding:0;min-width:0;background:transparent;border:none;border-radius:0;gap:0;display:flex;flex-direction:column;height:100%;}
 .peso-reps-grid > input[type=hidden] + .slider-row{grid-column:1/-1;}
 
 @media (max-width:340px){
@@ -1036,12 +1053,12 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 
 /* ── "Última vez" compacto dentro de la caja de peso ── */
-.peso-ultima-vez{font-size:11px;color:var(--td);text-align:center;margin-top:6px;}
+.peso-ultima-vez{font-size:11px;color:var(--td);text-align:center;margin-top:0;}
 
 /* ── Módulo 1RM estimado — independiente, tras Guardar serie ── */
 .orm-module{
   display:flex;align-items:flex-start;gap:10px;
-  margin:10px 16px 0;padding:12px 14px;
+  margin:8px 16px 0;padding:10px 14px;
   background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;
 }
 .orm-module:has(.orm-module-val:empty){display:none;}
@@ -1055,23 +1072,26 @@ input{background:transparent!important;border:none!important;outline:none!import
 .orm-module-caption{font-size:11px;color:var(--td);line-height:1.4;}
 
 .sliders-zona{padding:0 0 4px;}
+.sliders-zona .slider-row.rpe-row{padding:10px 12px;gap:8px;}
 .rpe-pick-btn{height:38px;font-size:14px;}
 
 .btn-molestia,.btn-swap-maquina,.btn-tope-maquina,.btn-fallo{min-height:44px;padding:6px 4px;}
 
-.series-log-title{font-size:11px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:0.15em;margin:14px 16px 8px;}
+.series-log-title{font-size:11px;font-weight:600;color:var(--td);text-transform:uppercase;letter-spacing:0.15em;margin:10px 16px 6px;}
 
 .set-pills-row{
-  margin:0 16px 10px;padding:0;background:var(--surf2);border-radius:16px;overflow:hidden;
-  display:flex;flex-direction:column;
+  margin:0 16px 8px;padding:8px;background:var(--surf2);border-radius:16px;overflow:hidden;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:8px;
 }
 .set-pill{
-  flex:none;height:auto;width:auto;border-radius:0;
-  display:flex;align-items:center;justify-content:flex-start;gap:12px;
-  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.06);
-  font-size:14px;font-weight:500;letter-spacing:0;background:transparent;
+  flex:none;height:auto;width:auto;border-radius:12px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+  padding:10px 6px;border-bottom:none;
+  background:rgba(255,255,255,0.03);
+  font-size:11px;font-weight:600;letter-spacing:0;text-align:center;
 }
 .set-pill:last-child{border-bottom:none;}
+.set-pills-row .sp-info{flex:none;text-align:center;}
 .set-pill.hecha{display:none;}
 .sp-badge{
   width:28px;height:28px;border-radius:50%;flex-shrink:0;
@@ -1265,14 +1285,6 @@ input{background:transparent!important;border:none!important;outline:none!import
      style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
   <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
-  <select class="tipo-carga-select" name="{{ ejercicio.form_id }}_tipo_carga"
-          id="tipo-carga-{{ ejercicio.form_id }}"
-          onchange="actualizarPreviewCarga('{{ ejercicio.form_id }}')"
-          aria-label="Cómo se interpreta el peso de {{ ejercicio.nombre }}">
-    <option value="total" {% if ejercicio.tipo_carga_default == 'total' or not ejercicio.tipo_carga_default %}selected{% endif %}>Peso total</option>
-    <option value="por_mano" {% if ejercicio.tipo_carga_default == 'por_mano' %}selected{% endif %}>Por mano</option>
-    <option value="por_lado" {% if ejercicio.tipo_carga_default == 'por_lado' %}selected{% endif %}>Por lado</option>
-  </select>
   <input type="hidden" name="{{ ejercicio.form_id }}_es_principal" value="{{ ejercicio.es_principal|yesno:'1,0,' }}">
   <input type="hidden" class="ejercicio-historial"
          data-ejercicio-id="{{ ejercicio.form_id }}"
@@ -1301,16 +1313,38 @@ input{background:transparent!important;border:none!important;outline:none!import
       {% endif %}
     </div>
 
-    <div class="ex-header-card">
-      <div class="ex-header-icon">
-        <i class="fas fa-dumbbell"></i>
+    <div class="ex-header-combo">
+      <div class="ex-header-card">
+        <div class="ex-header-icon">
+          <i class="fas fa-dumbbell"></i>
+        </div>
+        <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|lower|capfirst }}</h2>
+        {% if ejercicio.aproximaciones %}
+        <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
+          <span>Aproximaciones</span><span>›</span>
+        </button>
+        {% endif %}
       </div>
-      <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|lower|capfirst }}</h2>
-      {% if ejercicio.aproximaciones %}
-      <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
-        <span>Aproximaciones</span><span>›</span>
-      </button>
-      {% endif %}
+
+      <div class="exname-meta">
+        <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
+        <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
+        {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
+        {% if ejercicio.sugerencia_tope %}
+        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
+        {% endif %}
+        {% if ejercicio.estancado %}
+        <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
+        {% endif %}
+        <select class="tipo-carga-select" name="{{ ejercicio.form_id }}_tipo_carga"
+                id="tipo-carga-{{ ejercicio.form_id }}"
+                onchange="actualizarPreviewCarga('{{ ejercicio.form_id }}')"
+                aria-label="Cómo se interpreta el peso de {{ ejercicio.nombre }}">
+          <option value="total" {% if ejercicio.tipo_carga_default == 'total' or not ejercicio.tipo_carga_default %}selected{% endif %}>Peso total</option>
+          <option value="por_mano" {% if ejercicio.tipo_carga_default == 'por_mano' %}selected{% endif %}>Por mano</option>
+          <option value="por_lado" {% if ejercicio.tipo_carga_default == 'por_lado' %}selected{% endif %}>Por lado</option>
+        </select>
+      </div>
     </div>
 
     {# Phase 10A / 28.2 — Progression brake notice (contextual + lesión) #}
@@ -1373,18 +1407,6 @@ input{background:transparent!important;border:none!important;outline:none!import
     </div>
     {% endif %}
     {% endif %}
-
-    <div class="exname-meta">
-      <span class="exname-chip chip-g">{{ ejercicio.series }} series</span>
-      <span class="exname-chip chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>
-      {% if ejercicio.usa_tiempo %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="exname-chip chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}
-      {% if ejercicio.sugerencia_tope %}
-      <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
-      {% endif %}
-      {% if ejercicio.estancado %}
-      <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
-      {% endif %}
-    </div>
   </div>
 
 
@@ -1599,7 +1621,7 @@ input{background:transparent!important;border:none!important;outline:none!import
                name="{{ ejercicio.form_id }}_completado_{{ sn }}" value="1">
       </div>
 
-      {% if ejercicio.peso_anterior_kg > 0 or ejercicio.repeticiones_anterior > 0 %}
+      {% if not ejercicio.usa_peso and ejercicio.repeticiones_anterior > 0 %}
       <div class="historial-zona">
         Última vez ({{ ejercicio.fecha_anterior|date:"d/m" }}):
         {% if ejercicio.usa_distancia and ejercicio.usa_peso %}
