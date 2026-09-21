@@ -211,7 +211,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* ── PANTALLA DESCANSO ── */
 .pantalla-descanso{
   display:none;flex-direction:column;
-  min-height:100vh;padding:20px 20px 24px;
+  min-height:100vh;padding:14px 16px 16px;
   background:var(--bg);
   animation:pdFadeUp .3s ease both;
 }
@@ -219,56 +219,56 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* 1 — Confirmación serie */
 .pd-header{
   background:var(--surf2);border-radius:16px;
-  padding:12px 16px;margin-bottom:24px;
+  padding:10px 14px;margin-bottom:12px;
   display:flex;align-items:center;gap:8px;
 }
 .pd-ej{font-size:13px;color:var(--td);}
 .pd-ej strong{color:var(--green);font-weight:600;}
 /* 2 — Timer */
-.pd-timer-zona{text-align:center;margin-bottom:20px;}
-.pd-label{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:14px;}
-.pd-ring-wrap{position:relative;width:220px;height:220px;margin:0 auto 6px;}
+.pd-timer-zona{text-align:center;margin-bottom:10px;}
+.pd-label{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px;}
+.pd-ring-wrap{position:relative;width:148px;height:148px;margin:0 auto 4px;}
 .pd-ring-wrap svg{position:absolute;top:0;left:0;width:100%;height:100%;transform:rotate(-90deg);}
 .pd-ring-inner{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;}
-.pd-tiempo{font-size:clamp(44px,14vw,56px);font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
-.pd-de{font-size:11px;color:var(--td);margin-top:6px;letter-spacing:0.05em;}
+.pd-tiempo{font-size:clamp(30px,9vw,38px);font-weight:800;color:var(--green);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;}
+.pd-de{font-size:11px;color:var(--td);margin-top:2px;letter-spacing:0.05em;}
 /* 3 — Próxima serie */
-.pd-proxima{background:var(--surf2);border-radius:16px;padding:14px 16px;margin-bottom:10px;}
-.pd-prox-lbl{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;}
-.pd-prox-info{font-size:14px;font-weight:700;color:#fff;}
+.pd-proxima{background:var(--surf2);border-radius:16px;padding:8px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.pd-prox-lbl{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.18em;text-transform:uppercase;white-space:nowrap;}
+.pd-prox-info{font-size:14px;font-weight:700;color:#fff;text-align:right;}
 .pd-prox-kg{color:var(--green);}
 /* 4 — Calculadora de discos */
-.pd-calc{background:var(--surf2);border-radius:16px;padding:14px 16px;margin-bottom:10px;}
-.pd-calc-lbl{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:10px;}
-.discos-visual{display:flex;align-items:center;justify-content:center;gap:3px;margin-bottom:8px;}
-.barra{width:56px;height:10px;background:rgba(255,255,255,0.25);border-radius:99px;}
+.pd-calc{background:var(--surf2);border-radius:16px;padding:10px 12px;margin-bottom:8px;}
+.pd-calc-lbl{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.18em;text-transform:uppercase;margin-bottom:6px;}
+.discos-visual{display:flex;align-items:center;justify-content:center;gap:3px;margin-bottom:6px;}
+.barra{width:44px;height:8px;background:rgba(255,255,255,0.25);border-radius:99px;}
 .disco{border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;}
-.d20{width:26px;height:40px;background:#E74C3C;}
-.d15{width:22px;height:34px;background:#E67E22;}
-.d10{width:20px;height:30px;background:#3498DB;}
-.d5{width:18px;height:26px;background:#F1C40F;color:#000;}
-.d25{width:16px;height:22px;background:#10B981;color:#000;}
-.d1{width:14px;height:18px;background:#888;}
+.d20{width:22px;height:33px;background:#E74C3C;}
+.d15{width:19px;height:28px;background:#E67E22;}
+.d10{width:17px;height:25px;background:#3498DB;}
+.d5{width:15px;height:22px;background:#F1C40F;color:#000;}
+.d25{width:14px;height:19px;background:#10B981;color:#000;}
+.d1{width:12px;height:15px;background:#888;}
 .pd-calc-txt{font-size:12px;color:var(--td);text-align:center;}
 .pd-calc-txt strong{color:#fff;}
 /* Técnica */
 .pd-tecnica-wrap{
-  margin-bottom:16px;
+  margin-bottom:10px;
   background:var(--surf2,rgba(255,255,255,0.05));
-  border-radius:18px;
-  padding:14px 12px 12px;
+  border-radius:16px;
+  padding:10px 10px 8px;
   border:1.5px solid rgba(255,255,255,0.08);
 }
 .pd-tecnica-lbl{
   font-family:var(--fm);font-size:11px;font-weight:700;
   color:#fff;letter-spacing:.8px;text-transform:uppercase;
-  margin-bottom:10px;text-align:center;
+  margin-bottom:6px;text-align:center;
 }
 .pd-tecnica-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
 .btn-tecnica{
-  height:64px;border-radius:14px;border:2px solid transparent;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
-  font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;
+  height:44px;border-radius:12px;border:2px solid transparent;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
+  font-size:9px;font-weight:700;cursor:pointer;transition:all .15s;
   font-family:var(--fu);letter-spacing:.3px;text-transform:uppercase;
 }
 .btn-tecnica.tec-buena{
@@ -280,7 +280,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .btn-tecnica.tec-comprometida{
   background:rgba(231,76,60,0.15);color:#E74C3C;border-color:rgba(231,76,60,0.35);
 }
-.btn-tecnica .tec-icon{font-size:22px;line-height:1;}
+.btn-tecnica .tec-icon{font-size:15px;line-height:1;}
 .btn-tecnica.sel-buena{background:rgba(16,185,129,0.30);border-color:#10B981;box-shadow:0 0 12px rgba(16,185,129,0.4);transform:scale(1.04);}
 .btn-tecnica.sel-aceptable{background:rgba(241,196,15,0.30);border-color:#F1C40F;box-shadow:0 0 12px rgba(241,196,15,0.4);transform:scale(1.04);}
 .btn-tecnica.sel-comprometida{background:rgba(231,76,60,0.30);border-color:#E74C3C;box-shadow:0 0 12px rgba(231,76,60,0.4);transform:scale(1.04);}
@@ -781,7 +781,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   .sl-unit { font-size: 10px; }
 
   /* Descanso: ring proporcional */
-  .pd-ring-wrap { width: min(220px, 60vw); height: min(220px, 60vw); }
+  .pd-ring-wrap { width: min(148px, 42vw); height: min(148px, 42vw); }
 
   /* Controles descanso */
   .btn-saltar { height: 52px; }
@@ -819,7 +819,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 @media (max-width: 360px) {
   .peso-input { font-size: 32px !important; width: 90px !important; }
   .peso-btn { width: 44px; height: 56px; font-size: 22px; }
-  .pd-tiempo { font-size: 40px; }
+  .pd-tiempo { font-size: 30px; }
   .exname h2 { font-size: 0.9rem; }
   .nav-btn { padding: 8px 12px; font-size: 11px; }
 }
@@ -1310,6 +1310,12 @@ input{background:transparent!important;border:none!important;outline:none!import
   <input type="hidden" name="{{ ejercicio.form_id }}_es_tope_maquina" id="tope-{{ ejercicio.form_id }}" value="{% if ejercicio.sugerencia_tope %}true{% else %}false{% endif %}">
   <input type="hidden" name="{{ ejercicio.form_id }}_fallo_tipo" id="fallo-{{ ejercicio.form_id }}" value="">
 
+  <!-- Bloque de registro del ejercicio (nombre, series, molestia/fallo, log).
+       Se oculta por completo mientras dura el descanso (ver iniciarDescanso /
+       saltarDescanso / editarSeriePanel en el script) para que la pantalla
+       de descanso ocupe toda la pantalla sin apilarse al final de la pagina. -->
+  <div class="ejercicio-registro" id="registro-{{ ejercicio.form_id }}">
+
   <!-- NOMBRE -->
   <div class="exname">
     <div class="exname-toprow">
@@ -1696,6 +1702,8 @@ input{background:transparent!important;border:none!important;outline:none!import
     </div>
     {% endwith %}{% endfor %}
   </div>
+
+  </div><!-- /ejercicio-registro -->
 
     <!-- PANTALLA DESCANSO -->
   <div class="pantalla-descanso" id="desc-{{ ejercicio.form_id }}">
@@ -2528,6 +2536,8 @@ function guardarSeriePanel(fid,sn,total){
   // Ocultar panel actual, mostrar descanso
   const pdesc=document.getElementById('desc-'+fid);
   pdesc.style.display='flex';pdesc.style.flexDirection='column';
+  const pregistro=document.getElementById('registro-'+fid);
+  if(pregistro)pregistro.style.display='none';
 
   // Aplicar primero cualquier ajuste (incluido congelar el peso por tope)
   // para que el resumen de descanso muestre la próxima serie efectiva.
@@ -2573,6 +2583,8 @@ function editarSeriePanel(fid,sn,total){
   }
   const desc=document.getElementById('desc-'+fid);
   if(desc)desc.style.display='none';
+  const eregistro=document.getElementById('registro-'+fid);
+  if(eregistro)eregistro.style.display='block';
 
   // Mostrar de nuevo solo el panel de esa serie
   const panel=document.getElementById('reg-'+fid+'-'+sn);
@@ -2832,6 +2844,8 @@ function actualizarTimerUI(fid){
 function saltarDescanso(fid){
   if(STATE.timers[fid])clearInterval(STATE.timers[fid].interval);
   document.getElementById('desc-'+fid).style.display='none';
+  const sregistro=document.getElementById('registro-'+fid);
+  if(sregistro)sregistro.style.display='block';
   _resetTecnica(fid);
 
   const t=STATE.timers[fid];
