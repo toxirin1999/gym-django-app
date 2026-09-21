@@ -216,14 +216,6 @@ input{background:transparent!important;border:none!important;outline:none!import
   animation:pdFadeUp .3s ease both;
 }
 @keyframes pdFadeUp{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
-/* 1 — Confirmación serie */
-.pd-header{
-  background:var(--surf2);border-radius:16px;
-  padding:10px 14px;margin-bottom:12px;
-  display:flex;align-items:center;gap:8px;
-}
-.pd-ej{font-size:13px;color:var(--td);}
-.pd-ej strong{color:var(--green);font-weight:600;}
 /* 2 — Timer */
 .pd-timer-zona{text-align:center;margin-bottom:10px;}
 .pd-label{font-size:10px;font-weight:600;color:var(--td);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:8px;}
@@ -1707,11 +1699,6 @@ input{background:transparent!important;border:none!important;outline:none!import
 
     <!-- PANTALLA DESCANSO -->
   <div class="pantalla-descanso" id="desc-{{ ejercicio.form_id }}">
-
-    <!-- 1 — Confirmación serie guardada -->
-    <div class="pd-header">
-      <div class="pd-ej"><strong>{{ ejercicio.nombre|title }}</strong> — serie guardada</div>
-    </div>
 
     <!-- 2 — Temporizador circular -->
     <div class="pd-timer-zona">
