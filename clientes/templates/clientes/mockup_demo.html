@@ -92,8 +92,10 @@ body {
 @keyframes slideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 
 /* ── NAV ─────────────────────────────────────── */
+/* Fase UI 5: cabecera NO fija — acompaña el scroll natural de la pagina.
+   Solo el bottom nav permanece fijo (position:fixed) durante el scroll. */
 .rb-nav {
-  position: sticky; top: 0; z-index: 100; background: var(--bg);
+  position: relative; z-index: 100; background: var(--bg);
   border-bottom: 1px solid var(--line);
   min-height: var(--rb-nav-height); padding: 6px 16px;
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
@@ -1119,10 +1121,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   {% endwith %}
 
   <!-- Trayectoria: contexto secundario, no compite con la tarjeta de decisión.
-       Vive como un acceso mas junto al resto de capitulos, no bajo el saludo. -->
-  <details class="mt-4 group rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
-    <summary class="rb-collapse-summary" style="min-height:44px;display:flex;align-items:center;padding:12px 16px;">Tu trayectoria</summary>
-    <div class="px-4 pb-4">
+       Tarjeta integrada y visible por defecto (details abierto), no un boton
+       colapsado: las metricas se ven de un vistazo. -->
+  <details open class="mt-4 rounded-2xl bg-zinc-900 border border-zinc-800 overflow-hidden">
+    <summary style="list-style:none;display:flex;align-items:center;padding:14px 16px 0;font-size:10px;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:#a1a1aa;cursor:default;">Tu trayectoria</summary>
+    <div class="px-4 pt-2.5 pb-4">
       <div class="grid grid-cols-4 gap-2 text-center">
         <div>
           <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Sesiones</div>
@@ -1163,7 +1166,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
      fijan ese conteo en exactamente 1 por capitulo.
      {% endcomment %}
   <div class="mt-4 rounded-2xl bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
-    <button type="button" onclick="document.getElementById('chapter-entrenamiento').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbToggleChapter('chapter-entrenamiento')"
             class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
       <span class="flex items-center gap-3">
         <span class="font-mono text-[10px] text-zinc-600">02</span>
@@ -1171,7 +1174,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </span>
       <span class="text-zinc-600" aria-hidden="true">›</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-plan').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbToggleChapter('chapter-plan')"
             class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
       <span class="flex items-center gap-3">
         <span class="font-mono text-[10px] text-zinc-600">03</span>
@@ -1179,7 +1182,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </span>
       <span class="text-zinc-600" aria-hidden="true">›</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-memoria').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbToggleChapter('chapter-memoria')"
             class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
       <span class="flex items-center gap-3">
         <span class="font-mono text-[10px] text-zinc-600">04</span>
@@ -1187,7 +1190,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </span>
       <span class="text-zinc-600" aria-hidden="true">›</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-vida').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbToggleChapter('chapter-vida')"
             class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
       <span class="flex items-center gap-3">
         <span class="font-mono text-[10px] text-zinc-600">05</span>
@@ -1213,29 +1216,29 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <span class="text-base leading-none" aria-hidden="true">●</span>
       <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Ahora</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-entrenamiento').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbShowChapter('chapter-entrenamiento')"
             class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
       <span class="text-base leading-none" aria-hidden="true">▲</span>
       <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Entreno</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-plan').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbShowChapter('chapter-plan')"
             class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
       <span class="text-base leading-none" aria-hidden="true">◆</span>
       <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Plan</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-memoria').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbShowChapter('chapter-memoria')"
             class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
       <span class="text-base leading-none" aria-hidden="true">■</span>
       <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Memoria</span>
     </button>
-    <button type="button" onclick="document.getElementById('chapter-vida').scrollIntoView({behavior:'smooth'})"
+    <button type="button" onclick="rbShowChapter('chapter-vida')"
             class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
       <span class="text-base leading-none" aria-hidden="true">✦</span>
       <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Vida</span>
     </button>
   </nav>
 
-  <section id="chapter-entrenamiento" class="rb-chapter rb-chapter--training" aria-labelledby="chapter-entrenamiento-title">
+  <section id="chapter-entrenamiento" class="rb-chapter rb-chapter--training" aria-labelledby="chapter-entrenamiento-title" hidden>
     <header class="rb-chapter-heading">
       <span class="rb-chapter-index">02</span>
       <h2 class="rb-chapter-title" id="chapter-entrenamiento-title">Entrenamiento</h2>
@@ -1726,7 +1729,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
   </section><!-- #chapter-entrenamiento -->
 
-    <section id="chapter-plan" class="rb-chapter rb-chapter--plan" aria-labelledby="chapter-plan-title">
+    <section id="chapter-plan" class="rb-chapter rb-chapter--plan" aria-labelledby="chapter-plan-title" hidden>
       <header class="rb-chapter-heading">
         <span class="rb-chapter-index">03</span>
         <h2 class="rb-chapter-title" id="chapter-plan-title">Plan</h2>
@@ -2326,7 +2329,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     </div>
     </section><!-- #chapter-plan -->
 
-    <section id="chapter-memoria" class="rb-chapter rb-chapter--memory" aria-labelledby="chapter-memoria-title">
+    <section id="chapter-memoria" class="rb-chapter rb-chapter--memory" aria-labelledby="chapter-memoria-title" hidden>
       <header class="rb-chapter-heading">
         <span class="rb-chapter-index">04</span>
         <h2 class="rb-chapter-title" id="chapter-memoria-title">Memoria</h2>
@@ -2383,7 +2386,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
 
     </section><!-- #chapter-memoria -->
 
-  <section id="chapter-vida" class="rb-chapter rb-chapter--life" aria-labelledby="chapter-vida-title">
+  <section id="chapter-vida" class="rb-chapter rb-chapter--life" aria-labelledby="chapter-vida-title" hidden>
     <header class="rb-chapter-heading">
       <span class="rb-chapter-index">05</span>
       <h2 class="rb-chapter-title" id="chapter-vida-title">Vida</h2>
@@ -2902,6 +2905,22 @@ function rbRevertirGym(form) {
 </div>
 
 <script>
+// Fase UI 5: capitulos 02-05 arrancan ocultos (atributo hidden nativo).
+// rbToggleChapter alterna visibilidad desde los accesos rapidos de "Ahora".
+// rbShowChapter asegura visibilidad desde el bottom nav (no la oculta).
+function rbToggleChapter(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = !el.hidden;
+  if (!el.hidden) el.scrollIntoView({ behavior: 'smooth' });
+}
+function rbShowChapter(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.hidden = false;
+  el.scrollIntoView({ behavior: 'smooth' });
+}
+
 var rbCheckinTrigger = null;
 
 function rbOpenCheckin(trigger) {
