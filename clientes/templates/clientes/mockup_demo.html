@@ -2,6 +2,7 @@
 {% load clientes_filters %}
 {% load i18n %}
 {% load humanize %}
+{% load briefing_filters %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -13,6 +14,15 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  {# Rediseño Panel Principal (Fase UI 5): Tailwind solo para el capitulo "Ahora"
+     y el nuevo bottom nav. preflight desactivado a proposito: este reset global
+     de Tailwind reescribiria margenes/estilos de botones, inputs, listas, etc.
+     en TODO el resto de la pagina (capitulos 02-05, modales, JS heredado), que
+     siguen con el sistema JDS existente y no forman parte de este encargo. #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { corePlugins: { preflight: false } };
+  </script>
   <style>
 /* ═══════════════════════════════════════════════
    GYM/OS · PANEL · EDITORIAL DESIGN SYSTEM
@@ -703,7 +713,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   </a>
   <a class="rb-nav-joi" href="/joi/habitacion/" aria-label="Abrir JOI">
     <span style="width:5px;height:5px;border-radius:50%;background:{% if joi_mensaje_pendiente %}#6494dc{% else %}rgba(100,148,220,.35){% endif %};{% if joi_mensaje_pendiente %}box-shadow:0 0 6px rgba(100,148,220,.6);{% endif %}display:inline-block;"></span>
-    JOI
+    JOI{% if joi_mensaje_pendiente %} activo{% endif %}
   </a>
   <div class="rb-nav-tools">
     <a href="{% url 'clientes:mi_cuerpo' cliente.id %}"
@@ -794,101 +804,103 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
   </div>
 
-  <!-- ── BIB HERO ─────────────────────────────── -->
-  <div class="rb-bib">
-    <div class="rb-bib-meta">
-      <span>Atleta</span>
-      <span>{{ hoy|date:"Y" }}</span>
+  <!-- ── SALUDO ───────────────────────────────── -->
+  <div class="px-1 pt-1">
+    <div class="text-xl font-bold text-zinc-50">
+      Hola, {{ cliente.user.first_name|default:cliente.user.username }}
     </div>
-    <div class="rb-bib-name">{{ cliente.user.get_full_name|default:cliente.user.username }}</div>
-
-    {% comment %}
-    Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase.
-    Fase E (autoridad Organismo, jul-2026): se quitó el rótulo de estado
-    (RECUPERAR/VERSIÓN ESENCIAL/POSPONER) que duplicaba estado_sistema.estado_label
-    de la card "Sistema hoy". estado_entreno sigue gobernando el routing de
-    CTA/forms más abajo — solo se limpió este subtítulo.
-    {% endcomment %}
+    <div class="mt-0.5 font-mono text-[11px] tracking-[0.04em] text-zinc-500">
+      Semana {{ hoy|date:"W" }} · {{ hoy|date:"l"|capfirst }} {{ hoy|date:"j" }} de {{ hoy|date:"F" }}
+    </div>
     {% if proximo_entrenamiento %}
-    <div class="rb-bib-sub" style="margin-top:6px;">
+    <div class="mt-1 text-[11px] text-zinc-500">
       {{ proximo_entrenamiento.objetivo|upper|default:"BASE" }}
       · {{ proximo_entrenamiento.semana_nombre|default:"Semana" }} · Día {{ proximo_entrenamiento.dia|default:"1" }}
     </div>
     {% elif portada_hoy.sesion_pospuesta %}
-    <div class="rb-bib-sub" data-postponed-session-date style="margin-top:6px;">
+    <div class="mt-1 text-[11px] text-zinc-500" data-postponed-session-date>
       Sesión guardada para mañana · {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}
     </div>
     {% else %}
-    <div class="rb-bib-sub" style="margin-top:6px;">Sin sesión programada · Sin datos suficientes</div>
+    <div class="mt-1 text-[11px] text-zinc-500">Sin sesión programada · Sin datos suficientes</div>
     {% endif %}
 
     <!-- Trayectoria: contexto secundario, nunca compite con la decisión -->
-    <details style="margin-top:12px;">
-    <summary class="rb-collapse-summary" style="min-height:44px;">Tu trayectoria</summary>
-    <div class="rb-bib-divider" style="margin-top:4px;">
-      <div class="rb-bib-stat">
-        <div class="rb-bib-stat-label">Sesiones</div>
-        <div class="rb-bib-stat-val">{{ entrenos_count|default:"0" }}</div>
-      </div>
-      <div class="rb-bib-stat">
-        <div class="rb-bib-stat-label">Carga</div>
-        <div class="rb-bib-stat-val">{{ carga_total_acumulada|default:0|intcomma }}</div>
-      </div>
-      <div class="rb-bib-stat">
-        <div class="rb-bib-stat-label">Consist.</div>
-        <div class="rb-bib-stat-val">{% if consistencia_pct is not None %}{{ consistencia_pct }}<span style="font-size:10px;color:var(--ink-4)">%</span>{% else %}<span style="font-size:10px;">Sin datos</span>{% endif %}</div>
-      </div>
-      <div class="rb-bib-stat">
-        <div class="rb-bib-stat-label">ACWR</div>
-        <div class="rb-bib-stat-val {% if acwr_actual and acwr_actual >= 1.3 %}danger{% elif acwr_actual and acwr_actual >= 0.8 %}ok{% elif acwr_actual %}warn{% endif %}">
-          {{ acwr_actual|floatformat:2|default:"—" }}
-        </div>
-      </div>
-    </div>
-    <p style="margin:10px 0 8px;font-family:var(--font-body);font-size:12px;line-height:1.5;color:var(--ink-3);">
-      Sigue la evolución prevista de tu plan y el bloque en el que estás.
-    </p>
-    <a href="{% url 'clientes:trayectoria_plan' %}"
-       class="rb-bottom-btn"
-       aria-label="Ver trayectoria del plan"
-       style="display:flex;width:100%;min-height:44px;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border:1.5px solid var(--line);background:var(--paper);color:var(--ink);font-family:var(--font-mono);font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none;box-sizing:border-box;">
-      Ver trayectoria del plan <span aria-hidden="true">→</span>
-    </a>
-    </details>
-
-    <!-- Bio readiness — solo visible con lesión activa -->
-    {% if bio_readiness and bio_banner.has_restrictions %}
-    <div class="rb-readiness">
-      <div class="rb-rd-top">
-        <div class="rb-rd-lbl">Bio Readiness</div>
+    <details class="mt-3 group">
+      <summary class="rb-collapse-summary" style="min-height:44px;">Tu trayectoria</summary>
+      <div class="mt-2 grid grid-cols-4 gap-2 text-center">
         <div>
-          <span class="rb-rd-num">{% widthratio bio_readiness.score|default:0 1 100 %}</span>
-          <span class="rb-rd-unit">/ 100</span>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Sesiones</div>
+          <div class="text-sm font-bold text-zinc-100">{{ entrenos_count|default:"0" }}</div>
+        </div>
+        <div>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Carga</div>
+          <div class="text-sm font-bold text-zinc-100">{{ carga_total_acumulada|default:0|intcomma }}</div>
+        </div>
+        <div>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Consist.</div>
+          <div class="text-sm font-bold text-zinc-100">{% if consistencia_pct is not None %}{{ consistencia_pct }}<span class="text-[10px] text-zinc-500">%</span>{% else %}<span class="text-[10px] text-zinc-500">Sin datos</span>{% endif %}</div>
+        </div>
+        <div>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">ACWR</div>
+          <div class="text-sm font-bold {% if acwr_actual and acwr_actual >= 1.3 %}text-red-400{% elif acwr_actual and acwr_actual >= 0.8 %}text-green-400{% elif acwr_actual %}text-amber-400{% else %}text-zinc-100{% endif %}">
+            {{ acwr_actual|floatformat:2|default:"—" }}
+          </div>
         </div>
       </div>
-      <div class="rb-rd-bar">
-        <div class="rb-rd-bar-fill" style="width:{% widthratio bio_readiness.score|default:0 1 100 %}%"></div>
-      </div>
-      <div class="rb-rd-trend">
-        {% if bio_readiness.available %}
-        <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier 1 100 %}%</span>
-        <span>{{ bio_readiness.label|default:bio_readiness_label }}</span>
-        {% else %}
-        <span>Volumen: No disponible</span><span>No disponible</span>
-        {% endif %}
-      </div>
-    </div>
-    {% endif %}
+      <p class="mt-2.5 mb-2 text-[12px] leading-snug text-zinc-400">
+        Sigue la evolución prevista de tu plan y el bloque en el que estás.
+      </p>
+      <a href="{% url 'clientes:trayectoria_plan' %}"
+         aria-label="Ver trayectoria del plan"
+         style="min-height:44px;"
+         class="flex w-full items-center justify-center gap-2 rounded-xl border border-zinc-700 text-zinc-200 font-mono text-[10px] font-bold tracking-[0.08em] uppercase no-underline">
+        Ver trayectoria del plan <span aria-hidden="true">→</span>
+      </a>
+    </details>
   </div>
 
+  <!-- Bio readiness — solo visible con lesión activa -->
+  {% if bio_readiness and bio_banner.has_restrictions %}
+  <div class="rb-readiness mt-3">
+    <div class="rb-rd-top">
+      <div class="rb-rd-lbl">Bio Readiness</div>
+      <div>
+        <span class="rb-rd-num">{% widthratio bio_readiness.score|default:0 1 100 %}</span>
+        <span class="rb-rd-unit">/ 100</span>
+      </div>
+    </div>
+    <div class="rb-rd-bar">
+      <div class="rb-rd-bar-fill" style="width:{% widthratio bio_readiness.score|default:0 1 100 %}%"></div>
+    </div>
+    <div class="rb-rd-trend">
+      {% if bio_readiness.available %}
+      <span>Vol. modifier: {% widthratio bio_readiness.volume_modifier 1 100 %}%</span>
+      <span>{{ bio_readiness.label|default:bio_readiness_label }}</span>
+      {% else %}
+      <span>Volumen: No disponible</span><span>No disponible</span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% comment %}
+  Título de la sesión vive en la card de sesión — no duplicar aquí. Solo fase.
+  Fase E (autoridad Organismo, jul-2026): se quitó el rótulo de estado
+  (RECUPERAR/VERSIÓN ESENCIAL/POSPONER) que duplicaba estado_sistema.estado_label
+  de la card "Sistema hoy". estado_entreno sigue gobernando el routing de
+  CTA/forms más abajo — solo se limpió este subtítulo.
+  Fase UI 5 (rediseño Tailwind): la ficha-dorsal ("bib") de atleta se retira
+  visualmente en favor del saludo de arriba; la sub-línea de sesión programada
+  se conserva dentro de la tarjeta de decisión, más abajo.
+  {% endcomment %}
+
   {% if joi_narrativa_hoy %}
-  <a data-joi-voice href="/joi/habitacion/" style="display:block;margin:10px 0 6px;padding:8px 14px;
-              border-left:1px solid var(--jds-joi-border);">
-    <div style="font-family:var(--font-mono);font-size:7px;font-weight:700;
-                letter-spacing:0.14em;text-transform:uppercase;
-                color:var(--jds-joi);opacity:0.7;margin-bottom:4px;">JOI</div>
-    <div style="font-size:11px;color:var(--joi-text);line-height:1.55;font-style:italic;
-                font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
+  <!-- ── TARJETA JOI ──────────────────────────── -->
+  <a data-joi-voice href="/joi/habitacion/"
+     class="mt-3 block rounded-2xl bg-zinc-900 border border-indigo-400/25 px-4 py-3 no-underline">
+    <div class="font-mono text-[8px] font-bold tracking-[0.14em] uppercase text-indigo-300/80 mb-1">JOI</div>
+    <div class="text-[12px] text-indigo-100/85 leading-relaxed italic" style="font-family:-apple-system,BlinkMacSystemFont,system-ui,sans-serif;font-weight:400;">
       {{ joi_narrativa_hoy }}
     </div>
   </a>
@@ -897,38 +909,43 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
   <!-- ── DECISIÓN ÚNICA HOY ─────────────────── -->
   {% if portada_hoy %}
   <div class="rb-organismo-card">
-    <div class="rb-organismo-label">Decisión hoy</div>
-    <div class="rb-organismo-body">
-      <span class="rb-organismo-estado rb-org-{{ estado_sistema.estado|lower }}">
+    <div class="rb-organismo-label" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">Decisión hoy</div>
+    <div class="rb-organismo-body" style="display:block;">
+      <span class="rb-organismo-estado rb-org-{{ estado_sistema.estado|lower }}" style="display:inline-block;min-width:0;">
         {{ portada_hoy.decision.estado }}
       </span>
-      <span class="rb-organismo-texto">{{ portada_hoy.decision.frase }}</span>
+      <span class="rb-organismo-texto" style="display:block;margin-top:4px;">{{ portada_hoy.decision.frase }}</span>
     </div>
-    {% if portada_hoy.accion_principal %}
-      {% with accion_label_normalizada=portada_hoy.accion_principal.label|lower %}
-      {# Defensa ante workers antiguos: el descanso nunca es una acción ejecutable. #}
-      {% if 'descanso' not in accion_label_normalizada %}
-      {% if portada_hoy.accion_principal.tipo == 'modal_checkin' %}
+
+    {% if portada_hoy.decision.estado|lower == 'silencio' %}
+    <div class="mt-1 text-lg font-bold text-zinc-50">Día de Descanso</div>
+    {% endif %}
+
+    {% with accion=portada_hoy.accion_principal accion_label_normalizada=portada_hoy.accion_principal.label|default:""|lower %}
+    {# Defensa ante workers antiguos: el descanso nunca es una acción ejecutable. #}
+    {% if accion and 'descanso' not in accion_label_normalizada %}
+      {% if accion.tipo == 'modal_checkin' %}
       <button data-primary-action type="button" onclick="rbOpenCheckin(this)"
-              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
-        {{ portada_hoy.accion_principal.label }}
+              class="mt-3 flex w-full items-center justify-center gap-2 min-h-[48px] rounded-xl bg-green-500 px-4 font-mono text-[12px] font-bold tracking-[0.06em] uppercase text-zinc-950 border-0 cursor-pointer">
+        {{ accion.label }}
       </button>
-      {% elif portada_hoy.accion_principal.tipo == 'diario' %}
+      {% elif accion.tipo == 'diario' %}
       <button data-primary-action type="button"
-              onclick="window.location.href='{{ portada_hoy.accion_principal.url }}'"
-              class="rb-cta" style="min-height:44px;border:0;cursor:pointer;">
-        {{ portada_hoy.accion_principal.label }} →
+              onclick="window.location.href='{{ accion.url }}'"
+              class="mt-3 flex w-full items-center justify-center gap-2 min-h-[48px] rounded-xl bg-green-500 px-4 font-mono text-[12px] font-bold tracking-[0.06em] uppercase text-zinc-950 border-0 cursor-pointer">
+        {{ accion.label }} →
       </button>
       {% else %}
-      <a href="{{ portada_hoy.accion_principal.url }}" data-primary-action class="rb-cta">
-        {{ portada_hoy.accion_principal.label }} →
+      <a href="{{ accion.url }}" data-primary-action
+         class="mt-3 flex w-full items-center justify-center gap-2 min-h-[48px] rounded-xl bg-green-500 px-4 font-mono text-[12px] font-bold tracking-[0.06em] uppercase text-zinc-950 no-underline">
+        {{ accion.label }} →
       </a>
       {% endif %}
-      {% endif %}
-      {% endwith %}
     {% endif %}
+    {% endwith %}
+
     {% if sesion_programada and sesion_programada.estado == 'pendiente' and portada_hoy.sesion_dominante.modulo == 'gym' %}
-    <form data-postpone-session class="rb-session-calendar-action"
+    <form data-postpone-session class="rb-session-calendar-action mt-3"
           method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
       {% csrf_token %}
       <span class="rb-session-calendar-copy">
@@ -938,90 +955,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
     </form>
     {% endif %}
-    <a href="{% url 'clientes:ausencia_planificada_gym' %}" class="rb-session-calendar-btn"
-       style="display:inline-flex;align-items:center;min-height:44px;margin-top:8px;">
-      {% if ausencia_gym_activa %}
-        Gestionar ausencia · {{ ausencia_gym_activa.inicio|date:"d/m/Y" }}–{{ ausencia_gym_activa.fin|date:"d/m/Y" }} · regreso {{ regreso_gym|date:"d/m/Y" }}
-      {% else %}No estaré disponible unos días{% endif %}
-    </a>
-    {% comment %}
-    Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
-    operativo, subordinado aquí. Solo relevante si el módulo dominante
-    de hoy es gym/hyrox — con diario/joi sería ruido.
-    {% endcomment %}
-    {% if estado_sistema.modulo_operativo %}
-    <details data-decision-detail style="margin-top:10px;">
-      <summary class="rb-collapse-summary" style="min-height:44px;">Por qué hoy</summary>
-    <div class="rb-organismo-porque" style="margin-top:6px;">
-      {% include "includes/_semaforo_intencion.html" %}
-    </div>
-    </details>
-    {% endif %}
-    {% if autoridad_gym and portada_hoy.sesion_dominante.modulo == 'gym' %}
-    <details data-gym-correction class="rb-gym-correction"{% if recibo_supervision_gym %} open{% endif %}>
-      <summary class="rb-collapse-summary" style="min-height:44px;">
-        {% if recibo_supervision_gym %}
-          {{ recibo_supervision_gym.titulo }} · v{{ recibo_supervision_gym.version }}
-        {% else %}
-          Ajustar decisión
-        {% endif %}
-      </summary>
-      {% if recibo_supervision_gym %}
-      <section class="rb-gym-receipt" data-gym-supervision-receipt
-               data-receipt-executable="{{ recibo_supervision_gym.ejecutable|yesno:'true,false' }}"
-               aria-label="Recibo de supervisión Gym">
-        <div class="rb-gym-receipt-head">
-          <strong class="rb-gym-receipt-title">{{ recibo_supervision_gym.titulo }}</strong>
-          {% if recibo_supervision_gym.ejecutable %}
-          <span class="rb-gym-receipt-state rb-gym-receipt-state--ok">Ejecutable</span>
-          {% else %}
-          <span class="rb-gym-receipt-state rb-gym-receipt-state--warn">No ejecutable</span>
-          {% endif %}
-          <span class="rb-gym-receipt-version">V{{ recibo_supervision_gym.version }}</span>
-        </div>
-        <p class="rb-gym-receipt-flow" aria-label="Cambio de postura">
-          <span>{{ recibo_supervision_gym.postura_anterior }}</span>
-          <span class="rb-gym-receipt-arrow" aria-hidden="true">→</span>
-          <span>{{ recibo_supervision_gym.postura_actual }}</span>
-        </p>
-        <p class="rb-gym-receipt-copy"><strong>Motivo:</strong> {{ recibo_supervision_gym.motivo }}</p>
-        <p class="rb-gym-receipt-copy">{{ recibo_supervision_gym.conservacion }}</p>
-      </section>
-      {% endif %}
-      {% if autoridad_gym.postura != 'proteger' %}
-      <form class="rb-gym-correction-form"
-            data-url="{% url 'entrenos:corregir_autoridad_gym' cliente.id %}"
-            data-revert-url="{% url 'entrenos:revertir_autoridad_gym' cliente.id %}"
-            onsubmit="return rbCorregirGym(event)">
-        {% csrf_token %}
-        <input type="hidden" name="fecha" value="{{ hoy|date:'Y-m-d' }}">
-        <input type="hidden" name="decision_id" value="{{ autoridad_gym.decision_id }}">
-        <input name="motivo" required maxlength="240"
-               placeholder="¿Qué necesitas ajustar hoy?">
-        <div class="rb-gym-correction-actions">
-          {% if autoridad_gym.postura == 'empujar' %}
-          <button class="rb-gym-correction-btn" name="postura" value="sostener" type="submit">
-            Prefiero dejar margen
-          </button>
-          {% endif %}
-          <button class="rb-gym-correction-btn" name="postura" value="proteger" type="submit">
-            Proteger hoy
-          </button>
-          {% if autoridad_gym.origen_decision == 'correccion_manual' %}
-          <button class="rb-gym-correction-btn" type="button" onclick="rbRevertirGym(this.form)">
-            Restaurar propuesta
-          </button>
-          {% endif %}
-        </div>
-        <div class="rb-gym-correction-status" role="status" aria-live="polite"></div>
-      </form>
-      {% endif %}
-    </details>
-    {% endif %}
+
     {% if portada_hoy.sesion_dominante %}
-    <div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--line);">
-      <div class="rb-workout-eyebrow">Sesión dominante · {{ portada_hoy.sesion_dominante.modulo|upper }}</div>
-      <div style="font-size:13px;font-weight:700;color:var(--ink);margin-top:3px;">
+    <div class="mt-3 pt-3 border-t border-zinc-800">
+      <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Sesión dominante · {{ portada_hoy.sesion_dominante.modulo|upper }}</div>
+      <div class="text-[13px] font-bold text-zinc-100 mt-0.5">
         {% if portada_hoy.sesion_dominante.modulo == 'gym' %}
           {{ portada_hoy.sesion_dominante.datos.nombre|default:portada_hoy.sesion_dominante.datos.rutina_nombre|default:"Sesión Gym" }}
         {% else %}
@@ -1029,33 +967,263 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {% endif %}
       </div>
       {% if portada_hoy.sesion_pospuesta %}
-      <div data-postponed-session-summary style="font-size:11px;color:var(--ink-3);margin-top:4px;">
+      <div data-postponed-session-summary class="text-[11px] text-zinc-500 mt-1">
         Programada para {{ portada_hoy.sesion_pospuesta.fecha_efectiva_label }}.
       </div>
       {% endif %}
     </div>
     {% endif %}
-    {% if portada_hoy.sesion_alternativa %}
-    <details style="margin-top:8px;">
-      <summary class="rb-collapse-summary" style="min-height:44px;">Alternativa · {{ portada_hoy.sesion_alternativa.modulo|upper }}</summary>
-      <div style="font-size:11px;color:var(--ink-3);padding:4px 0 8px;">Disponible como referencia secundaria.</div>
-    </details>
-    {% endif %}
+
     {% if portada_hoy.senales %}
-    <div style="margin-top:10px;">
-      {% for senal in portada_hoy.senales %}<div data-causal-signal class="rb-aprendio-item">{{ senal }}</div>{% endfor %}
+    <div class="mt-3 space-y-1">
+      {% for senal in portada_hoy.senales %}<div data-causal-signal class="text-[11px] text-zinc-400">{{ senal }}</div>{% endfor %}
     </div>
     {% endif %}
-    {% if portada_hoy.aprendizajes %}
-    <details style="margin-top:8px;">
-      <summary class="rb-collapse-summary" style="min-height:44px;">Lo que aprendió el plan</summary>
-      {% for item in portada_hoy.aprendizajes %}<div data-learning class="rb-aprendio-item">{{ item }}</div>{% endfor %}
+
+    <!-- Ajustar decisión + No estaré disponible: un único desplegable, colapsado por defecto -->
+    <details data-gym-correction-wrap class="mt-3 pt-3 border-t border-zinc-800 group">
+      <summary class="flex min-h-[36px] cursor-pointer list-none items-center justify-between font-mono text-[10px] font-bold tracking-[0.08em] uppercase text-zinc-400">
+        Ajustar decisión
+        <span class="text-zinc-600 transition-transform group-open:rotate-180" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="mt-2 space-y-3">
+        {% if estado_sistema.modulo_operativo %}
+        {% comment %}
+        Fase D (autoridad Organismo, jul-2026): el Semáforo es el "porqué"
+        operativo, subordinado aquí. Solo relevante si el módulo dominante
+        de hoy es gym/hyrox — con diario/joi sería ruido.
+        {% endcomment %}
+        <details data-decision-detail>
+          <summary class="rb-collapse-summary" style="min-height:36px;">Por qué hoy</summary>
+          <div class="rb-organismo-porque" style="margin-top:6px;">
+            {% include "includes/_semaforo_intencion.html" %}
+          </div>
+        </details>
+        {% endif %}
+
+        {% if autoridad_gym and portada_hoy.sesion_dominante.modulo == 'gym' %}
+        <div data-gym-correction>
+          {% if recibo_supervision_gym %}
+          <section class="rb-gym-receipt" data-gym-supervision-receipt
+                   data-receipt-executable="{{ recibo_supervision_gym.ejecutable|yesno:'true,false' }}"
+                   aria-label="Recibo de supervisión Gym">
+            <div class="rb-gym-receipt-head">
+              <strong class="rb-gym-receipt-title">{{ recibo_supervision_gym.titulo }}</strong>
+              {% if recibo_supervision_gym.ejecutable %}
+              <span class="rb-gym-receipt-state rb-gym-receipt-state--ok">Ejecutable</span>
+              {% else %}
+              <span class="rb-gym-receipt-state rb-gym-receipt-state--warn">No ejecutable</span>
+              {% endif %}
+              <span class="rb-gym-receipt-version">V{{ recibo_supervision_gym.version }}</span>
+            </div>
+            <p class="rb-gym-receipt-flow" aria-label="Cambio de postura">
+              <span>{{ recibo_supervision_gym.postura_anterior }}</span>
+              <span class="rb-gym-receipt-arrow" aria-hidden="true">→</span>
+              <span>{{ recibo_supervision_gym.postura_actual }}</span>
+            </p>
+            <p class="rb-gym-receipt-copy"><strong>Motivo:</strong> {{ recibo_supervision_gym.motivo }}</p>
+            <p class="rb-gym-receipt-copy">{{ recibo_supervision_gym.conservacion }}</p>
+          </section>
+          {% endif %}
+          {% if autoridad_gym.postura != 'proteger' %}
+          <form class="rb-gym-correction-form"
+                data-url="{% url 'entrenos:corregir_autoridad_gym' cliente.id %}"
+                data-revert-url="{% url 'entrenos:revertir_autoridad_gym' cliente.id %}"
+                onsubmit="return rbCorregirGym(event)">
+            {% csrf_token %}
+            <input type="hidden" name="fecha" value="{{ hoy|date:'Y-m-d' }}">
+            <input type="hidden" name="decision_id" value="{{ autoridad_gym.decision_id }}">
+            <input name="motivo" required maxlength="240"
+                   placeholder="¿Qué necesitas ajustar hoy?">
+            <div class="rb-gym-correction-actions">
+              {% if autoridad_gym.postura == 'empujar' %}
+              <button class="rb-gym-correction-btn" name="postura" value="sostener" type="submit">
+                Prefiero dejar margen
+              </button>
+              {% endif %}
+              <button class="rb-gym-correction-btn" name="postura" value="proteger" type="submit">
+                Proteger hoy
+              </button>
+              {% if autoridad_gym.origen_decision == 'correccion_manual' %}
+              <button class="rb-gym-correction-btn" type="button" onclick="rbRevertirGym(this.form)">
+                Restaurar propuesta
+              </button>
+              {% endif %}
+            </div>
+            <div class="rb-gym-correction-status" role="status" aria-live="polite"></div>
+          </form>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        {% if portada_hoy.sesion_alternativa %}
+        <div class="text-[11px] text-zinc-500">
+          Alternativa · {{ portada_hoy.sesion_alternativa.modulo|upper }} disponible como referencia secundaria.
+        </div>
+        {% endif %}
+
+        <a href="{% url 'clientes:ausencia_planificada_gym' %}"
+           class="block text-[11px] font-mono tracking-[0.04em] text-zinc-400 underline decoration-zinc-700 underline-offset-2">
+          {% if ausencia_gym_activa %}
+            Gestionar ausencia · {{ ausencia_gym_activa.inicio|date:"d/m/Y" }}–{{ ausencia_gym_activa.fin|date:"d/m/Y" }} · regreso {{ regreso_gym|date:"d/m/Y" }}
+          {% else %}No estaré disponible unos días{% endif %}
+        </a>
+      </div>
     </details>
+
+    {% if portada_hoy.aprendizajes %}
+    <div class="mt-3 pt-3 border-t border-zinc-800 space-y-1">
+      {% for item in portada_hoy.aprendizajes %}<div data-learning class="text-[11px] text-zinc-400">{{ item }}</div>{% endfor %}
+    </div>
     {% endif %}
   </div>
   {% endif %}
 
+  <!-- ── SEÑALES DEL SISTEMA (grid 2x2) ───────── -->
+  <div class="mt-3">
+    <div class="font-mono text-[10px] font-bold tracking-[0.1em] uppercase text-zinc-500 mb-2">Señales del sistema</div>
+    <div class="grid grid-cols-2 gap-2.5">
+
+      <!-- Energía -->
+      <div class="rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-3">
+        <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Energía</div>
+        {% if checkin_hoy %}
+        <div class="mt-1 text-lg font-bold text-zinc-50">{{ checkin_hoy.energia_subjetiva }}<span class="text-[11px] font-normal text-zinc-500">/10</span></div>
+        <div class="mt-1.5 h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+          <div class="h-full rounded-full bg-green-500" style="width:{% widthratio checkin_hoy.energia_subjetiva 10 100 %}%"></div>
+        </div>
+        {% else %}
+        <span class="mt-1 block font-mono text-[10px] font-bold text-zinc-600">Sin registrar</span>
+        {% endif %}
+      </div>
+
+      <!-- ACWR -->
+      <div class="rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-3">
+        <div class="flex items-center justify-between">
+          <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">ACWR</div>
+          {% if acwr_actual %}
+          <span class="rounded-full px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase
+            {% if acwr_actual >= 1.3 %}bg-red-500/15 text-red-400{% elif acwr_actual >= 0.8 %}bg-green-500/15 text-green-400{% else %}bg-amber-500/15 text-amber-400{% endif %}">
+            {% if acwr_actual >= 1.3 %}Alto{% elif acwr_actual >= 0.8 %}En rango{% else %}Bajo{% endif %}
+          </span>
+          {% endif %}
+        </div>
+        <div class="mt-1 text-lg font-bold text-zinc-50">{{ acwr_actual|floatformat:2|default:"—" }}</div>
+      </div>
+
+      <!-- Carga semanal -->
+      <div class="rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-3">
+        <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Carga semanal</div>
+        <div class="mt-1 text-lg font-bold text-zinc-50">
+          {% if analisis_acwr.carga_aguda %}{{ analisis_acwr.carga_aguda|floatformat:0|intcomma }}<span class="text-[11px] font-normal text-zinc-500"> kg</span>{% else %}—{% endif %}
+        </div>
+      </div>
+
+      <!-- Sueño -->
+      <div class="rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-3">
+        <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Sueño</div>
+        {% if checkin_hoy %}
+        <div class="mt-1 text-lg font-bold text-zinc-50">{{ checkin_hoy.horas_sueno }}<span class="text-[11px] font-normal text-zinc-500">h</span></div>
+        {% else %}
+        <span class="mt-1 block font-mono text-[10px] font-bold text-zinc-600">Sin registrar</span>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── LO QUE APRENDIÓ EL PLAN (compacta) ───── -->
+  {% with sem_items=resumen_semanal_gym|sin_campo:"tipo:seccion"|slice:":2" %}
+  {% if sem_items %}
+  <div class="mt-3 rounded-2xl bg-zinc-900 border border-zinc-800 px-4 py-3.5">
+    <div class="font-mono text-[10px] font-bold tracking-[0.1em] uppercase text-zinc-500 mb-2">Lo que aprendió el plan</div>
+    <div class="space-y-1.5">
+      {% for item in sem_items %}
+      <div class="flex items-start gap-2 text-[12px] leading-snug text-zinc-300">
+        <span class="shrink-0">{{ item.icono }}</span>
+        <span>{{ item.texto }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+  {% endwith %}
+
+  <!-- ── ACCESOS RÁPIDOS ──────────────────────── -->
+  {# Nota: navegan con scrollIntoView (no href="#chapter-...") a proposito:
+     el ancla original de cada capitulo vive UNA sola vez en .rb-chapter-nav
+     (arriba) y varios tests de contrato de contenido (tests_portada_capitulos.py)
+     fijan ese conteo en exactamente 1 por capitulo. #}
+  <div class="mt-4 rounded-2xl bg-zinc-900 border border-zinc-800 divide-y divide-zinc-800 overflow-hidden">
+    <button type="button" onclick="document.getElementById('chapter-entrenamiento').scrollIntoView({behavior:'smooth'})"
+            class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
+      <span class="flex items-center gap-3">
+        <span class="font-mono text-[10px] text-zinc-600">02</span>
+        <span class="text-[13px] font-medium">Entrenamiento</span>
+      </span>
+      <span class="text-zinc-600" aria-hidden="true">›</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-plan').scrollIntoView({behavior:'smooth'})"
+            class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
+      <span class="flex items-center gap-3">
+        <span class="font-mono text-[10px] text-zinc-600">03</span>
+        <span class="text-[13px] font-medium">Plan</span>
+      </span>
+      <span class="text-zinc-600" aria-hidden="true">›</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-memoria').scrollIntoView({behavior:'smooth'})"
+            class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
+      <span class="flex items-center gap-3">
+        <span class="font-mono text-[10px] text-zinc-600">04</span>
+        <span class="text-[13px] font-medium">Memoria</span>
+      </span>
+      <span class="text-zinc-600" aria-hidden="true">›</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-vida').scrollIntoView({behavior:'smooth'})"
+            class="flex w-full items-center justify-between px-4 py-3 bg-transparent border-0 text-left text-zinc-200 cursor-pointer">
+      <span class="flex items-center gap-3">
+        <span class="font-mono text-[10px] text-zinc-600">05</span>
+        <span class="text-[13px] font-medium">Vida</span>
+      </span>
+      <span class="text-zinc-600" aria-hidden="true">›</span>
+    </button>
+  </div>
+
   </section><!-- #chapter-ahora -->
+
+  <!-- ── BOTTOM NAV (fijo) ────────────────────── -->
+  {# data-chapter-link no se reutiliza aqui (ver nota arriba): esta barra es
+     un atajo visual fijo, no un segundo nav de scrollspy. "Ahora" queda
+     marcado activo de forma estatica, tal y como pide el encargo. #}
+  <nav aria-label="Navegación principal"
+       class="fixed inset-x-0 bottom-0 z-[90] flex items-stretch justify-around bg-zinc-950/95 backdrop-blur border-t border-zinc-800"
+       style="padding-bottom:env(safe-area-inset-bottom, 0);">
+    <button type="button" onclick="document.getElementById('chapter-ahora').scrollIntoView({behavior:'smooth'})"
+            class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-green-500">
+      <span class="text-base leading-none" aria-hidden="true">●</span>
+      <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Ahora</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-entrenamiento').scrollIntoView({behavior:'smooth'})"
+            class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
+      <span class="text-base leading-none" aria-hidden="true">▲</span>
+      <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Entreno</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-plan').scrollIntoView({behavior:'smooth'})"
+            class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
+      <span class="text-base leading-none" aria-hidden="true">◆</span>
+      <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Plan</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-memoria').scrollIntoView({behavior:'smooth'})"
+            class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
+      <span class="text-base leading-none" aria-hidden="true">■</span>
+      <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Memoria</span>
+    </button>
+    <button type="button" onclick="document.getElementById('chapter-vida').scrollIntoView({behavior:'smooth'})"
+            class="flex flex-1 flex-col items-center justify-center gap-0.5 py-2 bg-transparent border-0 cursor-pointer text-zinc-500">
+      <span class="text-base leading-none" aria-hidden="true">✦</span>
+      <span class="font-mono text-[9px] font-bold tracking-[0.04em] uppercase">Vida</span>
+    </button>
+  </nav>
 
   <section id="chapter-entrenamiento" class="rb-chapter rb-chapter--training" aria-labelledby="chapter-entrenamiento-title">
     <header class="rb-chapter-heading">
