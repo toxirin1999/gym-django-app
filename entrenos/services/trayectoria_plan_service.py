@@ -31,20 +31,47 @@ def _periodizacion_actual(cliente, fecha, limitations):
         plan = _generar_plan_helms(cliente, fecha.year) or {}
     except Exception:  # la trayectoria sigue disponible aunque el plan anual no lo esté
         limitations.append('plan_helms_no_disponible')
-        return None, None
+        return None, None, []
 
     bloques = plan.get('plan_por_bloques') or []
+    # periodizacion_completa trae los parametros reales (reps/RPE/descanso) del
+    # mismo generador que ya produce plan_por_bloques; se cruzan por nombre
+    # porque es la unica clave estable comun a ambas listas (una las resume,
+    # la otra las detalla) y evita una segunda llamada al planificador.
+    detalle_por_nombre = {
+        item.get('nombre'): item
+        for item in (plan.get('metadata') or {}).get('periodizacion_completa') or []
+    }
     primer_lunes = date(fecha.year, 1, 1)
     primer_lunes += timedelta(days=(7 - primer_lunes.weekday()) % 7)
     cursor = primer_lunes
+    fases_anio = []
+    actual = None
     for indice, bloque in enumerate(bloques, start=1):
         duracion = bloque.get('duracion')
         if not isinstance(duracion, int) or duracion < 1:
             limitations.append('duracion_fase_helms_no_determinable')
-            return None, plan
+            return actual, plan, fases_anio
         fin = cursor + timedelta(weeks=duracion) - timedelta(days=1)
-        if cursor <= fecha <= fin:
-            return {
+        detalle = detalle_por_nombre.get(bloque.get('nombre')) or {}
+        estado_fase = 'completada' if fin < fecha else ('actual' if cursor <= fecha <= fin else 'pendiente')
+        fase_info = {
+            'indice': indice,
+            'nombre': bloque.get('nombre'),
+            'objetivo': bloque.get('objetivo'),
+            'inicio': cursor,
+            'fin': fin,
+            'semanas': duracion,
+            'estado': estado_fase,
+            'semana_actual': ((fecha - cursor).days // 7) + 1 if estado_fase == 'actual' else None,
+            'reps': detalle.get('rep_range'),
+            'rpe_inicio': detalle.get('rpe_inicio'),
+            'rpe_fin': detalle.get('rpe_fin'),
+            'descanso_seg': detalle.get('descanso'),
+        }
+        fases_anio.append(fase_info)
+        if estado_fase == 'actual':
+            actual = {
                 'carril': 'Fase de periodización',
                 'fuente': 'PlanificadorHelms.generar_plan_anual',
                 'indice': indice,
@@ -52,12 +79,35 @@ def _periodizacion_actual(cliente, fecha, limitations):
                 'objetivo': bloque.get('objetivo'),
                 'inicio': cursor,
                 'fin': fin,
-                'semana_actual': ((fecha - cursor).days // 7) + 1,
+                'semana_actual': fase_info['semana_actual'],
                 'semanas': duracion,
-            }, plan
+                'reps': fase_info['reps'],
+                'rpe_inicio': fase_info['rpe_inicio'],
+                'rpe_fin': fase_info['rpe_fin'],
+                'descanso_seg': fase_info['descanso_seg'],
+            }
         cursor = fin + timedelta(days=1)
-    limitations.append('fase_helms_fuera_de_ventana')
-    return None, plan
+    if actual is None:
+        limitations.append('fase_helms_fuera_de_ventana')
+    return actual, plan, fases_anio
+
+
+def _macrociclo(fases_anio, periodizacion):
+    """Deriva 'siguiente fase' y 'fases cerradas' del mismo listado que ya
+    calculo _periodizacion_actual; no vuelve a llamar al planificador ni
+    inventa datos que ese listado no traiga."""
+    if not fases_anio:
+        return None
+    fases_cerradas = [f for f in fases_anio if f['estado'] == 'completada']
+    siguiente_fase = None
+    if periodizacion:
+        candidatas = [f for f in fases_anio if f['indice'] == periodizacion['indice'] + 1]
+        siguiente_fase = candidatas[0] if candidatas else None
+    return {
+        'fases': fases_anio,
+        'siguiente_fase': siguiente_fase,
+        'fases_cerradas': fases_cerradas,
+    }
 
 
 def _serializar_evaluacion_semanal(contrato):
@@ -132,7 +182,8 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
     fecha = fecha or timezone.localdate()
     limitations = []
     bloque_base = proyectar_bloque_gym(cliente, fecha=fecha)
-    periodizacion, _plan = _periodizacion_actual(cliente, fecha, limitations)
+    periodizacion, _plan, fases_anio = _periodizacion_actual(cliente, fecha, limitations)
+    macrociclo = _macrociclo(fases_anio, periodizacion)
 
     if not bloque_base.get('disponible'):
         limitations.append(bloque_base.get('estado_evidencia', 'bloque_no_disponible'))
@@ -142,6 +193,7 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
             'fecha_corte': fecha,
             'estado': 'unknown',
             'periodizacion': periodizacion,
+            'macrociclo': macrociclo,
             'bloque': None,
             'semana': None,
             'proximo_hito': None,
@@ -196,7 +248,9 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
             evaluacion_bloque = {
                 'id': persistida.pk,
                 'estado_resultado': persistida.estado_resultado,
+                'estado_resultado_display': persistida.get_estado_resultado_display(),
                 'estado_revision': persistida.estado_revision,
+                'estado_revision_display': persistida.get_estado_revision_display(),
             }
 
     proximo = _proximo_hito(fecha, semana, bloque, periodizacion)
@@ -209,6 +263,7 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
         'fecha_corte': fecha,
         'estado': 'available' if periodizacion else 'partial',
         'periodizacion': periodizacion,
+        'macrociclo': macrociclo,
         'bloque': bloque,
         'semana': semana,
         'evaluacion_bloque': evaluacion_bloque,

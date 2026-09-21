@@ -14,6 +14,8 @@ from entrenos.models import (
     EvaluacionSemanalGym,
     SesionProgramada,
 )
+from django.template.loader import render_to_string
+
 from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan
 
 
@@ -22,6 +24,22 @@ PLAN_HELMS = {
         {'nombre': 'Fuerza', 'objetivo': 'Elevar fuerza máxima', 'duracion': 52},
     ],
     'metadata': {'año_planificacion': 2026},
+}
+
+PLAN_HELMS_MULTIFASE = {
+    'plan_por_bloques': [
+        {'nombre': 'Fase A', 'objetivo': 'acondicionamiento', 'duracion': 8},
+        {'nombre': 'Fase B', 'objetivo': 'hipertrofia', 'duracion': 8},
+        {'nombre': 'Fase C', 'objetivo': 'fuerza', 'duracion': 8},
+    ],
+    'metadata': {
+        'año_planificacion': 2026,
+        'periodizacion_completa': [
+            {'nombre': 'Fase A', 'rep_range': '10-12', 'rpe_inicio': 6, 'rpe_fin': 7, 'descanso': 90},
+            {'nombre': 'Fase B', 'rep_range': '8-10', 'rpe_inicio': 7, 'rpe_fin': 9, 'descanso': 75},
+            {'nombre': 'Fase C', 'rep_range': '4-6', 'rpe_inicio': 7, 'rpe_fin': 9, 'descanso': 240},
+        ],
+    },
 }
 
 
@@ -189,3 +207,85 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         self.assertEqual(plantilla.count("{% url 'clientes:trayectoria_plan' %}"), 2)
         self.assertIn('Ver trayectoria del plan', plantilla)
         self.assertIn('Trayectoria del plan', plantilla)
+
+
+class TrayectoriaPlanMacrocicloTests(TestCase):
+    """Cobertura del rediseño: mini-timeline horizontal del macrociclo,
+    'siguiente fase' y 'fases cerradas', todo derivado del mismo listado
+    que ya calculaba _periodizacion_actual (ninguna llamada extra al
+    planificador ni ningun dato inventado)."""
+
+    def setUp(self):
+        self.user = User.objects.create_user('trayectoria_macro', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+
+    def _proyectar(self, fecha):
+        with patch(
+            'entrenos.services.trayectoria_plan_service._generar_plan_helms',
+            return_value=PLAN_HELMS_MULTIFASE,
+        ):
+            return proyectar_trayectoria_plan(self.cliente, fecha=fecha)
+
+    def test_macrociclo_expone_fases_del_anio_con_estado_y_parametros_reales(self):
+        resultado = self._proyectar(date(2026, 3, 15))
+        macro = resultado['macrociclo']
+        self.assertEqual(len(macro['fases']), 3)
+        estados = {f['nombre']: f['estado'] for f in macro['fases']}
+        self.assertEqual(estados, {'Fase A': 'completada', 'Fase B': 'actual', 'Fase C': 'pendiente'})
+        fase_b = next(f for f in macro['fases'] if f['nombre'] == 'Fase B')
+        self.assertEqual(fase_b['reps'], '8-10')
+        self.assertEqual(fase_b['rpe_inicio'], 7)
+        self.assertEqual(fase_b['rpe_fin'], 9)
+        self.assertEqual(fase_b['descanso_seg'], 75)
+
+    def test_macrociclo_siguiente_fase_es_la_inmediatamente_posterior(self):
+        resultado = self._proyectar(date(2026, 3, 15))
+        self.assertEqual(resultado['macrociclo']['siguiente_fase']['nombre'], 'Fase C')
+
+    def test_macrociclo_ultima_fase_no_tiene_siguiente(self):
+        resultado = self._proyectar(date(2026, 5, 1))  # dentro de Fase C
+        self.assertIsNone(resultado['macrociclo']['siguiente_fase'])
+
+    def test_macrociclo_fases_cerradas_son_solo_las_ya_finalizadas(self):
+        resultado = self._proyectar(date(2026, 3, 15))
+        nombres_cerradas = [f['nombre'] for f in resultado['macrociclo']['fases_cerradas']]
+        self.assertEqual(nombres_cerradas, ['Fase A'])
+
+    def test_periodizacion_actual_incluye_parametros_reales_de_la_fase(self):
+        resultado = self._proyectar(date(2026, 3, 15))
+        self.assertEqual(resultado['periodizacion']['reps'], '8-10')
+        self.assertEqual(resultado['periodizacion']['rpe_inicio'], 7)
+        self.assertEqual(resultado['periodizacion']['rpe_fin'], 9)
+
+    def test_sin_plan_helms_disponible_macrociclo_es_none_sin_romper(self):
+        with patch(
+            'entrenos.services.trayectoria_plan_service._generar_plan_helms',
+            side_effect=Exception('boom'),
+        ):
+            resultado = proyectar_trayectoria_plan(self.cliente, fecha=date(2026, 3, 15))
+        self.assertIsNone(resultado['macrociclo'])
+        self.assertIn('plan_helms_no_disponible', resultado['limitations'])
+
+
+class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
+    """El rediseño retira el lenguaje de depuracion interna de la plantilla;
+    estas pruebas fijan ese contrato para que no vuelva a filtrarse."""
+
+    def test_semana_sin_materializar_no_expone_lenguaje_de_backend(self):
+        resultado = self._proyectar(fecha=date(2026, 8, 31))  # semana 2 del bloque, nunca creada
+        self.assertIn('semana_no_materializada', resultado['limitations'])
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente, 'trayectoria': resultado,
+        })
+        self.assertNotIn('Aún no materializada', html)
+        self.assertNotIn('La trayectoria no anticipa ni crea sesiones', html)
+        self.assertIn('Pendiente de iniciar', html)
+        self.assertIn('Semana 36', html)
+
+    def test_plantilla_no_incluye_disclaimer_ni_panel_de_limitaciones_crudo(self):
+        resultado = self._proyectar()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente, 'trayectoria': resultado,
+        })
+        self.assertNotIn('Una lectura vertical desde la periodización anual', html)
+        self.assertNotIn('Qué no puede afirmar esta lectura', html)
