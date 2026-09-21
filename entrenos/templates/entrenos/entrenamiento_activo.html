@@ -318,7 +318,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .mr-subtitle{font-size:13px;color:var(--td);font-weight:400;}
 /* ── Anillos actividad ── */
 .mr-rings-section{display:flex;flex-direction:column;align-items:center;margin-bottom:20px;}
-.mr-rings-wrap{position:relative;width:160px;height:160px;}
+.mr-rings-wrap{position:relative;width:120px;height:120px;}
 .mr-rings-svg{display:block;}
 .ring-track{transition:stroke-dashoffset 1s cubic-bezier(.4,0,.2,1);}
 .mr-rings-labels{
@@ -339,7 +339,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 .modal-ej-nombre{flex:1;color:#fff;font-weight:600;}
 .modal-ej-stats{text-align:right;color:var(--td);font-size:12px;font-weight:400;}
 /* ── Botones ── */
-.mr-actions{margin-top:auto;padding-top:20px;display:flex;flex-direction:column;gap:10px;}
+.mr-actions{
+  position:sticky;bottom:0;margin-top:auto;
+  padding:14px 0 4px;display:flex;flex-direction:column;gap:10px;
+  background:#000;border-top:1px solid rgba(255,255,255,0.08);
+}
 .mbtn-ok{
   width:100%;height:56px;font-size:16px;font-weight:700;
   background:var(--green);border:none;color:#000;
@@ -563,25 +567,25 @@ input{background:transparent!important;border:none!important;outline:none!import
 .msg-moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:0.5px;}
 
 /* ── MODAL MEJORADO ── */
-.modal-cumplimiento{padding:0 16px 12px;}
-.cumpl-label{font-family:var(--fm);font-size:9px;color:var(--td);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:6px;}
-.cumpl-bar-wrap{background:rgba(200,170,110,0.08);border:1px solid var(--bd);height:8px;border-radius:2px;overflow:hidden;}
-.cumpl-bar-fill{height:100%;background:linear-gradient(90deg,var(--gd),var(--g));border-radius:2px;transition:width .8s ease;width:0%;}
-.cumpl-pct{font-family:var(--fm);font-size:11px;color:var(--g);font-weight:700;text-align:right;margin-top:4px;}
+.modal-resumen-secondary{
+  margin:0 16px 12px;border:1px solid var(--bdm);border-radius:12px;overflow:hidden;
+}
 .modal-highlight{
-  margin:0 16px 12px;padding:10px 14px;
-  background:rgba(200,170,110,0.06);border:1px solid var(--bdm);
+  padding:9px 14px;
+  background:rgba(200,170,110,0.06);
   display:flex;justify-content:space-between;align-items:center;
+  border-bottom:1px solid var(--bdm);
 }
 .mh-label{font-family:var(--fm);font-size:9px;color:var(--td);letter-spacing:1px;text-transform:uppercase;}
 .mh-val{font-family:var(--fm);font-size:13px;font-weight:700;color:var(--g);}
 .modal-moti-banner{
-  margin:0 16px 12px;padding:10px 14px;text-align:center;
-  background:rgba(74,222,128,0.05);border:1px solid rgba(74,222,128,0.2);
+  padding:8px 14px;text-align:center;
+  background:rgba(74,222,128,0.05);
+  display:flex;align-items:center;gap:8px;justify-content:center;
 }
-.moti-emoji{font-size:1.5rem;display:block;margin-bottom:4px;}
-.moti-text{font-family:var(--fu);font-size:13px;font-weight:600;color:var(--gb);}
-.moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);margin-top:2px;}
+.moti-emoji{font-size:1.15rem;display:block;}
+.moti-text{font-family:var(--fu);font-size:12px;font-weight:600;color:var(--gb);}
+.moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);}
 
 /* ── BOTÓN MOLESTIA ── */
 .btn-molestia{
@@ -1931,7 +1935,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- Anillos de actividad -->
     <div class="mr-rings-section">
       <div class="mr-rings-wrap">
-        <svg class="mr-rings-svg" viewBox="0 0 200 200" width="160" height="160">
+        <svg class="mr-rings-svg" viewBox="0 0 200 200" width="120" height="120">
           <!-- Fondos -->
           <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
           <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
@@ -1993,22 +1997,21 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
 
     <!-- Datos adicionales (cumplimiento, mejor ejercicio, motivacional, desglose) -->
-    <div class="modal-cumplimiento">
-      <div class="cumpl-label">Cumplimiento del plan</div>
-      <div class="cumpl-bar-wrap"><div class="cumpl-bar-fill" id="modal-cumpl-fill"></div></div>
-      <div class="cumpl-pct" id="modal-cumpl-pct">0%</div>
-    </div>
-    <div class="modal-highlight" id="modal-mejor-ej-wrap" style="display:none;">
-      <div>
-        <div class="mh-label">Mayor volumen</div>
-        <div id="modal-mejor-ej-nombre" style="font-family:var(--fu);font-size:12px;color:var(--gb);margin-top:2px;"></div>
+    <div class="modal-resumen-secondary">
+      <div class="modal-highlight" id="modal-mejor-ej-wrap" style="display:none;">
+        <div>
+          <div class="mh-label">Mayor volumen</div>
+          <div id="modal-mejor-ej-nombre" style="font-family:var(--fu);font-size:12px;color:var(--gb);margin-top:2px;"></div>
+        </div>
+        <div class="mh-val" id="modal-mejor-ej-vol">0 kg</div>
       </div>
-      <div class="mh-val" id="modal-mejor-ej-vol">0 kg</div>
-    </div>
-    <div class="modal-moti-banner" id="modal-moti-banner">
-      <span class="moti-emoji" id="modal-moti-emoji">💪</span>
-      <div class="moti-text" id="modal-moti-text"></div>
-      <div class="moti-sub" id="modal-moti-sub"></div>
+      <div class="modal-moti-banner" id="modal-moti-banner">
+        <span class="moti-emoji" id="modal-moti-emoji">💪</span>
+        <div>
+          <div class="moti-text" id="modal-moti-text"></div>
+          <div class="moti-sub" id="modal-moti-sub"></div>
+        </div>
+      </div>
     </div>
     <!-- Volumen oculto (usado internamente) -->
     <span id="modal-volumen" style="display:none">0</span>
@@ -2020,11 +2023,11 @@ document.addEventListener('DOMContentLoaded', () => {
     <!-- ── Energía pre-sesión ── -->
     <div class="mr-energia-wrap" style="margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
       <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegaste al entreno?</div>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
         {% for n in "1234567890" %}{% with val=forloop.counter %}
         <button type="button" class="btn-energia-pre" data-val="{{ val }}"
                 onclick="selEnergiaPreSesion({{ val }})"
-                style="flex:1;min-width:28px;padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
+                style="padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
           {{ val }}
         </button>
         {% endwith %}{% endfor %}
