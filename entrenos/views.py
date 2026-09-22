@@ -3688,6 +3688,19 @@ def vista_entrenamiento_activo(request, cliente_id):
         if ejercicios_planificados is None:
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
+        # Un ejercicio sin ninguna serie no forma parte del plan ejecutable:
+        # no debe recibir form_id ni viajar al template como una tarjeta vacía.
+        def _tiene_series_planificadas(ejercicio):
+            try:
+                return int(ejercicio.get('series', 0) or 0) > 0
+            except (TypeError, ValueError):
+                return False
+
+        ejercicios_planificados = [
+            ejercicio for ejercicio in (ejercicios_planificados or [])
+            if _tiene_series_planificadas(ejercicio)
+        ]
+
         from entrenos.services.retorno_ausencia_service import (
             es_primera_sesion_tras_ausencia, limitar_series_retorno,
         )

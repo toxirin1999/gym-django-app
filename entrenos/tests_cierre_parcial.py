@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+import json
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -110,6 +111,33 @@ class CierreParcialTests(TestCase):
         cerrar_sesion_programada(sp.pk, entreno)
         sp.refresh_from_db()
         self.assertEqual(sp.estado, SesionProgramada.ESTADO_PARCIAL)
+
+    def test_entrenamiento_activo_no_renderiza_ejercicios_con_cero_series(self):
+        url = reverse('entrenos:entrenamiento_activo', args=[self.cliente.pk])
+        ejercicios = [
+            {
+                'nombre': 'Sentadilla válida', 'series': 3, 'repeticiones': 5,
+                'peso_recomendado_kg': 60, 'tipo_ejercicio': 'compuesto_principal',
+                '_autoridad_gym_materializada': True,
+            },
+            {
+                'nombre': 'Curl fantasma', 'series': 0, 'repeticiones': 10,
+                'peso_recomendado_kg': 20, 'tipo_ejercicio': 'accesorio',
+                '_autoridad_gym_materializada': True,
+            },
+        ]
+
+        response = self.client.get(url, {
+            'fecha': date.today().isoformat(),
+            'rutina_nombre': self.rutina.nombre,
+            'ejercicios': json.dumps(ejercicios),
+        })
+
+        self.assertEqual(response.status_code, 200)
+        planificados = response.context['ejercicios_planificados']
+        self.assertEqual([ejercicio['nombre'] for ejercicio in planificados], ['Sentadilla válida'])
+        self.assertContains(response, 'Sentadilla válida')
+        self.assertNotContains(response, 'Curl fantasma')
 
 
 class EnergiaActualTests(TestCase):
