@@ -124,9 +124,14 @@ def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | N
     ).exists():
         return None
 
+    # Antes se descartaba mejor['texto'] (la observación concreta por tipo de
+    # decisión, ya construida en detectar_hipotesis_abiertas/_OBSERVACIONES) y
+    # se generaba un texto genérico ("esta señal", "esta variable") que no
+    # decía a qué se refería. Ahora se reutiliza esa observación real: ya
+    # nombra el patrón detectado (posponer/recuperar/entrenar/versión
+    # reducida) con lenguaje tentativo, cumpliendo el contrato del módulo.
     texto = (
-        f"Esta señal se ha repetido {n} veces.\n\n"
-        f"Puede que el plan necesite observar mejor esta variable antes de decidir. "
+        f"{mejor['texto']}\n\n"
         f"¿Quieres probar durante {_DURACION_EXPERIMENTO} días que el plan "
         f"vigile esta señal con más atención antes de proponer entrenar?"
     )

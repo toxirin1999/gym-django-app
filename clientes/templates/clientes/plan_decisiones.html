@@ -1218,7 +1218,7 @@
     </div>
     {% endif %}
 
-    {% if sugerencia_hipotesis %}
+    {% if sugerencia_hipotesis and sugerencia_hipotesis.patron|cut:"hipotesis_senal_" and sugerencia_hipotesis.texto %}
     <article class="dc-card is-experiment-priority" aria-labelledby="propuesta-experimento-titulo">
       <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
       <p class="dc-card-text" id="propuesta-experimento-titulo">{{ sugerencia_hipotesis.texto }}</p>
