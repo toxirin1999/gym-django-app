@@ -7,7 +7,8 @@ from django.test import TestCase
 from django.utils import timezone
 
 from clientes.models import Cliente
-from entrenos.models import CicloDeload
+from entrenos.models import CicloDeload, ContratoBloqueGym, EstrategiaSemanalGym
+from hyrox.models import ContratoCampanaHyrox, HyroxObjective
 from entrenos.services.deload_cycle_service import (
     aplicar_overlay_gym,
     aplicar_overlay_hyrox,
@@ -25,6 +26,35 @@ class CicloDeloadServiceTests(TestCase):
             defaults={'nombre': 'Deload', 'email': 'd@example.com', 'telefono': '1'},
         )
         self.hoy = timezone.localdate()
+
+    def _activar_campana_hyrox(self, objetivo=None):
+        objetivo = objetivo or HyroxObjective.objects.create(
+            cliente=self.cliente, fecha_evento=self.hoy + timedelta(days=90),
+        )
+        estrategia = EstrategiaSemanalGym.objects.create(
+            cliente=self.cliente, version=1, objetivo_sesiones=5,
+            minimo_valido=3, vigente_desde=self.hoy,
+        )
+        bloque = ContratoBloqueGym.objects.create(
+            cliente=self.cliente, version=1, estado='activo',
+            semana_inicio=self.hoy, semanas_previstas=16,
+            semana_fin_prevista=self.hoy + timedelta(days=111),
+            estrategia=estrategia, objetivo_sesiones=5, minimo_valido=3,
+            objetivo_principal='hyrox', objetivos_secundarios=[],
+            limites_snapshot={}, motor_nombre='test', motor_version='1',
+            fingerprint='deload-bloque'.ljust(64, '0'),
+        )
+        ContratoCampanaHyrox.objects.create(
+            cliente=self.cliente, version=1, estado='activa', objetivo=objetivo,
+            bloque_gym=bloque,
+            objetivo_snapshot={
+                'id': objetivo.pk,
+                'fecha_evento': str(objetivo.fecha_evento),
+            },
+            bloque_gym_snapshot={'estado': 'activo'}, limites_snapshot={},
+            fingerprint='deload-campana'.ljust(64, '0'),
+        )
+        return objetivo
 
     def test_apertura_es_idempotente_y_gym_define_ventana_de_7_dias(self):
         primero, creado = abrir_ciclo_deload(
@@ -88,11 +118,9 @@ class CicloDeloadServiceTests(TestCase):
         self.assertEqual(aplicar_overlay_gym(self.cliente, [{'series': 4}], self.hoy), [{'series': 4}])
 
     def test_detector_hyrox_abre_ciclo_sin_mutar_sesion_futura(self):
-        from hyrox.models import HyroxObjective, HyroxSession
+        from hyrox.models import HyroxSession
         from hyrox.training_engine import DeloadAutoTrigger, HyroxLoadManager
-        objetivo = HyroxObjective.objects.create(
-            cliente=self.cliente, fecha_evento=self.hoy + timedelta(days=90)
-        )
+        objetivo = self._activar_campana_hyrox()
         completada = HyroxSession.objects.create(
             objective=objetivo, fecha=self.hoy, estado='completado', titulo='Carga'
         )
@@ -136,6 +164,7 @@ class CicloDeloadServiceTests(TestCase):
 
     def test_helper_hyrox_obtiene_ciclo_y_respeta_lesion_y_descanso(self):
         from hyrox.views import _crear_hyrox_decision
+        self._activar_campana_hyrox()
         abrir_ciclo_deload(self.cliente, CicloDeload.CAUSA_TSB_HYROX, hoy=self.hoy)
         base = {'current_score': 80, 'resumen_semanal': {'tsb': 0, 'acwr': 1}}
         self.assertEqual(_crear_hyrox_decision(**base, cliente=self.cliente)['causa'], 'deload_seguridad')

@@ -42,11 +42,11 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
             fecha_realizado=fecha_realizado,
         )
 
-    def _pendiente(self, fecha):
+    def _pendiente(self, fecha, nombre_sesion=None):
         return SesionProgramada.objects.create(
             cliente=self.cliente,
             fecha_prevista=fecha,
-            nombre_sesion="",
+            nombre_sesion=nombre_sesion or "",
             estado=SesionProgramada.ESTADO_PENDIENTE,
         )
 
@@ -80,8 +80,8 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
         self.assertFalse(_fecha_completada(self.cliente, self.fecha_real))
 
     def test_batch_entreno_usa_fecha_ejecucion_y_no_fecha_planificada(self):
-        planificada = self._pendiente(self.fecha_plan)
-        efectiva = self._pendiente(self.fecha_real)
+        planificada = self._pendiente(self.fecha_plan, nombre_sesion='Otra rutina')
+        efectiva = self._pendiente(self.fecha_real, nombre_sesion=self.rutina.nombre)
         self._entreno(fecha_ejecucion=self.fecha_real)
 
         _marcar_completadas(self.cliente, self.hoy)
@@ -91,7 +91,7 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
         self.assertEqual(planificada.estado, SesionProgramada.ESTADO_PENDIENTE)
         self.assertEqual(efectiva.estado, SesionProgramada.ESTADO_COMPLETADA)
 
-    def test_batch_actividad_usa_fecha_realizado_y_no_fecha_planificada(self):
+    def test_batch_actividad_standalone_no_cierra_sin_identidad_causal(self):
         planificada = self._pendiente(self.fecha_plan)
         efectiva = self._pendiente(self.fecha_real)
         self._actividad(fecha_realizado=self.fecha_real)
@@ -101,10 +101,10 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
         planificada.refresh_from_db()
         efectiva.refresh_from_db()
         self.assertEqual(planificada.estado, SesionProgramada.ESTADO_PENDIENTE)
-        self.assertEqual(efectiva.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(efectiva.estado, SesionProgramada.ESTADO_PENDIENTE)
 
     def test_batch_sin_fecha_efectiva_conserva_fallback_legacy(self):
-        pendiente = self._pendiente(self.fecha_plan)
+        pendiente = self._pendiente(self.fecha_plan, nombre_sesion=self.rutina.nombre)
         self._entreno(fecha_ejecucion=None)
 
         _marcar_completadas(self.cliente, self.hoy)
@@ -113,7 +113,7 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
         self.assertEqual(pendiente.estado, SesionProgramada.ESTADO_COMPLETADA)
 
     def test_batch_entreno_y_hub_mismo_esfuerzo_tienen_un_unico_efecto(self):
-        pendiente = self._pendiente(self.fecha_real)
+        pendiente = self._pendiente(self.fecha_real, nombre_sesion=self.rutina.nombre)
         entreno = self._entreno(fecha_ejecucion=self.fecha_real)
         hub = entreno.hub_actividad
         hub.fecha = self.fecha_plan

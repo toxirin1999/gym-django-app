@@ -92,7 +92,7 @@ class GuardadoDistanciaTests(TestCase):
                 "fecha": "2026-09-15", "rutina_nombre": "Carry",
                 "ej1_nombre": "Farmer Carry", "ej1_tipo_progresion": "progresion_distancia",
                 "ej1_tipo_carga": "por_mano", "ej1_peso_1": "36", "ej1_reps_1": "47",
-                "ej1_completado_1": "1",
+                "ej1_rpe_1": "8", "ej1_completado_1": "1",
             },
         )
         self.assertEqual(response.status_code, 302)

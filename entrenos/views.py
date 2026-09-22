@@ -4071,7 +4071,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             _base_carga = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
             if _base_carga:
                 ejercicio.setdefault('tipo_carga_default', _base_carga.tipo_carga_default)
-                ejercicio.setdefault('incremento_kg', float(_base_carga.incremento_kg))
+                ejercicio['incremento_kg'] = float(_base_carga.incremento_fisico_kg)
             from entrenos.services.peso_semantica_service import normalizar_semantica_carga
             ejercicio.update(normalizar_semantica_carga(ejercicio))
 
@@ -4444,6 +4444,21 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 status=400,
             )
         _ids_omitidos = [fid for fid in _ids_planificados if fid not in _ids_con_serie]
+        for fid in _ids_con_serie:
+            for i in range(1, 11):
+                if not request.POST.get(f'{fid}_completado_{i}'):
+                    continue
+                rpe_real = request.POST.get(f'{fid}_rpe_{i}', '').strip()
+                if not rpe_real:
+                    raise ValueError(
+                        f'El RPE real es obligatorio para cada serie completada (serie {i}).'
+                    )
+                try:
+                    rpe_num = float(rpe_real.replace(',', '.'))
+                except ValueError as exc:
+                    raise ValueError(f'RPE real inválido en la serie {i}.') from exc
+                if not 1 <= rpe_num <= 10:
+                    raise ValueError(f'El RPE real de la serie {i} debe estar entre 1 y 10.')
         _hay_series_pendientes = any(
             sum(1 for i in range(1, 11) if f'{fid}_reps_{i}' in request.POST)
             > sum(1 for i in range(1, 11) if bool(request.POST.get(f'{fid}_completado_{i}')))

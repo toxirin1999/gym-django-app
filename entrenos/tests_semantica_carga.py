@@ -74,6 +74,7 @@ class SnapshotSemanticaCargaTests(TestCase):
                 "ej1_multiplicador_carga": "99",
                 "ej1_peso_1": "12.5",
                 "ej1_reps_1": "10",
+                "ej1_rpe_1": "8",
                 "ej1_completado_1": "1",
             },
         )

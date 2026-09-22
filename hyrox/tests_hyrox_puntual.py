@@ -4,6 +4,7 @@ import uuid
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.utils import timezone
 
 from entrenos.models import SesionProgramada
 from hyrox.models import HyroxObjective, SolicitudHyroxPuntual
@@ -60,7 +61,7 @@ class SolicitudHyroxPuntualModelTests(TestCase):
 
 class AutorizarSolicitudExtraTests(TestCase):
     def setUp(self):
-        self.hoy = datetime.date(2026, 8, 26)
+        self.hoy = timezone.localdate()
         self.user = User.objects.create_user('puntual-servicio')
         self.cliente = self.user.cliente_perfil
         self.objetivo = HyroxObjective.objects.create(

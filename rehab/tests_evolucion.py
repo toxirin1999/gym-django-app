@@ -187,7 +187,7 @@ class EvolucionViewTests(EvolucionRehabTestBase):
         response = self.client.get(reverse('rehab:evolucion'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Iniciar un episodio de rehabilitación')
+        self.assertContains(response, 'Iniciar episodio')
 
     def test_con_episodio_pero_sin_datos_muestra_mensaje(self):
         self.episodio.estado = 'ALTA'

@@ -294,10 +294,10 @@ class HoyViewJerarquiaBotonesSinDatosTests(DashboardRehabTestBase):
 
         registrar_dolor_url = reverse('rehab:registrar_dolor', args=[self.episodio.id])
         self.assertIn(
-            f'<a class="rehab-accion-primaria" href="{registrar_dolor_url}">Registrar dolor de hoy</a>',
+            f'<a class="rehab-btn-primary" href="{registrar_dolor_url}">Registrar dolor de hoy</a>',
             contenido,
         )
-        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 1)
+        self.assertEqual(contenido.count('<a class="rehab-btn-primary"'), 1)
 
 
 class HoyViewJerarquiaBotonesPuedeEntrenarTests(DashboardRehabTestBase):
@@ -326,15 +326,15 @@ class HoyViewJerarquiaBotonesPuedeEntrenarTests(DashboardRehabTestBase):
         registrar_dolor_url = reverse('rehab:registrar_dolor', args=[self.episodio.id])
 
         self.assertIn(
-            f'<a class="rehab-accion-primaria" href="{registrar_sesion_url}">Registrar sesión</a>',
+            f'<a class="rehab-btn-primary" href="{registrar_sesion_url}">Registrar sesión</a>',
             contenido,
         )
         self.assertIn(
-            f'<a class="rehab-accion-secundaria" href="{registrar_dolor_url}">Editar dolor de hoy</a>',
+            f'<a class="rehab-btn-secondary" href="{registrar_dolor_url}">Editar dolor de hoy</a>',
             contenido,
         )
         self.assertNotIn('Registrar dolor de hoy', contenido)
-        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 1)
+        self.assertEqual(contenido.count('<a class="rehab-btn-primary"'), 1)
 
 
 class HoyViewJerarquiaBotonesPararTests(DashboardRehabTestBase):
@@ -362,7 +362,7 @@ class HoyViewJerarquiaBotonesPararTests(DashboardRehabTestBase):
         self.assertIn('PARAR', contenido)
         self.assertIn('Editar dolor de hoy', contenido)
         self.assertNotIn('Registrar dolor de hoy', contenido)
-        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
+        self.assertEqual(contenido.count('<a class="rehab-btn-primary"'), 0)
         self.assertNotIn('<h2>Progreso de fase</h2>', contenido)
         self.assertIn('sesiones necesarias en esta fase', contenido)
         self.assertIn('<p class="rehab-progreso-secundario">', contenido)
@@ -408,7 +408,7 @@ class HoyViewJerarquiaBotonesDescansoProgramadoTests(DashboardRehabTestBase):
         self.assertIn('DESCANSO_PROGRAMADO', contenido)
         self.assertIn('Editar dolor de hoy', contenido)
         self.assertNotIn('Registrar dolor de hoy', contenido)
-        self.assertEqual(contenido.count('<a class="rehab-accion-primaria"'), 0)
-        self.assertIn('<h2>Progreso de fase</h2>', contenido)
+        self.assertEqual(contenido.count('<a class="rehab-btn-primary"'), 0)
+        self.assertIn('<div class="section-index" style="margin-top: 1.6rem;">Progreso de fase</div>', contenido)
         self.assertIn('sesiones necesarias en esta fase', contenido)
         self.assertNotIn('<p class="rehab-progreso-secundario">', contenido)

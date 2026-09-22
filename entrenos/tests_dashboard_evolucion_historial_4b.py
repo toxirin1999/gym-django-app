@@ -47,6 +47,19 @@ class SourcePriorityTest(DashboardEvolucionHistorialBase):
         entreno.volumen_total_kg = 9850
         entreno.save(update_fields=['volumen_total_kg'])
 
+        # Este test necesita deliberadamente el snapshot legado desincronizado;
+        # ya no se crea como efecto lateral de EntrenoRealizado.post_save.
+        SesionEntrenamiento.objects.create(
+            entreno=entreno,
+            duracion_minutos=0,
+            series_completadas=0,
+            series_totales=0,
+            ejercicios_completados=0,
+            ejercicios_totales=0,
+            volumen_sesion=0,
+            rpe_medio=None,
+        )
+
         sesion_detalle = SesionEntrenamiento.objects.get(entreno=entreno)
         self.assertEqual(sesion_detalle.volumen_sesion, 0)
 

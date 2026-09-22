@@ -38,7 +38,7 @@ class CierreParcialTests(TestCase):
         data = {
             'fecha': date.today().isoformat(), 'rutina_nombre': self.rutina.nombre,
             'ej1_nombre': 'Sentadilla', 'ej1_tipo_progresion': 'peso_reps',
-            'ej1_peso_1': '60', 'ej1_reps_1': '5', 'ej1_completado_1': '1',
+            'ej1_peso_1': '60', 'ej1_reps_1': '5', 'ej1_rpe_1': '8', 'ej1_completado_1': '1',
             'ej2_nombre': 'Curl femoral', 'ej2_tipo_progresion': 'peso_reps',
             'ej2_peso_1': '30', 'ej2_reps_1': '10',
         }

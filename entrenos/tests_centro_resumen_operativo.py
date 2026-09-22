@@ -61,13 +61,25 @@ class ResumenOperativoCentroTests(TestCase):
 
         self.assertEqual(resumen['bloque'], {'estado': 'activo', 'semana_actual': 1, 'semanas_total': 4})
         self.assertEqual(resumen['semana'], {
-            'estado': 'materializada', 'completadas': 2, 'objetivo': 5, 'minimo': 3,
+            'estado': 'materializada',
+            'completadas': 2,
+            'sesiones_completadas': 2,
+            'sesiones_parciales': 0,
+            'sesiones_realizadas': 2,
+            'objetivo': 5,
+            'minimo': 3,
         })
 
     def test_sin_contrato_no_infiere_progreso(self):
         resumen = self.construir()
         self.assertEqual(resumen['semana'], {
-            'estado': 'desconocido', 'completadas': None, 'objetivo': None, 'minimo': None,
+            'estado': 'desconocido',
+            'completadas': None,
+            'sesiones_completadas': None,
+            'sesiones_parciales': None,
+            'sesiones_realizadas': None,
+            'objetivo': None,
+            'minimo': None,
         })
 
     def test_proxima_sesion_usa_fecha_efectiva_y_no_mezcla_fechas(self):
@@ -112,4 +124,3 @@ class ResumenOperativoCentroTests(TestCase):
         self.assertEqual(set(resumen), {'bloque', 'semana', 'proxima_sesion', 'carga'})
         self.assertNotIn('fingerprint', str(resumen))
         self.assertNotIn('limites_snapshot', str(resumen))
-

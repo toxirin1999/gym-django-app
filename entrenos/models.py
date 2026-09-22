@@ -1368,8 +1368,11 @@ class GymDecisionLog(models.Model):
             raw = peso_anterior * (1 - float(self.valor_cambio) / 100)
         else:
             return None
-        # Redondear al múltiplo de 2.5 kg más cercano (disco estándar)
-        candidato = round(round(raw / 2.5) * 2.5, 1)
+        from rutinas.models import EjercicioBase
+        base = EjercicioBase.objects.filter(nombre__iexact=self.ejercicio).first()
+        incremento = float(base.incremento_fisico_kg) if base else 2.5
+        # La sugerencia debe corresponder a una carga físicamente montable.
+        candidato = round(round(raw / incremento) * incremento, 1)
         # Con pesos bajos, un incremento/reducción porcentual pequeño puede
         # redondear de vuelta al mismo valor (p.ej. 20kg +5% = 21kg -> 20kg).
         # Eso convierte una decisión activa en un no-op silencioso — más
@@ -1377,9 +1380,9 @@ class GymDecisionLog(models.Model):
         # seguridad. Forzar el siguiente múltiplo de 2.5kg en la dirección
         # esperada garantiza que la decisión siempre se traduzca en cambio.
         if self.accion == 'subir_peso' and candidato <= peso_anterior:
-            return round(peso_anterior + 2.5, 1)
+            return round(peso_anterior + incremento, 1)
         if self.accion in ('bajar_peso', 'deload') and candidato >= peso_anterior:
-            return round(peso_anterior - 2.5, 1)
+            return round(max(0, peso_anterior - incremento), 1)
         return candidato
 
     @property

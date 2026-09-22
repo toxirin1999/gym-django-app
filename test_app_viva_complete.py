@@ -13,13 +13,20 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from datetime import date, timedelta
 import json
+import uuid
+from unittest.mock import patch
 
 from diario.models import ProsocheMes, ProsocheDiario
 from diario.services.estado_diario import calcular_estado_diario_hoy
 from hyrox.models import HyroxObjective, HyroxSession, HyroxActivity, HyroxReadinessLog
 from joi.services import determinar_estado_habitacion_joi
-from entrenos.models import EntrenoRealizado, SesionEntrenamiento
-from hyrox.models import UserInjury
+from entrenos.models import (
+    ContratoBloqueGym,
+    EntrenoRealizado,
+    EstrategiaSemanalGym,
+    SesionEntrenamiento,
+)
+from hyrox.models import ContratoCampanaHyrox, UserInjury
 
 
 class TestAppVivaHyrox(TestCase):
@@ -158,9 +165,14 @@ class TestAppVivaDiarioCierre(TestCase):
             fecha=self.hoy,
             persona_quiero_ser='Ser paciente',
             gratitud_1='Por el café',
+            apertura_confirmada_en=timezone.now(),
         )
 
-    def test_cierre_ajax_returns_json(self):
+    @patch(
+        'diario.services.cierre_service.ejecutar_enriquecimiento_cierre',
+        return_value={'respuesta_joi': 'Cierre integrado.'},
+    )
+    def test_cierre_ajax_returns_json(self, _enriquecer):
         """Cierre POST con X-Requested-With retorna JSON y JOI se puede refrescar"""
         from django.urls import reverse
         self.client.login(username='testuser', password='pass123')
@@ -170,7 +182,10 @@ class TestAppVivaDiarioCierre(TestCase):
             data={
                 'reflexion_libre': 'Hoy fue un día bueno. Aprendí sobre paciencia.',
                 'friccion_no': '2',
+                'estado_animo_noche': '4',
                 'habitos_completados': '[]',
+                'idempotency_key': str(uuid.uuid4()),
+                'expected_version': '0',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )
@@ -252,6 +267,25 @@ class TestAppVivaJOIReactivity(TestCase):
             estado='activo',
             fecha_evento=self.hoy + timedelta(days=30),
         )
+        estrategia = EstrategiaSemanalGym.objects.create(
+            cliente=self.cliente, version=1, objetivo_sesiones=4,
+            minimo_valido=3, vigente_desde=self.hoy,
+        )
+        bloque = ContratoBloqueGym.objects.create(
+            cliente=self.cliente, version=1, estado='activo',
+            semana_inicio=self.hoy, semanas_previstas=8,
+            semana_fin_prevista=self.hoy + timedelta(days=55),
+            estrategia=estrategia, objetivo_sesiones=4, minimo_valido=3,
+            objetivo_principal='hyrox', objetivos_secundarios=[], limites_snapshot={},
+            motor_nombre='test', motor_version='1', fingerprint='app-viva-bloque'.ljust(64, '0'),
+        )
+        ContratoCampanaHyrox.objects.create(
+            cliente=self.cliente, version=1, estado='activa', objetivo=objetivo,
+            bloque_gym=bloque,
+            objetivo_snapshot={'id': objetivo.pk, 'fecha_evento': str(objetivo.fecha_evento)},
+            bloque_gym_snapshot={'id': bloque.pk, 'estado': 'activo'},
+            limites_snapshot={}, fingerprint='app-viva-campana'.ljust(64, '0'),
+        )
 
         # Readiness bajo (<40) → PulsoService retorna PROTEGIENDO → JOI va a PROTEGIENDO
         HyroxReadinessLog.objects.create(objective=objetivo, score=30)
@@ -295,7 +329,11 @@ class TestAppVivaCompleteCycle(TestCase):
             año=self.hoy.year,
         )
 
-    def test_complete_diario_cycle_ajax(self):
+    @patch(
+        'diario.services.cierre_service.ejecutar_enriquecimiento_cierre',
+        return_value={'respuesta_joi': 'Cierre integrado.'},
+    )
+    def test_complete_diario_cycle_ajax(self, _enriquecer):
         """
         Ciclo completo en un día:
         1. Apertura AJAX → estado 'manana_hecha'
@@ -332,7 +370,10 @@ class TestAppVivaCompleteCycle(TestCase):
             data={
                 'reflexion_libre': 'Excelente día de aprendizaje.',
                 'friccion_no': '1',
+                'estado_animo_noche': '4',
                 'habitos_completados': '[]',
+                'idempotency_key': str(uuid.uuid4()),
+                'expected_version': '0',
             },
             HTTP_X_REQUESTED_WITH='XMLHttpRequest',
         )

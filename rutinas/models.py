@@ -94,6 +94,22 @@ class EjercicioBase(models.Model):
     def usa_distancia(self):
         return self.tipo_progresion == 'progresion_distancia'
 
+    @property
+    def incremento_fisico_kg(self):
+        """Salto montable de carga: máquinas 5 kg; barras/discos 2 kg."""
+        descriptor = f'{self.nombre} {self.equipo or ""}'.lower()
+        tokens_maquina = ('máquina', 'maquina', 'polea', 'cable', 'pec deck')
+        tokens_discos = (
+            'barra', 'barbell', 'disco', 'press banca', 'sentadilla',
+            'peso muerto', 'deadlift', 'squat', 'bench press', 'multipower',
+            'smith', 'prensa', 'leg press', 'hack squat',
+        )
+        if any(token in descriptor for token in tokens_discos):
+            return 2
+        if any(token in descriptor for token in tokens_maquina):
+            return 5
+        return self.incremento_kg
+
 
 class Rutina(models.Model):
     programa = models.ForeignKey('Programa', on_delete=models.CASCADE, null=True, blank=True)

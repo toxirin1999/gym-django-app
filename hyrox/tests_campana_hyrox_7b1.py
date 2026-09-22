@@ -144,9 +144,10 @@ class CampanaHyrox7B1Tests(TestCase):
         self.assertEqual(HyroxSession.objects.filter(objective=objetivo_b).count(), 0)
 
     def test_auto_adjust_no_muta_sin_campana_y_activa_si(self):
+        fecha_estable = datetime.date(2026, 9, 16)  # Miércoles: evita depender del día de ejecución.
         atrasada = HyroxSession.objects.create(
             objective=self.objetivo,
-            fecha=self.hoy - datetime.timedelta(days=1),
+            fecha=fecha_estable - datetime.timedelta(days=1),
             titulo='Carrera crítica',
         )
         HyroxActivity.objects.create(
@@ -154,16 +155,21 @@ class CampanaHyrox7B1Tests(TestCase):
             tipo_actividad='carrera',
             nombre_ejercicio='Carrera',
         )
+        instante = timezone.make_aware(datetime.datetime.combine(
+            fecha_estable, datetime.time(hour=12),
+        ))
         self._contrato('inactiva')
-        HyroxTrainingEngine.auto_adjust(self.objetivo)
+        with patch('hyrox.training_engine.timezone.now', return_value=instante):
+            HyroxTrainingEngine.auto_adjust(self.objetivo)
         atrasada.refresh_from_db()
-        self.assertEqual(atrasada.fecha, self.hoy - datetime.timedelta(days=1))
+        self.assertEqual(atrasada.fecha, fecha_estable - datetime.timedelta(days=1))
 
         ContratoCampanaHyrox.objects.all().delete()
         self._contrato('activa')
-        HyroxTrainingEngine.auto_adjust(self.objetivo)
+        with patch('hyrox.training_engine.timezone.now', return_value=instante):
+            HyroxTrainingEngine.auto_adjust(self.objetivo)
         atrasada.refresh_from_db()
-        self.assertEqual(atrasada.fecha, self.hoy)
+        self.assertEqual(atrasada.fecha, fecha_estable)
 
     def test_lesion_se_registra_pero_no_borra_plan_si_campana_inactiva(self):
         self._contrato('inactiva')

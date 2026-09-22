@@ -148,7 +148,7 @@ class RecorridoViewTests(RecorridoRehabTestBase):
         response = self.client.get(reverse('rehab:recorrido'))
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Iniciar un episodio de rehabilitación')
+        self.assertContains(response, 'Iniciar episodio')
 
     def test_con_episodio_activo_muestra_las_3_fases(self):
         response = self.client.get(reverse('rehab:recorrido'))

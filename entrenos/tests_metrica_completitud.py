@@ -29,7 +29,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from clientes.models import Cliente
-from entrenos.models import EjercicioRealizado, EntrenoRealizado
+from entrenos.models import EjercicioRealizado, EntrenoRealizado, SesionEntrenamiento
 from entrenos.services.estadisticas_service import EstadisticasService
 from entrenos.tests_dashboard_evolucion_historial import DashboardEvolucionHistorialBase
 from rutinas.models import Rutina
@@ -59,6 +59,19 @@ class CalculoPorcentajePerfeccionSinCambiosTest(TestCase):
         entreno.volumen_total_kg = 300
         entreno.duracion_minutos = 30
         entreno.save(update_fields=['numero_ejercicios', 'volumen_total_kg', 'duracion_minutos'])
+
+        # El comando repara snapshots existentes; la creación automática fue
+        # eliminada, así que el fixture explicita el snapshot zombi a backfillear.
+        SesionEntrenamiento.objects.create(
+            entreno=entreno,
+            duracion_minutos=0,
+            series_completadas=0,
+            series_totales=0,
+            ejercicios_completados=0,
+            ejercicios_totales=0,
+            volumen_sesion=0,
+            rpe_medio=None,
+        )
 
         call_command('backfill_sesion_entrenamiento', stdout=StringIO())
 

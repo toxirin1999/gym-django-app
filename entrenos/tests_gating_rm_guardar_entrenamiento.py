@@ -115,16 +115,17 @@ class TestGatingRMGuardarEntrenamiento(TestCase):
         self.assertGreater(rm_despues, 92.5)
         self.assertLessEqual(rm_despues, round(92.5 * 1.03, 2))
 
-    def test_5_sin_rpe_real_no_sube_rm(self):
-        """Sin RPE real registrado: confianza baja, no se toca one_rm_data."""
+    def test_5_sin_rpe_real_rechaza_la_sesion_y_no_sube_rm(self):
+        """Una serie completada sin RPE real es un payload incompleto."""
         data = self._base_post('Fuerza Test')
         for i in range(1, 4):
             data[f'ej1_peso_{i}'] = '100'
             data[f'ej1_reps_{i}'] = '5'
             data[f'ej1_rpe_{i}'] = ''
             data[f'ej1_completado_{i}'] = '1'
-        resp = self.client.post(self.url, data)
-        self.assertEqual(resp.status_code, 302)
+        resp = self.client.post(self.url, data, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn('RPE real', resp.json()['error'])
         rm_despues = self._refrescar_rm()
         self.assertEqual(rm_despues, 92.5, f"RM no debía subir sin RPE real, quedó en {rm_despues}")
 

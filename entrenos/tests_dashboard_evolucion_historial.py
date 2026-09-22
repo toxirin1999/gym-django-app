@@ -190,6 +190,33 @@ class NoContaminacionContratoTest(TestCase):
             entreno.volumen_total_kg = entreno.calcular_volumen_total()
             entreno.save()
 
+    @staticmethod
+    def _snapshot_progresion(items):
+        snapshot = []
+        for item in items:
+            estable = {key: value for key, value in item.items() if key != 'proxima_accion'}
+            decision = item.get('proxima_accion')
+            estable['proxima_accion'] = None if decision is None else {
+                'ejercicio': decision.ejercicio_normalizado,
+                'accion': decision.accion,
+                'motivo_codigo': decision.motivo_codigo,
+                'valor_cambio': decision.valor_cambio,
+            }
+            snapshot.append(estable)
+        return snapshot
+
+    @staticmethod
+    def _snapshot_decisiones(items):
+        return [
+            {
+                'ejercicio': decision.ejercicio_normalizado,
+                'accion': decision.accion,
+                'motivo_codigo': decision.motivo_codigo,
+                'valor_cambio': decision.valor_cambio,
+            }
+            for decision in items
+        ]
+
     def test_sesion_incompleta_no_altera_contexto_analitico(self):
         # Cliente A: solo sesiones normales
         _, cliente_a, rutina_a = self._build_cliente('tester_evoui3_a')
@@ -213,7 +240,10 @@ class NoContaminacionContratoTest(TestCase):
         url_b = reverse('entrenos:dashboard_evolucion', kwargs={'cliente_id': cliente_b.id})
         resp_b = client_b.get(url_b)
 
-        self.assertEqual(resp_a.context['progresion_ejercicios'], resp_b.context['progresion_ejercicios'])
+        self.assertEqual(
+            self._snapshot_progresion(resp_a.context['progresion_ejercicios']),
+            self._snapshot_progresion(resp_b.context['progresion_ejercicios']),
+        )
         self.assertEqual(resp_a.context['estancamientos'], resp_b.context['estancamientos'])
         self.assertEqual(
             resp_a.context['coach_data']['ejercicios_estancados'],
@@ -222,7 +252,10 @@ class NoContaminacionContratoTest(TestCase):
 
         decision_logs_a = list(resp_a.context['decision_logs'])
         decision_logs_b = list(resp_b.context['decision_logs'])
-        self.assertEqual(len(decision_logs_a), len(decision_logs_b))
+        self.assertEqual(
+            self._snapshot_decisiones(decision_logs_a),
+            self._snapshot_decisiones(decision_logs_b),
+        )
 
 
 class ActividadAnualDataTest(DashboardEvolucionHistorialBase):
