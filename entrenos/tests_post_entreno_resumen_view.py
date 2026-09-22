@@ -236,6 +236,6 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertContains(resp, 'Decisiones del entrenador')
         self.assertContains(resp, 'Subir peso')
         self.assertContains(resp, 'Completaste el rango con margen y buena técnica.')
-        self.assertContains(resp, 'Añadirá 2.5 kg')
+        self.assertContains(resp, 'Aumentará la carga un 2.5%')
         self.assertNotContains(resp, 'Decisión legacy')
         self.assertNotContains(resp, 'Próxima vez')

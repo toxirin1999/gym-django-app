@@ -9088,15 +9088,23 @@ def briefing_entrenamiento(request, cliente_id):
             ej['peso_recomendado_kg'] = alerta_tope['peso_kg']
             ej['peso_kg'] = alerta_tope['peso_kg']
             ej['repeticiones'] = alerta_tope['reps_objetivo']
+            ej['reps_objetivo'] = alerta_tope['reps_objetivo']
+            ej['reps_min'] = alerta_tope['reps_objetivo']
+            ej['reps_max'] = alerta_tope['reps_objetivo']
+        tipo_progresion = ej.get('tipo_progresion') or 'peso_reps'
+        ej['usa_tiempo'] = tipo_progresion == 'progresion_tiempo'
+        ej['usa_distancia'] = tipo_progresion == 'progresion_distancia'
+        ej['usa_peso'] = (
+            tipo_progresion in ('peso_reps', 'peso_corporal_lastre')
+            or (ej['usa_distancia'] and float(ej.get('peso_recomendado_kg') or 0) > 0)
+        )
         from entrenos.services.peso_semantica_service import normalizar_semantica_carga
         ej.update(normalizar_semantica_carga(ej))
         try:
             peso_trabajo = float(ej.get('peso_recomendado_kg') or ej.get('peso_kg') or 0)
         except (TypeError, ValueError):
             peso_trabajo = 0
-        ej['aproximaciones'] = get_aproximaciones_calentamiento(
-            peso_trabajo, ej.get('usa_peso', True)
-        )
+        ej['aproximaciones'] = get_aproximaciones_calentamiento(peso_trabajo, ej['usa_peso'])
 
     # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
     # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.

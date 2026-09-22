@@ -457,7 +457,7 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
             'ejercicio': 'press banca',
             'accion': actual.get_accion_display(),
             'motivo': 'La técnica se comprometió',
-            'efecto': 'Reducirá 5 kg',
+            'efecto': 'Reducirá la carga un 5%',
         }])
         self.assertIsNone(ctx['proxima_vez'])
 

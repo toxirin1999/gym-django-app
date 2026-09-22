@@ -417,7 +417,7 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
         prev_rpe = prev.rpe if prev.rpe is not None else 8
         prev_fallo = prev.fallo_muscular
         if prev_rpe <= 8 and not prev_fallo:
-            if tipo_progresion == 'progresion_reps':
+            if tipo_progresion in ('progresion_reps', 'progresion_tiempo'):
                 return (
                     'subir_reps',
                     1,

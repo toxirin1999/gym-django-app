@@ -578,11 +578,12 @@
       <div class="plan-spec-row">
         <div class="plan-spec-left">
           {{ ej.series|default:"3" }} series
-          {% if ej.repeticiones %} × {{ ej.repeticiones }} reps{% endif %}
+          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% endif %}{% endif %}
           {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
         <div class="plan-objetivo">
-          {% if ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
+          {% if not ej.usa_peso %}
+          {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-up">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' and ej.peso_kg_anterior %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-down">{{ ej.peso_kg|floatformat:"-1" }} kg</span>

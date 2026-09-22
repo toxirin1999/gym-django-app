@@ -17,9 +17,11 @@ CONTRATO:
 
 from datetime import timedelta
 
+from django.db.models import Q
 from django.utils import timezone
 
-from entrenos.models import EjercicioRealizado, GymDecisionLog
+from entrenos.models import EjercicioRealizado, GymDecisionLog, SerieRealizada
+from entrenos.services.decision_log_service import normalizar_ejercicio
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -59,6 +61,7 @@ _PROXIMA_VEZ_ACCION = {
     'subir_peso': 'el plan propondrá subir peso en {ejercicios}',
     'subir_reps': 'el plan propondrá subir repeticiones en {ejercicios}',
     'subir_reps_distancia': 'el plan propondrá subir la distancia en {ejercicios}',
+    'subir_reps_tiempo': 'el plan propondrá aumentar el tiempo en {ejercicios}',
     'bajar_peso': 'el plan reducirá la carga en {ejercicios}',
     'deload': 'el plan aplicará una descarga en {ejercicios}',
     'cambiar_variante': 'el plan propondrá cambiar de variante en {ejercicios}',
@@ -76,12 +79,14 @@ def _efecto_decision(log, tipo_progresion):
 
     valor = _formatear_magnitud(abs(log.valor_cambio))
     if log.accion == 'subir_peso':
-        return f'Añadirá {valor} kg'
+        return f'Aumentará la carga un {valor}%'
     if log.accion == 'bajar_peso':
-        return f'Reducirá {valor} kg'
+        return f'Reducirá la carga un {valor}%'
     if log.accion == 'subir_reps':
         if tipo_progresion == 'progresion_distancia':
             return f'Añadirá {valor} m'
+        if tipo_progresion == 'progresion_tiempo':
+            return f'Añadirá {valor} s'
         return f'Añadirá {valor} repeticiones'
     return None
 
@@ -157,6 +162,8 @@ def _proxima_vez_decisiones(cliente, ejercicios):
         accion = log.accion
         if accion == 'subir_reps' and tipos_progresion.get(log.ejercicio) == 'progresion_distancia':
             accion = 'subir_reps_distancia'
+        elif accion == 'subir_reps' and tipos_progresion.get(log.ejercicio) == 'progresion_tiempo':
+            accion = 'subir_reps_tiempo'
         plantilla = _PROXIMA_VEZ_ACCION.get(accion)
         if not plantilla:
             continue
@@ -171,6 +178,65 @@ def _proxima_vez_decisiones(cliente, ejercicios):
     ]
     frase = '; '.join(frases)
     return frase[0].upper() + frase[1:] + '.'
+
+
+def calcular_metricas_unidades(entreno, ejercicios):
+    """Agrega trabajo real sin mezclar repeticiones, segundos y metros.
+
+    ``SerieRealizada`` es la autoridad cuando hay detalle para un ejercicio.
+    Para históricos sin series se conserva un fallback por tipo de progresión;
+    una distancia legacy sin campo propio no se inventa a partir de reps.
+    """
+    from rutinas.models import EjercicioBase
+
+    ejercicios_por_nombre = {
+        normalizar_ejercicio(ej.nombre_ejercicio): ej for ej in ejercicios
+    }
+    consulta_nombres = Q(pk__in=[])
+    for ejercicio in ejercicios:
+        consulta_nombres |= Q(nombre__iexact=ejercicio.nombre_ejercicio.strip())
+    tipos = {
+        normalizar_ejercicio(nombre): tipo
+        for nombre, tipo in EjercicioBase.objects.filter(consulta_nombres)
+        .values_list('nombre', 'tipo_progresion')
+    }
+    series_por_nombre = {}
+    for serie in (
+        SerieRealizada.objects.filter(entreno=entreno, completado=True)
+        .select_related('ejercicio')
+    ):
+        clave = normalizar_ejercicio(serie.ejercicio.nombre)
+        if clave in ejercicios_por_nombre:
+            series_por_nombre.setdefault(clave, []).append(serie)
+
+    reps = 0
+    segundos = 0
+    distancia = 0
+    for clave, ejercicio in ejercicios_por_nombre.items():
+        tipo = tipos.get(clave, 'peso_reps')
+        series = series_por_nombre.get(clave)
+        if series:
+            if tipo == 'progresion_tiempo':
+                segundos += sum(serie.repeticiones or 0 for serie in series)
+            elif tipo == 'progresion_distancia':
+                distancia += sum(
+                    serie.distancia_metros or 0 for serie in series
+                )
+            else:
+                reps += sum(serie.repeticiones or 0 for serie in series)
+            continue
+
+        magnitud_legacy = (ejercicio.series or 0) * (ejercicio.repeticiones or 0)
+        if tipo == 'progresion_tiempo':
+            segundos += magnitud_legacy
+        elif tipo != 'progresion_distancia':
+            reps += magnitud_legacy
+
+    return {
+        'repeticiones_totales': reps,
+        'segundos_totales': segundos,
+        'distancia_metros_total': float(distancia),
+    }
 
 
 def _resumen_sesion(entreno, ejercicios):
@@ -203,6 +269,7 @@ def _resumen_sesion(entreno, ejercicios):
             'duracion_minutos': sesion.duracion_minutos or entreno.duracion_minutos,
             'volumen_kg': float(sesion.volumen_sesion or entreno.volumen_total_kg or 0),
             'sesion_tipo': sesion_tipo,
+            **calcular_metricas_unidades(entreno, ejercicios),
         }
     return {
         'titulo': titulo,
@@ -212,7 +279,27 @@ def _resumen_sesion(entreno, ejercicios):
         'duracion_minutos': entreno.duracion_minutos,
         'volumen_kg': float(entreno.volumen_total_kg or 0),
         'sesion_tipo': sesion_tipo,
+        **calcular_metricas_unidades(entreno, ejercicios),
     }
+
+
+def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallback_reps):
+    """Peso/reps de trabajo desde series; usa el agregado solo si no existen."""
+    series = [
+        serie for serie in (
+            SerieRealizada.objects.filter(entreno=entreno, completado=True)
+            .exclude(peso_kg__isnull=True)
+            .select_related('ejercicio')
+        )
+        if normalizar_ejercicio(serie.ejercicio.nombre)
+        == normalizar_ejercicio(nombre_ejercicio)
+    ]
+    if not series:
+        return float(fallback_peso or 0), fallback_reps or 0
+    peso = max(serie.peso_kg for serie in series)
+    reps_peso = [serie.repeticiones for serie in series if serie.peso_kg == peso]
+    reps = round(sum(reps_peso) / len(reps_peso))
+    return float(peso), reps
 
 
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
@@ -234,23 +321,35 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # el otro rango de reps con su peso naturalmente más ligero/pesado.
         # Se busca la ocurrencia anterior más reciente cuyas reps reales sean
         # compatibles con las de hoy (ver reps_compatibles_con_objetivo).
+        peso_hoy, reps_hoy = _rendimiento_representativo(
+            entreno, ej.nombre_ejercicio, ej.peso_kg, ej.repeticiones,
+        )
         anterior = None
+        peso_anterior = None
         for candidato in (
             EjercicioRealizado.objects
             .filter(entreno__cliente=cliente, nombre_ejercicio=ej.nombre_ejercicio, completado=True)
             .exclude(entreno_id=entreno.id)
             .order_by('-entreno__fecha', '-id')
         ):
-            if reps_compatibles_con_objetivo(candidato.repeticiones, ej.repeticiones):
+            peso_candidato, reps_candidato = _rendimiento_representativo(
+                candidato.entreno, candidato.nombre_ejercicio,
+                candidato.peso_kg, candidato.repeticiones,
+            )
+            if reps_compatibles_con_objetivo(reps_candidato, reps_hoy):
                 anterior = candidato
+                peso_anterior = peso_candidato
                 break
         if anterior is None:
             continue
 
-        diff = round((ej.peso_kg or 0) - (anterior.peso_kg or 0), 2)
+        diff = round(peso_hoy - peso_anterior, 2)
 
         # Detectar cambio de variante: 0↔carga (cambio de unidad, no regresión real)
-        es_cambio_variante = (ej.peso_kg == 0 and anterior.peso_kg > 0) or (ej.peso_kg > 0 and anterior.peso_kg == 0)
+        es_cambio_variante = (
+            (peso_hoy == 0 and peso_anterior > 0)
+            or (peso_hoy > 0 and peso_anterior == 0)
+        )
         if es_cambio_variante:
             continue  # No mostrar cambios de variante como cambios de carga
 

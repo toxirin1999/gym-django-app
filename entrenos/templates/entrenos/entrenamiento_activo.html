@@ -385,6 +385,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   color:var(--td);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
 }
 .sticky-final-btn:hover,.sticky-final-btn:active{color:#fff;border-color:rgba(255,255,255,0.28);}
+.sticky-final-btn:disabled{opacity:.38;cursor:not-allowed;color:var(--td);border-color:var(--border);}
 
 /* ── LAYOUT ── */
 .wrap{max-width:480px;margin:0 auto;padding-bottom:70px;}
@@ -1278,10 +1279,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 <div class="cyber-ejercicio-card" id="card-{{ ejercicio.form_id }}"
      data-form-id="{{ ejercicio.form_id }}"
      data-rpe-target="{{ ejercicio.rpe_objetivo|default:8 }}"
-     data-reps-min="{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}"
-     data-reps-max="{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}"
+     data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
+     data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
      data-inc-kg="{{ ejercicio.incremento_kg|default:2.5 }}"
      data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
+     data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}"
      data-total-sets="{{ ejercicio.series }}"
      data-descanso="{{ ejercicio.descanso_minutos|default:3 }}"
      data-barra-kg="{{ ejercicio.barra_kg|default:0 }}"
@@ -2106,7 +2108,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </div>
     <span id="ejercicio-actual" style="display:none;">--</span>
   </div>
-  <button type="button" id="btn-mostrar-resumen" class="sticky-final-btn" title="Finalizar entrenamiento">
+  <button type="button" id="btn-mostrar-resumen" class="sticky-final-btn" title="Completa al menos una serie para finalizar" disabled>
     <i class="fas fa-flag-checkered"></i>
     <span>Finalizar</span>
   </button>
@@ -2116,6 +2118,11 @@ document.addEventListener('DOMContentLoaded', () => {
 <script>
 // ── CONSTANTES RPE ───────────────────────────────────────────────
 const RPE_DESC={5:'Muy fácil — muchas reps en reserva',6:'Fácil — 4-5 reps en reserva',7:'Moderado — 3 reps en reserva',8:'Intenso — 2 reps en reserva',9:'Muy duro — 1 rep en reserva',10:'Máximo — sin reserva'};
+const RPE_DESC_TIEMPO={5:'Muy fácil — control técnico holgado',6:'Fácil — postura estable',7:'Moderado — control técnico sostenible',8:'Intenso — técnica aún estable',9:'Muy duro — técnica cerca del límite',10:'Máximo — límite técnico alcanzado'};
+function descripcionRPE(fidSn,valor){
+  const panel=document.getElementById('reg-'+fidSn);
+  return panel?.dataset.usaTiempo==='1'?(RPE_DESC_TIEMPO[valor]||''):(RPE_DESC[valor]||'');
+}
 const STORAGE_KEY='entreno_activo_{{ cliente.id }}_{{ fecha }}';
 
 // ── FRASES MOTIVACIONALES ────────────────────────────────────────
@@ -2157,6 +2164,13 @@ const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
       // totalSets debe declararse ANTES del series.forEach para evitar TDZ (ReferenceError)
       const card=document.getElementById('card-'+fid);
       const totalSets=parseInt(card?.dataset.totalSets||'0');
+      // Checkpoints previos a la semántica temporal no guardaban estos flags.
+      // Rehidratarlos desde la card evita convertir segundos antiguos en reps.
+      series.forEach(s=>{
+        if(!s)return;
+        s.usaTiempo=card?.dataset.usaTiempo==='1';
+        s.usaDistancia=card?.dataset.usaDistancia==='1';
+      });
       // Re-renderizar log visual
       series.forEach((s,idx)=>{
         const log=document.getElementById('log-'+fid);
@@ -2287,12 +2301,13 @@ function actualizarSetPills(fid){
   const comp=(STATE.seriesCompletadas[fid]||[]).length;
   const card=document.getElementById('card-'+fid);
   const total=parseInt(card?.dataset.totalSets||'0');
-  const activeSn=Math.min(comp+1,total);
+  const activeSn=comp<total?comp+1:null;
   for(let sn=1;sn<=total;sn++){
     const pill=document.getElementById('pill-'+fid+'-'+sn);
     if(!pill)continue;
     pill.classList.remove('activa','hecha','pendiente');
-    if(sn<activeSn)pill.classList.add('hecha');
+    if(comp>=total && total>0)pill.classList.add('hecha');
+    else if(sn<activeSn)pill.classList.add('hecha');
     else if(sn===activeSn)pill.classList.add('activa');
     else pill.classList.add('pendiente');
   }
@@ -2455,6 +2470,7 @@ function guardarSeriePanel(fid,sn,total){
   const tipoCarga = document.getElementById('tipo-carga-'+fid)?.value || 'total';
   const multiplicador = (tipoCarga === 'por_mano' || tipoCarga === 'por_lado') ? 2 : 1;
   const usaDistancia = document.getElementById('card-'+fid)?.dataset.usaDistancia === '1';
+  const usaTiempo = document.getElementById('card-'+fid)?.dataset.usaTiempo === '1';
   STATE.seriesCompletadas[fid][sn-1] = {
     peso,
     reps,
@@ -2462,6 +2478,7 @@ function guardarSeriePanel(fid,sn,total){
     tipoCarga,
     multiplicador,
     usaDistancia,
+    usaTiempo,
     tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null
   };
 
@@ -2624,7 +2641,7 @@ function syncSliderRPE(el,dispId,hidId,descId){
   if(disp)disp.textContent=v;
   if(hid)hid.value=v;
   if(desc){
-    desc.textContent=RPE_DESC[v]||'';
+    desc.textContent=descripcionRPE(descId.replace('rpe-desc-',''),v);
     desc.style.color=v>=9?'var(--rl)':v>=7?'var(--g)':'var(--td)';
   }
 }
@@ -2673,7 +2690,7 @@ function seleccionarRPE(fidSn,valor){
   if(disp)disp.textContent=valor;
   if(hid)hid.value=valor;
   if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>b.classList.toggle('sel',parseInt(b.dataset.val)===valor));
-  if(desc){desc.textContent=RPE_DESC[valor]||'';desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
+  if(desc){desc.textContent=descripcionRPE(fidSn,valor);desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
   if(navigator.vibrate)navigator.vibrate(8);
 }
 document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
@@ -2687,7 +2704,7 @@ document.querySelectorAll('.rpe-picker-grid').forEach(grid=>{
   const fidSn=sel.dataset.fidSn;
   const val=parseInt(sel.dataset.val);
   const desc=document.getElementById('rpe-desc-'+fidSn);
-  if(desc){desc.textContent=RPE_DESC[val]||'';desc.style.color=val>=9?'var(--rl)':val>=7?'var(--g)':'var(--td)';}
+  if(desc){desc.textContent=descripcionRPE(fidSn,val);desc.style.color=val>=9?'var(--rl)':val>=7?'var(--g)':'var(--td)';}
 });
 
 // ── CHECKPOINT localStorage ──────────────────────────────────────
@@ -2749,26 +2766,38 @@ function getBarraKg(fid){
   return parseFloat(card?.dataset.barraKg||'0');
 }
 
-function calcularDiscosInline(fid,sn,pesoTotal){
-  const contenedor=document.getElementById('discos-inline-'+fid+'-'+sn);
-  const txt=document.getElementById('calc-inline-txt-'+fid+'-'+sn);
-  if(!contenedor)return;
+function calcularDesgloseDiscos(fid,pesoTotal){
   const barraKg=getBarraKg(fid);
-  let porLado=Math.max(0,(pesoTotal-barraKg)/2);
-  const sizes=[20,15,10,5,2.5,1];
-  const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
-  const discos=[];let resto=porLado;
-  for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
+  const porLado=(Number(pesoTotal)-barraKg)/2;
+  const sizes=[20,15,10,5,2.5,1,0.5,0.25];
+  if(porLado < -0.001)return {barraKg,discos:[],representable:false};
+  const discos=[];let resto=Math.max(0,porLado);
+  for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*1000)/1000;}}
+  return {barraKg,discos,representable:resto<0.001};
+}
+
+function pintarDesgloseDiscos(fid,pesoTotal,contenedor,txt){
+  const {barraKg,discos,representable}=calcularDesgloseDiscos(fid,pesoTotal);
+  const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1',0.5:'d1',0.25:'d1'};
+  if(!representable){
+    contenedor.innerHTML='';
+    if(txt)txt.textContent='No representable con los discos disponibles';
+    return;
+  }
   contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
     +(barraKg>0?'<div class="barra"></div>':'')
     +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
   if(txt){
-    if(barraKg>0){
-      txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
-    }else{
-      txt.innerHTML='<strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
-    }
+    const carga=(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado';
+    txt.innerHTML=(barraKg>0?'Barra '+barraKg+'kg + ':'')+'<strong>'+carga+'</strong> = '+pesoTotal+'kg total';
   }
+}
+
+function calcularDiscosInline(fid,sn,pesoTotal){
+  const contenedor=document.getElementById('discos-inline-'+fid+'-'+sn);
+  const txt=document.getElementById('calc-inline-txt-'+fid+'-'+sn);
+  if(!contenedor)return;
+  pintarDesgloseDiscos(fid,pesoTotal,contenedor,txt);
 }
 
 // ── INICIALIZAR PANEL SERIE ─────────────────────────────────────
@@ -2878,22 +2907,7 @@ function calcularDiscos(fid,pesoTotal){
   const contenedor=document.getElementById('discos-'+fid);
   const txt=document.getElementById('calc-txt-'+fid);
   if(!contenedor)return;
-  const barraKg=getBarraKg(fid);
-  let porLado=Math.max(0,(pesoTotal-barraKg)/2);
-  const sizes=[20,15,10,5,2.5,1];
-  const cls={20:'d20',15:'d15',10:'d10',5:'d5',2.5:'d25',1:'d1'};
-  const discos=[];let resto=porLado;
-  for(const t of sizes){while(resto>=t-0.001){discos.push(t);resto=Math.round((resto-t)*100)/100;}}
-  contenedor.innerHTML=discos.map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('')
-    +(barraKg>0?'<div class="barra"></div>':'')
-    +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
-  if(txt){
-    if(barraKg>0){
-      txt.innerHTML='Barra '+barraKg+'kg + <strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
-    }else{
-      txt.innerHTML='<strong>'+(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado</strong> = '+pesoTotal+'kg';
-    }
-  }
+  pintarDesgloseDiscos(fid,pesoTotal,contenedor,txt);
 }
 
 function calcVolumenEj(fid){
@@ -2918,8 +2932,10 @@ function metricasSerie(s){
   const pesoTotal = Number(s.peso || 0) * multiplicador;
   const cantidad = Number(s.reps || 0);
   return s.usaDistancia
-    ? {tonelaje:0, cargaDistancia:pesoTotal*cantidad, reps:0, distancia:cantidad}
-    : {tonelaje:pesoTotal*cantidad, cargaDistancia:0, reps:cantidad, distancia:0};
+    ? {tonelaje:0, cargaDistancia:pesoTotal*cantidad, reps:0, distancia:cantidad, segundos:0}
+    : s.usaTiempo
+      ? {tonelaje:0, cargaDistancia:0, reps:0, distancia:0, segundos:cantidad}
+      : {tonelaje:pesoTotal*cantidad, cargaDistancia:0, reps:cantidad, distancia:0, segundos:0};
 }
 
 function textoMetricas(tonelaje, cargaDistancia){
@@ -2944,6 +2960,12 @@ function actualizarSticky(){
   if(elS)elS.textContent=comp+'/'+total;
   if(elV)elV.textContent=textoMetricas(vol,cargaDistancia);
   if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
+  const btnFinal=document.getElementById('btn-mostrar-resumen');
+  const puedeFinalizar=comp>=1;
+  if(btnFinal){
+    btnFinal.disabled=!puedeFinalizar;
+    btnFinal.title=puedeFinalizar?'Finalizar entrenamiento':'Completa al menos una serie para finalizar';
+  }
 }
 
 // ── TIMER TOTAL (sobrevive recargas de Safari via localStorage) ──────────
@@ -2991,7 +3013,7 @@ document.querySelectorAll('.weight-input').forEach(inp=>{
 });
 
 document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
-  let comp=0,total=0,vol=0,cargaDistancia=0,reps=0,distanciaTotal=0,rpes=[],ejComp=0,ejTot=0;
+  let comp=0,total=0,vol=0,cargaDistancia=0,reps=0,distanciaTotal=0,segundosTrabajo=0,rpes=[],ejComp=0,ejTot=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
     const t=parseInt(card.dataset.totalSets)||0;
@@ -2999,7 +3021,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const scs=STATE.seriesCompletadas[fid]||[];
     comp+=scs.length;
     if(scs.length>=t)ejComp++;
-    scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;reps+=m.reps;distanciaTotal+=m.distancia;if(s.rpe)rpes.push(s.rpe);});
+    scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;reps+=m.reps;distanciaTotal+=m.distancia;segundosTrabajo+=m.segundos;if(s.rpe)rpes.push(s.rpe);});
   });
   const rpeAvg=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length):0;
   if(comp<1){
@@ -3020,7 +3042,11 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('hid-duracion').value=mins;
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
-  document.getElementById('modal-reps').textContent=distanciaTotal?reps+' reps · '+distanciaTotal+' m':reps;
+  const trabajo=[];
+  if(reps)trabajo.push(reps+' reps');
+  if(segundosTrabajo)trabajo.push(segundosTrabajo+' s');
+  if(distanciaTotal)trabajo.push(distanciaTotal+' m');
+  document.getElementById('modal-reps').textContent=trabajo.join(' · ')||'0';
 
   // Animar anillos SVG
   setTimeout(()=>{
@@ -3477,7 +3503,7 @@ document.addEventListener('DOMContentLoaded',function(){
     const hidEl=document.getElementById('rpe-hid-'+fid+'-'+sn);
     if(hidEl){
       const v=parseInt(hidEl.value)||8;
-      desc.textContent=RPE_DESC[v]||'';
+      desc.textContent=descripcionRPE(fid+'-'+sn,v);
       desc.style.color=v>=9?'var(--rl)':v>=7?'var(--g)':'var(--td)';
     }
   });
