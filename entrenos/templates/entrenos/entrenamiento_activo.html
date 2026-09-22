@@ -3392,12 +3392,19 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   .then(data => {
     if (data.success) {
       // El borrador y el inicio del reloj solo dejan de ser necesarios cuando
-      // el servidor confirma que la sesión quedó persistida.
-      limpiarCheckpoint();
-      localStorage.removeItem(_WK_KEY);
+      // el servidor confirma que la sesión quedó persistida. Safari puede
+      // rechazar localStorage (modo privado/cuota); eso no deshace el POST.
+      try { limpiarCheckpoint(); } catch (error) {
+        console.warn('No se pudo limpiar el checkpoint confirmado:', error);
+      }
+      try { localStorage.removeItem(_WK_KEY); } catch (error) {
+        console.warn('No se pudo limpiar el inicio confirmado:', error);
+      }
       // Refresh JOI estado in parallel (non-blocking)
       if (data.refresh_joi) {
-        fetch('/joi/api/pulso-actual/').catch(() => {});
+        try { fetch('/joi/api/pulso-actual/').catch(() => {}); } catch (error) {
+          console.warn('No se pudo refrescar JOI:', error);
+        }
       }
       // Redirect to post-session summary
       setTimeout(() => {
@@ -3407,14 +3414,14 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
       throw new Error(data.error || 'No se pudo confirmar el guardado');
     }
   })
-  .catch(() => {
+  .catch(error => {
     // Conserva series, técnica y hora inicial para que el usuario reintente
     // sin convertir el segundo intento en una sesión nueva o más corta.
     _sessionGuardada = false;
     _envioCierreEnCurso = false;
     confirmarBtn.disabled = false;
     if (ov) ov.style.display = 'none';
-    window.alert('No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
+    window.alert(error.message || 'No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
   });
 });
 

@@ -72,6 +72,30 @@ class CierreParcialTests(TestCase):
             'mantener',
         )
 
+    def test_post_parcial_con_varios_realizados_y_varios_omitidos_por_fatiga(self):
+        response = self._post(
+            motivo_cierre='fatiga',
+            ej2_completado_1='1', ej2_rpe_1='9',
+            ej3_nombre='Press banca', ej3_tipo_progresion='peso_reps',
+            ej3_peso_1='50', ej3_reps_1='8',
+            ej4_nombre='Remo sentado', ej4_tipo_progresion='peso_reps',
+            ej4_peso_1='45', ej4_reps_1='10',
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['success'])
+        entreno = EntrenoRealizado.objects.get()
+        self.assertEqual(entreno.estado_cierre, EntrenoRealizado.ESTADO_PARCIAL)
+        self.assertEqual(entreno.ejercicios_realizados.count(), 2)
+        self.assertEqual(
+            set(entreno.ejercicios_omitidos.values_list('nombre_ejercicio', flat=True)),
+            {'Press banca', 'Remo sentado'},
+        )
+        self.assertEqual(
+            entreno.ejercicios_omitidos.filter(motivo='fatiga').count(),
+            2,
+        )
+
     def test_rechaza_cierre_sin_ninguna_serie(self):
         response = self._post(motivo_cierre='tiempo', ej1_completado_1='')
         self.assertEqual(response.status_code, 400)
@@ -146,6 +170,21 @@ class ContratoTemplateCierreParcialTests(TestCase):
         self.assertIn('confirmarBtn.disabled = true;', source)
         self.assertIn('_envioCierreEnCurso = false;', source)
         self.assertIn('confirmarBtn.disabled = false;', source)
+
+    def test_js_confirmacion_del_servidor_no_falla_por_limpieza_local_o_refresh_joi(self):
+        source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
+        success_branch = source.split('if (data.success) {', 1)[1].split('} else {', 1)[0]
+        self.assertIn('try { limpiarCheckpoint(); } catch', success_branch)
+        self.assertIn('try { localStorage.removeItem(_WK_KEY); } catch', success_branch)
+        self.assertIn("try { fetch('/joi/api/pulso-actual/')", success_branch)
+        self.assertIn('window.location.href =', success_branch)
+
+    def test_js_muestra_error_real_y_solo_conserva_checkpoint_en_fallo(self):
+        source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
+        self.assertIn("window.alert(error.message || 'No se pudo guardar", source)
+        catch_branch = source.split('.catch(error => {', 1)[1].split('});', 1)[0]
+        self.assertNotIn('limpiarCheckpoint()', catch_branch)
+        self.assertNotIn('localStorage.removeItem(_WK_KEY)', catch_branch)
 
 
 class IntegracionTransversalCierreParcialTests(TestCase):
