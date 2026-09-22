@@ -93,18 +93,19 @@
   .mem-big .n small{display:block;color:var(--ink-faint);font:9px/1.6 var(--font-mono);text-transform:uppercase;letter-spacing:.1em;margin-top:6px}
   .mem-big .d{color:var(--ink-muted);font-size:13px;line-height:1.6;border-left:1px solid var(--line);padding-left:18px}
 
-  .mem-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}
-  .mem-card{border:1px solid var(--line);background:var(--surface-raised);padding:14px}
-  .mem-card .d{color:var(--ink-faint);font:9px/1.5 var(--font-mono);text-transform:uppercase;letter-spacing:.1em}
-  .mem-card .v{margin-top:12px;font-size:30px;line-height:1;letter-spacing:-.02em}
-  .mem-card .v small{font:700 10px/1 var(--font-mono);color:var(--ink-faint);margin-left:4px}
-  .mem-card .e{margin-top:12px;color:var(--ink-muted);font:700 9px/1.4 var(--font-mono);text-transform:uppercase;letter-spacing:.1em}
-
   .mem-quads{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:16px}
   .mem-quad{padding:16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
   .mem-quad:first-child{background:var(--surface-raised)}
   .mem-quad .v{font:700 34px/1 var(--font-mono)}
+  .mem-quad .v small{font:700 10px/1 var(--font-mono);color:var(--ink-faint);margin-left:3px;text-transform:uppercase}
   .mem-quad .k{margin-top:10px;color:var(--ink-faint);font:700 8px/1.4 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+
+  .mem-subhead{margin-top:16px;color:var(--ink-faint);font:700 9px/1.4 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+  .mem-subhead:first-of-type{margin-top:0}
+
+  .mem-row--record{grid-template-columns:1fr auto auto;gap:14px;align-items:baseline}
+  .mem-row--record .date{color:var(--ink-faint);font:9px/1.5 var(--font-mono);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+  .mem-row--record .v{font-size:15px}
 
   .mem-alerts{display:flex;flex-direction:column;gap:8px;margin-top:16px}
   .mem-alert{display:flex;gap:14px;align-items:center;padding:12px 16px;border:1px solid var(--line);background:var(--surface-raised)}
@@ -133,7 +134,7 @@
     .mem-node::before{left:-38px}
   }
   @media (max-width:640px){
-    .mem-stats,.mem-cards,.mem-ins{grid-template-columns:1fr}
+    .mem-stats,.mem-ins{grid-template-columns:1fr}
     .mem-big{grid-template-columns:1fr}
     .mem-big .d{border-left:0;padding-left:0;border-top:1px solid var(--line);padding-top:14px}
     .mem-quads{grid-template-columns:repeat(2,1fr)}
@@ -183,23 +184,53 @@
     </article>
     {% endif %}
 
-    {# ── §01 CARGA · 28 DÍAS ── #}
+    {# ── §01 CARGA Y BIOMETRÍA · 28/14 DÍAS ── #}
     <article class="mem-node mem-node--state">
-      <div class="mem-label">§01 · Carga · 28 días</div>
-      <h2 class="mem-heading">Patrón de carga</h2>
-      <div class="mem-stats">
-        <div class="mem-stat">
-          <div class="k">Sesiones / semana</div>
+      <div class="mem-label">§01 · Carga y biometría</div>
+      <h2 class="mem-heading">Carga y señales fisiológicas</h2>
+      <div class="mem-quads">
+        <div class="mem-quad">
           <div class="v {% if sesiones_semana >= 3 %}ok{% elif sesiones_semana and sesiones_semana < 2 %}warn{% else %}na{% endif %}">{% if sesiones_semana %}{{ sesiones_semana }}{% else %}—{% endif %}</div>
+          <div class="k">Sesiones / semana</div>
         </div>
-        <div class="mem-stat">
-          <div class="k">RPE medio gym</div>
+        <div class="mem-quad">
           <div class="v {% if rpe_medio_gym and rpe_medio_gym >= 8.5 %}warn{% elif rpe_medio_gym and rpe_medio_gym <= 6 %}ok{% else %}na{% endif %}">{% if rpe_medio_gym %}{{ rpe_medio_gym }}<small>/10</small>{% else %}—{% endif %}</div>
+          <div class="k">RPE medio gym</div>
         </div>
-        <div class="mem-stat">
-          <div class="k">Energía media</div>
+        <div class="mem-quad">
           <div class="v {% if energia_media and energia_media >= 7 %}ok{% elif energia_media and energia_media <= 4 %}warn{% else %}na{% endif %}">{% if energia_media %}{{ energia_media }}<small>/10</small>{% else %}—{% endif %}</div>
+          <div class="k">Energía pre-sesión</div>
         </div>
+        {% if bio_resumen.hrv_medio %}
+        <div class="mem-quad">
+          <div class="v {% if bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct > 0 %}ok{% elif bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct < -10 %}warn{% endif %}">{{ bio_resumen.hrv_medio|floatformat:0 }}<small>ms</small></div>
+          <div class="k">HRV medio{% if bio_resumen.hrv_tendencia_pct is not None %} ({% if bio_resumen.hrv_tendencia_pct > 0 %}↑{% elif bio_resumen.hrv_tendencia_pct < 0 %}↓{% endif %}{{ bio_resumen.hrv_tendencia_pct|floatformat:1 }}%){% endif %}</div>
+        </div>
+        {% endif %}
+        {% if bio_resumen.fc_media %}
+        <div class="mem-quad">
+          <div class="v">{{ bio_resumen.fc_media|floatformat:0 }}<small>lpm</small></div>
+          <div class="k">FC reposo media</div>
+        </div>
+        {% endif %}
+        {% if bio_resumen.sueno_medio %}
+        <div class="mem-quad">
+          <div class="v {% if bio_resumen.sueno_medio >= 7.5 %}ok{% elif bio_resumen.sueno_medio < 6 %}warn{% endif %}">{{ bio_resumen.sueno_medio|floatformat:1 }}<small>h</small></div>
+          <div class="k">Sueño medio</div>
+        </div>
+        {% endif %}
+        {% if bio_resumen.calidad_sueno_media %}
+        <div class="mem-quad">
+          <div class="v {% if bio_resumen.calidad_sueno_media >= 75 %}ok{% elif bio_resumen.calidad_sueno_media < 50 %}warn{% endif %}">{{ bio_resumen.calidad_sueno_media|floatformat:0 }}<small>/100</small></div>
+          <div class="k">Calidad de sueño</div>
+        </div>
+        {% endif %}
+        {% if bio_resumen.energia_media_bio %}
+        <div class="mem-quad">
+          <div class="v {% if bio_resumen.energia_media_bio >= 7 %}ok{% elif bio_resumen.energia_media_bio <= 4 %}warn{% else %}na{% endif %}">{{ bio_resumen.energia_media_bio|floatformat:1 }}<small>/10</small></div>
+          <div class="k">Energía checkin</div>
+        </div>
+        {% endif %}
       </div>
     </article>
 
@@ -235,7 +266,7 @@
           <div class="mem-row">
             <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
             <div><div class="name">{{ item.ejercicio }}</div></div>
-            <div class="v">{{ item.rm }}<small>KG</small></div>
+            <div class="v">{{ item.rm|floatformat:1 }}<small>KG</small></div>
           </div>
           {% endfor %}
         </div>
@@ -251,11 +282,11 @@
       <div class="mem-stats">
         <div class="mem-stat">
           <div class="k">Squat 1RM</div>
-          <div class="v {% if hyrox_obj.rm_sentadilla %}ok{% else %}na{% endif %}">{% if hyrox_obj.rm_sentadilla %}{{ hyrox_obj.rm_sentadilla }}<small>KG</small>{% else %}—{% endif %}</div>
+          <div class="v {% if hyrox_obj.rm_sentadilla %}ok{% else %}na{% endif %}">{% if hyrox_obj.rm_sentadilla %}{{ hyrox_obj.rm_sentadilla|floatformat:1 }}<small>KG</small>{% else %}—{% endif %}</div>
         </div>
         <div class="mem-stat">
           <div class="k">Deadlift 1RM</div>
-          <div class="v {% if hyrox_obj.rm_peso_muerto %}ok{% else %}na{% endif %}">{% if hyrox_obj.rm_peso_muerto %}{{ hyrox_obj.rm_peso_muerto }}<small>KG</small>{% else %}—{% endif %}</div>
+          <div class="v {% if hyrox_obj.rm_peso_muerto %}ok{% else %}na{% endif %}">{% if hyrox_obj.rm_peso_muerto %}{{ hyrox_obj.rm_peso_muerto|floatformat:1 }}<small>KG</small>{% else %}—{% endif %}</div>
         </div>
         <div class="mem-stat">
           <div class="k">5K base</div>
@@ -291,12 +322,12 @@
     <article class="mem-node mem-node--good">
       <div class="mem-label">§06 · Récords personales</div>
       <h2 class="mem-heading">Top marcas activas</h2>
-      <div class="mem-cards">
+      <div class="mem-list">
         {% for r in records %}
-        <div class="mem-card">
-          <div class="d">{{ r.fecha_logrado|date:"d M Y" }}</div>
-          <div class="v">{{ r.valor }}<small>KG</small></div>
-          <div class="e">{{ r.ejercicio_nombre }}</div>
+        <div class="mem-row mem-row--record">
+          <div class="name">{{ r.ejercicio_nombre }}</div>
+          <div class="date">{{ r.fecha_logrado|date:"d M" }}</div>
+          <div class="v ok">{{ r.valor|floatformat:1 }}<small>KG</small></div>
         </div>
         {% endfor %}
       </div>
@@ -399,7 +430,7 @@
         <div>
           <div class="k"><b>PR</b><span>{{ e.ejercicio|upper|truncatechars:16 }}</span></div>
           <div class="v">+{{ e.pct }}%</div>
-          <div class="d">{{ e.peso_antes }} kg → {{ e.peso_ahora }} kg en 90 días</div>
+          <div class="d">{{ e.peso_antes|floatformat:1 }} kg → {{ e.peso_ahora|floatformat:1 }} kg en 90 días</div>
         </div>
         {% endfor %}
       </div>
@@ -432,6 +463,8 @@
     <article class="mem-node mem-node--personal">
       <div class="mem-label">§09c · Progresión muscular</div>
       <h2 class="mem-heading">Grupos que responden</h2>
+      {% if modelo.grupos_musculares.rapidos %}
+      <p class="mem-subhead">En progresión positiva</p>
       <div class="mem-list">
         {% for g in modelo.grupos_musculares.rapidos %}
         <div class="mem-row">
@@ -440,6 +473,11 @@
           <div class="v ok">+{{ g.pct }}<small>%</small></div>
         </div>
         {% endfor %}
+      </div>
+      {% endif %}
+      {% if modelo.grupos_musculares.lentos %}
+      <p class="mem-subhead">Rezago / fatiga acumulada</p>
+      <div class="mem-list">
         {% for g in modelo.grupos_musculares.lentos %}
         <div class="mem-row">
           <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
@@ -448,55 +486,11 @@
         </div>
         {% endfor %}
       </div>
+      {% endif %}
     </article>
     {% endif %}
 
     {% endif %}{# /modelo.tiene_datos #}
-
-    {# ── §10 BIOMETRÍA · 14 DÍAS ── #}
-    {% if bio_resumen and bio_resumen.sueno_medio %}
-    <article class="mem-node mem-node--state">
-      <div class="mem-label">§10 · Biometría · 14 días</div>
-      <h2 class="mem-heading">Señales fisiológicas</h2>
-      <div class="mem-stats">
-        {% if bio_resumen.hrv_medio %}
-        <div class="mem-stat">
-          <div class="k">HRV medio</div>
-          <div class="v {% if bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct > 0 %}ok{% elif bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct < -10 %}warn{% endif %}">
-            {{ bio_resumen.hrv_medio|floatformat:0 }}<small>ms</small>
-            {% if bio_resumen.hrv_tendencia_pct is not None %}
-            <div class="t">{% if bio_resumen.hrv_tendencia_pct > 0 %}↑{% elif bio_resumen.hrv_tendencia_pct < 0 %}↓{% endif %}{{ bio_resumen.hrv_tendencia_pct|floatformat:1 }}% vs sem. ant.</div>
-            {% endif %}
-          </div>
-        </div>
-        {% endif %}
-        {% if bio_resumen.fc_media %}
-        <div class="mem-stat">
-          <div class="k">FC reposo media</div>
-          <div class="v">{{ bio_resumen.fc_media|floatformat:0 }}<small>lpm</small></div>
-        </div>
-        {% endif %}
-        {% if bio_resumen.sueno_medio %}
-        <div class="mem-stat">
-          <div class="k">Sueño medio</div>
-          <div class="v {% if bio_resumen.sueno_medio >= 7.5 %}ok{% elif bio_resumen.sueno_medio < 6 %}warn{% endif %}">{{ bio_resumen.sueno_medio|floatformat:1 }}<small>h</small></div>
-        </div>
-        {% endif %}
-        {% if bio_resumen.calidad_sueno_media %}
-        <div class="mem-stat">
-          <div class="k">Calidad de sueño</div>
-          <div class="v {% if bio_resumen.calidad_sueno_media >= 75 %}ok{% elif bio_resumen.calidad_sueno_media < 50 %}warn{% endif %}">{{ bio_resumen.calidad_sueno_media|floatformat:0 }}<small>/100</small></div>
-        </div>
-        {% endif %}
-        {% if bio_resumen.energia_media_bio %}
-        <div class="mem-stat">
-          <div class="k">Energía checkin</div>
-          <div class="v {% if bio_resumen.energia_media_bio >= 7 %}ok{% elif bio_resumen.energia_media_bio <= 4 %}warn{% endif %}">{{ bio_resumen.energia_media_bio|floatformat:1 }}<small>/10</small></div>
-        </div>
-        {% endif %}
-      </div>
-    </article>
-    {% endif %}
 
     {# ── §11 MANUAL DE DAVID ── #}
     {% if manual_patrones %}
@@ -504,7 +498,7 @@
       <div class="mem-label">§11 · Manual de David</div>
       <h2 class="mem-heading">Reglas que he anotado</h2>
       <div class="mem-list">
-        {% for p in manual_patrones %}
+        {% for p in manual_patrones|slice:":3" %}
         <div class="mem-row">
           <div class="idx">{% if p.origen == 'patron_detectado' %}PAT{% else %}ERR{% endif %}</div>
           <div>
@@ -514,6 +508,25 @@
         </div>
         {% endfor %}
       </div>
+      {% if manual_patrones|length > 3 %}
+      <details class="mem-collapse">
+        <summary>
+          Ver todas las anotaciones
+          <span class="mem-count">{{ manual_patrones|length }}</span>
+        </summary>
+        <div class="mem-list">
+          {% for p in manual_patrones|slice:"3:" %}
+          <div class="mem-row">
+            <div class="idx">{% if p.origen == 'patron_detectado' %}PAT{% else %}ERR{% endif %}</div>
+            <div>
+              <div class="name" style="font-size:12px;line-height:1.5;">{{ p.entrada }}</div>
+              <div class="meta">{{ p.creado_en|date:"d/m/Y" }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
+      {% endif %}
     </article>
     {% endif %}
 
