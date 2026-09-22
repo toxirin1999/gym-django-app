@@ -28,10 +28,12 @@ class CentroOperativoVisualTests(TestCase):
         html = response.content.decode()
         self.assertLess(html.index('Siguiente paso'), html.index('Activo ahora'))
         self.assertIn('class="dc-hero is-compact"', html)
-        self.assertIn('<details class="dc-definitions">', html)
+        # El panel fijo de definiciones ("Qué significa cada señal") se eliminó
+        # a propósito del rediseño del Centro de decisiones: ya no debe existir.
+        self.assertNotIn('<details class="dc-definitions">', html)
         self.assertIn('<details class="dc-technical-shell">', html)
         self.assertNotIn('<details class="dc-technical-shell" open', html)
-        self.assertContains(response, 'Progreso semanal desconocido')
+        self.assertContains(response, 'Semana pendiente de programar')
 
     def test_resumen_visible_muestra_sesion_y_progreso_real(self):
         lunes = date(2026, 8, 24)

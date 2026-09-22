@@ -70,7 +70,6 @@
     a:focus-visible,
     button:focus-visible,
     .dc-accordion summary:focus-visible,
-    .dc-definitions summary:focus-visible,
     .dc-active-shell > summary:focus-visible,
     .dc-technical-shell > summary:focus-visible,
     .dc-load-detail > summary:focus-visible {
@@ -241,14 +240,6 @@
       font-size: clamp(26px, 4vw, 36px);
     }
 
-    .dc-definitions {
-      position: relative;
-      z-index: 1;
-      margin-top: 20px;
-      border-top: 1px solid var(--line);
-    }
-
-    .dc-definitions summary,
     .dc-technical-shell > summary,
     .dc-active-shell > summary {
       min-height: 44px;
@@ -442,29 +433,28 @@
       overflow-wrap: anywhere;
     }
 
-    .dc-legend {
+    .dc-stats-quiet {
       position: relative;
       z-index: 1;
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin: 16px 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .dc-legend li {
-      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin-top: 20px;
+      padding: 14px 16px;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--surface);
       color: var(--ink-muted);
       font-size: 13px;
-      line-height: 1.5;
+      line-height: 1.4;
     }
 
-    .dc-legend strong {
-      display: block;
-      margin-bottom: 2px;
-      color: var(--ink);
-      font-weight: 700;
+    .dc-stats-quiet-dot {
+      width: 6px;
+      height: 6px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--cyan);
     }
 
     .dc-section {
@@ -564,6 +554,12 @@
 
     .dc-card.is-experiment {
       background: var(--gold-soft);
+    }
+
+    .dc-card.is-experiment-priority {
+      margin-bottom: 28px;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: rgba(69, 26, 3, 0.2);
     }
 
     .dc-card.is-weekly-close {
@@ -905,6 +901,7 @@
 
     .dc-load-list {
       display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 10px;
     }
 
@@ -1131,11 +1128,6 @@
         padding: 13px 9px;
       }
 
-      .dc-legend {
-        grid-template-columns: 1fr;
-        gap: 8px;
-      }
-
       .dc-next-grid {
         grid-template-columns: 1fr;
       }
@@ -1190,8 +1182,7 @@
         grid-column: 1 / -1;
       }
 
-      .dc-card-grid.is-active,
-      .dc-load-list {
+      .dc-card-grid.is-active {
         grid-template-columns: repeat(2, minmax(0, 1fr));
       }
     }
@@ -1227,6 +1218,23 @@
     </div>
     {% endif %}
 
+    {% if sugerencia_hipotesis %}
+    <article class="dc-card is-experiment-priority" aria-labelledby="propuesta-experimento-titulo">
+      <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
+      <p class="dc-card-text" id="propuesta-experimento-titulo">{{ sugerencia_hipotesis.texto }}</p>
+      <div class="dc-actions">
+        <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}">
+          {% csrf_token %}
+          <button class="dc-button is-primary" type="submit">Probar 2 semanas</button>
+        </form>
+        <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}">
+          {% csrf_token %}
+          <button class="dc-button is-quiet" type="submit">No por ahora</button>
+        </form>
+      </div>
+    </article>
+    {% endif %}
+
     <section class="dc-timeline" aria-label="Línea del plan">
     <article class="dc-node dc-node--state">
     <section class="dc-hero is-compact" data-contract='class="dc-hero"' aria-labelledby="titulo-centro">
@@ -1245,6 +1253,12 @@
         <span class="dc-meta">Señales confirmadas, ajustes temporales e hipótesis en observación.</span>
       </div>
 
+      {% if preferencias_activas|length == 0 and intervenciones_activas|length == 0 and hipotesis_abiertas|length == 0 %}
+      <div class="dc-stats-quiet" aria-label="Sin señales activas registradas">
+        <span class="dc-stats-quiet-dot" aria-hidden="true"></span>
+        Modo estándar activo · Decisiones basadas en el histórico inmediato
+      </div>
+      {% else %}
       <div class="dc-stats" aria-label="Contadores de señales activas">
         <div class="dc-stat is-learned">
           <span class="dc-stat-value">{{ preferencias_activas|length }}</span>
@@ -1265,24 +1279,7 @@
           </span>
         </div>
       </div>
-
-      <details class="dc-definitions">
-        <summary>Qué significa cada señal</summary>
-      <ul class="dc-legend" aria-label="Cómo interpretar las señales">
-        <li>
-          <strong>Preferencia</strong>
-          Algo que el plan recordó y aplica cuando el contexto lo permite.
-        </li>
-        <li>
-          <strong>Ajuste</strong>
-          Un cambio temporal con una fecha de finalización.
-        </li>
-        <li>
-          <strong>Hipótesis</strong>
-          Un patrón en observación que todavía no se da por confirmado.
-        </li>
-      </ul>
-      </details>
+      {% endif %}
     </section>
     </article>
 
@@ -1297,8 +1294,8 @@
           <strong class="dc-next-value">{{ resumen_operativo.proxima_sesion.nombre }}</strong>
           <span class="dc-next-meta">{{ resumen_operativo.proxima_sesion.fecha|date:"l d M" }}{% if resumen_operativo.proxima_sesion.es_pospuesta %} · reubicada{% endif %}</span>
           {% else %}
-          <strong class="dc-next-value">Sin sesión canónica pendiente</strong>
-          <span class="dc-next-meta">El Centro no completa el dato con otra fuente.</span>
+          <strong class="dc-next-value">Sin sesiones en cola</strong>
+          <span class="dc-next-meta">Aún no hay una próxima sesión programada.</span>
           {% endif %}
         </div>
         <div class="dc-next-cell">
@@ -1307,8 +1304,8 @@
           <strong class="dc-next-value">{{ resumen_operativo.semana.completadas }} de {{ resumen_operativo.semana.objetivo }} completadas</strong>
           <span class="dc-next-meta">Mínimo válido: {{ resumen_operativo.semana.minimo }}</span>
           {% else %}
-          <strong class="dc-next-value">Progreso semanal desconocido</strong>
-          <span class="dc-next-meta">La semana todavía no tiene contrato materializado.</span>
+          <strong class="dc-next-value">Semana pendiente de programar</strong>
+          <span class="dc-next-meta">Aún no hay sesiones programadas para esta semana.</span>
           {% endif %}
         </div>
         <div class="dc-next-cell">
@@ -1537,23 +1534,6 @@
             <button class="dc-button is-primary" type="submit">Mantener cargas 7 días</button>
           </form>
           <form method="post" action="{% url 'clientes:ignorar_sugerencia' sugerencia_prioritaria.id %}">
-            {% csrf_token %}
-            <button class="dc-button is-quiet" type="submit">No por ahora</button>
-          </form>
-        </div>
-      </article>
-      {% endif %}
-
-      {% if sugerencia_hipotesis %}
-      <article class="dc-card is-experiment">
-        <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
-        <p class="dc-card-text">{{ sugerencia_hipotesis.texto }}</p>
-        <div class="dc-actions">
-          <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}">
-            {% csrf_token %}
-            <button class="dc-button is-primary" type="submit">Probar 2 semanas</button>
-          </form>
-          <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}">
             {% csrf_token %}
             <button class="dc-button is-quiet" type="submit">No por ahora</button>
           </form>
