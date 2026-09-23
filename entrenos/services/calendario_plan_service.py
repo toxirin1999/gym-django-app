@@ -35,6 +35,7 @@ _COLOR_MAP = {
     'omitida_sistema':      'gris_tenue',
     'pendiente':            'azul',
     'pospuesta':            'azul_dim',
+    'sustituida_recuperacion': 'turquesa',
     'sin_registro':         None,
 }
 
@@ -59,6 +60,8 @@ def _determinar_estado(sp, er, fecha, hoy):
             return 'omitida_sistema'
         if sp.estado == SesionProgramada.ESTADO_CANCELADA_LESION:
             return 'omitida_sistema'
+        if sp.estado == SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION:
+            return 'sustituida_recuperacion'
         if sp.estado == SesionProgramada.ESTADO_PENDIENTE:
             if sp.pospuesta_hasta and sp.pospuesta_hasta > fecha:
                 return 'pospuesta'

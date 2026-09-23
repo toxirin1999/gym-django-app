@@ -93,3 +93,12 @@ class PortadaUnificadaTemplateTests(TestCase):
                 html = self._render_con_accion_principal(accion)
                 self.assertEqual(html.count("data-primary-action"), 1)
                 self.assertIn(accion["label"], html)
+
+    def test_ajustar_decision_ofrece_movilidad_como_accion_secundaria(self):
+        template_source = get_template(
+            "clientes/mockup_demo.html"
+        ).template.source
+
+        self.assertIn("data-mobility-secondary-action", template_source)
+        self.assertIn("{% url 'estiramientos:panel' %}", template_source)
+        self.assertIn("sesion_programada_id={{ sesion_programada.id }}", template_source)

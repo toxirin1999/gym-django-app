@@ -189,9 +189,14 @@ def evaluar_contrato_semanal_gym(contrato):
     numero_completadas = completadas.count()
     numero_parciales = parciales.count()
     numero_realizadas = numero_completadas + numero_parciales
-    if numero_realizadas >= contrato.objetivo_sesiones:
+    numero_adaptadas = sesiones.filter(
+        estado=SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION,
+    ).count()
+    objetivo_efectivo = max(0, contrato.objetivo_sesiones - numero_adaptadas)
+    minimo_efectivo = max(0, contrato.minimo_valido - numero_adaptadas)
+    if numero_realizadas >= objetivo_efectivo:
         estado = 'objetivo'
-    elif numero_realizadas >= contrato.minimo_valido:
+    elif numero_realizadas >= minimo_efectivo:
         estado = 'minima_valida'
     else:
         estado = 'insuficiente'
@@ -201,6 +206,7 @@ def evaluar_contrato_semanal_gym(contrato):
         'sesiones_completadas': numero_completadas,
         'sesiones_parciales': numero_parciales,
         'sesiones_realizadas': numero_realizadas,
+        'sesiones_adaptadas': numero_adaptadas,
         'sesiones_reubicadas': sesiones.filter(
             estado__in=[SesionProgramada.ESTADO_COMPLETADA, SesionProgramada.ESTADO_PARCIAL],
             fecha_realizada__isnull=False,

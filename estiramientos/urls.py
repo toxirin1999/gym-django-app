@@ -6,4 +6,5 @@ app_name = "estiramientos"
 urlpatterns = [
     path("", views.panel_estiramientos, name="panel"),
     path("plan/<int:plan_id>/", views.iniciar_plan, name="iniciar_plan"),
+    path("plan/<int:plan_id>/completar/", views.completar_plan, name="completar_plan"),
 ]

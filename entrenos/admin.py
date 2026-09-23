@@ -17,6 +17,7 @@ from .models import (
     DesafioSemanal,
     ProgresoDesafio,
     ActividadRealizada,
+    SesionMovilidadAdaptativa,
 )
 
 
@@ -40,6 +41,16 @@ class SerieRealizadaInline(admin.TabularInline):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('ejercicio')
+
+
+@admin.register(SesionMovilidadAdaptativa)
+class SesionMovilidadAdaptativaAdmin(admin.ModelAdmin):
+    list_display = (
+        "cliente", "fecha", "plan", "resolucion", "duracion_minutos", "rpe",
+    )
+    list_filter = ("resolucion", "fecha", "plan")
+    search_fields = ("cliente__nombre", "idempotency_key")
+    readonly_fields = ("actividad", "idempotency_key", "creada_en")
 
 
 @admin.register(EntrenoRealizado)

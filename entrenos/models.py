@@ -1855,6 +1855,7 @@ class SesionProgramada(models.Model):
     ESTADO_OMITIDA_USUARIO = "omitida_usuario"
     ESTADO_OMITIDA_SISTEMA = "omitida_sistema"
     ESTADO_CANCELADA_LESION = "cancelada_lesion"
+    ESTADO_SUSTITUIDA_RECUPERACION = "sustituida_recuperacion"
 
     PRIORIDAD_ALTA = "alta"
     PRIORIDAD_NORMAL = "normal"
@@ -1867,6 +1868,7 @@ class SesionProgramada(models.Model):
         (ESTADO_OMITIDA_USUARIO, "Omitida por ausencia planificada"),
         (ESTADO_OMITIDA_SISTEMA, "Omitida por sistema"),
         (ESTADO_CANCELADA_LESION, "Cancelada por lesión"),
+        (ESTADO_SUSTITUIDA_RECUPERACION, "Sustituida por recuperación"),
     ]
 
     PRIORIDADES = [
@@ -1890,7 +1892,7 @@ class SesionProgramada(models.Model):
     fecha_realizada = models.DateField(null=True, blank=True)
 
     estado = models.CharField(
-        max_length=20,
+        max_length=24,
         choices=ESTADOS,
         default=ESTADO_PENDIENTE,
         db_index=True,
@@ -1942,6 +1944,59 @@ class SesionProgramada(models.Model):
 
     def __str__(self):
         return f"{self.cliente} - {self.fecha_prevista} - {self.nombre_sesion} - {self.estado}"
+
+
+class SesionMovilidadAdaptativa(models.Model):
+    """Recibo auditable de una sesión de movilidad completada.
+
+    La actividad física vive en ``ActividadRealizada``; este modelo conserva la
+    decisión tomada sobre la sesión Gym sin hacer pasar movilidad por fuerza.
+    """
+
+    RESOLUCION_ANADIR = "anadir"
+    RESOLUCION_POSPONER = "posponer"
+    RESOLUCION_SUSTITUIR = "sustituir"
+    RESOLUCIONES = [
+        (RESOLUCION_ANADIR, "Añadir movilidad"),
+        (RESOLUCION_POSPONER, "Posponer entrenamiento"),
+        (RESOLUCION_SUSTITUIR, "Sustituir por recuperación"),
+    ]
+
+    cliente = models.ForeignKey(
+        "clientes.Cliente", on_delete=models.CASCADE,
+        related_name="sesiones_movilidad_adaptativas",
+    )
+    plan = models.ForeignKey(
+        "estiramientos.EstiramientoPlan", on_delete=models.PROTECT,
+        related_name="sesiones_completadas",
+    )
+    sesion_programada = models.ForeignKey(
+        SesionProgramada, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="sesiones_movilidad",
+    )
+    actividad = models.OneToOneField(
+        ActividadRealizada, on_delete=models.PROTECT,
+        related_name="sesion_movilidad_adaptativa",
+    )
+    resolucion = models.CharField(max_length=16, choices=RESOLUCIONES)
+    fecha = models.DateField(db_index=True)
+    fecha_destino = models.DateField(null=True, blank=True)
+    duracion_minutos = models.PositiveIntegerField()
+    rpe = models.FloatField()
+    idempotency_key = models.CharField(max_length=120)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-fecha", "-id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cliente", "idempotency_key"],
+                name="unique_movilidad_cliente_idempotencia",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.cliente} — movilidad {self.fecha} ({self.resolucion})"
 
 
 class SugerenciaPlan(models.Model):

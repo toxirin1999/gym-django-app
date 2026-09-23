@@ -447,3 +447,62 @@
 .hidden {
     display: none !important;
 }
+
+.mobility-decision {
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    border: 1px solid rgba(52, 211, 153, 0.3);
+    border-radius: 18px;
+    background: linear-gradient(145deg, rgba(6, 78, 59, 0.28), var(--bg-darker));
+    color: var(--text-primary);
+}
+
+.mobility-decision__eyebrow {
+    margin: 0 0 0.4rem;
+    color: var(--color-green);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.mobility-decision h2 {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+}
+
+.mobility-decision > label {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 44px;
+    margin-top: 0.5rem;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--text-secondary);
+}
+
+.mobility-decision input[type="radio"] {
+    accent-color: var(--color-green);
+}
+
+.mobility-date input {
+    margin-left: auto;
+    padding: 0.45rem;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+}
+
+#mobilityDecisionReady {
+    width: 100%;
+    min-height: 44px;
+    margin-top: 0.9rem;
+    border: 0;
+    border-radius: 12px;
+    background: var(--color-green);
+    color: #052e26;
+    font-weight: 800;
+}

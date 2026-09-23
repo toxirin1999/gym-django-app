@@ -7,6 +7,10 @@ class StretchPlayer {
         this.steps = config.steps;
         this.transition = config.transition;
         this.planId = config.planId;
+        this.completionUrl = config.completionUrl;
+        this.sessionId = config.sessionId || null;
+        this.resolution = config.resolution || 'anadir';
+        this.targetDate = config.targetDate || null;
         this.totalSteps = this.steps.length;
 
         // Estado del player
@@ -100,6 +104,9 @@ class StretchPlayer {
             statExercises: $('statExercises'),
             statTime: $('statTime'),
             btnRestartFinal: $('btnRestartFinal'),
+            btnCompleteMobility: $('btnCompleteMobility'),
+            mobilityDuration: $('mobilityDuration'),
+            mobilityRpe: $('mobilityRpe'),
             breathIndicator: $('breathIndicator'),
             btnBreath: $('btnBreath'),
             btnFullscreen: $('btnFullscreen'),
@@ -123,6 +130,9 @@ class StretchPlayer {
         }
         if (this.elements.btnRestartFinal) {
             this.elements.btnRestartFinal.addEventListener('click', () => this.restart());
+        }
+        if (this.elements.btnCompleteMobility) {
+            this.elements.btnCompleteMobility.addEventListener('click', () => this.completeMobility());
         }
 
         // Controles adicionales
@@ -655,6 +665,9 @@ class StretchPlayer {
     showCompleted() {
         this.elements.statExercises.textContent = this.totalSteps;
         this.elements.statTime.textContent = this.formatTime(this.state.totalElapsedTime);
+        if (this.elements.mobilityDuration && !this.elements.mobilityDuration.value) {
+            this.elements.mobilityDuration.value = Math.max(1, Math.ceil(this.state.totalElapsedTime / 60));
+        }
         this.elements.completedOverlay.classList.add('visible');
 
         // Secuencia de sonidos de celebración
@@ -664,6 +677,50 @@ class StretchPlayer {
         this.vibrate([100, 50, 100, 50, 200]);
 
         this.showToast('¡Sesión completada! 🎉', 'success');
+    }
+
+    async completeMobility() {
+        const duration = parseInt(this.elements.mobilityDuration?.value || '', 10);
+        const rpe = parseFloat(this.elements.mobilityRpe?.value || '');
+        if (!duration || !rpe || rpe < 1 || rpe > 10) {
+            this.showToast('Indica duración y RPE reales', 'warning');
+            return;
+        }
+        const csrf = document.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+        const storageKey = `mobilityCompletion:${this.planId}:${this.sessionId || 'free'}`;
+        let idempotencyKey = localStorage.getItem(storageKey);
+        if (!idempotencyKey) {
+            idempotencyKey = window.crypto?.randomUUID?.() || `${Date.now()}-${this.planId}`;
+            localStorage.setItem(storageKey, idempotencyKey);
+        }
+        this.elements.btnCompleteMobility.disabled = true;
+        try {
+            const response = await fetch(this.completionUrl, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json', 'X-CSRFToken': csrf},
+                body: JSON.stringify({
+                    sesion_programada_id: this.sessionId || null,
+                    resolucion: this.resolution,
+                    fecha_destino: this.targetDate || null,
+                    fecha: new Date().toISOString().slice(0, 10),
+                    duracion_minutos: duration,
+                    rpe: rpe,
+                    idempotency_key: idempotencyKey
+                })
+            });
+            const body = await response.json();
+            if (!response.ok || !body.success) throw new Error(body.error || 'No se pudo guardar');
+            try {
+                localStorage.removeItem(storageKey);
+            } catch (storageError) {
+                console.warn('La movilidad se guardó, pero no se pudo limpiar el borrador.', storageError);
+            }
+            this.showToast('Movilidad guardada', 'success');
+            window.location.href = '/estiramientos/';
+        } catch (error) {
+            this.elements.btnCompleteMobility.disabled = false;
+            this.showToast(error.message, 'warning');
+        }
     }
 
     // =====================================================

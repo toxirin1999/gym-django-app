@@ -33,6 +33,7 @@ def medir_ventana(cliente, desde, hasta):
     excluidos = {
         SesionProgramada.ESTADO_OMITIDA_SISTEMA,
         SesionProgramada.ESTADO_CANCELADA_LESION,
+        SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION,
     }
     programadas = SesionProgramada.objects.filter(cliente=cliente).select_related(
         'entreno_realizado', 'contrato_semanal',

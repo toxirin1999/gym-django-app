@@ -46,6 +46,8 @@ def _clasificar_sesion(sesion):
         return {**base, 'resultado': 'omitida', 'causa': 'sistema'}
     if sesion.estado == SesionProgramada.ESTADO_CANCELADA_LESION:
         return {**base, 'resultado': 'protegida', 'causa': 'lesion'}
+    if sesion.estado == SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION:
+        return {**base, 'resultado': 'protegida', 'causa': 'recuperacion'}
 
     # Una evaluación aceptada puede conservar una identidad no terminal. No se
     # fuerza dentro de otra categoría causal: queda visible pero fuera del

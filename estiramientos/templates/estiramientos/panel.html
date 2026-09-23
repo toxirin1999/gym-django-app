@@ -17,6 +17,22 @@
         <p>Elige un plan y relájate. Transición automática entre ejercicios.</p>
     </div>
 
+    {% if sesion_programada %}
+    <section class="mobility-decision" data-mobility-decision>
+        <p class="mobility-decision__eyebrow">MOVILIDAD · {{ sesion_programada.nombre_sesion }}</p>
+        <h2>¿Qué hacemos con tu entrenamiento programado?</h2>
+        <label><input type="radio" name="mobility_resolution" value="anadir" checked> Añadir movilidad y mantenerlo hoy</label>
+        <label><input type="radio" name="mobility_resolution" value="posponer"> Posponer el entrenamiento</label>
+        <label><input type="radio" name="mobility_resolution" value="sustituir"> Sustituirlo por recuperación</label>
+        <label class="mobility-date" hidden>
+            Nueva fecha
+            <input type="date" id="mobilityTargetDate">
+        </label>
+        <p>Elige después uno de los planes. La decisión viajará al reproductor y solo se aplicará al completar.</p>
+        <button type="button" data-primary-action id="mobilityDecisionReady">Decisión preparada</button>
+    </section>
+    {% endif %}
+
     {% if planes %}
     <!-- Filtros y búsqueda (NUEVO) -->
     <div class="filters-section">
@@ -47,9 +63,10 @@
 
     <div class="plans-grid">
         {% for p in planes %}
-        <a href="{% url 'estiramientos:iniciar_plan' p.id %}"
+        <a href="{% url 'estiramientos:iniciar_plan' p.id %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
             class="plan-card {% if p.fase == 'SUPERIOR' %}superior{% elif p.fase == 'INFERIOR' %}inferior{% else %}completo{% endif %}"
-            role="article" aria-label="Plan de estiramiento: {{ p.nombre }}">
+            role="article" aria-label="Plan de estiramiento: {{ p.nombre }}"
+            {% if sesion_programada %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% endif %}>
 
             <div class="plan-badge">
                 <i class="fas fa-play"></i> Iniciar
@@ -112,5 +129,28 @@
 {% block extra_js %}
 {% if planes %}
 <script src="{% static 'estiramientos/js/panel.js' %}"></script>
+{% if sesion_programada %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const radios = document.querySelectorAll('[name="mobility_resolution"]');
+    const dateWrap = document.querySelector('.mobility-date');
+    const targetDate = document.getElementById('mobilityTargetDate');
+    const sessionId = '{{ sesion_programada.id }}';
+    const refreshLinks = () => {
+        const selected = document.querySelector('[name="mobility_resolution"]:checked').value;
+        dateWrap.hidden = selected !== 'posponer';
+        document.querySelectorAll('[data-mobility-plan-url]').forEach(link => {
+            const query = new URLSearchParams({sesion_programada_id: sessionId, resolucion: selected});
+            if (selected === 'posponer' && targetDate.value) query.set('fecha_destino', targetDate.value);
+            link.href = `${link.dataset.mobilityPlanUrl}?${query}`;
+        });
+    };
+    radios.forEach(radio => radio.addEventListener('change', refreshLinks));
+    targetDate.addEventListener('change', refreshLinks);
+    document.getElementById('mobilityDecisionReady').addEventListener('click', refreshLinks);
+    refreshLinks();
+});
+</script>
+{% endif %}
 {% endif %}
 {% endblock %}

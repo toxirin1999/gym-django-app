@@ -932,3 +932,33 @@
 .player-container>*:nth-child(6) {
     animation-delay: 0.3s;
 }
+
+.mobility-completion-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem 0.75rem;
+    margin: 1rem 0;
+    text-align: left;
+}
+
+.mobility-completion-form label {
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.mobility-completion-form input {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.65rem;
+    border: 1px solid var(--border-light);
+    border-radius: 10px;
+    background: var(--bg-dark);
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
+.mobility-completion-form input:focus {
+    border-color: var(--color-success);
+    outline: 2px solid rgba(74, 222, 128, 0.2);
+}

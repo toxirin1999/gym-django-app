@@ -56,6 +56,7 @@ def _snapshot(contrato):
         SesionProgramada.ESTADO_SALTADA_USUARIO,
         SesionProgramada.ESTADO_OMITIDA_SISTEMA,
         SesionProgramada.ESTADO_CANCELADA_LESION,
+        SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION,
     )
     conteos = {
         codigo: sum(sesion.estado == codigo for sesion in sesiones)
@@ -65,6 +66,8 @@ def _snapshot(contrato):
     # diccionario histórico exacto. La nueva clave solo aparece con evidencia.
     if not conteos[SesionProgramada.ESTADO_PARCIAL]:
         conteos.pop(SesionProgramada.ESTADO_PARCIAL)
+    if not conteos[SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION]:
+        conteos.pop(SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION)
     omitidas_ausencia = [
         sesion for sesion in sesiones
         if sesion.estado == SesionProgramada.ESTADO_OMITIDA_USUARIO

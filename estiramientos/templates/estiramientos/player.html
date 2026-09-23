@@ -9,7 +9,11 @@
 
 {% block content %}
 <div class="player-container" data-steps='{{ steps|safe }}' data-transition="{{ transition }}"
-    data-plan-id="{{ plan.id }}">
+    data-plan-id="{{ plan.id }}"
+    data-sesion-programada-id="{{ sesion_programada.id|default:'' }}"
+    data-resolucion="{{ resolucion }}"
+    data-fecha-destino="{{ fecha_destino }}"
+    data-completion-url="{% url 'estiramientos:completar_plan' plan.id %}">
 
     <!-- Header -->
     <div class="player-header">
@@ -146,13 +150,21 @@
             </div>
         </div>
 
+        <form id="mobilityCompletionForm" class="mobility-completion-form">
+            {% csrf_token %}
+            <label for="mobilityDuration">Duración real</label>
+            <input id="mobilityDuration" name="duracion_minutos" type="number" min="1" required>
+            <label for="mobilityRpe">RPE real</label>
+            <input id="mobilityRpe" name="rpe" type="number" min="1" max="10" step="0.5" required>
+        </form>
+
         <div class="completed-actions">
             <button id="btnRestartFinal" class="completed-btn secondary">
                 <i class="fas fa-redo"></i> Repetir
             </button>
-            <a href="{% url 'estiramientos:panel' %}" class="completed-btn primary">
-                <i class="fas fa-check"></i> Finalizar
-            </a>
+            <button id="btnCompleteMobility" type="button" class="completed-btn primary" data-primary-action>
+                <i class="fas fa-check"></i> Guardar movilidad
+            </button>
         </div>
     </div>
 </div>
@@ -172,7 +184,11 @@
         const player = new StretchPlayer({
             steps: JSON.parse(playerContainer.dataset.steps),
             transition: parseInt(playerContainer.dataset.transition),
-            planId: parseInt(playerContainer.dataset.planId)
+            planId: parseInt(playerContainer.dataset.planId),
+            completionUrl: playerContainer.dataset.completionUrl,
+            sessionId: playerContainer.dataset.sesionProgramadaId,
+            resolution: playerContainer.dataset.resolucion,
+            targetDate: playerContainer.dataset.fechaDestino
         });
 
         player.init();

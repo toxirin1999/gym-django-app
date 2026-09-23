@@ -844,6 +844,7 @@ def _consistencia_semanal_programada(cliente, hoy):
     ).exclude(estado__in=(
         SesionProgramada.ESTADO_OMITIDA_SISTEMA,
         SesionProgramada.ESTADO_CANCELADA_LESION,
+        SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION,
     ))
     planificadas = sesiones.count()
     if planificadas == 0:
