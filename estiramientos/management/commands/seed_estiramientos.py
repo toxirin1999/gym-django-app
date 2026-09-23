@@ -18,23 +18,27 @@ class Command(BaseCommand):
         # CREAR/ACTUALIZAR LOS 3 PLANES
         # =====================================================
         planes_data = [
-            ("Tren Superior", "SUPERIOR", 5),
-            ("Tren Inferior", "INFERIOR", 5),
-            ("Cuerpo Completo", "COMPLETO", 5),
+            ("stretch-upper-body", "Tren Superior", "SUPERIOR", 5),
+            ("stretch-lower-body", "Tren Inferior", "INFERIOR", 5),
+            ("stretch-full-body", "Cuerpo Completo", "COMPLETO", 5),
         ]
 
         plan_objs = {}
-        for nombre, fase, transicion in planes_data:
+        for codigo, nombre, fase, transicion in planes_data:
             plan, created = EstiramientoPlan.objects.get_or_create(
-                fase=fase,
+                codigo=codigo,
                 defaults={
                     "nombre": nombre,
+                    "modalidad": EstiramientoPlan.MODALIDAD_ESTIRAMIENTOS,
+                    "fase": fase,
                     "transicion_segundos": transicion,
                     "activo": True
                 }
             )
             if not created:
                 plan.nombre = nombre
+                plan.modalidad = EstiramientoPlan.MODALIDAD_ESTIRAMIENTOS
+                plan.fase = fase
                 plan.transicion_segundos = transicion
                 plan.activo = True
                 plan.save()

@@ -22,9 +22,20 @@ class EstiramientoEjercicio(models.Model):
 
 class EstiramientoPlan(models.Model):
     FASE_CHOICES = EstiramientoEjercicio.FASE_CHOICES
+    MODALIDAD_ESTIRAMIENTOS = "estiramientos"
+    MODALIDAD_MOVILIDAD = "movilidad"
+    MODALIDAD_CHOICES = [
+        (MODALIDAD_ESTIRAMIENTOS, "Estiramientos"),
+        (MODALIDAD_MOVILIDAD, "Movilidad"),
+    ]
 
     nombre = models.CharField(max_length=80)  # "Superior", "Inferior", "Completo"
-    fase = models.CharField(max_length=12, choices=FASE_CHOICES, unique=True)
+    codigo = models.SlugField(max_length=80, unique=True)
+    modalidad = models.CharField(
+        max_length=16, choices=MODALIDAD_CHOICES, default=MODALIDAD_ESTIRAMIENTOS,
+    )
+    fase = models.CharField(max_length=12, choices=FASE_CHOICES)
+    descripcion = models.CharField(max_length=220, blank=True, default="")
     transicion_segundos = models.PositiveIntegerField(default=5)
     activo = models.BooleanField(default=True)
 

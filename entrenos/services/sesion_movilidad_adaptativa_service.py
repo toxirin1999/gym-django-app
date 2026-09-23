@@ -47,6 +47,8 @@ def completar_sesion_movilidad(
     idempotency_key, sesion_programada=None, fecha_destino=None,
 ):
     """Persiste movilidad real y aplica una sola resolución sobre el Gym."""
+    if getattr(plan, "modalidad", None) != "movilidad":
+        raise ValueError("El plan seleccionado no es una sesión de movilidad.")
     if not idempotency_key or not str(idempotency_key).strip():
         raise ValueError("La clave de idempotencia es obligatoria.")
     if sesion_programada is not None and sesion_programada.cliente_id != cliente.id:
@@ -94,7 +96,7 @@ def completar_sesion_movilidad(
     rpe_real = float(rpe)
     actividad = ActividadRealizada.objects.create(
         cliente=cliente,
-        tipo="estiramientos",
+        tipo="movilidad",
         titulo=f"Movilidad · {plan.nombre}",
         fecha=fecha,
         fecha_realizado=fecha,

@@ -12,7 +12,11 @@ import json
 
 
 def panel_estiramientos(request):
-    planes = EstiramientoPlan.objects.filter(activo=True).order_by("fase")
+    planes = EstiramientoPlan.objects.filter(activo=True).order_by("fase", "nombre")
+    planes_movilidad = planes.filter(modalidad=EstiramientoPlan.MODALIDAD_MOVILIDAD)
+    planes_estiramientos = planes.filter(
+        modalidad=EstiramientoPlan.MODALIDAD_ESTIRAMIENTOS,
+    )
     sesion = None
     sesion_id = request.GET.get("sesion_programada_id")
     if request.user.is_authenticated and sesion_id:
@@ -24,6 +28,8 @@ def panel_estiramientos(request):
         )
     return render(request, "estiramientos/panel.html", {
         "planes": planes,
+        "planes_movilidad": planes_movilidad,
+        "planes_estiramientos": planes_estiramientos,
         "sesion_programada": sesion,
     })
 
@@ -51,7 +57,10 @@ def iniciar_plan(request, plan_id: int):
 
     sesion = None
     sesion_id = request.GET.get("sesion_programada_id")
-    if request.user.is_authenticated and sesion_id:
+    if (
+        plan.modalidad == EstiramientoPlan.MODALIDAD_MOVILIDAD
+        and request.user.is_authenticated and sesion_id
+    ):
         sesion = get_object_or_404(
             SesionProgramada, pk=sesion_id, cliente__user=request.user,
             estado=SesionProgramada.ESTADO_PENDIENTE,

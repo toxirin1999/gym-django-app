@@ -77,62 +77,34 @@
         </div>
     </div>
 
-    <div class="mobility-section-heading">
+    <div class="mobility-section-heading" id="movilidad">
         <div>
-            <span>SESIONES GUIADAS</span>
-            <h2>Elige cómo moverte hoy</h2>
+            <span>MOVIMIENTO ACTIVO</span>
+            <h2>Sesiones de movilidad</h2>
         </div>
         <small>Puedes finalizar y guardar en cualquier momento</small>
     </div>
 
-    <div class="plans-grid">
-        {% for p in planes %}
-        <a href="{% url 'estiramientos:iniciar_plan' p.id %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
-            class="plan-card {% if p.fase == 'SUPERIOR' %}superior{% elif p.fase == 'INFERIOR' %}inferior{% else %}completo{% endif %}"
-            role="article" aria-label="Plan de estiramiento: {{ p.nombre }}"
-            {% if sesion_programada %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% endif %}>
+    <div class="plans-grid" data-plan-section="movilidad">
+        {% for p in planes_movilidad %}
+            {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
+        {% empty %}
+            <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
+        {% endfor %}
+    </div>
 
-            <div class="plan-badge">
-                <i class="fas fa-play"></i> Iniciar y registrar
-            </div>
-
-            <div class="plan-icon">
-                {% if p.fase == 'SUPERIOR' %}
-                <i class="fas fa-hand-rock"></i>
-                {% elif p.fase == 'INFERIOR' %}
-                <i class="fas fa-shoe-prints"></i>
-                {% else %}
-                <i class="fas fa-child"></i>
-                {% endif %}
-            </div>
-
-            <div class="plan-title">{{ p.nombre }}</div>
-
-            <div class="plan-description">
-                {% if p.fase == 'SUPERIOR' %}
-                Pectorales, dorsales, hombros, brazos y cuello.
-                {% elif p.fase == 'INFERIOR' %}
-                Cuádriceps, isquios, glúteos, cadera y gemelos.
-                {% else %}
-                Rutina completa para todo el cuerpo.
-                {% endif %}
-            </div>
-
-            <div class="plan-stats">
-                <div class="plan-stat">
-                    <i class="fas fa-list-ol"></i>
-                    <span>{{ p.pasos.count }} ejercicios</span>
-                </div>
-                <div class="plan-stat">
-                    <i class="fas fa-clock"></i>
-                    <span>~{{ p.pasos.count|default:0 }} min</span>
-                </div>
-                <div class="plan-stat">
-                    <i class="fas fa-sync-alt"></i>
-                    <span>{{ p.transicion_segundos }}s transición</span>
-                </div>
-            </div>
-        </a>
+    <div class="mobility-section-heading" id="estiramientos">
+        <div>
+            <span>VUELTA A LA CALMA</span>
+            <h2>Sesiones de estiramientos</h2>
+        </div>
+        <small>Posiciones mantenidas para reducir tensión</small>
+    </div>
+    <div class="plans-grid" data-plan-section="estiramientos">
+        {% for p in planes_estiramientos %}
+            {% include "estiramientos/_plan_card.html" with permite_resolucion=False %}
+        {% empty %}
+            <p class="no-plans">No hay sesiones de estiramientos disponibles.</p>
         {% endfor %}
     </div>
 

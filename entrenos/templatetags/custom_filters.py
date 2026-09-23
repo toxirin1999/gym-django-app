@@ -62,7 +62,7 @@ def tipo_icono(tipo):
         'futbol':       '⚽',
         'natacion':     '🏊',
         'yoga':         '🧘',
-        'estiramientos':'🤸',
+        'estiramientos':'🤸', 'movilidad':'🔄',
         'otro':         '🎯',
     }
     return iconos.get(tipo, '🎯')

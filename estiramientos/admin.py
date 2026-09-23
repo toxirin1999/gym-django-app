@@ -17,6 +17,7 @@ class PasoInline(admin.TabularInline):
 
 @admin.register(EstiramientoPlan)
 class EstiramientoPlanAdmin(admin.ModelAdmin):
-    list_display = ("nombre", "fase", "transicion_segundos", "activo")
-    list_filter = ("fase", "activo")
+    list_display = ("nombre", "codigo", "modalidad", "fase", "transicion_segundos", "activo")
+    list_filter = ("modalidad", "fase", "activo")
+    search_fields = ("nombre", "codigo", "descripcion")
     inlines = [PasoInline]

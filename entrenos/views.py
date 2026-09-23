@@ -8549,13 +8549,14 @@ def timeline_atleta(request, cliente_id):
     ICONOS = {
         'gym': '🏋️', 'hyrox': '⚡', 'carrera': '🏃', 'ciclismo': '🚴',
         'remo': '🚣', 'futbol': '⚽', 'natacion': '🏊',
-        'yoga': '🧘', 'estiramientos': '🤸', 'otro': '🎯',
+        'yoga': '🧘', 'movilidad': '🔄', 'estiramientos': '🤸', 'otro': '🎯',
         'cardio_sustituto': '🔥', 'hiit': '⚡',
     }
     LABELS = {
         'gym': 'GYM', 'hyrox': 'HYROX', 'carrera': 'CARRERA',
         'ciclismo': 'BICI', 'remo': 'REMO', 'futbol': 'FÚTBOL',
-        'natacion': 'NATACIÓN', 'yoga': 'YOGA', 'estiramientos': 'STRETCHING',
+        'natacion': 'NATACIÓN', 'yoga': 'YOGA', 'movilidad': 'MOVILIDAD',
+        'estiramientos': 'STRETCHING',
         'cardio_sustituto': 'CARDIO', 'hiit': 'HIIT', 'otro': 'OTRO',
     }
     HUMOR_EMOJI = {'verde': '😊', 'amarillo': '😐', 'rojo': '😞'}

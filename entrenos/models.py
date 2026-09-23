@@ -1132,6 +1132,7 @@ class ActividadRealizada(models.Model):
         ('futbol', 'Fútbol'),
         ('natacion', 'Natación'),
         ('yoga', 'Yoga / Movilidad'),
+        ('movilidad', 'Movilidad'),
         ('estiramientos', 'Estiramientos'),
         ('otro', 'Otra Actividad'),
     ]

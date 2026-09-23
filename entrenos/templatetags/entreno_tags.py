@@ -45,6 +45,7 @@ def tipo_icono(tipo):
         'natacion':      '🏊',
         'yoga':          '🧘',
         'estiramientos': '🤸',
+        'movilidad': '🔄',
         'otro':          '🎯',
     }
     return iconos.get(tipo, '🎯')

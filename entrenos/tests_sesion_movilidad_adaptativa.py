@@ -29,7 +29,8 @@ class SesionMovilidadAdaptativaContractTests(TestCase):
         self.cliente = Cliente.objects.get(user=self.user)
         self.otro = Cliente.objects.get(user=self.otro_user)
         self.plan = EstiramientoPlan.objects.create(
-            nombre="Movilidad completa", fase="COMPLETO", transicion_segundos=5,
+            nombre="Movilidad completa", codigo="mobility-contract-complete",
+            modalidad="movilidad", fase="COMPLETO", transicion_segundos=5,
         )
         ejercicio = EstiramientoEjercicio.objects.create(
             nombre="Rotación torácica", fase_recomendada="COMPLETO",
@@ -73,7 +74,7 @@ class SesionMovilidadAdaptativaContractTests(TestCase):
         self.assertEqual(registro.resolucion, "anadir")
         self.assertEqual(registro.duracion_minutos, 20)
         self.assertEqual(registro.rpe, 3)
-        self.assertEqual(registro.actividad.tipo, "estiramientos")
+        self.assertEqual(registro.actividad.tipo, "movilidad")
         self.assertEqual(registro.actividad.cliente, self.cliente)
         self.assertEqual(registro.actividad.fecha_realizado, self.HOY)
         self.assertEqual(registro.actividad.carga_ua, 60.0)
@@ -212,7 +213,8 @@ class CompletarMovilidadHttpContractTests(TestCase):
         self.otro = Cliente.objects.get(user=self.otro_user)
         self.client.force_login(self.user)
         self.plan = EstiramientoPlan.objects.create(
-            nombre="Movilidad superior", fase="SUPERIOR",
+            nombre="Movilidad superior", codigo="mobility-contract-upper",
+            modalidad="movilidad", fase="SUPERIOR",
         )
         ejercicio = EstiramientoEjercicio.objects.create(nombre="CARs hombro")
         EstiramientoPaso.objects.create(

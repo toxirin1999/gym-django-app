@@ -10,6 +10,7 @@
 {% block content %}
 <div class="player-container" data-steps='{{ steps|safe }}' data-transition="{{ transition }}"
     data-plan-id="{{ plan.id }}"
+    data-modalidad="{{ plan.modalidad }}"
     data-sesion-programada-id="{{ sesion_programada.id|default:'' }}"
     data-resolucion="{{ resolucion }}"
     data-fecha-destino="{{ fecha_destino }}"
@@ -54,7 +55,7 @@
         <div class="timer-overlay">
             <div class="timer-display">
                 <div id="timerSeconds" class="timer-seconds">30</div>
-                <div id="timerLabel" class="timer-label">Estirando</div>
+            <div id="timerLabel" class="timer-label">{% if plan.modalidad == 'movilidad' %}Moviéndote{% else %}Estirando{% endif %}</div>
             </div>
 
             <!-- Progress ring -->
@@ -131,10 +132,10 @@
         </div>
     </div>
 
-    <button id="btnFinishEarly" type="button" class="finish-early-btn" data-secondary-action>
+    {% if plan.modalidad == 'movilidad' %}<button id="btnFinishEarly" type="button" class="finish-early-btn" data-secondary-action>
         <span><i class="fas fa-flag-checkered"></i> Finalizar y guardar</span>
         <small>Registrar lo realizado hasta ahora</small>
-    </button>
+    </button>{% endif %}
 </div>
 
 <!-- Overlay de completado -->
@@ -142,7 +143,7 @@
     <div class="completed-content">
         <div class="completed-icon" role="img" aria-label="Celebración">🎉</div>
         <div id="completedTitle" class="completed-title">¡Completado!</div>
-        <div class="completed-subtitle">Has terminado todos los estiramientos</div>
+        <div class="completed-subtitle">Has terminado la sesión de {{ plan.get_modalidad_display|lower }}</div>
 
         <div class="completed-stats">
             <div class="completed-stat">
@@ -155,7 +156,7 @@
             </div>
         </div>
 
-        <form id="mobilityCompletionForm" class="mobility-completion-form">
+        <form id="mobilityCompletionForm" class="mobility-completion-form"{% if plan.modalidad != 'movilidad' %} hidden{% endif %}>
             {% csrf_token %}
             <label for="mobilityDuration">Duración real</label>
             <input id="mobilityDuration" name="duracion_minutos" type="number" min="1" required>
@@ -167,9 +168,9 @@
             <button id="btnRestartFinal" class="completed-btn secondary">
                 <i class="fas fa-redo"></i> Repetir
             </button>
-            <button id="btnCompleteMobility" type="button" class="completed-btn primary" data-primary-action>
+            {% if plan.modalidad == 'movilidad' %}<button id="btnCompleteMobility" type="button" class="completed-btn primary" data-primary-action>
                 <i class="fas fa-check"></i> Guardar movilidad
-            </button>
+            </button>{% else %}<a href="{% url 'estiramientos:panel' %}" class="completed-btn primary">Volver a las sesiones</a>{% endif %}
         </div>
     </div>
 </div>
