@@ -17,23 +17,24 @@
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-html, body { background: #EFEAE1; min-height: 100vh; }
+html, body { background: #09090B; min-height: 100vh; }
 
 body {
-  --bg:      #EFEAE1;
-  --ink:     #0F0F0E;
-  --ink-2:   #2A2926;
-  --ink-3:   rgba(15,15,14,0.55);
-  --ink-4:   rgba(15,15,14,0.28);
-  --line:    rgba(15,15,14,0.12);
-  --line-2:  rgba(15,15,14,0.25);
-  --paper:   #F7F3EA;
-  --paper-2: #E4DED1;
-  --accent:  oklch(0.55 0.21 28);
-  --accent-2:oklch(0.62 0.18 60);
-  --ok:      oklch(0.50 0.16 145);
-  --warn:    oklch(0.68 0.17 70);
-  --danger:  oklch(0.52 0.22 25);
+  --bg:      #09090B;
+  --ink:     #F4F4F5;
+  --ink-2:   #D4D4D8;
+  --ink-3:   #A1A1AA;
+  --ink-4:   #71717A;
+  --line:    rgba(255,255,255,0.08);
+  --line-2:  rgba(255,255,255,0.16);
+  --paper:   rgba(24,24,27,0.6);
+  --paper-2: #27272A;
+  --accent:  #F87171;
+  --accent-2:#FB923C;
+  --ok:      #34D399;
+  --warn:    #FBBF24;
+  --danger:  #F87171;
+  --on-light:#09090B;
   --font-disp: 'Archivo Black','Archivo',sans-serif;
   --font-body: 'Archivo',system-ui,sans-serif;
   --font-mono: 'JetBrains Mono',ui-monospace,monospace;
@@ -80,12 +81,12 @@ body {
   border-radius: 2px; white-space: nowrap;
   min-height: 36px;
 }
-.rb-btn:hover { background: var(--ink); color: var(--paper); text-decoration: none; }
-.rb-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--paper); }
+.rb-btn:hover { background: var(--ink); color: var(--on-light); text-decoration: none; }
+.rb-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-light); }
 .rb-btn-primary:hover { background: var(--ink); border-color: var(--ink); }
 .rb-btn-ghost { border-color: var(--line-2); color: var(--ink-3); }
 .rb-btn-ghost:hover { background: var(--paper-2); color: var(--ink); border-color: var(--ink-2); }
-.rb-btn-active { background: var(--ink); color: var(--paper); }
+.rb-btn-active { background: var(--ink); color: var(--on-light); }
 .rb-btn-sm { padding: 4px 9px; font-size: 9px; }
 
 /* ── PERIOD PILLS ────────────────────────────── */
@@ -96,11 +97,11 @@ body {
   color: var(--ink-3); transition: all .15s; cursor: pointer;
   min-height: 32px; display: inline-flex; align-items: center; }
 .rb-period:hover { border-color: var(--ink-2); color: var(--ink); text-decoration: none; }
-.rb-period.active { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.rb-period.active { background: var(--ink); border-color: var(--ink); color: var(--on-light); }
 
 /* ── SECTION ─────────────────────────────────── */
 .rb-section { padding: 20px 0 4px; }
-.rb-performance { border:1px solid var(--line-2); border-left:4px solid #0891b2; padding:20px; margin:22px 0; background:rgba(8,145,178,.035); }
+.rb-performance { border:1px solid var(--line-2); border-left:4px solid #22D3EE; padding:20px; margin:22px 0; background:rgba(34,211,238,.06); }
 .rb-performance-head { display:flex; justify-content:space-between; gap:16px; align-items:end; border-bottom:1px solid var(--line); padding-bottom:14px; }
 .rb-performance-title { font-family:var(--font-disp); font-size:clamp(25px,6vw,38px); line-height:1; }
 .rb-performance-source { font-family:var(--font-mono); color:var(--ink-3); font-size:9px; text-transform:uppercase; letter-spacing:.1em; }
@@ -132,10 +133,6 @@ body {
 .rb-bib-name { font-family: var(--font-disp);
   font-size: clamp(32px, 10vw, 56px); line-height: 0.95;
   letter-spacing: -0.03em; color: var(--ink); text-transform: uppercase; }
-.rb-bib-level { font-family: var(--font-mono); font-size: 11px; font-weight: 700;
-  letter-spacing: 0.1em; color: var(--accent); text-transform: uppercase; margin-top: 8px;
-  text-decoration: none; display: inline-block; }
-.rb-bib-level:hover { text-decoration: underline; }
 .rb-bib-divider { display: flex; justify-content: space-between; align-items: baseline;
   margin-top: 14px; border-top: 1.5px dashed var(--ink); padding-top: 12px;
   gap: 8px; flex-wrap: wrap; }
@@ -231,9 +228,9 @@ body {
 .rb-track { margin: 12px 0 8px; }
 .rb-track-bar { display: flex; height: 8px; border-radius: 4px; overflow: hidden; gap: 2px; }
 .rb-track-seg { flex: 1; border-radius: 2px; }
-.rb-seg-red    { background: rgba(193,53,21,0.25); }
-.rb-seg-yellow { background: rgba(180,83,9,0.25); }
-.rb-seg-green  { background: rgba(45,125,69,0.25); }
+.rb-seg-red    { background: rgba(248,113,113,0.25); }
+.rb-seg-yellow { background: rgba(251,191,36,0.25); }
+.rb-seg-green  { background: rgba(52,211,153,0.25); }
 .rb-seg-active.rb-seg-red    { background: oklch(0.52 0.22 25); }
 .rb-seg-active.rb-seg-yellow { background: oklch(0.68 0.17 70); }
 .rb-seg-active.rb-seg-green  { background: oklch(0.50 0.16 145); }
@@ -245,9 +242,9 @@ body {
 .rb-chip { display: inline-flex; align-items: center; gap: 5px;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   padding: 4px 8px; border-radius: 2px; letter-spacing: 0.06em; }
-.rb-chip-ok     { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.2); }
-.rb-chip-warn   { background: rgba(180,83,9,0.12);  color: var(--warn); border: 1px solid rgba(180,83,9,0.2); }
-.rb-chip-accent { background: rgba(193,53,21,0.10); color: var(--accent); border: 1px solid rgba(193,53,21,0.2); }
+.rb-chip-ok     { background: rgba(52,211,153,0.12); color: var(--ok); border: 1px solid rgba(52,211,153,0.2); }
+.rb-chip-warn   { background: rgba(251,191,36,0.12);  color: var(--warn); border: 1px solid rgba(251,191,36,0.2); }
+.rb-chip-accent { background: rgba(248,113,113,0.10); color: var(--accent); border: 1px solid rgba(248,113,113,0.2); }
 .rb-chip-muted  { background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--line); }
 
 /* ── ZONE BADGE ──────────────────────────────── */
@@ -255,11 +252,11 @@ body {
   letter-spacing: 0.1em; text-transform: uppercase;
   padding: 6px 12px; border-radius: 2px; display: inline-flex; align-items: center; gap: 6px;
   margin-top: 10px; }
-.rb-zone-optima    { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.25); }
-.rb-zone-cuidado   { background: rgba(180,83,9,0.12);  color: var(--warn); border: 1px solid rgba(180,83,9,0.25); }
-.rb-zone-riesgo_alto { background: rgba(193,53,21,0.12); color: var(--danger); border: 1px solid rgba(193,53,21,0.25); }
+.rb-zone-optima    { background: rgba(52,211,153,0.12); color: var(--ok); border: 1px solid rgba(52,211,153,0.25); }
+.rb-zone-cuidado   { background: rgba(251,191,36,0.12);  color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
+.rb-zone-riesgo_alto { background: rgba(248,113,113,0.12); color: var(--danger); border: 1px solid rgba(248,113,113,0.25); }
 .rb-zone-baja_carga  { background: var(--paper-2); color: var(--ink-3); border: 1px solid var(--line-2); }
-.rb-zone-reanudacion { background: rgba(180,83,9,0.10); color: var(--warn); border: 1px solid rgba(180,83,9,0.25); }
+.rb-zone-reanudacion { background: rgba(251,191,36,0.10); color: var(--warn); border: 1px solid rgba(251,191,36,0.25); }
 
 /* ── TABS ────────────────────────────────────── */
 .rb-tabs { display: flex; gap: 0; border-bottom: 1.5px solid var(--line-2);
@@ -293,14 +290,14 @@ body {
 .rb-badge { display: inline-flex; align-items: center; gap: 4px;
   font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   padding: 3px 7px; border-radius: 2px; letter-spacing: 0.06em; }
-.rb-badge-ok      { background: rgba(45,125,69,0.12);  color: var(--ok); }
-.rb-badge-accent  { background: rgba(193,53,21,0.10);  color: var(--danger); }
-.rb-badge-warn    { background: rgba(180,83,9,0.10);   color: var(--warn); }
+.rb-badge-ok      { background: rgba(52,211,153,0.12);  color: var(--ok); }
+.rb-badge-accent  { background: rgba(248,113,113,0.10);  color: var(--danger); }
+.rb-badge-warn    { background: rgba(251,191,36,0.10);   color: var(--warn); }
 .rb-badge-muted   { background: var(--paper-2); color: var(--ink-4); }
 .rb-count-badge { font-family: var(--font-mono); font-size: 10px; font-weight: 700;
   padding: 3px 8px; border-radius: 2px; }
-.rb-count-warn  { background: rgba(180,83,9,0.12); color: var(--warn); border: 1px solid rgba(180,83,9,0.2); }
-.rb-count-ok    { background: rgba(45,125,69,0.12); color: var(--ok); border: 1px solid rgba(45,125,69,0.2); }
+.rb-count-warn  { background: rgba(251,191,36,0.12); color: var(--warn); border: 1px solid rgba(251,191,36,0.2); }
+.rb-count-ok    { background: rgba(52,211,153,0.12); color: var(--ok); border: 1px solid rgba(52,211,153,0.2); }
 
 /* ── LEGEND ROW ──────────────────────────────── */
 .rb-legend-row { display: flex; gap: 12px; }
@@ -440,13 +437,10 @@ body {
 .rb-empty i { font-size: 24px; color: var(--ink-4); margin-bottom: 8px; display: block; }
 .rb-empty p { font-size: 13px; color: var(--ink-3); }
 .rb-all-clear { display: flex; align-items: center; gap: 10px; padding: 14px;
-  background: rgba(45,125,69,0.08); border: 1px solid rgba(45,125,69,0.2); border-radius: 4px;
+  background: rgba(52,211,153,0.08); border: 1px solid rgba(52,211,153,0.2); border-radius: 4px;
   color: var(--ok); }
 .rb-all-clear i { font-size: 18px; flex-shrink: 0; }
 .rb-all-clear p { font-size: 13px; font-weight: 600; }
-
-/* ── ACTIONS BAR ─────────────────────────────── */
-.rb-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
 
 /* ── PLAN DE ACCIÓN ──────────────────────────── */
 .rb-plan { margin: 0 0 4px; }
@@ -470,16 +464,16 @@ body {
 .rb-plan-titulo { font-size: 13px; font-weight: 700; color: var(--ink); flex: 1; }
 .rb-plan-prio { font-size: 10px; font-weight: 700; letter-spacing: .05em;
   text-transform: uppercase; padding: 2px 6px; border-radius: 20px; flex-shrink: 0; }
-.rb-prio-critica { background: rgba(193,53,21,.15); color: var(--accent); }
-.rb-prio-alta    { background: rgba(45,125,69,.12); color: var(--ok); }
-.rb-prio-media   { background: rgba(180,83,9,.12); color: var(--warn); }
-.rb-prio-baja    { background: rgba(0,0,0,.06); color: var(--ink-3); }
+.rb-prio-critica { background: rgba(248,113,113,.15); color: var(--accent); }
+.rb-prio-alta    { background: rgba(52,211,153,.12); color: var(--ok); }
+.rb-prio-media   { background: rgba(251,191,36,.12); color: var(--warn); }
+.rb-prio-baja    { background: rgba(255,255,255,.08); color: var(--ink-3); }
 .rb-plan-detalle { font-size: 12px; color: var(--ink-2); line-height: 1.5; }
 .rb-plan-tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.rb-plan-tag { font-size: 10px; background: rgba(0,0,0,.06); color: var(--ink-2);
+.rb-plan-tag { font-size: 10px; background: rgba(255,255,255,.08); color: var(--ink-2);
   padding: 2px 7px; border-radius: 20px; font-family: var(--font-mono); }
 .rb-plan-resumen { margin-top: 14px; padding: 14px 16px;
-  background: rgba(0,0,0,.04); border: 1px solid var(--line); border-radius: 4px; }
+  background: rgba(255,255,255,.06); border: 1px solid var(--line); border-radius: 4px; }
 .rb-plan-resumen-title { font-size: 11px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
   display: flex; align-items: center; gap: 6px; }
@@ -488,27 +482,27 @@ body {
 
 /* ── DECISION SUMMARY (Coach IA) ─────────────── */
 .rb-decision-summary { margin-top: 12px; padding: 10px 14px;
-  background: rgba(0,0,0,.04); border-radius: 4px; }
+  background: rgba(255,255,255,.06); border-radius: 4px; }
 .rb-ds-title { font-size: 11px; font-weight: 700; letter-spacing: .06em;
   text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
 .rb-ds-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .rb-ds-chip { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px;
   display: inline-flex; align-items: center; gap: 4px; }
-.rb-ds-up   { background: rgba(45,125,69,.15); color: var(--ok); }
-.rb-ds-down { background: rgba(193,53,21,.12); color: var(--accent); }
-.rb-ds-hold { background: rgba(0,0,0,.08); color: var(--ink-2); }
-.rb-ds-prec { background: rgba(180,83,9,.12); color: var(--warn); }
+.rb-ds-up   { background: rgba(52,211,153,.15); color: var(--ok); }
+.rb-ds-down { background: rgba(248,113,113,.12); color: var(--accent); }
+.rb-ds-hold { background: rgba(255,255,255,.10); color: var(--ink-2); }
+.rb-ds-prec { background: rgba(251,191,36,.12); color: var(--warn); }
 
 /* ── PRÓXIMA ACCIÓN (tabla) ──────────────────── */
 .rb-next-action { display: inline-flex; align-items: center; gap: 4px;
   font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px;
   white-space: nowrap; cursor: default; }
-.rb-na-subir_peso      { background: rgba(45,125,69,.15); color: var(--ok); }
-.rb-na-subir_reps      { background: rgba(45,125,69,.10); color: var(--ok); }
-.rb-na-mantener        { background: rgba(0,0,0,.08); color: var(--ink-2); }
-.rb-na-bajar_peso      { background: rgba(193,53,21,.12); color: var(--accent); }
-.rb-na-deload          { background: rgba(180,83,9,.15); color: var(--warn); }
-.rb-na-cambiar_variante { background: rgba(180,83,9,.10); color: var(--warn); }
+.rb-na-subir_peso      { background: rgba(52,211,153,.15); color: var(--ok); }
+.rb-na-subir_reps      { background: rgba(52,211,153,.10); color: var(--ok); }
+.rb-na-mantener        { background: rgba(255,255,255,.10); color: var(--ink-2); }
+.rb-na-bajar_peso      { background: rgba(248,113,113,.12); color: var(--accent); }
+.rb-na-deload          { background: rgba(251,191,36,.15); color: var(--warn); }
+.rb-na-cambiar_variante { background: rgba(251,191,36,.10); color: var(--warn); }
 .rb-na-conf { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-left: 2px; }
 .rb-na-conf-alta   { background: var(--ok); }
 .rb-na-conf-media  { background: var(--warn); }
@@ -536,7 +530,7 @@ body {
 }
 
 /* ── SKIP LINK ───────────────────────────────── */
-.rb-skip { position: absolute; top: -40px; left: 0; background: var(--ink); color: var(--paper);
+.rb-skip { position: absolute; top: -40px; left: 0; background: var(--ink); color: var(--on-light);
   padding: 8px 16px; font-family: var(--font-mono); font-size: 12px; z-index: 9999;
   transition: top .15s; text-decoration: none; }
 .rb-skip:focus { top: 0; }
@@ -604,11 +598,6 @@ body {
       <span>Gym Log</span>
     </div>
     <div class="rb-bib-name">{{ cliente.nombre }}</div>
-    {% if perfil_gamificacion and perfil_gamificacion.nivel_actual %}
-    <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-bib-level">
-      NIV {{ perfil_gamificacion.nivel_actual.nivel }} · {{ perfil_gamificacion.nivel_actual.titulo_arquetipo }}
-    </a>
-    {% endif %}
     <div class="rb-bib-divider">
       <div class="rb-bib-stat">
         <div class="rb-bib-stat-label">Sesiones</div>
@@ -672,25 +661,6 @@ body {
       <a href="{% url 'clientes:trayectoria_plan' %}" class="rb-btn rb-btn-ghost rb-btn-sm">Trayectoria del plan →</a>
     </div>
   </section>
-
-  <!-- ── ACCIONES ── -->
-  <div class="rb-actions">
-    <a href="{% url 'clientes:panel_cliente' %}" class="rb-btn rb-btn-primary rb-btn-sm">
-      <i class="fas fa-home"></i> Panel Principal
-    </a>
-    <a href="{% url 'entrenos:timeline_atleta' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-      <i class="fas fa-stream"></i> Timeline
-    </a>
-    <a href="{% url 'entrenos:evaluacion_profesional' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-      <i class="fas fa-microscope"></i> Evaluar
-    </a>
-    <a href="{% url 'logros:ver_codice_completo' cliente.id %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-      <i class="fas fa-book-journal-whills"></i> Códice
-    </a>
-    <a href="{% url 'logros:leaderboard' %}" class="rb-btn rb-btn-ghost rb-btn-sm">
-      <i class="fas fa-trophy"></i> Ranking
-    </a>
-  </div>
 
   <!-- ── LECTURA DEL PERIODO ── -->
   {% with coach_data=coach_data %}
@@ -1297,7 +1267,7 @@ body {
                 <span class="rb-tl-chip"><i class="fas fa-dumbbell"></i> {{ sesion.ejercicios_completados }}/{{ sesion.ejercicios_totales }}</span>
                 <span class="rb-tl-chip"><i class="fas fa-weight-hanging"></i> {{ sesion.volumen_sesion|floatformat:0 }} kg</span>
                 {% if sesion.rpe_medio %}
-                <span class="rb-tl-chip" style="background:rgba(193,53,21,0.10);color:var(--accent);">
+                <span class="rb-tl-chip" style="background:rgba(248,113,113,0.10);color:var(--accent);">
                   <i class="fas fa-heart"></i> RPE {{ sesion.rpe_medio|floatformat:1 }}
                 </span>
                 {% endif %}
@@ -1320,11 +1290,11 @@ body {
           <div id="ev-heatmap"></div>
           <div class="rb-hm-legend">
             <span class="rb-hm-lbl">Menos</span>
-            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.12)"></div>
-            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.30)"></div>
-            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.55)"></div>
-            <div class="rb-hm-swatch" style="background:rgba(193,53,21,0.80)"></div>
-            <div class="rb-hm-swatch" style="background:rgba(193,53,21,1)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(248,113,113,0.12)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(248,113,113,0.30)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(248,113,113,0.55)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(248,113,113,0.80)"></div>
+            <div class="rb-hm-swatch" style="background:rgba(248,113,113,1)"></div>
             <span class="rb-hm-lbl">Más</span>
           </div>
         </div>
@@ -1405,18 +1375,18 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('.rb-tab:not(.active)').forEach(b => b.setAttribute('aria-selected', 'false'));
 });
 
-/* ── CHART PALETTE (light bg) ─────────────── */
+/* ── CHART PALETTE (dark bg) ──────────────── */
 const PAL = {
-  green:  '#16A34A',
-  cyan:   '#0891B2',
-  yellow: '#D97706',
-  purple: '#7C3AED',
-  red:    '#C13515',
-  blue:   '#2563EB',
-  pink:   '#DB2777',
-  orange: '#EA580C',
-  grid:   'rgba(15,15,14,0.08)',
-  tick:   'rgba(15,15,14,0.45)',
+  green:  '#34D399',
+  cyan:   '#22D3EE',
+  yellow: '#FBBF24',
+  purple: '#A78BFA',
+  red:    '#F87171',
+  blue:   '#60A5FA',
+  pink:   '#F472B6',
+  orange: '#FB923C',
+  grid:   'rgba(255,255,255,0.08)',
+  tick:   'rgba(255,255,255,0.55)',
 };
 
 Chart.defaults.color       = PAL.tick;
@@ -1438,7 +1408,7 @@ document.addEventListener('DOMContentLoaded', function () {
         labels,
         datasets: [
           { label: 'Volumen (kg)', data: volData,
-            backgroundColor: 'rgba(22,163,74,0.15)', borderColor: PAL.green,
+            backgroundColor: 'rgba(52,211,153,0.15)', borderColor: PAL.green,
             borderWidth: 1.5, borderRadius: 3, yAxisID: 'yVol' },
           { label: 'RPE', data: rpeData, type: 'line',
             borderColor: PAL.purple, backgroundColor: 'transparent',
@@ -1466,7 +1436,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const cols   = [PAL.green, PAL.blue, PAL.yellow, PAL.pink, PAL.orange, PAL.cyan, PAL.red];
     new Chart(cvDist, {
       type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: cols.slice(0, data.length), borderWidth: 2, borderColor: '#F7F3EA' }] },
+      data: { labels, datasets: [{ data, backgroundColor: cols.slice(0, data.length), borderWidth: 2, borderColor: '#18181B' }] },
       options: {
         responsive: true, maintainAspectRatio: false, cutout: '68%',
         plugins: { legend: { position: 'right', labels: { color: PAL.tick, padding: 10, font: { size: 10 }, boxWidth: 10 } } }
@@ -1484,7 +1454,7 @@ document.addEventListener('DOMContentLoaded', function () {
         labels: raw.map(r => r.fecha || ''),
         datasets: [{
           data: raw.map(r => r.acwr || 0),
-          borderColor: PAL.cyan, backgroundColor: 'rgba(8,145,178,0.08)',
+          borderColor: PAL.cyan, backgroundColor: 'rgba(34,211,238,0.08)',
           fill: true, tension: 0.4, pointRadius: 0, borderWidth: 2,
         }]
       },
@@ -1509,7 +1479,7 @@ document.addEventListener('DOMContentLoaded', function () {
       type: 'radar',
       data: { labels, datasets: [{
         label: 'Ratio', data: vals,
-        borderColor: PAL.yellow, backgroundColor: 'rgba(217,119,6,0.10)',
+        borderColor: PAL.yellow, backgroundColor: 'rgba(251,191,36,0.10)',
         pointBackgroundColor: PAL.yellow, borderWidth: 2, pointRadius: 4,
       }] },
       options: {
@@ -1539,14 +1509,14 @@ document.addEventListener('DOMContentLoaded', function () {
         datasets: [
           { label: 'Series/semana', data: reales, borderRadius: 3,
             backgroundColor: reales.map(v =>
-              v < minRec ? 'rgba(193,53,21,0.5)' :
-              v > maxRec ? 'rgba(217,119,6,0.5)' : 'rgba(22,163,74,0.5)'
+              v < minRec ? 'rgba(248,113,113,0.5)' :
+              v > maxRec ? 'rgba(251,191,36,0.5)' : 'rgba(52,211,153,0.5)'
             ) },
           { label: 'Mín. recomendado', data: Array(labels.length).fill(minRec),
-            type: 'line', borderColor: 'rgba(22,163,74,0.5)', borderDash: [4,3],
+            type: 'line', borderColor: 'rgba(52,211,153,0.5)', borderDash: [4,3],
             pointRadius: 0, backgroundColor: 'transparent' },
           { label: 'Máx. recomendado', data: Array(labels.length).fill(maxRec),
-            type: 'line', borderColor: 'rgba(217,119,6,0.5)', borderDash: [4,3],
+            type: 'line', borderColor: 'rgba(251,191,36,0.5)', borderDash: [4,3],
             pointRadius: 0, backgroundColor: 'transparent' },
         ]
       },
@@ -1571,8 +1541,8 @@ document.addEventListener('DOMContentLoaded', function () {
       type: 'doughnut',
       data: { labels: labs, datasets: [{ data,
         backgroundColor: [
-          'rgba(37,99,235,0.7)', 'rgba(22,163,74,0.7)',
-          'rgba(217,119,6,0.7)', 'rgba(193,53,21,0.7)',
+          'rgba(96,165,250,0.7)', 'rgba(52,211,153,0.7)',
+          'rgba(251,191,36,0.7)', 'rgba(248,113,113,0.7)',
         ], borderWidth: 0,
       }] },
       options: {
@@ -1615,7 +1585,7 @@ document.addEventListener('DOMContentLoaded', function () {
       cell.className = 'ev-hm-cell';
       if (count > 0) {
         const opacity = Math.min(0.15 + (count / maxCount) * 0.85, 1).toFixed(2);
-        cell.style.backgroundColor = `rgba(193,53,21,${opacity})`;
+        cell.style.backgroundColor = `rgba(248,113,113,${opacity})`;
       }
       cell.title = dateStr + (count ? ` · ${count} sesión${count > 1 ? 'es' : ''}` : '');
       col.appendChild(cell);
