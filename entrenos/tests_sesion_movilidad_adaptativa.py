@@ -1,6 +1,9 @@
 import json
+import re
 from datetime import date, timedelta
+from pathlib import Path
 
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.test import TestCase
 from django.urls import reverse
@@ -289,3 +292,44 @@ class CompletarMovilidadHttpContractTests(TestCase):
         self.assertContains(response, 'value="sustituir"')
         self.assertContains(response, "¿Qué hacemos con tu entrenamiento programado?")
         self.assertEqual(response.content.count(b"data-primary-action"), 1)
+
+    def test_panel_presenta_movilidad_adaptativa_y_explicita_su_registro(self):
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Movilidad adaptativa")
+        self.assertContains(response, "duración real")
+        self.assertContains(response, "RPE real")
+        self.assertContains(response, "carga de entrenamiento")
+        self.assertContains(response, "Iniciar y registrar", count=1)
+        self.assertLessEqual(response.content.count(b"data-primary-action"), 1)
+
+    def test_player_ofrece_finalizar_temprano_como_accion_secundaria(self):
+        response = self.client.get(
+            reverse("estiramientos:iniciar_plan", args=[self.plan.pk]),
+            {"sesion_programada_id": self.sesion.pk, "resolucion": "anadir"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'id="btnFinishEarly"')
+        self.assertContains(response, "Finalizar y guardar")
+        self.assertContains(response, "data-secondary-action")
+        self.assertEqual(response.content.count(b"data-primary-action"), 1)
+
+    def test_js_finalizar_temprano_detiene_timer_abre_cierre_y_precarga_duracion(self):
+        source = Path(
+            settings.BASE_DIR,
+            "estiramientos/static/estiramientos/js/player.js",
+        ).read_text(encoding="utf-8")
+
+        match = re.search(
+            r"finishEarly\(\)\s*\{(?P<body>.*?)\n\s{4}\}",
+            source,
+            flags=re.DOTALL,
+        )
+        self.assertIsNotNone(match, "Falta el contrato JS finishEarly()")
+        body = match.group("body")
+        self.assertIn("this.stop()", body)
+        self.assertIn("mode: 'DONE'", body)
+        self.assertIn("this.showCompleted()", body)
+        self.assertRegex(body, r"mobilityDuration.*Math\.(ceil|round)")

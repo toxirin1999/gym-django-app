@@ -57,6 +57,83 @@
     margin: 0;
 }
 
+.mobility-intro {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1.25rem;
+    overflow: hidden;
+    border: 1px solid rgba(52, 211, 153, 0.32);
+    border-radius: 20px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(52, 211, 153, 0.16), transparent 42%),
+        var(--bg-darker);
+}
+
+.mobility-intro__mark {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    place-items: center;
+    border: 1px solid rgba(52, 211, 153, 0.45);
+    border-radius: 14px;
+    background: rgba(52, 211, 153, 0.12);
+    color: var(--color-green);
+    font-size: 1.1rem;
+    font-weight: 900;
+}
+
+.mobility-intro__eyebrow,
+.mobility-section-heading span {
+    margin: 0 0 0.35rem;
+    color: var(--color-green);
+    font-size: 0.68rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+}
+
+.mobility-intro h2,
+.mobility-section-heading h2 {
+    margin: 0;
+    color: var(--text-primary);
+}
+
+.mobility-intro p:not(.mobility-intro__eyebrow) {
+    margin: 0.55rem 0 0;
+    color: var(--text-secondary);
+    line-height: 1.55;
+}
+
+.mobility-intro__flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    margin-top: 0.9rem;
+}
+
+.mobility-intro__flow span {
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border-light);
+    border-radius: 999px;
+    color: var(--text-secondary);
+    font-size: 0.72rem;
+}
+
+.mobility-section-heading {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.75rem 0 1rem;
+}
+
+.mobility-section-heading small {
+    max-width: 220px;
+    color: var(--text-muted);
+    text-align: right;
+}
+
 /* =====================================================
    FILTROS Y BÚSQUEDA (NUEVO)
    ===================================================== */
@@ -399,6 +476,19 @@
    RESPONSIVE
    ===================================================== */
 @media (max-width: 640px) {
+    .mobility-intro {
+        grid-template-columns: 1fr;
+    }
+
+    .mobility-section-heading {
+        align-items: start;
+        flex-direction: column;
+    }
+
+    .mobility-section-heading small {
+        text-align: left;
+    }
+
     .stretch-header h1 {
         font-size: 1.5rem;
     }

@@ -100,6 +100,7 @@ class StretchPlayer {
             pauseLabel: $('pauseLabel'),
             btnSkip: $('btnSkip'),
             btnRestart: $('btnRestart'),
+            btnFinishEarly: $('btnFinishEarly'),
             completedOverlay: $('completedOverlay'),
             statExercises: $('statExercises'),
             statTime: $('statTime'),
@@ -127,6 +128,9 @@ class StretchPlayer {
         }
         if (this.elements.btnRestart) {
             this.elements.btnRestart.addEventListener('click', () => this.restart());
+        }
+        if (this.elements.btnFinishEarly) {
+            this.elements.btnFinishEarly.addEventListener('click', () => this.finishEarly());
         }
         if (this.elements.btnRestartFinal) {
             this.elements.btnRestartFinal.addEventListener('click', () => this.restart());
@@ -492,6 +496,17 @@ class StretchPlayer {
         this.render();
         this.start();
         this.showToast('Sesión reiniciada', 'success');
+    }
+
+    finishEarly() {
+        this.stop();
+        this.setState({ mode: 'DONE', isPaused: false });
+        this.clearProgress();
+        this.releaseWakeLock();
+        this.elements.mobilityDuration.value = Math.ceil(
+            Math.max(60, this.state.totalElapsedTime) / 60
+        );
+        this.showCompleted();
     }
 
     // =====================================================

@@ -31,6 +31,36 @@
     min-height: 100vh;
 }
 
+.finish-early-btn {
+    display: flex;
+    width: 100%;
+    min-height: 52px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid rgba(74, 222, 128, 0.32);
+    border-radius: 14px;
+    background: rgba(74, 222, 128, 0.08);
+    color: var(--color-success);
+    cursor: pointer;
+    font: inherit;
+}
+
+.finish-early-btn span {
+    font-weight: 800;
+}
+
+.finish-early-btn small {
+    color: var(--text-muted);
+}
+
+.finish-early-btn:focus-visible {
+    outline: 2px solid var(--color-success);
+    outline-offset: 3px;
+}
+
 /* =====================================================
    HEADER CON PROGRESO
    ===================================================== */
