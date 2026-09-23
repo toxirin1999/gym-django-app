@@ -904,6 +904,22 @@ class EstadisticasService:
     @staticmethod
     def generar_predicciones_ia(cliente):
         from entrenos.models import EjercicioRealizado
+        from clientes.models import FaseCliente
+
+        # Las semanas de descarga/deload bajan la carga a propósito: son una
+        # variable de manejo de fatiga, no una señal de pérdida de fuerza, así
+        # que no deben tirar de la pendiente de la proyección hacia abajo.
+        rangos_descarga = list(
+            FaseCliente.objects.filter(cliente=cliente, fase='descarga')
+            .values_list('fecha_inicio', 'fecha_fin')
+        )
+
+        def _en_descarga(fecha):
+            return any(
+                inicio <= fecha and (fin is None or fecha <= fin)
+                for inicio, fin in rangos_descarga
+            )
+
         ejercicios_objetivo = ['Press Banca', 'Sentadilla', 'Peso Muerto']
         proyecciones = []
         for ej_nombre in ejercicios_objetivo:
@@ -917,6 +933,8 @@ class EstadisticasService:
             marcas_diarias = {}
             for r in registros:
                 fecha = r.entreno.fecha
+                if _en_descarga(fecha):
+                    continue
                 rm = float(r.peso_kg) * (1 + (r.repeticiones / 30))
                 if fecha not in marcas_diarias or rm > marcas_diarias[fecha]: marcas_diarias[fecha] = rm
             fechas_ordenadas = sorted(marcas_diarias.keys())

@@ -338,7 +338,7 @@ body {
 
 /* ── RECORDS ─────────────────────────────────── */
 .rb-record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; }
-.rb-record-item { border: 1.5px solid var(--line-2); border-radius: 4px; padding: 12px;
+.rb-record-item { border: 1.5px solid var(--line-2); border-radius: 4px; padding: 9px;
   text-align: center; }
 .rb-record-type { font-family: var(--font-mono); font-size: 8px; font-weight: 700;
   letter-spacing: 0.14em; color: var(--accent); text-transform: uppercase; margin-bottom: 4px; }
@@ -540,7 +540,12 @@ body {
   .rb-nav { padding: 10px 16px; }
   .rb-bib-name { font-size: clamp(26px, 9vw, 42px); }
   .rb-bib-stat-val { font-size: 17px; }
-  .rb-record-grid { grid-template-columns: repeat(2, 1fr); }
+  .rb-record-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .rb-record-item { padding: 7px; }
+  .rb-record-type { margin-bottom: 2px; }
+  .rb-record-name { margin-bottom: 3px; }
+  .rb-record-val { font-size: 20px; }
+  .rb-record-date { margin-top: 3px; }
   .rb-achievement-grid { grid-template-columns: repeat(3, 1fr); }
   /* Ocultar columna "Próxima acción" en móvil — demasiado estrecha con 7 cols */
   .rb-table th:last-child,
@@ -591,6 +596,29 @@ body {
 
 <div class="rb-container">
 
+  <!-- ── TABS (movidas a cabecera) ── -->
+  <div class="rb-tabs" role="tablist" aria-label="Secciones">
+    <button class="rb-tab active" onclick="rbTab('overview', this)" role="tab">
+      <i class="fas fa-chart-line"></i> General
+    </button>
+    <button class="rb-tab" onclick="rbTab('carga', this)" role="tab">
+      <i class="fas fa-heartbeat"></i> Carga
+    </button>
+    <button class="rb-tab" onclick="rbTab('progresion', this)" role="tab">
+      <i class="fas fa-arrow-trend-up"></i> Progresión
+    </button>
+    <button class="rb-tab" onclick="rbTab('records', this)" role="tab">
+      <i class="fas fa-trophy"></i> Récords
+    </button>
+    <button class="rb-tab" onclick="rbTab('historial', this)" role="tab">
+      <i class="fas fa-history"></i> Historial
+    </button>
+  </div>
+
+  <!-- ─────────── TAB PANELS ─────────── -->
+
+  <!-- GENERAL -->
+  <div id="rb-tab-overview" class="rb-tab-panel">
   <!-- ── HERO BIB ── -->
   <div class="rb-bib" id="main-content">
     <div class="rb-bib-meta">
@@ -829,37 +857,6 @@ body {
     {% endif %}
   </div>
 
-  <!-- ── TABS ── -->
-  <div class="rb-section" style="padding-bottom:0;">
-    <div class="rb-section-head">
-      <span class="rb-section-num">03</span>
-      <h2 class="rb-section-title">Dashboard</h2>
-      <div class="rb-section-line"></div>
-    </div>
-  </div>
-
-  <div class="rb-tabs" role="tablist" aria-label="Secciones">
-    <button class="rb-tab active" onclick="rbTab('overview', this)" role="tab">
-      <i class="fas fa-chart-line"></i> General
-    </button>
-    <button class="rb-tab" onclick="rbTab('carga', this)" role="tab">
-      <i class="fas fa-heartbeat"></i> Carga
-    </button>
-    <button class="rb-tab" onclick="rbTab('progresion', this)" role="tab">
-      <i class="fas fa-arrow-trend-up"></i> Progresión
-    </button>
-    <button class="rb-tab" onclick="rbTab('records', this)" role="tab">
-      <i class="fas fa-trophy"></i> Récords
-    </button>
-    <button class="rb-tab" onclick="rbTab('historial', this)" role="tab">
-      <i class="fas fa-history"></i> Historial
-    </button>
-  </div>
-
-  <!-- ─────────── TAB PANELS ─────────── -->
-
-  <!-- GENERAL -->
-  <div id="rb-tab-overview" class="rb-tab-panel">
     <p class="rb-lectura-desc" style="margin-bottom:12px;">{{ lectura_periodo }}</p>
     <div class="rb-grid-2">
 
