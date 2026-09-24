@@ -47,7 +47,8 @@ class StretchPanel {
                 name: card.querySelector('.plan-title')?.textContent.toLowerCase() || '',
                 description: card.querySelector('.plan-description')?.textContent.toLowerCase() || '',
                 type: card.classList.contains('superior') ? 'superior' :
-                    card.classList.contains('inferior') ? 'inferior' : 'completo'
+                    card.classList.contains('inferior') ? 'inferior' :
+                    card.classList.contains('cardio') ? 'cardio' : 'completo'
             });
         });
         this.filteredPlans = [...this.plans];

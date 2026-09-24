@@ -35,6 +35,14 @@
             <div class="mobility-intro__flow" aria-label="Flujo de registro">
                 <span>1 · Elige</span><span>2 · Muévete</span><span>3 · Guarda</span>
             </div>
+            {% if sesion_hoy %}
+            <label class="mobility-swap-toggle" for="mobilitySwapToday">
+                <input type="checkbox" id="mobilitySwapToday"
+                       data-mobility-swap-toggle
+                       data-sesion-hoy-id="{{ sesion_hoy.id }}">
+                <span>Contabilizar como sustituto de la sesión de fuerza de hoy</span>
+            </label>
+            {% endif %}
         </div>
     </section>
 
@@ -79,6 +87,10 @@
                 <i class="fas fa-child"></i>
                 Completo
             </button>
+            <button class="filter-btn" data-filter="cardio">
+                <i class="fas fa-heart-pulse"></i>
+                Cardio Z2
+            </button>
         </div>
     </div>
 
@@ -118,6 +130,26 @@
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=False %}
             {% empty %}
                 <p class="no-plans">No hay sesiones de estiramientos disponibles.</p>
+            {% endfor %}
+        </div>
+    </details>
+
+    <details class="mv-block" id="cardio" open>
+        <summary>
+            <div class="mobility-section-heading">
+                <div>
+                    <span>03 CARDIO &amp; FLUJO DE RECUPERACIÓN</span>
+                    <h2>Sesiones de cardio</h2>
+                </div>
+                <small>Zona 2 para sumar sin acumular fatiga</small>
+            </div>
+            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="plans-grid" data-plan-section="cardio">
+            {% for p in planes_cardio %}
+                {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
+            {% empty %}
+                <p class="no-plans">No hay sesiones de cardio disponibles.</p>
             {% endfor %}
         </div>
     </details>
@@ -162,6 +194,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 {% endif %}
+{% endif %}
+
+{% if sesion_hoy %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const toggle = document.getElementById('mobilitySwapToday');
+    if (!toggle) return;
+    const sesionId = toggle.dataset.sesionHoyId;
+    const aplicarSustitucion = () => {
+        document.querySelectorAll('[data-mobility-plan-url]').forEach(link => {
+            const base = link.dataset.mobilityPlanUrl;
+            if (toggle.checked) {
+                const query = new URLSearchParams({
+                    sesion_programada_id: sesionId,
+                    resolucion: 'sustituir',
+                });
+                link.href = `${base}?${query}`;
+            } else {
+                link.href = base;
+            }
+        });
+    };
+    toggle.addEventListener('change', aplicarSustitucion);
+    aplicarSustitucion();
+});
+</script>
 {% endif %}
 
 <script>

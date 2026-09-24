@@ -176,6 +176,28 @@ html, body { background: #09090b !important; }
     font-weight: 600;
 }
 
+/* Toggle discreto: sustituir la sesión de fuerza de hoy por esta movilidad */
+.mobility-swap-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    padding: 7px 10px;
+    border: 1px dashed var(--mv-border);
+    border-radius: 10px;
+    color: var(--mv-muted) !important;
+    font-size: 11.5px;
+    line-height: 1.4;
+    cursor: pointer;
+}
+.mobility-swap-toggle:hover { border-color: var(--mv-border-2); color: var(--mv-ink-2) !important; }
+.mobility-swap-toggle input[type="checkbox"] {
+    flex-shrink: 0;
+    width: 15px;
+    height: 15px;
+    accent-color: var(--mv-accent);
+}
+
 /* =====================================================
    DECISIÓN DE ENTRENAMIENTO PROGRAMADO
    ===================================================== */
@@ -355,13 +377,26 @@ html, body { background: #09090b !important; }
 }
 .plan-card:hover { border-color: var(--mv-border-2); background: var(--mv-card-2); text-decoration: none; }
 
-.plan-card.superior { border-left: 2px solid rgba(244, 114, 182, .55); }
-.plan-card.inferior { border-left: 2px solid rgba(52, 211, 153, .55); }
-.plan-card.completo { border-left: 2px solid rgba(96, 165, 250, .55); }
+/* Acento por bloque temático (no por zona corporal): emerald para
+   Movilidad Activa, indigo para Vuelta a la Calma, amber para el futuro
+   bloque de Cardio Z2 (#cardio). */
+#movilidad .plan-card { border-left: 2px solid rgba(52, 211, 153, .55); }
+#estiramientos .plan-card { border-left: 2px solid rgba(129, 140, 248, .55); }
+#cardio .plan-card { border-left: 2px solid rgba(251, 191, 36, .55); }
 
 .plan-row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
 .plan-title { color: var(--mv-ink) !important; font-size: 14.5px; font-weight: 700; line-height: 1.3; }
-.plan-time { flex-shrink: 0; color: var(--mv-muted) !important; font-size: 11px; font-weight: 600; white-space: nowrap; }
+.plan-time {
+    flex-shrink: 0;
+    display: inline-block;
+    background: var(--mv-border);
+    color: var(--mv-ink-2) !important;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-radius: 6px;
+    padding: 2px 8px;
+}
 
 .plan-description {
     margin: 4px 0 0;

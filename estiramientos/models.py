@@ -6,6 +6,7 @@ class EstiramientoEjercicio(models.Model):
         ("SUPERIOR", "Tren superior"),
         ("INFERIOR", "Tren inferior"),
         ("COMPLETO", "Cuerpo completo"),
+        ("CARDIO", "Cardio / Recuperación activa"),
     ]
 
     nombre = models.CharField(max_length=120)
@@ -38,6 +39,16 @@ class EstiramientoPlan(models.Model):
     descripcion = models.CharField(max_length=220, blank=True, default="")
     transicion_segundos = models.PositiveIntegerField(default=5)
     activo = models.BooleanField(default=True)
+
+    @property
+    def duracion_estimada_min(self):
+        """Duración real aproximada (minutos) sumando los pasos, no solo su recuento."""
+        total_segundos = sum(
+            paso.duracion_segundos for paso in self.pasos.all()
+        )
+        if total_segundos <= 0:
+            return 0
+        return max(1, round(total_segundos / 60))
 
     def __str__(self):
         return f"{self.nombre} ({self.fase})"

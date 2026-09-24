@@ -1,17 +1,18 @@
 <a href="{% url 'estiramientos:iniciar_plan' p.id %}{% if permite_resolucion and sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
-   class="plan-card {% if p.fase == 'SUPERIOR' %}superior{% elif p.fase == 'INFERIOR' %}inferior{% else %}completo{% endif %}"
+   class="plan-card {% if p.fase == 'SUPERIOR' %}superior{% elif p.fase == 'INFERIOR' %}inferior{% elif p.fase == 'CARDIO' %}cardio{% else %}completo{% endif %}"
    role="article" aria-label="Plan de {{ p.get_modalidad_display|lower }}: {{ p.nombre }}"
    data-plan-id="{{ p.pk }}"
    data-modalidad="{{ p.modalidad }}"
-   {% if permite_resolucion and sesion_programada %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% endif %}>
+   {% if permite_resolucion and sesion_programada %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% elif permite_resolucion and sesion_hoy %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% endif %}>
     <div class="plan-row1">
         <span class="plan-title">{{ p.nombre }}</span>
-        <span class="plan-time">~{{ p.pasos.count|default:0 }} min</span>
+        <span class="plan-time">~{{ p.duracion_estimada_min|default:0 }} min</span>
     </div>
     <p class="plan-description">
         {% if p.descripcion %}{{ p.descripcion }}
         {% elif p.fase == 'SUPERIOR' %}Hombros, columna torácica, cuello y brazos.
         {% elif p.fase == 'INFERIOR' %}Cadera, tobillos, piernas y pelvis.
+        {% elif p.fase == 'CARDIO' %}Cardio suave en Zona 2 para sumar recuperación activa sin fatiga.
         {% else %}Rutina completa para todo el cuerpo.{% endif %}
     </p>
     <div class="plan-row3">

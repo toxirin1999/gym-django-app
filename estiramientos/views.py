@@ -13,7 +13,12 @@ import json
 
 def panel_estiramientos(request):
     planes = EstiramientoPlan.objects.filter(activo=True).order_by("fase", "nombre")
-    planes_movilidad = planes.filter(modalidad=EstiramientoPlan.MODALIDAD_MOVILIDAD)
+    planes_movilidad = planes.filter(
+        modalidad=EstiramientoPlan.MODALIDAD_MOVILIDAD,
+    ).exclude(fase="CARDIO")
+    planes_cardio = planes.filter(
+        modalidad=EstiramientoPlan.MODALIDAD_MOVILIDAD, fase="CARDIO",
+    )
     planes_estiramientos = planes.filter(
         modalidad=EstiramientoPlan.MODALIDAD_ESTIRAMIENTOS,
     )
@@ -26,11 +31,29 @@ def panel_estiramientos(request):
             cliente__user=request.user,
             estado=SesionProgramada.ESTADO_PENDIENTE,
         )
+
+    # Sesión de fuerza de HOY detectada automáticamente (sin necesidad de un
+    # ?sesion_programada_id= en la URL), para el checkbox "Contabilizar como
+    # sustituto de la sesión de fuerza de hoy" en la tarjeta principal. Solo
+    # se calcula cuando no llegamos ya con una sesión explícita por URL, para
+    # no interferir con ese flujo ya existente y probado.
+    sesion_hoy = None
+    if sesion is None and request.user.is_authenticated:
+        cliente = getattr(request.user, "cliente_perfil", None)
+        if cliente is not None:
+            sesion_hoy = SesionProgramada.objects.filter(
+                cliente=cliente,
+                fecha_prevista=date.today(),
+                estado=SesionProgramada.ESTADO_PENDIENTE,
+            ).first()
+
     return render(request, "estiramientos/panel.html", {
         "planes": planes,
         "planes_movilidad": planes_movilidad,
+        "planes_cardio": planes_cardio,
         "planes_estiramientos": planes_estiramientos,
         "sesion_programada": sesion,
+        "sesion_hoy": sesion_hoy,
     })
 
 
