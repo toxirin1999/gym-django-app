@@ -42,6 +42,9 @@
                        data-sesion-hoy-id="{{ sesion_hoy.id }}">
                 <span>Contabilizar como sustituto de la sesión de fuerza de hoy</span>
             </label>
+            <p id="mobilitySwapHint" class="mobility-swap-hint" hidden>
+                Reemplazará la sesión de fuerza programada para hoy en tu planning semanal
+            </p>
             {% endif %}
         </div>
     </section>
@@ -202,6 +205,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const toggle = document.getElementById('mobilitySwapToday');
     if (!toggle) return;
     const sesionId = toggle.dataset.sesionHoyId;
+    const hint = document.getElementById('mobilitySwapHint');
     const aplicarSustitucion = () => {
         document.querySelectorAll('[data-mobility-plan-url]').forEach(link => {
             const base = link.dataset.mobilityPlanUrl;
@@ -215,6 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 link.href = base;
             }
         });
+        if (hint) hint.hidden = !toggle.checked;
     };
     toggle.addEventListener('change', aplicarSustitucion);
     aplicarSustitucion();

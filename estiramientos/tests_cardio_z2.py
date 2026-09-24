@@ -34,11 +34,15 @@ class SeedCardioZ2Tests(TestCase):
         call_command("seed_cardio_z2", verbosity=0)
 
         bici_remo = EstiramientoPlan.objects.get(codigo="cardio-z2-bici-remo")
-        # 300 + 1200 + 300 segundos = 1800s = 30 min reales.
+        self.assertEqual(bici_remo.nombre, "Bici / Remo Zona 2")
+        self.assertEqual(bici_remo.descripcion, "Enfoque regenerativo FC < 130 bpm")
+        self.assertEqual(bici_remo.pasos.count(), 1)
         self.assertEqual(bici_remo.duracion_estimada_min, 30)
 
         caminata = EstiramientoPlan.objects.get(codigo="cardio-z2-caminata-inclinada")
-        # 240 + 900 + 60 segundos = 1200s = 20 min reales.
+        self.assertEqual(caminata.nombre, "Caminata Inclinada Activa")
+        self.assertEqual(caminata.descripcion, "Ritmo constante Z2")
+        self.assertEqual(caminata.pasos.count(), 1)
         self.assertEqual(caminata.duracion_estimada_min, 20)
 
 
@@ -63,6 +67,9 @@ class PanelCardioZ2Tests(TestCase):
         self.assertContains(response, "03 CARDIO")
         self.assertContains(response, "Sesiones de cardio")
         self.assertContains(response, "Cardio Z2")
+        self.assertContains(response, "Bici / Remo Zona 2")
+        self.assertContains(response, "Caminata Inclinada Activa")
+        self.assertNotContains(response, "No hay sesiones de cardio disponibles.")
 
 
 class SustitucionAutomaticaHoyTests(TestCase):
@@ -98,6 +105,11 @@ class SustitucionAutomaticaHoyTests(TestCase):
         )
         self.assertContains(
             response, f'data-sesion-hoy-id="{self.sesion_hoy.id}"',
+        )
+        self.assertContains(response, 'id="mobilitySwapHint"')
+        self.assertContains(
+            response,
+            "Reemplazará la sesión de fuerza programada para hoy en tu planning semanal",
         )
         # No debe pisar el flujo ya existente de "3 resoluciones" por URL.
         self.assertNotContains(response, "¿Qué hacemos con tu entrenamiento programado?")

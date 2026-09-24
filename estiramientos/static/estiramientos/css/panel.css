@@ -18,6 +18,7 @@
     --mv-faint:    #71717a; /* zinc-500 */
     --mv-accent:   #34d399; /* emerald-400 */
     --mv-warn:     #fbbf24; /* amber-400 */
+    --mv-indigo:   #818cf8; /* indigo-400 */
     --mv-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Arial, sans-serif;
 
     position: relative;
@@ -149,6 +150,9 @@ html, body { background: #09090b !important; }
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
 }
+/* Jerarquía visual por bloque: 01 emerald (por defecto), 02 indigo, 03 amber. */
+#estiramientos .mobility-section-heading span { color: var(--mv-indigo) !important; }
+#cardio .mobility-section-heading span { color: var(--mv-warn) !important; }
 
 .mobility-intro h2,
 .mobility-section-heading h2 {
@@ -196,6 +200,13 @@ html, body { background: #09090b !important; }
     width: 15px;
     height: 15px;
     accent-color: var(--mv-accent);
+}
+.mobility-swap-hint {
+    margin: 4px 0 0;
+    padding-left: 2px;
+    color: var(--mv-muted) !important;
+    font-size: 12px;
+    line-height: 1.4;
 }
 
 /* =====================================================

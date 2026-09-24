@@ -14,24 +14,22 @@ from estiramientos.models import EstiramientoEjercicio, EstiramientoPaso, Estira
 PLANES = (
     {
         "codigo": "cardio-z2-bici-remo",
-        "nombre": "Bici o remo en Zona 2",
+        "nombre": "Bici / Remo Zona 2",
         "fase": "CARDIO",
-        "descripcion": "30 min a ritmo constante en Zona 2 (RPE 3-4) para sumar recuperación activa sin acumular fatiga.",
+        "descripcion": "Enfoque regenerativo FC < 130 bpm",
         "pasos": (
-            ("Calentamiento progresivo en bici o remo", "Cardiovascular", "Sube el ritmo poco a poco hasta notar la respiración algo más profunda, RPE 2-3.", 300),
-            ("Bloque principal Zona 2 (bici o remo)", "Cardiovascular / Piernas", "Mantén un ritmo constante donde puedas hablar en frases cortas, RPE 3-4.", 1200),
-            ("Enfriamiento suave", "Cardiovascular", "Baja la intensidad poco a poco hasta recuperar el ritmo respiratorio normal.", 300),
+            # Una sola sesión continua de 30 min (1 ejercicio), no segmentada.
+            ("Bici / remo continuo en Zona 2", "Cardiovascular", "Mantén la frecuencia cardíaca por debajo de 130 lpm con un ritmo cómodo y constante durante todo el bloque.", 1800),
         ),
     },
     {
         "codigo": "cardio-z2-caminata-inclinada",
-        "nombre": "Caminata inclinada activa",
+        "nombre": "Caminata Inclinada Activa",
         "fase": "CARDIO",
-        "descripcion": "20 min de caminata con inclinación para sumar recuperación activa sin impacto.",
+        "descripcion": "Ritmo constante Z2",
         "pasos": (
-            ("Calentamiento a ritmo llano", "Cardiovascular / Piernas", "Camina a paso ligero sin inclinación los primeros minutos.", 240),
-            ("Bloque con inclinación", "Piernas / Glúteo", "Sube la inclinación de la cinta (o busca una cuesta) y mantén un ritmo cómodo, RPE 3-4.", 900),
-            ("Vuelta a la calma", "Cardiovascular", "Baja la inclinación y camina suave hasta normalizar la respiración.", 60),
+            # Una sola sesión continua de 20 min (1 ejercicio), no segmentada.
+            ("Caminata inclinada continua en Zona 2", "Cardiovascular / Piernas", "Sube la inclinación de la cinta (o busca una cuesta) y mantén un ritmo cómodo y constante, RPE 3-4.", 1200),
         ),
     },
 )
