@@ -34,6 +34,17 @@
    casita, que esta página sustituye por la cabecera estándar. */
 .home-btn { display: none !important; }
 
+/* El html/body globales conservan el fondo con textura (Blade Runner /
+   variables-base.css) fuera de .stretch-container, por ejemplo en los
+   márgenes laterales en pantallas anchas. Lo forzamos a negro sólido
+   para que no quede ningún resto visible en esta página. */
+html, body { background: #09090b !important; }
+
+/* Círculo flotante semitransparente de "La Habitación de JOI"
+   (includes/_joi_fab.html), incluido globalmente en base.html. Se oculta
+   solo en esta página, igual que el botón de inicio. */
+.joi-fab, #joi-fab-banner { display: none !important; }
+
 /* La hoja de estilos global fuerza Cinzel/Rajdhani con !important sobre
    h1-h4/p/span/li. Estas reglas, más específicas, la ganan sin tocar
    base.html ni otras páginas. Se excluyen los <i> para no romper los
@@ -232,12 +243,11 @@
 .filters-section {
     margin: 0 0 16px;
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
 }
 
-.search-box { flex: 1; min-width: 180px; position: relative; }
+.search-box { width: 100%; position: relative; }
 .search-box input {
     width: 100%;
     padding: 9px 12px 9px 34px;
@@ -251,8 +261,21 @@
 .search-box input:focus { outline: none; border-color: var(--mv-border-2); }
 .search-box i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--mv-faint); font-size: 12px; pointer-events: none; }
 
-.filter-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+.filter-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+    margin: 0 -16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+.filter-buttons::-webkit-scrollbar { display: none; }
 .filter-btn {
+    flex-shrink: 0;
     padding: 7px 12px;
     background: var(--mv-bg);
     border: 1px solid var(--mv-border);
@@ -265,6 +288,7 @@
     align-items: center;
     gap: 5px;
     transition: all .15s ease;
+    white-space: nowrap;
 }
 .filter-btn i { font-size: 10px; }
 .filter-btn:hover { border-color: var(--mv-border-2); color: var(--mv-ink-2) !important; }

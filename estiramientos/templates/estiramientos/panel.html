@@ -163,4 +163,29 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 {% endif %}
 {% endif %}
+
+<script>
+(function() {
+    // base.html arranca globalmente un sistema de partículas decorativo
+    // (BladeRunnerParticles) que sigue añadiendo un <div> a pantalla
+    // completa con destellos en movimiento, incluso en páginas con fondo
+    // negro sólido como esta. Ese contenedor no tiene id ni clase, así
+    // que lo localizamos por su estilo inline característico
+    // (position:fixed, z-index:5, pointer-events:none) y lo retiramos
+    // solo en esta página, sin tocar base.html ni el resto del sitio.
+    function limpiarParticulasResiduales() {
+        var body = document.body;
+        for (var i = body.children.length - 1; i >= 0; i--) {
+            var el = body.children[i];
+            if (el.tagName !== 'DIV' || el.id || el.className) continue;
+            var st = el.style;
+            if (st.position === 'fixed' && st.zIndex === '5' && st.pointerEvents === 'none') {
+                el.remove();
+            }
+        }
+    }
+    document.addEventListener('DOMContentLoaded', limpiarParticulasResiduales);
+    window.addEventListener('load', limpiarParticulasResiduales);
+})();
+</script>
 {% endblock %}
