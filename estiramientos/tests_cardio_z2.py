@@ -70,6 +70,12 @@ class PanelCardioZ2Tests(TestCase):
         self.assertContains(response, "Bici / Remo Zona 2")
         self.assertContains(response, "Caminata Inclinada Activa")
         self.assertNotContains(response, "No hay sesiones de cardio disponibles.")
+        self.assertContains(
+            response, "Bloque continuo · Estado estable Z2", count=2,
+        )
+        self.assertContains(response, "Iniciar cardio", count=2)
+        # La tarjeta de movilidad regular conserva su copy de siempre.
+        self.assertContains(response, "Iniciar y registrar", count=1)
 
 
 class SustitucionAutomaticaHoyTests(TestCase):
@@ -109,7 +115,7 @@ class SustitucionAutomaticaHoyTests(TestCase):
         self.assertContains(response, 'id="mobilitySwapHint"')
         self.assertContains(
             response,
-            "Reemplazará la sesión de fuerza programada para hoy en tu planning semanal",
+            "La sesión de fuerza de hoy quedará registrada como adaptada por recuperación activa",
         )
         # No debe pisar el flujo ya existente de "3 resoluciones" por URL.
         self.assertNotContains(response, "¿Qué hacemos con tu entrenamiento programado?")
