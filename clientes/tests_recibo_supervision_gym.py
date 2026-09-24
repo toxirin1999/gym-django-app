@@ -150,27 +150,61 @@ class ReciboSupervisionGymTests(TestCase):
         )
 
         html = self._render(
-            self._portada(ejecutable=True),
+            self._portada(ejecutable=False),
             self.motor.snapshot,
             None,
             sesion_programada=sesion,
         )
 
-        self.assertIn('data-postpone-session', html)
+        self.assertEqual(html.count('data-postpone-session'), 1)
         self.assertIn('Hacer esta sesión mañana', html)
         self.assertIn(
             f'/clientes/sesion/{sesion.id}/posponer/',
             html,
         )
         self.assertIn('Cuándo entrenar', html)
+        self.assertLess(
+            html.index('data-postpone-session'),
+            html.index('data-gym-correction-wrap'),
+            'Posponer debe ser visible sin abrir Ajustar decisión.',
+        )
 
-    def test_portada_moderna_sin_sesion_canonica_no_inventa_accion_de_posponer(self):
+    def test_portada_moderna_on_the_fly_ofrece_mover_la_sesion_gym_a_manana(self):
         self.motor.vigente = True
         self.motor.save(update_fields=["vigente"])
 
         html = self._render(self._portada(ejecutable=True), self.motor.snapshot, None)
 
-        self.assertNotIn('data-postpone-session', html)
+        self.assertEqual(html.count('data-postpone-session'), 1)
+        self.assertIn('Hacer esta sesión mañana', html)
+        self.assertIn('/clientes/sesion/hoy/posponer/', html)
+        self.assertLess(
+            html.index('data-postpone-session'),
+            html.index('data-gym-correction-wrap'),
+            'Posponer debe ser visible sin abrir Ajustar decisión.',
+        )
+
+    def test_portada_moderna_no_duplica_posponer_dentro_de_ajustar_decision(self):
+        self.motor.vigente = True
+        self.motor.save(update_fields=["vigente"])
+        sesion = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.fecha,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Fuerza A",
+        )
+
+        html = self._render(
+            self._portada(ejecutable=True),
+            self.motor.snapshot,
+            None,
+            sesion_programada=sesion,
+        )
+        ajustar_decision = html[html.index('data-gym-correction-wrap'):]
+
+        self.assertEqual(html.count('data-postpone-session'), 1)
+        self.assertNotIn('data-postpone-session', ajustar_decision)
+        self.assertIn('data-mobility-secondary-action', ajustar_decision)
 
     def _render(self, portada, autoridad, recibo, sesion_programada=None):
         postura_actual = recibo["postura_actual"] if recibo else "empujar"

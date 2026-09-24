@@ -919,8 +919,34 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
     {% endwith %}
 
+    {% if portada_hoy.sesion_dominante.modulo == 'gym' %}
+      {% if sesion_programada %}
+        {% if sesion_programada.estado == 'pendiente' %}
+        <form data-postpone-session class="rb-session-calendar-action mt-3"
+              method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
+          {% csrf_token %}
+          <span class="rb-session-calendar-copy">
+            <span class="rb-session-calendar-label">Cuándo entrenar</span>
+            <span class="rb-session-calendar-note">Conserva esta sesión y su lugar en el plan.</span>
+          </span>
+          <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
+        </form>
+        {% endif %}
+      {% else %}
+      <form data-postpone-session class="rb-session-calendar-action mt-3"
+            method="post" action="{% url 'clientes:posponer_sesion_hoy' %}">
+        {% csrf_token %}
+        <span class="rb-session-calendar-copy">
+          <span class="rb-session-calendar-label">Cuándo entrenar</span>
+          <span class="rb-session-calendar-note">Guarda la sesión de hoy para realizarla mañana.</span>
+        </span>
+        <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
+      </form>
+      {% endif %}
+    {% endif %}
+
     <!-- Ajustar decisión: un único desplegable, colapsado por defecto. Agrupa
-         logistica de la sesion (posponer, sesion dominante, señales causales),
+         logistica secundaria (sesion dominante, señales causales),
          el porque, la correccion de autoridad Gym, la alternativa y la ausencia. -->
     <details data-gym-correction-wrap class="mt-3 pt-3 border-t border-zinc-800 group">
       <summary class="flex min-h-[36px] cursor-pointer list-none items-center justify-between font-mono text-[10px] font-bold tracking-[0.08em] uppercase text-zinc-400">
@@ -943,18 +969,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
           </span>
           <span aria-hidden="true">→</span>
         </a>
-
-        {% if sesion_programada and sesion_programada.estado == 'pendiente' and portada_hoy.sesion_dominante.modulo == 'gym' %}
-        <form data-postpone-session class="rb-session-calendar-action"
-              method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
-          {% csrf_token %}
-          <span class="rb-session-calendar-copy">
-            <span class="rb-session-calendar-label">Cuándo entrenar</span>
-            <span class="rb-session-calendar-note">Conserva esta sesión y su lugar en el plan.</span>
-          </span>
-          <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
-        </form>
-        {% endif %}
 
         {% if portada_hoy.sesion_dominante %}
         <div>
