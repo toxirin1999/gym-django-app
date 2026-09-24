@@ -65,33 +65,34 @@ html, body { background: #09090b !important; }
 .player-container {
     max-width: 600px;
     margin: 0 auto;
-    padding: 15px;
-    min-height: 100vh;
+    padding: 16px;
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    overflow: hidden;
 }
 
 .finish-early-btn {
-    display: flex;
-    width: 100%;
-    min-height: 52px;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    margin-top: 1rem;
-    padding: 0.7rem 0.9rem;
-    border: 1px solid rgba(16, 185, 129, 0.4);
-    border-radius: 14px;
-    background: rgba(16, 185, 129, 0.2);
-    color: #34d399;
+    display: block;
+    width: auto;
+    margin: 8px auto 0;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #71717a;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-align: center;
     cursor: pointer;
     font: inherit;
+    transition: color 0.15s ease;
 }
 
-.finish-early-btn span {
-    font-weight: 800;
-}
-
-.finish-early-btn small {
-    color: var(--text-muted);
+.finish-early-btn:hover {
+    color: #d4d4d8;
 }
 
 .finish-early-btn:focus-visible {
@@ -217,6 +218,7 @@ html, body { background: #09090b !important; }
     display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
 }
 
 .timer-display {

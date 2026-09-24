@@ -314,7 +314,7 @@ class CompletarMovilidadHttpContractTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="btnFinishEarly"')
-        self.assertContains(response, "Finalizar y guardar")
+        self.assertContains(response, "Finalizar y registrar hasta aquí")
         self.assertContains(response, "data-secondary-action")
         self.assertEqual(response.content.count(b"data-primary-action"), 1)
 
