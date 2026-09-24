@@ -1218,10 +1218,18 @@
     </div>
     {% endif %}
 
-    {% if sugerencia_hipotesis and sugerencia_hipotesis.patron|cut:"hipotesis_senal_" and sugerencia_hipotesis.texto %}
+    {% if incidencias_contexto %}
+    <div class="dc-message" role="status">Parte de la evidencia no pudo cargarse. No se interpreta como ausencia de señales; vuelve a intentarlo más tarde.</div>
+    {% endif %}
+
+    {% if sugerencia_hipotesis_ui %}
     <article class="dc-card is-experiment-priority" aria-labelledby="propuesta-experimento-titulo">
       <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
-      <p class="dc-card-text" id="propuesta-experimento-titulo">{{ sugerencia_hipotesis.texto }}</p>
+      <h2 class="dc-card-text" id="propuesta-experimento-titulo">Observar {{ sugerencia_hipotesis_ui.senal }}</h2>
+      <p class="dc-card-meta">{{ sugerencia_hipotesis_ui.texto }}</p>
+      <p class="dc-card-note"><strong>Qué observará:</strong> {{ sugerencia_hipotesis_ui.que_observa }}</p>
+      <p class="dc-card-note"><strong>Qué no cambia:</strong> {{ sugerencia_hipotesis_ui.que_no_cambia }}</p>
+      <p class="dc-card-note"><strong>Cómo termina:</strong> {{ sugerencia_hipotesis_ui.como_termina }}</p>
       <div class="dc-actions">
         <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}">
           {% csrf_token %}
@@ -1546,7 +1554,7 @@
         <strong>El plan no necesita ninguna decisión tuya ahora.</strong>
         Seguirá observando tus sesiones y te avisará cuando exista evidencia suficiente para proponer un cambio.
       </div>
-      {% else %}
+      {% elif preferencias_activas or intervenciones_activas or hipotesis_abiertas or continuidad %}
       <details class="dc-active-shell">
         <summary>Señales activas · {{ preferencias_activas|length }} preferencias · {{ intervenciones_activas|length }} ajustes · {{ hipotesis_abiertas|length }} hipótesis</summary>
       <div class="dc-card-grid is-active">
@@ -1571,8 +1579,10 @@
         {% for iv in intervenciones_activas %}
         <article class="dc-card is-temporary">
           <span class="dc-pill is-temporary">temporal · hasta el {{ iv.fecha_fin|date:"j N" }}</span>
-          <p class="dc-card-text">{{ iv.get_tipo_display }}</p>
-          {% if iv.origen_patron %}
+          <p class="dc-card-text">{% if iv.tipo == 'vigilar_senal' %}Experimento de observación{% else %}{{ iv.get_tipo_display }}{% endif %}</p>
+          {% if iv.tipo == 'vigilar_senal' %}
+          <p class="dc-card-meta">Observa una señal concreta durante 14 días. No modifica cargas, ejercicios ni calendario.</p>
+          {% elif iv.origen_patron %}
           <p class="dc-card-meta">Origen: {{ iv.origen_patron }}.</p>
           {% endif %}
           <p class="dc-card-note">
@@ -1582,7 +1592,11 @@
             Expira automáticamente al terminar su ventana.
             {% endif %}
           </p>
-          {% if iv.origen_patron == 'esenciales_frecuentes' %}
+          {% if iv.tipo == 'vigilar_senal' %}
+          <form method="post" action="{% url 'clientes:cancelar_experimento_hipotesis' iv.id %}">
+            {% csrf_token %}<button class="dc-button is-danger" type="submit">Cancelar experimento</button>
+          </form>
+          {% elif iv.origen_patron == 'esenciales_frecuentes' %}
           <form method="post" action="{% url 'clientes:cancelar_intervencion_esenciales' iv.id %}">
             {% csrf_token %}
             <button class="dc-button is-danger" type="submit">Cancelar ajuste</button>
@@ -1637,6 +1651,25 @@
     </section>
     </article>
 
+    {% if resultados_hipotesis %}
+    <article class="dc-node dc-node--decisions">
+      <section class="dc-section" aria-labelledby="titulo-resultados-hipotesis">
+        <div class="dc-label">Experimentos cerrados</div>
+        <h2 class="dc-heading" id="titulo-resultados-hipotesis">Qué observó el plan</h2>
+        <div class="dc-card-grid">
+        {% for item in resultados_hipotesis %}
+          <article class="dc-card">
+            <span class="dc-pill is-hypothesis">{{ item.evaluacion.resultado }}</span>
+            <p class="dc-card-text">{{ item.senal|capfirst }}</p>
+            <p class="dc-card-meta">{{ item.evaluacion.texto }}</p>
+            <p class="dc-card-note">Comparación descriptiva: observar no demuestra que el experimento causara el resultado.</p>
+          </article>
+        {% endfor %}
+        </div>
+      </section>
+    </article>
+    {% endif %}
+
     {% if resultados_contractuales %}
     <article class="dc-node dc-node--decisions">
     <section class="dc-section" aria-labelledby="titulo-resultados-ajustes">
@@ -1687,7 +1720,7 @@
                 {{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}
               </h4>
               <span class="dc-badge">
-                {% if g.lesion_label %}lesión{% else %}{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}{% endif %}
+                {% if g.lesion_label %}lesión{% elif g.count == 1 %}1 sesión{% else %}{{ g.count }} sesiones{% endif %}
               </span>
             </div>
             <p class="dc-group-detail">{{ g.explicacion }}</p>
@@ -1707,7 +1740,7 @@
             <article class="dc-group{% if g.lesion_label %} is-protected{% endif %}">
               <div class="dc-group-head">
                 <h4 class="dc-group-title">{{ g.decision_label }} · {{ g.count }} {% if g.count == 1 %}vez{% else %}veces{% endif %}</h4>
-                <span class="dc-badge">{{ g.count }} sesi{{ g.count|pluralize:"ón,ones" }}</span>
+                <span class="dc-badge">{% if g.count == 1 %}1 sesión{% else %}{{ g.count }} sesiones{% endif %}</span>
               </div>
               <p class="dc-group-detail">{{ g.explicacion }}</p>
               <p class="dc-group-meta">Última vez: {{ g.fecha_label }}</p>
@@ -1727,8 +1760,29 @@
 
       <details class="dc-technical-shell">
         <summary>Abrir detalle técnico y trazabilidad</summary>
-      {% if analisis_semanal and analisis_semanal.hay_datos or lectura_semanal_joi and lectura_semanal_joi.texto or decisiones_agrupadas or traces_recientes or decisiones_carga or sesiones_esenciales %}
+      {% if analisis_semanal and analisis_semanal.hay_datos or lectura_semanal_joi and lectura_semanal_joi.texto or decisiones_agrupadas or traces_recientes or decisiones_carga or sesiones_esenciales or pruebas_recientes or patron_multisemanal %}
       <div class="dc-evidence-grid">
+        {% if patron_multisemanal %}
+        <div class="dc-subsection is-wide">
+          <h3 class="dc-subtitle">Patrón de varias semanas</h3>
+          <article class="dc-week"><p class="dc-week-reading">{{ patron_multisemanal }}</p></article>
+        </div>
+        {% endif %}
+
+        {% if pruebas_recientes %}
+        <div class="dc-subsection is-wide">
+          <h3 class="dc-subtitle">Pruebas de distribución recientes</h3>
+          <div class="dc-card-grid">
+          {% for prueba in pruebas_recientes %}
+            <article class="dc-card">
+              <span class="dc-pill">{{ prueba.intervencion.get_tipo_display }}</span>
+              <p class="dc-card-meta">{{ prueba.intervencion.fecha_inicio|date:"d/m/Y" }}–{{ prueba.intervencion.fecha_fin|date:"d/m/Y" }}</p>
+              {% if prueba.evaluacion %}<p class="dc-card-note">{{ prueba.evaluacion.texto|default:prueba.evaluacion.resultado }}</p>{% endif %}
+            </article>
+          {% endfor %}
+          </div>
+        </div>
+        {% endif %}
         {% if analisis_semanal and analisis_semanal.hay_datos %}
         <div class="dc-subsection">
           <h3 class="dc-subtitle">Esta semana</h3>
@@ -1828,7 +1882,7 @@
           {% if traces_recientes %}
           <details class="dc-accordion">
             <summary>
-              <span>Ver historial completo ({{ traces_recientes|length }} sesi{{ traces_recientes|length|pluralize:"ón,ones" }})</span>
+              <span>Ver historial completo ({% if traces_recientes|length == 1 %}1 sesión{% else %}{{ traces_recientes|length }} sesiones{% endif %})</span>
               <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>

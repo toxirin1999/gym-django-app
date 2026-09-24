@@ -229,6 +229,13 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         # Las cards de preferencias/intervenciones no aparecen si no hay datos
         self.assertNotContains(response, 'permanente · revocable')
         self.assertNotContains(response, 'temporal · hasta el')
+        self.assertNotContains(response, 'Señales activas · 0 preferencias · 0 ajustes · 0 hipótesis')
+
+    @patch('entrenos.services.analisis_semanal_service.detectar_patron_multisemanal', side_effect=RuntimeError('boom'))
+    def test_error_de_carga_no_se_presenta_como_ausencia_de_senales(self, _mock):
+        response = self._get()
+        self.assertContains(response, 'Parte de la evidencia no pudo cargarse')
+        self.assertIn('analisis_semanal', response.context['incidencias_contexto'])
 
 
 # ── Case 10: URL resolution ───────────────────────────────────────────────────

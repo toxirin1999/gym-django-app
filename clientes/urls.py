@@ -144,4 +144,5 @@ urlpatterns = [
     # Phase 37 — Hypothesis experiment
     path('hipotesis/<int:sugerencia_id>/probar/', views.aceptar_hipotesis_view, name='aceptar_hipotesis'),
     path('hipotesis/<int:sugerencia_id>/ignorar/', views.ignorar_hipotesis_view, name='ignorar_hipotesis'),
+    path('hipotesis/experimento/<int:intervencion_id>/cancelar/', views.cancelar_experimento_hipotesis_view, name='cancelar_experimento_hipotesis'),
 ]

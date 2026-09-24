@@ -5571,6 +5571,7 @@ def plan_decisiones_view(request):
     hoy = timezone.localdate()
     hace_60 = hoy - timedelta(days=60)
     hace_30 = hoy - timedelta(days=30)
+    incidencias_contexto = []
 
     # Ciclo 11: consulta pura de la última semana ya cerrada. La pantalla no
     # materializa ni recalcula evaluaciones; esa operación es explícita.
@@ -5658,7 +5659,8 @@ def plan_decisiones_view(request):
             mock_fecha = p.fecha_fin + timedelta(days=1)
             evaluacion = evaluar_prueba_distribucion(cliente, mock_fecha)
         except Exception:
-            pass
+            logger.exception('No se pudo evaluar una prueba de distribución en el Centro')
+            incidencias_contexto.append('pruebas_distribucion')
         pruebas_recientes.append({'intervencion': p, 'evaluacion': evaluacion})
 
     # 4. Patrón multisemanal y análisis semanal
@@ -5671,7 +5673,8 @@ def plan_decisiones_view(request):
         patron_multisemanal = detectar_patron_multisemanal(cliente)
         analisis_semanal = analizar_semana_entrenamiento(cliente, hoy)
     except Exception:
-        pass
+        logger.exception('No se pudo cargar el análisis semanal del Centro')
+        incidencias_contexto.append('analisis_semanal')
 
     # 5. Decisiones de carga recientes (todas: mantener, subir, bajar, deload)
     # Phase 62G.3 — subir_peso es ejecutivo desde 62H, debe ser transparente.
@@ -5711,7 +5714,8 @@ def plan_decisiones_view(request):
         from entrenos.services.decision_trace_service import get_traces_recientes
         traces_recientes = get_traces_recientes(cliente, n=7)
     except Exception:
-        pass
+        logger.exception('No se pudo cargar el historial de decisiones del Centro')
+        incidencias_contexto.append('historial_decisiones')
 
     # Phase 45 — Lectura JOI semanal completa para el Centro
     lectura_semanal_joi = None
@@ -5728,7 +5732,8 @@ def plan_decisiones_view(request):
                     'estado': _estado,
                 }
     except Exception:
-        pass
+        logger.exception('No se pudo cargar la lectura semanal JOI del Centro')
+        incidencias_contexto.append('lectura_semanal')
 
     # Phase 36 + 38 — Hipótesis abiertas con gobernanza de ciclo de vida
     hipotesis_abiertas = []
@@ -5738,15 +5743,25 @@ def plan_decisiones_view(request):
         hipotesis_raw = detectar_hipotesis_abiertas(cliente)
         hipotesis_abiertas = aplicar_gobernanza_hipotesis(cliente, hipotesis_raw, hoy)
     except Exception:
-        pass
+        logger.exception('No se pudieron cargar las hipótesis abiertas del Centro')
+        incidencias_contexto.append('hipotesis_abiertas')
 
     # Phase 37 — Sugerencia experimental activa (solo una a la vez)
     sugerencia_hipotesis = None
+    sugerencia_hipotesis_ui = None
+    resultados_hipotesis = []
     try:
-        from entrenos.services.hipotesis_service import get_sugerencia_hipotesis_activa
+        from entrenos.services.hipotesis_service import (
+            get_sugerencia_hipotesis_activa, presentar_sugerencia_hipotesis,
+            resultados_hipotesis_recientes,
+        )
         sugerencia_hipotesis = get_sugerencia_hipotesis_activa(cliente)
+        if sugerencia_hipotesis:
+            sugerencia_hipotesis_ui = presentar_sugerencia_hipotesis(sugerencia_hipotesis)
+        resultados_hipotesis = resultados_hipotesis_recientes(cliente)
     except Exception:
-        pass
+        logger.exception('No se pudo cargar el ciclo de hipótesis del Centro')
+        incidencias_contexto.append('ciclo_hipotesis')
 
     # Phase Continuidad 1.4: lectura de continuidad para el Centro (read-only).
     continuidad_evaluada = None
@@ -5757,6 +5772,8 @@ def plan_decisiones_view(request):
         if continuidad_evaluada.get('hay_pausa_significativa'):
             continuidad = continuidad_evaluada
     except Exception:
+        logger.exception('No se pudo cargar la continuidad del Centro')
+        incidencias_contexto.append('continuidad')
         continuidad_evaluada = None
         continuidad = None
 
@@ -5812,6 +5829,9 @@ def plan_decisiones_view(request):
         'traces_recientes':    traces_recientes,
         'hipotesis_abiertas':  hipotesis_abiertas,
         'sugerencia_hipotesis': sugerencia_hipotesis,
+        'sugerencia_hipotesis_ui': sugerencia_hipotesis_ui,
+        'resultados_hipotesis': resultados_hipotesis,
+        'incidencias_contexto': sorted(set(incidencias_contexto)),
         'sugerencia_prioritaria': sugerencia_prioritaria,
         'lectura_semanal_joi': lectura_semanal_joi,
         'continuidad': continuidad,
@@ -5845,6 +5865,24 @@ def _version_bloque_post(request):
 
 def _mensaje_conflicto_bloque(request, exc):
     messages.error(request, str(exc))
+    return redirect('clientes:plan_decisiones')
+
+
+@login_required
+@require_POST
+def cancelar_experimento_hipotesis_view(request, intervencion_id):
+    from entrenos.models import IntervencionPlan
+    from entrenos.services.hipotesis_service import cancelar_experimento_hipotesis
+    cliente = get_object_or_404(Cliente, user=request.user)
+    intervencion = get_object_or_404(
+        IntervencionPlan,
+        pk=intervencion_id,
+        cliente=cliente,
+        tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+        estado=IntervencionPlan.ESTADO_ACTIVA,
+    )
+    cancelar_experimento_hipotesis(intervencion)
+    messages.info(request, 'Experimento cancelado. El plan deja de vigilar esa señal.')
     return redirect('clientes:plan_decisiones')
 
 

@@ -3,6 +3,12 @@ from django.utils import timezone
 
 
 @shared_task
+def cerrar_experimentos_hipotesis_diarios():
+    from entrenos.services.hipotesis_service import cerrar_experimentos_hipotesis_vencidos
+    return {'cerrados': cerrar_experimentos_hipotesis_vencidos(timezone.localdate())}
+
+
+@shared_task
 def evaluar_intervenciones_esenciales_diarias():
     from entrenos.models import IntervencionPlan
     from entrenos.services.ciclo_intervencion_esenciales_service import candidatos, evaluar_intervencion

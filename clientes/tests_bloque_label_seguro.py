@@ -25,6 +25,8 @@ class BloqueLabelSeguroTests(TestCase):
         )
         card = consultar_bloque_gym_colaborativo(cliente)['card']
         self.assertEqual(card['objetivo_label'], 'Hipertrofia Muscular')
+        self.assertTrue(card['vencido_pendiente_cierre'])
+        self.assertEqual(card['estado_label'], 'Pendiente de cierre')
         self.assertEqual(bloque.objetivo_principal, 'HIPERTROFIA ')
         self.client.force_login(user)
         response = self.client.get('/clientes/plan/decisiones/')

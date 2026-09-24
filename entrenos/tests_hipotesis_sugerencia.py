@@ -37,6 +37,8 @@ from entrenos.models import (
 from entrenos.services.hipotesis_service import (
     generar_sugerencia_hipotesis, aceptar_sugerencia_hipotesis,
     get_sugerencia_hipotesis_activa, evaluar_fin_experimento_hipotesis,
+    cerrar_experimentos_hipotesis_vencidos, cancelar_experimento_hipotesis,
+    presentar_sugerencia_hipotesis,
 )
 
 PALABRAS_PROHIBIDAS = ['fallo', 'error del', 'equivocó', 'incorrecto', 'no cumpliste']
@@ -135,8 +137,14 @@ class TestCase6_AceptarCreaIntervencion(HipotesisSugerenciaBase):
         sugerencia = generar_sugerencia_hipotesis(self.cliente, self.hoy)
         intervencion = aceptar_sugerencia_hipotesis(sugerencia, self.hoy)
         self.assertEqual(intervencion.tipo, IntervencionPlan.TIPO_VIGILAR_SENAL)
-        self.assertEqual((intervencion.fecha_fin - intervencion.fecha_inicio).days, 14)
+        self.assertEqual((intervencion.fecha_fin - intervencion.fecha_inicio).days, 13)
         self.assertEqual(intervencion.estado, IntervencionPlan.ESTADO_ACTIVA)
+
+    def test_ventana_incluye_exactamente_catorce_fechas(self):
+        self._crear_3_senal()
+        sugerencia = generar_sugerencia_hipotesis(self.cliente, self.hoy)
+        intervencion = aceptar_sugerencia_hipotesis(sugerencia, self.hoy)
+        self.assertEqual((intervencion.fecha_fin - intervencion.fecha_inicio).days + 1, 14)
 
     def test_sugerencia_cambia_a_aceptada(self):
         self._crear_3_senal()
@@ -276,3 +284,90 @@ class TestCase15_RedirectCorrecto(HipotesisSugerenciaBase):
         c.login(username='tester_h37', password='x')
         response = c.post(reverse('clientes:aceptar_hipotesis', args=[sug.id]))
         self.assertRedirects(response, reverse('clientes:plan_decisiones'))
+
+
+class TestCase16_PresentacionLegacy(HipotesisSugerenciaBase):
+    def test_legacy_identifica_senal_y_explica_contrato(self):
+        sugerencia = SugerenciaPlan.objects.create(
+            cliente=self.cliente,
+            patron='hipotesis_senal_posponer',
+            texto='Esta señal se ha repetido 3 veces.',
+        )
+        ui = presentar_sugerencia_hipotesis(sugerencia)
+        self.assertIn('posponer', ui['senal'].lower())
+        self.assertTrue(ui['que_observa'])
+        self.assertIn('no cambia', ui['que_no_cambia'].lower())
+        self.assertIn('14', ui['como_termina'])
+
+
+class TestCase17_CierrePersistente(HipotesisSugerenciaBase):
+    def _intervencion_vencida(self, estado_origen='posponer'):
+        sugerencia = SugerenciaPlan.objects.create(
+            cliente=self.cliente,
+            patron=f'hipotesis_senal_{estado_origen}',
+            texto='Legacy',
+            estado=SugerenciaPlan.ESTADO_ACEPTADA,
+        )
+        return IntervencionPlan.objects.create(
+            cliente=self.cliente,
+            sugerencia=sugerencia,
+            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron=sugerencia.patron,
+            fecha_inicio=self.hoy - timedelta(days=14),
+            fecha_fin=self.hoy - timedelta(days=1),
+            estado=IntervencionPlan.ESTADO_ACTIVA,
+        )
+
+    def test_cierre_filtra_evidencia_por_estado_y_es_idempotente(self):
+        iv = self._intervencion_vencida('posponer')
+        for i in range(3):
+            self._trace_eval(estado='posponer', dias_atras=20 + i)
+        self._trace_eval(estado='posponer', dias_atras=7)
+        for i in range(5):
+            self._trace_eval(estado='entrenar', dias_atras=9 + i)
+
+        self.assertEqual(cerrar_experimentos_hipotesis_vencidos(self.hoy), 1)
+        self.assertEqual(cerrar_experimentos_hipotesis_vencidos(self.hoy), 0)
+        iv.refresh_from_db()
+        iv.sugerencia.refresh_from_db()
+        self.assertEqual(iv.estado, IntervencionPlan.ESTADO_EXPIRADA)
+        evaluacion = iv.sugerencia.contrato_snapshot['evaluacion_hipotesis']
+        self.assertEqual(evaluacion['estado_observado'], 'posponer')
+        self.assertEqual(evaluacion['durante'], 1)
+
+
+class TestCase18_GetPuroYCancelaPost(HipotesisSugerenciaBase):
+    def setUp(self):
+        super().setUp()
+        self._crear_3_senal()
+        sug = generar_sugerencia_hipotesis(self.cliente, self.hoy)
+        self.iv = aceptar_sugerencia_hipotesis(sug, self.hoy - timedelta(days=20))
+        self.client.login(username='tester_h37', password='x')
+
+    def test_get_no_expira_intervencion_vencida(self):
+        response = self.client.get(reverse('clientes:plan_decisiones'))
+        self.assertEqual(response.status_code, 200)
+        self.iv.refresh_from_db()
+        self.assertEqual(self.iv.estado, IntervencionPlan.ESTADO_ACTIVA)
+
+    def test_cancelar_es_post_y_solo_del_propietario(self):
+        activa = IntervencionPlan.objects.create(
+            cliente=self.cliente,
+            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron='hipotesis_senal_entrenar',
+            fecha_inicio=self.hoy,
+            fecha_fin=self.hoy + timedelta(days=3),
+        )
+        url = reverse('clientes:cancelar_experimento_hipotesis', args=[activa.id])
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertRedirects(self.client.post(url), reverse('clientes:plan_decisiones'))
+        activa.refresh_from_db()
+        self.assertEqual(activa.estado, IntervencionPlan.ESTADO_CANCELADA)
+
+    def test_servicio_cancelacion_rechaza_tipo_ajeno(self):
+        otro = IntervencionPlan.objects.create(
+            cliente=self.cliente, tipo=IntervencionPlan.TIPO_NO_SUBIR,
+            fecha_inicio=self.hoy, fecha_fin=self.hoy + timedelta(days=2),
+        )
+        with self.assertRaises(ValueError):
+            cancelar_experimento_hipotesis(otro)

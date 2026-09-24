@@ -53,6 +53,33 @@ _DEFAULT_OBSERVACION = (
 _PATRON_PREFIX = 'hipotesis_senal_'  # SugerenciaPlan.patron prefix for hypothesis suggestions
 _DURACION_EXPERIMENTO = 14  # days
 
+_ETIQUETAS_ESTADO = {
+    'entrenar': 'propuestas de entrenar con normalidad',
+    'posponer': 'decisiones de posponer una sesión',
+    'recuperar': 'decisiones de priorizar recuperación',
+    'version_reducida': 'propuestas de versión esencial',
+}
+
+
+def _estado_desde_patron(patron: str) -> str | None:
+    if not (patron or '').startswith(_PATRON_PREFIX):
+        return None
+    return patron[len(_PATRON_PREFIX):] or None
+
+
+def presentar_sugerencia_hipotesis(sugerencia) -> dict:
+    """DTO humano estable, también para filas legacy con texto genérico."""
+    estado = _estado_desde_patron(sugerencia.patron)
+    senal = _ETIQUETAS_ESTADO.get(estado, 'una señal de decisión todavía no explicada')
+    return {
+        'id': sugerencia.pk,
+        'senal': senal,
+        'texto': sugerencia.texto,
+        'que_observa': f'Durante 14 días contará si se repite margen bajo después de {senal}.',
+        'que_no_cambia': 'No cambia cargas, ejercicios ni el calendario: solo observa y compara.',
+        'como_termina': 'Al completar 14 días, el sistema cerrará la prueba y mostrará si la señal disminuyó, persistió o faltaron datos.',
+    }
+
 
 def _hipotesis_mas_relevante(hipotesis: list[dict]) -> dict | None:
     """Returns the single most repeated hypothesis (highest ocurrencias)."""
@@ -74,7 +101,8 @@ def get_sugerencia_hipotesis_activa(cliente) -> 'SugerenciaPlan | None':
             estado=SugerenciaPlan.ESTADO_PENDIENTE,
         ).order_by('-fecha_generada').first()
     except Exception:
-        return None
+        logger.exception('No se pudo consultar la sugerencia de hipótesis activa')
+        raise
 
 
 def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | None':
@@ -176,10 +204,21 @@ def aceptar_sugerencia_hipotesis(sugerencia, fecha_ref=None) -> 'IntervencionPla
             raise ValueError('La hipótesis ya no está pendiente.')
 
         fecha_ref = fecha_ref or timezone.localdate()
-        fecha_fin = fecha_ref + _td(days=_DURACION_EXPERIMENTO)
+        # La fecha inicial cuenta como el día 1: inicio + 13 abarca 14 fechas.
+        fecha_fin = fecha_ref + _td(days=_DURACION_EXPERIMENTO - 1)
+        snapshot = dict(sugerencia.contrato_snapshot or {})
+        snapshot['experimento_hipotesis'] = {
+            'version': 1,
+            'estado_observado': _estado_desde_patron(sugerencia.patron),
+            'duracion_dias': _DURACION_EXPERIMENTO,
+            'fecha_inicio': fecha_ref.isoformat(),
+            'fecha_fin': fecha_fin.isoformat(),
+            'modifica_plan': False,
+        }
         sugerencia.estado = SugerenciaPlan.ESTADO_ACEPTADA
         sugerencia.fecha_respuesta = timezone.now()
-        sugerencia.save(update_fields=['estado', 'fecha_respuesta'])
+        sugerencia.contrato_snapshot = snapshot
+        sugerencia.save(update_fields=['estado', 'fecha_respuesta', 'contrato_snapshot'])
 
         return IntervencionPlan.objects.create(
             cliente=sugerencia.cliente,
@@ -215,7 +254,7 @@ def ignorar_sugerencia_hipotesis(sugerencia, fecha_ref=None):
         return sugerencia
 
 
-def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
+def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None, intervencion=None) -> dict | None:
     """
     Phase 37 — After the vigilar_senal experiment ends, check if senal_no_captada
     occurrences decreased during the experiment window.
@@ -229,23 +268,29 @@ def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
     fecha_ref = fecha_ref or timezone.localdate()
 
     # Find recently expired vigilar_senal intervention
-    intervencion = IntervencionPlan.objects.filter(
-        cliente=cliente,
-        tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
-        estado__in=[IntervencionPlan.ESTADO_EXPIRADA, IntervencionPlan.ESTADO_ACTIVA],
-        fecha_fin__lte=fecha_ref,
-    ).order_by('-fecha_fin').first()
+    if intervencion is None:
+        intervencion = IntervencionPlan.objects.filter(
+            cliente=cliente,
+            tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            estado__in=[IntervencionPlan.ESTADO_EXPIRADA, IntervencionPlan.ESTADO_ACTIVA],
+            fecha_fin__lte=fecha_ref,
+        ).order_by('-fecha_fin').first()
 
     if not intervencion:
         return None
 
-    # Count senal_no_captada during and before experiment
+    estado_observado = _estado_desde_patron(intervencion.origen_patron)
+    filtros_estado = {'trace__decision_estado': estado_observado} if estado_observado else {}
+
+    # Count senal_no_captada during and before experiment. Los históricos sin
+    # origen conservan el comportamiento antiguo; los nuevos miden su señal.
     antes_desde = intervencion.fecha_inicio - _td(days=_DURACION_EXPERIMENTO)
     antes_n = GymDecisionTraceEvaluation.objects.filter(
         trace__cliente=cliente,
         trace__fecha__gte=antes_desde,
         trace__fecha__lt=intervencion.fecha_inicio,
         resultado='senal_no_captada',
+        **filtros_estado,
     ).count()
 
     durante_n = GymDecisionTraceEvaluation.objects.filter(
@@ -253,10 +298,14 @@ def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
         trace__fecha__gte=intervencion.fecha_inicio,
         trace__fecha__lte=intervencion.fecha_fin,
         resultado='senal_no_captada',
+        **filtros_estado,
     ).count()
 
     if antes_n == 0:
-        return {'resultado': 'insuficiente', 'texto': 'Sin datos previos suficientes para comparar.'}
+        return {
+            'resultado': 'insuficiente', 'texto': 'Sin datos previos suficientes para comparar.',
+            'antes': antes_n, 'durante': durante_n, 'estado_observado': estado_observado,
+        }
 
     if durante_n < antes_n * 0.6:  # 40%+ reduction
         return {
@@ -264,8 +313,9 @@ def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
             'texto': (
                 f'Durante el experimento, la señal apareció {durante_n} vez/veces '
                 f'(antes: {antes_n}). Parece que observar esta variable con más '
-                f'atención redujo la señal. Hipótesis provisionalmente atenuada.'
+                f'atención coincidió con menos apariciones. Hipótesis provisionalmente atenuada.'
             ),
+            'antes': antes_n, 'durante': durante_n, 'estado_observado': estado_observado,
         }
     return {
         'resultado': 'persiste',
@@ -273,7 +323,84 @@ def evaluar_fin_experimento_hipotesis(cliente, fecha_ref=None) -> dict | None:
             f'La señal siguió apareciendo ({durante_n} vez/veces durante el experimento). '
             f'La hipótesis permanece abierta. Puede que haya otras variables implicadas.'
         ),
+        'antes': antes_n, 'durante': durante_n, 'estado_observado': estado_observado,
     }
+
+
+def cerrar_experimentos_hipotesis_vencidos(fecha_ref=None) -> int:
+    """Cierra y persiste experimentos vencidos. Idempotente; nunca se llama desde GET."""
+    from django.db import transaction
+    from django.utils import timezone
+    from entrenos.models import IntervencionPlan, SugerenciaPlan
+
+    fecha_ref = fecha_ref or timezone.localdate()
+    ids = list(IntervencionPlan.objects.filter(
+        tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+        estado=IntervencionPlan.ESTADO_ACTIVA,
+        fecha_fin__lt=fecha_ref,
+    ).values_list('pk', flat=True))
+    cerradas = 0
+    for pk in ids:
+        with transaction.atomic():
+            iv = IntervencionPlan.objects.select_for_update().select_related('sugerencia').get(pk=pk)
+            if iv.estado != IntervencionPlan.ESTADO_ACTIVA or iv.fecha_fin >= fecha_ref:
+                continue
+            resultado = evaluar_fin_experimento_hipotesis(
+                iv.cliente, fecha_ref=fecha_ref, intervencion=iv,
+            )
+            if iv.sugerencia_id:
+                sugerencia = SugerenciaPlan.objects.select_for_update().get(pk=iv.sugerencia_id)
+                snap = dict(sugerencia.contrato_snapshot or {})
+                snap['evaluacion_hipotesis'] = {
+                    **(resultado or {
+                        'resultado': 'insuficiente',
+                        'texto': 'Sin evidencia suficiente para evaluar la prueba.',
+                        'antes': 0, 'durante': 0,
+                        'estado_observado': _estado_desde_patron(iv.origen_patron),
+                    }),
+                    'fecha_cierre': fecha_ref.isoformat(),
+                }
+                sugerencia.contrato_snapshot = snap
+                sugerencia.save(update_fields=['contrato_snapshot'])
+            iv.estado = IntervencionPlan.ESTADO_EXPIRADA
+            iv.save(update_fields=['estado'])
+            cerradas += 1
+    return cerradas
+
+
+def cancelar_experimento_hipotesis(intervencion):
+    """Cancela solo una vigilancia activa; no admite otros ajustes del plan."""
+    from django.db import transaction
+    from entrenos.models import IntervencionPlan
+    with transaction.atomic():
+        iv = IntervencionPlan.objects.select_for_update().get(pk=intervencion.pk)
+        if iv.tipo != IntervencionPlan.TIPO_VIGILAR_SENAL:
+            raise ValueError('La intervención no es un experimento de hipótesis.')
+        if iv.estado == IntervencionPlan.ESTADO_ACTIVA:
+            iv.estado = IntervencionPlan.ESTADO_CANCELADA
+            iv.save(update_fields=['estado'])
+        return iv
+
+
+def resultados_hipotesis_recientes(cliente, limite=3):
+    """Consulta pura de cierres persistidos, lista para mostrar."""
+    from entrenos.models import IntervencionPlan
+    resultados = []
+    qs = IntervencionPlan.objects.filter(
+        cliente=cliente,
+        tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+        estado=IntervencionPlan.ESTADO_EXPIRADA,
+        sugerencia__contrato_snapshot__evaluacion_hipotesis__isnull=False,
+    ).select_related('sugerencia').order_by('-fecha_fin')[:limite]
+    for iv in qs:
+        resultados.append({
+            'intervencion': iv,
+            'senal': _ETIQUETAS_ESTADO.get(
+                _estado_desde_patron(iv.origen_patron), 'señal observada'
+            ),
+            'evaluacion': iv.sugerencia.contrato_snapshot['evaluacion_hipotesis'],
+        })
+    return resultados
 
 
 def detectar_hipotesis_abiertas(cliente, ventana_dias=_VENTANA_DIAS, min_ocurrencias=_MIN_OCURRENCIAS, fecha_ref=None) -> list[dict]:

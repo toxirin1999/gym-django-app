@@ -125,12 +125,21 @@ def consultar_bloque_gym_colaborativo(cliente):
         'espalda': 'Espalda', 'pecho': 'Pecho', 'gluteos': 'Glúteos',
         'cuadriceps': 'Cuádriceps',
     }
+    hoy = timezone.localdate()
+    vencido_pendiente = (
+        bloque.estado == ContratoBloqueGym.ESTADO_ACTIVO
+        and bloque.semana_fin_prevista < hoy
+    )
     return {
         'cierre_pendiente': cierre_pendiente,
         'bloque': bloque,
         'card': {
             'estado': bloque.estado,
-            'estado_label': dict(ContratoBloqueGym.ESTADOS).get(bloque.estado, bloque.estado),
+            'estado_label': (
+                'Pendiente de cierre' if vencido_pendiente
+                else dict(ContratoBloqueGym.ESTADOS).get(bloque.estado, bloque.estado)
+            ),
+            'vencido_pendiente_cierre': vencido_pendiente,
             'semana_inicio': bloque.semana_inicio,
             'semana_fin': bloque.semana_fin_prevista,
             'semanas': bloque.semanas_previstas,

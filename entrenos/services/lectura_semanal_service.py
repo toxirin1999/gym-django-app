@@ -249,7 +249,7 @@ def _construir_texto(n, balance, positivas, no_captadas, n_hip, n_pref) -> str:
             )
         else:
             partes.append(
-                f"Esta semana el plan tomó {n} decisión{'es' if n > 1 else ''} sin señales llamativas."
+                f"Esta semana el plan tomó {n} {'decisión' if n == 1 else 'decisiones'} sin señales llamativas."
             )
 
     # ── Hilo abierto: hipótesis ────────────────────────────────────────────────
