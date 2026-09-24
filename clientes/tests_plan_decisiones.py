@@ -237,6 +237,22 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         self.assertContains(response, 'Parte de la evidencia no pudo cargarse')
         self.assertIn('analisis_semanal', response.context['incidencias_contexto'])
 
+    @patch('entrenos.services.analisis_semanal_service.detectar_patron_multisemanal', return_value=None)
+    @patch('entrenos.services.analisis_semanal_service.analizar_semana_entrenamiento')
+    def test_plural_de_sesiones_es_correcto(self, analizar, _patron):
+        analizar.return_value = {
+            'hay_datos': True,
+            'sesiones_completadas': 3,
+            'sesiones_pospuestas': 0,
+            'lectura_textual': 'Semana sólida.',
+            'estado_semana': 'solida',
+        }
+
+        response = self._get()
+
+        self.assertContains(response, 'sesiones')
+        self.assertNotContains(response, 'sesiónes')
+
 
 # ── Case 10: URL resolution ───────────────────────────────────────────────────
 

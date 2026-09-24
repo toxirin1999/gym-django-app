@@ -1791,7 +1791,7 @@
               {% if analisis_semanal.sesiones_completadas %}
               <div class="dc-week-metric">
                 <span class="dc-week-number">{{ analisis_semanal.sesiones_completadas }}</span>
-                <span class="dc-week-label">sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }}</span>
+                <span class="dc-week-label">{% if analisis_semanal.sesiones_completadas == 1 %}sesión{% else %}sesiones{% endif %}</span>
               </div>
               {% endif %}
               {% if analisis_semanal.sesiones_pospuestas %}
