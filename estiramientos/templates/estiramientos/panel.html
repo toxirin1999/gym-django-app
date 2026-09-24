@@ -9,6 +9,11 @@
 
 {% block content %}
 <div class="stretch-container">
+
+    <div class="mv-topbar">
+        <a href="{% url 'clientes:mockup_demo' %}" class="mv-back">← Panel principal</a>
+    </div>
+
     <div class="stretch-header">
         <h1>
             <i class="fas fa-spa"></i>
@@ -50,7 +55,7 @@
     {% endif %}
 
     {% if planes %}
-    <!-- Filtros y búsqueda (NUEVO) -->
+    <!-- Filtros y búsqueda -->
     <div class="filters-section">
         <div class="search-box">
             <i class="fas fa-search"></i>
@@ -77,36 +82,45 @@
         </div>
     </div>
 
-    <div class="mobility-section-heading" id="movilidad">
-        <div>
-            <span>MOVIMIENTO ACTIVO</span>
-            <h2>Sesiones de movilidad</h2>
+    <details class="mv-block" id="movilidad" open>
+        <summary>
+            <div class="mobility-section-heading">
+                <div>
+                    <span>01 PREPARACIÓN &amp; MOVILIDAD ACTIVA</span>
+                    <h2>Sesiones de movilidad</h2>
+                </div>
+                <small>Puedes finalizar y guardar en cualquier momento</small>
+            </div>
+            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="plans-grid" data-plan-section="movilidad">
+            {% for p in planes_movilidad %}
+                {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
+            {% empty %}
+                <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
+            {% endfor %}
         </div>
-        <small>Puedes finalizar y guardar en cualquier momento</small>
-    </div>
+    </details>
 
-    <div class="plans-grid" data-plan-section="movilidad">
-        {% for p in planes_movilidad %}
-            {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
-        {% empty %}
-            <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
-        {% endfor %}
-    </div>
-
-    <div class="mobility-section-heading" id="estiramientos">
-        <div>
-            <span>VUELTA A LA CALMA</span>
-            <h2>Sesiones de estiramientos</h2>
+    <details class="mv-block" id="estiramientos" open>
+        <summary>
+            <div class="mobility-section-heading">
+                <div>
+                    <span>02 VUELTA A LA CALMA &amp; ESTIRAMIENTOS</span>
+                    <h2>Sesiones de estiramientos</h2>
+                </div>
+                <small>Posiciones mantenidas para reducir tensión</small>
+            </div>
+            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="plans-grid" data-plan-section="estiramientos">
+            {% for p in planes_estiramientos %}
+                {% include "estiramientos/_plan_card.html" with permite_resolucion=False %}
+            {% empty %}
+                <p class="no-plans">No hay sesiones de estiramientos disponibles.</p>
+            {% endfor %}
         </div>
-        <small>Posiciones mantenidas para reducir tensión</small>
-    </div>
-    <div class="plans-grid" data-plan-section="estiramientos">
-        {% for p in planes_estiramientos %}
-            {% include "estiramientos/_plan_card.html" with permite_resolucion=False %}
-        {% empty %}
-            <p class="no-plans">No hay sesiones de estiramientos disponibles.</p>
-        {% endfor %}
-    </div>
+    </details>
 
     <div class="start-hint">
         <i class="fas fa-info-circle"></i>

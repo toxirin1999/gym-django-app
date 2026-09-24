@@ -4,25 +4,18 @@
    data-plan-id="{{ p.pk }}"
    data-modalidad="{{ p.modalidad }}"
    {% if permite_resolucion and sesion_programada %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' p.id %}"{% endif %}>
-    <div class="plan-badge">
-        <i class="fas fa-play"></i>
-        {% if p.modalidad == 'movilidad' %}Iniciar y registrar{% else %}Iniciar estiramientos{% endif %}
+    <div class="plan-row1">
+        <span class="plan-title">{{ p.nombre }}</span>
+        <span class="plan-time">~{{ p.pasos.count|default:0 }} min</span>
     </div>
-    <div class="plan-icon">
-        {% if p.fase == 'SUPERIOR' %}<i class="fas fa-hand-rock"></i>
-        {% elif p.fase == 'INFERIOR' %}<i class="fas fa-shoe-prints"></i>
-        {% else %}<i class="fas fa-child"></i>{% endif %}
-    </div>
-    <div class="plan-title">{{ p.nombre }}</div>
-    <div class="plan-description">
+    <p class="plan-description">
         {% if p.descripcion %}{{ p.descripcion }}
         {% elif p.fase == 'SUPERIOR' %}Hombros, columna torácica, cuello y brazos.
         {% elif p.fase == 'INFERIOR' %}Cadera, tobillos, piernas y pelvis.
         {% else %}Rutina completa para todo el cuerpo.{% endif %}
-    </div>
-    <div class="plan-stats">
-        <div class="plan-stat"><i class="fas fa-list-ol"></i><span>{{ p.pasos.count }} ejercicios</span></div>
-        <div class="plan-stat"><i class="fas fa-clock"></i><span>~{{ p.pasos.count|default:0 }} min</span></div>
-        <div class="plan-stat"><i class="fas fa-sync-alt"></i><span>{{ p.transicion_segundos }}s transición</span></div>
+    </p>
+    <div class="plan-row3">
+        <span class="plan-meta">{{ p.pasos.count }} ejercicios · {{ p.transicion_segundos }}s transición</span>
+        <span class="plan-start">{% if p.modalidad == 'movilidad' %}Iniciar y registrar{% else %}Iniciar estiramientos{% endif %} →</span>
     </div>
 </a>
