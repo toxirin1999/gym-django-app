@@ -119,7 +119,9 @@ class StretchPlayer {
             durationDisplay: $('durationDisplay'),
             btnDurationMinus: $('btnDurationMinus'),
             btnDurationPlus: $('btnDurationPlus'),
-            toast: $('toast')
+            toast: $('toast'),
+            playerContainer: document.querySelector('.player-container'),
+            rpePills: Array.from(document.querySelectorAll('.rpe-pill'))
         };
     }
 
@@ -142,6 +144,18 @@ class StretchPlayer {
         }
         if (this.elements.btnCompleteMobility) {
             this.elements.btnCompleteMobility.addEventListener('click', () => this.completeMobility());
+        }
+
+        if (this.elements.rpePills && this.elements.rpePills.length) {
+            this.elements.rpePills.forEach((pill) => {
+                pill.addEventListener('click', () => {
+                    this.elements.rpePills.forEach((p) => p.classList.remove('selected'));
+                    pill.classList.add('selected');
+                    if (this.elements.mobilityRpe) {
+                        this.elements.mobilityRpe.value = pill.dataset.rpe;
+                    }
+                });
+            });
         }
 
         // Controles adicionales
@@ -493,6 +507,9 @@ class StretchPlayer {
         this.elements.pauseLabel.textContent = 'Pausar';
         this.elements.pauseLabel.classList.remove('paused-label');
         this.elements.completedOverlay.classList.remove('visible');
+        if (this.elements.playerContainer) {
+            this.elements.playerContainer.classList.remove('session-ended');
+        }
 
         this.clearProgress();
         this.render();
@@ -686,6 +703,9 @@ class StretchPlayer {
             this.elements.mobilityDuration.value = Math.max(1, Math.ceil(this.state.totalElapsedTime / 60));
         }
         this.elements.completedOverlay.classList.add('visible');
+        if (this.elements.playerContainer) {
+            this.elements.playerContainer.classList.add('session-ended');
+        }
 
         // Secuencia de sonidos de celebración
         this.playBeep(523, 200);

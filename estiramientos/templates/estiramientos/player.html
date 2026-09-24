@@ -122,8 +122,12 @@
 <!-- Overlay de completado -->
 <div id="completedOverlay" class="completed-overlay" role="dialog" aria-labelledby="completedTitle">
     <div class="completed-content">
-        <div class="completed-icon" role="img" aria-label="Celebración">🎉</div>
-        <div id="completedTitle" class="completed-title">¡Completado!</div>
+        <div class="completed-icon" role="img" aria-label="Sesión completada">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
+        </div>
+        <div id="completedTitle" class="completed-title">SESIÓN COMPLETADA</div>
         <div class="completed-subtitle">Has terminado la sesión de {{ plan.get_modalidad_display|lower }}</div>
 
         <div class="completed-stats">
@@ -141,8 +145,16 @@
             {% csrf_token %}
             <label for="mobilityDuration">Duración real</label>
             <input id="mobilityDuration" name="duracion_minutos" type="number" min="1" required>
-            <label for="mobilityRpe">RPE real</label>
-            <input id="mobilityRpe" name="rpe" type="number" min="1" max="10" step="0.5" required>
+            <div class="rpe-picker">
+                <label class="rpe-picker-label">RPE real</label>
+                <div class="rpe-pills" role="group" aria-label="Selecciona el esfuerzo percibido">
+                    <button type="button" class="rpe-pill" data-rpe="3"><span class="rpe-pill-value">1</span><span class="rpe-pill-caption">Suave</span></button>
+                    <button type="button" class="rpe-pill" data-rpe="5"><span class="rpe-pill-value">2</span><span class="rpe-pill-caption">Medio</span></button>
+                    <button type="button" class="rpe-pill" data-rpe="7"><span class="rpe-pill-value">3</span><span class="rpe-pill-caption">Activo</span></button>
+                    <button type="button" class="rpe-pill" data-rpe="9"><span class="rpe-pill-value">4</span><span class="rpe-pill-caption">Duro</span></button>
+                </div>
+                <input id="mobilityRpe" name="rpe" type="hidden" required>
+            </div>
         </form>
 
         <div class="completed-actions">
