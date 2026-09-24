@@ -95,6 +95,7 @@ def iniciar_plan(request, plan_id: int):
     return render(request, "estiramientos/player.html", {
         "plan": plan,
         "steps": json.dumps(steps),  # Convertir a JSON string
+        "total_steps": len(steps),
         "transition": int(plan.transicion_segundos),
         "sesion_programada": sesion,
         "resolucion": resolucion,

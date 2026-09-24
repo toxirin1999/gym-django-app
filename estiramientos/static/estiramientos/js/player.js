@@ -264,9 +264,6 @@ class StretchPlayer {
                 if (this.elements.noImagePlaceholder) {
                     this.elements.noImagePlaceholder.style.display = 'flex';
                 }
-                if (this.elements.placeholderText) {
-                    this.elements.placeholderText.textContent = step.name;
-                }
             }
 
             // Info del ejercicio
@@ -331,7 +328,7 @@ class StretchPlayer {
             this.elements.progressRing.classList.remove('transition-mode');
 
             // Progress ring
-            const circumference = 264; // 2 * PI * 42
+            const circumference = 440; // 2 * PI * 70 (anillo unificado, r=70)
             const progress = this.state.timeRemaining / adjustedDuration;
             const offset = circumference * (1 - progress);
             this.elements.progressRing.style.strokeDashoffset = offset;
@@ -356,7 +353,7 @@ class StretchPlayer {
         }
 
         // Progress ring para transición
-        const circumference = 264;
+        const circumference = 440;
         const progress = this.state.transitionRemaining / this.transition;
         const offset = circumference * (1 - progress);
         this.elements.progressRing.style.strokeDashoffset = offset;

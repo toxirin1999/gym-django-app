@@ -16,6 +16,10 @@
     data-fecha-destino="{{ fecha_destino }}"
     data-completion-url="{% url 'estiramientos:completar_plan' plan.id %}">
 
+    <div class="player-topbar">
+        <a href="{% url 'estiramientos:panel' %}" class="player-exit">✕ Salir</a>
+    </div>
+
     <!-- Header -->
     <div class="player-header">
         <div class="player-title">
@@ -23,7 +27,7 @@
             {{ plan.nombre }}
         </div>
         <div class="player-progress-text">
-            <span id="currentStep">1</span> / <span id="totalSteps">{{ steps|length }}</span>
+            <span id="currentStep">1</span> / <span id="totalSteps">{{ total_steps }}</span>
         </div>
     </div>
 
@@ -40,31 +44,24 @@
             <span id="placeholderText">Prepárate</span>
         </div>
 
-        <!-- Indicador de respiración (NUEVO) -->
-        <div id="breathIndicator" class="breath-indicator">
-            <i class="fas fa-wind"></i>
-        </div>
-
         <!-- Pantalla de transición -->
         <div id="transitionScreen" class="transition-screen">
             <div class="transition-text">Siguiente ejercicio</div>
             <div id="transitionNextName" class="transition-next-name"></div>
         </div>
 
-        <!-- Timer overlay -->
+        <!-- Timer unificado: anillo de progreso con el tiempo en el centro -->
         <div class="timer-overlay">
-            <div class="timer-display">
-                <div id="timerSeconds" class="timer-seconds">30</div>
-            <div id="timerLabel" class="timer-label">{% if plan.modalidad == 'movilidad' %}Moviéndote{% else %}Estirando{% endif %}</div>
-            </div>
-
-            <!-- Progress ring -->
-            <div class="progress-ring-container">
-                <svg class="progress-ring" width="100" height="100">
-                    <circle class="progress-ring-bg" cx="50" cy="50" r="42" />
-                    <circle id="progressRing" class="progress-ring-fill" cx="50" cy="50" r="42" stroke-dasharray="264"
+            <div class="timer-ring">
+                <svg class="progress-ring" width="160" height="160">
+                    <circle class="progress-ring-bg" cx="80" cy="80" r="70" />
+                    <circle id="progressRing" class="progress-ring-fill" cx="80" cy="80" r="70" stroke-dasharray="440"
                         stroke-dashoffset="0" />
                 </svg>
+                <div class="timer-display">
+                    <div id="timerSeconds" class="timer-seconds">30</div>
+                    <div id="timerLabel" class="timer-label">{% if plan.modalidad == 'movilidad' %}Moviéndote{% else %}Estirando{% endif %}</div>
+                </div>
             </div>
         </div>
     </div>
@@ -87,25 +84,6 @@
         <div>
             <div class="next-exercise-label">Siguiente</div>
             <div id="nextExerciseName" class="next-exercise-name">-</div>
-        </div>
-    </div>
-
-    <!-- Controles adicionales (NUEVO) -->
-    <div class="additional-controls">
-        <button id="btnBreath" class="control-btn-icon active" type="button" title="Indicador de respiración (B)">
-            <i class="fas fa-wind"></i>
-        </button>
-        <button id="btnFullscreen" class="control-btn-icon" type="button" title="Pantalla completa (F)">
-            <i class="fas fa-expand"></i>
-        </button>
-        <div class="duration-adjuster" title="Ajustar duración de ejercicios">
-            <button id="btnDurationMinus" type="button">
-                <i class="fas fa-minus"></i>
-            </button>
-            <span id="durationDisplay">Normal</span>
-            <button id="btnDurationPlus" type="button">
-                <i class="fas fa-plus"></i>
-            </button>
         </div>
     </div>
 
@@ -177,6 +155,29 @@
 
 <!-- Toast de notificaciones (NUEVO) -->
 <div id="toast" class="toast" role="alert" aria-live="polite"></div>
+
+<script>
+(function() {
+    // base.html arranca globalmente un sistema de partículas decorativo
+    // (BladeRunnerParticles) que añade un <div> a pantalla completa con
+    // destellos en movimiento. No tiene id ni clase, así que se localiza
+    // por su estilo inline característico (position:fixed, z-index:5,
+    // pointer-events:none) y se retira solo en esta página.
+    function limpiarParticulasResiduales() {
+        var body = document.body;
+        for (var i = body.children.length - 1; i >= 0; i--) {
+            var el = body.children[i];
+            if (el.tagName !== 'DIV' || el.id || el.className) continue;
+            var st = el.style;
+            if (st.position === 'fixed' && st.zIndex === '5' && st.pointerEvents === 'none') {
+                el.remove();
+            }
+        }
+    }
+    document.addEventListener('DOMContentLoaded', limpiarParticulasResiduales);
+    window.addEventListener('load', limpiarParticulasResiduales);
+})();
+</script>
 
 {% endblock %}
 
