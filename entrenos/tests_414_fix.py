@@ -15,7 +15,7 @@ El fix: cache de transporte con claves cortas en vez de JSON en la URL.
 """
 
 import json
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User
@@ -24,6 +24,7 @@ from django.test import TestCase, Client
 from django.urls import reverse
 
 from clientes.models import Cliente
+from entrenos.models import SesionProgramada
 
 
 class _Base(TestCase):
@@ -155,6 +156,56 @@ class FallbackCacheMiss_EntrenoActivoTests(_Base):
         self.assertNotEqual(resp.status_code, 500)
         self.assertIn(resp.status_code, (200, 302))
 
+
+class SesionPospuestaSinTokenTests(_Base):
+    """Una sesión aplazada conserva su día prescrito si expira el transporte."""
+
+    def setUp(self):
+        super().setUp()
+        self.fecha_hoy = date.today()
+        self.fecha_prevista = self.fecha_hoy - timedelta(days=1)
+        self.sesion = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.fecha_prevista,
+            pospuesta_hasta=self.fecha_hoy,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Día aplazado',
+        )
+
+    def test_ejecucion_sin_token_reconstruye_el_dia_previsto_de_la_sesion(self):
+        url = reverse('entrenos:entrenamiento_activo', args=[self.cliente.id])
+        ejercicios = [{'nombre': 'Ejercicio del día aplazado', 'series': 2, 'repeticiones': 10}]
+
+        with patch('entrenos.views._calcular_ejercicios_dia', return_value=ejercicios) as calcular:
+            respuesta = self.c.get(url, {
+                'fecha': self.fecha_hoy.isoformat(),
+                'sesion_programada_id': self.sesion.pk,
+                'ejercicios_token': 'token-expirado',
+            })
+
+        self.assertEqual(respuesta.status_code, 200)
+        calcular.assert_called_once_with(self.cliente.id, self.fecha_prevista)
+        self.assertEqual(
+            [ejercicio['nombre'] for ejercicio in respuesta.context['ejercicios_planificados']],
+            ['Ejercicio del día aplazado'],
+        )
+
+    def test_briefing_legacy_reconstruye_el_dia_previsto_de_la_sesion(self):
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+        ejercicios = [{'nombre': 'Ejercicio del día aplazado', 'series': 2, 'repeticiones': 10}]
+
+        with patch('entrenos.views._calcular_ejercicios_dia', return_value=ejercicios) as calcular:
+            respuesta = self.c.get(url, {
+                'fecha': self.fecha_hoy.isoformat(),
+                'sesion_programada_id': self.sesion.pk,
+            })
+
+        self.assertEqual(respuesta.status_code, 200)
+        calcular.assert_called_once_with(self.cliente.id, self.fecha_prevista)
+        self.assertEqual(
+            [ejercicio['nombre'] for ejercicio in respuesta.context['ejercicios']],
+            ['Ejercicio del día aplazado'],
+        )
 
 # ---------------------------------------------------------------------------
 # Test 3b: dashboard → briefing sin cache de calendario (botones "EMPEZAR

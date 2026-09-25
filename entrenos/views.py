@@ -3597,6 +3597,28 @@ def _bio_score_label(score_pct: int) -> str:
     return readiness_etiqueta(score_pct)
 
 
+def _fecha_planificada_para_sesion(cliente, sesion_programada_id, fecha_por_defecto):
+    """Devuelve la fecha prescrita de una sesión pendiente propiedad del cliente.
+
+    La fecha de la petición es la de ejecución; no sustituye la identidad de
+    una sesión aplazada cuando haya que reconstruir su plan sin transporte.
+    """
+    if not sesion_programada_id:
+        return fecha_por_defecto
+
+    try:
+        from entrenos.models import SesionProgramada
+        sesion = SesionProgramada.objects.filter(
+            pk=int(sesion_programada_id),
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+        ).only('fecha_prevista').first()
+    except (TypeError, ValueError):
+        return fecha_por_defecto
+
+    return sesion.fecha_prevista if sesion else fecha_por_defecto
+
+
 @login_required
 def vista_entrenamiento_activo(request, cliente_id):
     """
@@ -3686,7 +3708,14 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except Exception:
                     ejercicios_planificados = None
         if ejercicios_planificados is None:
-            ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_obj)
+            # Una sesión pendiente aplazada conserva la identidad del día en que
+            # fue prescrita. El token es solo transporte: si expira, reconstruir
+            # con la fecha de ejecución (hoy) cargaría silenciosamente el plan
+            # de otro día.
+            fecha_planificada = _fecha_planificada_para_sesion(
+                cliente, sesion_programada_id, fecha_obj,
+            )
+            ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_planificada)
 
         # Un ejercicio sin ninguna serie no forma parte del plan ejecutable:
         # no debe recibir form_id ni viajar al template como una tarjeta vacía.
@@ -8998,6 +9027,10 @@ def briefing_entrenamiento(request, cliente_id):
 
     fecha_str = request.GET.get('fecha')
     fecha_obj = _dt.strptime(fecha_str, '%Y-%m-%d').date() if fecha_str else timezone.now().date()
+    sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
+    fecha_planificada = _fecha_planificada_para_sesion(
+        cliente, sesion_programada_id, fecha_obj,
+    )
 
     # Fase 6.2: el CTA puede referenciar una versión concreta. Antes de leer o
     # transformar cualquier payload verificamos que continúa siendo vigente.
@@ -9036,7 +9069,7 @@ def briefing_entrenamiento(request, cliente_id):
     # Salto 1 → 2: con decision_id se reconstruye siempre desde la autoridad
     # vigente. El payload GET y el cache quedan solo como compatibilidad para
     # enlaces legacy sin identidad canónica.
-    _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
+    _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_planificada.isoformat()}"
     if decision_id_recibida:
         entrenamiento_vigente = autoridad_vigente.get('entrenamiento') or {}
         ejercicios = entrenamiento_vigente.get('ejercicios') or []
@@ -9058,7 +9091,7 @@ def briefing_entrenamiento(request, cliente_id):
         if ejercicios is None:
             ejercicios = cache.get(_cache_key_dia)
         if ejercicios is None:
-            ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
+            ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_planificada)
 
     from entrenos.services.briefing_service import get_briefing_gym
 
@@ -9073,9 +9106,9 @@ def briefing_entrenamiento(request, cliente_id):
         cambios_plan = []
     else:
         from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
-        ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_obj)
+        ejercicios_mod, cambios_plan = aplicar_plan_dinamico(cliente, ejercicios, fecha_planificada)
 
-    briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_obj)
+    briefing = get_briefing_gym(cliente, ejercicios_mod, fecha_planificada)
 
     # Inyectar alertas y calentamiento (aproximaciones) en cada ejercicio
     for ej in ejercicios_mod:
@@ -9119,7 +9152,6 @@ def briefing_entrenamiento(request, cliente_id):
     }
     if decision_id_recibida:
         params_dict['decision_id'] = decision_id_recibida
-    sesion_programada_id = request.GET.get('sesion_programada_id', '').strip()
     if sesion_programada_id:
         params_dict['sesion_programada_id'] = sesion_programada_id
     if request.GET.get('modo_reducido') == '1':
