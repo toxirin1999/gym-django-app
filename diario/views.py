@@ -64,7 +64,9 @@ from .insights_engine import generar_insights_semanales
 @login_required
 def dashboard_diario(request):
     """Phase Diario 2.1 — Portada viva del Diario."""
-    from diario.services.estado_diario import calcular_estado_diario_hoy
+    from diario.services.estado_diario import (
+        calcular_estado_diario_hoy, tiene_apertura_manana, tiene_cierre_noche,
+    )
     from diario.services.lectura_semanal import agregar_semana, buscar_revision_semanal, periodo_semana_completa
     from diario.models import PersonaInterina
 
@@ -78,6 +80,22 @@ def dashboard_diario(request):
     inicio_semana, fin_semana, clave_semana = periodo_semana_completa()
     datos_semana = agregar_semana(request.user, inicio=inicio_semana, fin=fin_semana)
     revision_semanal = buscar_revision_semanal(request.user, clave_semana)
+
+    # Barra visual de la semana (lunes-domingo): un punto por día, encendido
+    # solo si ese día se completó el ritual entero (apertura y cierre).
+    entradas_semana = {
+        e.fecha: e for e in ProsocheDiario.objects.filter(
+            prosoche_mes__usuario=request.user, fecha__range=(inicio_semana, fin_semana),
+        )
+    }
+    dias_semana_ritual = []
+    for offset in range(7):
+        fecha_dia = inicio_semana + timedelta(days=offset)
+        entrada_dia = entradas_semana.get(fecha_dia)
+        dias_semana_ritual.append({
+            'fecha': fecha_dia,
+            'completo': tiene_apertura_manana(entrada_dia) and tiene_cierre_noche(entrada_dia),
+        })
     n_radar = PersonaInterina.objects.filter(
         usuario=request.user, estado='radar'
     ).count()
@@ -89,6 +107,46 @@ def dashboard_diario(request):
     ).count()
     n_interacciones = Interaccion.objects.filter(usuario=request.user).count()
 
+    # Ergonomía reactiva del ritual: antes de las 14:00 se prioriza la
+    # apertura; después, el cierre pasa a ser la acción principal aunque
+    # la apertura siga pendiente (nunca se oculta, solo deja de ser la
+    # acción primaria y se avisa aparte).
+    antes_de_las_14 = timezone.localtime().hour < 14
+    if estado_dia['manana_hecha'] and estado_dia['noche_hecha']:
+        ritual_accion_principal = 'concluido'
+    elif not estado_dia['manana_hecha'] and antes_de_las_14:
+        ritual_accion_principal = 'apertura'
+    else:
+        ritual_accion_principal = 'cierre'
+    aviso_apertura_pendiente = not estado_dia['manana_hecha'] and not antes_de_las_14
+
+    # Micro-señal contextual: sesión de fuerza registrada hoy, para que el
+    # cierre pueda invitar a reflexionar sobre su impacto. Solo lectura,
+    # no condiciona ni bloquea nada del ritual.
+    entreno_fuerza_hoy = False
+    try:
+        from entrenos.models import EntrenoRealizado
+        cliente = request.user.cliente_perfil
+        entreno_fuerza_hoy = EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha=hoy
+        ).exists()
+    except Exception:
+        entreno_fuerza_hoy = False
+
+    # Resúmenes compactos para la cuadrícula de módulos (Logos, Gestos,
+    # Simbiosis, Virtudes) — lecturas rápidas, cada una remite a su propio
+    # dashboard para el detalle real.
+    racha = RachaEscritura.objects.filter(usuario=request.user).first()
+    racha_escritura_dias = racha.dias_consecutivos if racha else 0
+
+    gestos_cultivo_activos = Gesto.objects.filter(
+        usuario=request.user, tipo='cultivo', estado='activo'
+    )
+    gestos_total_hoy = gestos_cultivo_activos.count()
+    gestos_completados_hoy = RegistroGesto.objects.filter(
+        gesto__in=gestos_cultivo_activos, fecha=hoy, estado='cumplido'
+    ).count()
+
     context = {
         'hoy': hoy,
         'entrada_hoy': entrada_hoy,
@@ -99,6 +157,13 @@ def dashboard_diario(request):
         'n_sombra': n_sombra,
         'n_confirmadas': n_confirmadas,
         'n_interacciones': n_interacciones,
+        'ritual_accion_principal': ritual_accion_principal,
+        'aviso_apertura_pendiente': aviso_apertura_pendiente,
+        'entreno_fuerza_hoy': entreno_fuerza_hoy,
+        'racha_escritura_dias': racha_escritura_dias,
+        'gestos_completados_hoy': gestos_completados_hoy,
+        'gestos_total_hoy': gestos_total_hoy,
+        'dias_semana_ritual': dias_semana_ritual,
     }
     return render(request, 'diario/dashboard.html', context)
 

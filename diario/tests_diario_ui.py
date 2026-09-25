@@ -5,14 +5,32 @@ Verifica que el dashboard muestre claramente el estado actual del día
 y el CTA correcto sin crear nuevos modelos.
 """
 
+from unittest.mock import patch
+
 from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
-from datetime import date
+from datetime import date, datetime
 
 from diario.models import ProsocheDiario, ProsocheMes
 from diario.services.estado_diario import calcular_estado_diario_hoy
+
+# Referencia a la implementación real de timezone.localtime, capturada antes
+# de que ningún test la parchee. calcular "hoy" (timezone.localdate) delega
+# internamente en timezone.localtime, así que un mock ingenuo con un
+# return_value fijo rompería también la fecha de "hoy" en toda la vista. Este
+# helper conserva la fecha/hora reales y solo fuerza la hora del día, para
+# poder probar de forma determinista la lógica de "antes/después de las 14:00"
+# sin desincronizar el resto de los cálculos de la vista.
+_ORIGINAL_LOCALTIME = timezone.localtime
+
+
+def _congelar_hora(hora):
+    def _side_effect(value=None, tz=None):
+        real = _ORIGINAL_LOCALTIME(value, tz) if value is not None else _ORIGINAL_LOCALTIME()
+        return real.replace(hour=hora, minute=0, second=0, microsecond=0)
+    return _side_effect
 
 
 class DiarioUIEstadoCicloTests(TestCase):
@@ -37,8 +55,10 @@ class DiarioUIEstadoCicloTests(TestCase):
         ProsocheDiario.objects.all().delete()
 
     # Test 1: sin_entrada muestra "Día sin abrir"
-    def test_sin_entrada_muestra_dia_sin_abrir(self):
-        """Sin apertura ni cierre → dashboard muestra 'Día sin abrir'"""
+    @patch('diario.views.timezone.localtime')
+    def test_sin_entrada_muestra_dia_sin_abrir(self, mock_localtime):
+        """Sin apertura ni cierre, en horario de mañana → dashboard muestra 'Día sin abrir'"""
+        mock_localtime.side_effect = _congelar_hora(9)
         self.client.login(username='testuser', password='pass123')
 
         response = self.client.get('/diario/')
@@ -46,7 +66,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertContains(response, 'Día sin abrir')
         self.assertContains(response, 'Aún no has hecho la apertura')
         # Verificar CTA
-        self.assertContains(response, 'Abrir día')
+        self.assertContains(response, 'Abrir el día')
 
     # Test 2: manana_hecha muestra "Día abierto"
     def test_manana_hecha_muestra_dia_abierto(self):
@@ -66,11 +86,13 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Día abierto')
         self.assertContains(response, 'La apertura está hecha')
-        self.assertContains(response, 'Completar cierre')
+        self.assertContains(response, 'Cerrar el día')
 
     # Test 3: solo_noche muestra "Cierre registrado"
-    def test_solo_noche_muestra_cierre_registrado(self):
-        """Sin apertura con cierre → dashboard muestra 'Cierre registrado'"""
+    @patch('diario.views.timezone.localtime')
+    def test_solo_noche_muestra_cierre_registrado(self, mock_localtime):
+        """Sin apertura con cierre, en horario de tarde → dashboard prioriza cerrar y avisa de la apertura pendiente"""
+        mock_localtime.side_effect = _congelar_hora(20)
         # Crear entrada con solo cierre
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
@@ -85,11 +107,12 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Cierre registrado')
         self.assertContains(response, 'no hubo apertura')
-        self.assertContains(response, 'Ver cierre')
+        self.assertContains(response, 'Apertura matinal pendiente')
+        self.assertContains(response, 'Cerrar el día')
 
-    # Test 4: dia_completo muestra "Día completo"
+    # Test 4: dia_completo muestra "Día concluido"
     def test_dia_completo_muestra_completo(self):
-        """Con apertura y cierre → dashboard muestra 'Día completo'"""
+        """Con apertura y cierre → dashboard muestra el badge 'Día concluido' y la intención matutina"""
         # Crear entrada con ambos
         ProsocheDiario.objects.create(
             prosoche_mes=self.mes,
@@ -105,18 +128,20 @@ class DiarioUIEstadoCicloTests(TestCase):
 
         response = self.client.get('/diario/')
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Día completo')
-        self.assertContains(response, 'Apertura y cierre registrados')
+        self.assertContains(response, 'Día concluido')
+        self.assertContains(response, 'Ser paciente hoy')
 
     # Test 5: CTA existe por estado
-    def test_cta_existe_por_estado(self):
+    @patch('diario.views.timezone.localtime')
+    def test_cta_existe_por_estado(self, mock_localtime):
         """Cada estado muestra un CTA principal"""
+        mock_localtime.side_effect = _congelar_hora(9)
         self.client.login(username='testuser', password='pass123')
 
-        # sin_entrada
+        # sin_entrada, en horario de mañana
         response = self.client.get('/diario/')
         self.assertContains(response, 'hoy-btn-primary')
-        self.assertContains(response, 'Abrir día')
+        self.assertContains(response, 'Abrir el día')
 
         # manana_hecha
         ProsocheDiario.objects.create(
@@ -128,7 +153,7 @@ class DiarioUIEstadoCicloTests(TestCase):
         )
         response = self.client.get('/diario/')
         self.assertContains(response, 'hoy-btn-primary')
-        self.assertContains(response, 'Completar cierre')
+        self.assertContains(response, 'Cerrar el día')
 
     # Test 6: Mobile no rompe jerarquía
     def test_mobile_no_rompe_jerarquia(self):
