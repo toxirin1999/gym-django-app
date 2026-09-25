@@ -235,6 +235,43 @@ class FallbackGetEjercicios_BriefingTests(_Base):
             62.5,
         )
 
+    def test_decision_id_reconstruye_plan_vigente_e_ignora_payload_legacy(self):
+        """Con identidad canónica, la autoridad sustituye cualquier JSON de la URL."""
+        autoridad = {
+            'decision_id': 'gym-vigente-1',
+            'postura': 'empujar',
+            'estado': 'entrenar',
+            'entrenamiento': {
+                'rutina_nombre': 'Rutina vigente',
+                'ejercicios': [{
+                    'nombre': 'Ejercicio vigente',
+                    'series': 2,
+                    'repeticiones': 8,
+                    'peso_recomendado_kg': 20,
+                    '_autoridad_gym_materializada': True,
+                    '_autoridad_gym_decision_id': 'gym-vigente-1',
+                }],
+            },
+        }
+        url = reverse('entrenos:briefing_entrenamiento', args=[self.cliente.id])
+        payload_obsoleto = json.dumps([{'nombre': 'Ejercicio manipulado', 'series': 99}])
+
+        with patch(
+            'entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym',
+            return_value=autoridad,
+        ), patch('entrenos.services.plan_dinamico_service.aplicar_plan_dinamico') as aplicar:
+            resp = self.c.get(url, {
+                'fecha': self.fecha_str,
+                'decision_id': 'gym-vigente-1',
+                'rutina_nombre': 'Rutina manipulada',
+                'ejercicios': payload_obsoleto,
+            })
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['rutina_nombre'], 'Rutina vigente')
+        self.assertEqual([e['nombre'] for e in resp.context['ejercicios']], ['Ejercicio vigente'])
+        aplicar.assert_not_called()
+
 
 class DeloadIdempotenteTransporteTests(_Base):
     def test_briefing_y_sesion_activa_no_reducen_series_dos_veces(self):

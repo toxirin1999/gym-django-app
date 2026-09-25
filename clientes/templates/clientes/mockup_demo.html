@@ -1112,11 +1112,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <div class="mt-1 text-lg font-bold text-zinc-50">{{ acwr_actual|floatformat:2|default:"—" }}</div>
       </div>
 
-      <!-- Carga semanal -->
+      <!-- Carga aguda (ATL): unidades arbitrarias de carga, no volumen en kg -->
       <div class="rounded-2xl bg-zinc-900 border border-zinc-800 px-3.5 py-3">
-        <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Carga semanal</div>
+        <div class="font-mono text-[9px] font-bold tracking-[0.08em] uppercase text-zinc-500">Carga aguda</div>
         <div class="mt-1 text-lg font-bold text-zinc-50">
-          {% if analisis_acwr.carga_aguda %}{{ analisis_acwr.carga_aguda|floatformat:0|intcomma }}<span class="text-[11px] font-normal text-zinc-500"> kg</span>{% else %}—{% endif %}
+          {% if analisis_acwr.carga_aguda %}{{ analisis_acwr.carga_aguda|floatformat:0|intcomma }}<span class="text-[11px] font-normal text-zinc-500"> UA</span>{% else %}—{% endif %}
         </div>
       </div>
 
@@ -1162,11 +1162,11 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
           <div class="text-sm font-bold text-zinc-100">{{ entrenos_count|default:"0" }}</div>
         </div>
         <div>
-          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Carga</div>
-          <div class="text-sm font-bold text-zinc-100">{{ carga_total_acumulada|default:0|intcomma }}</div>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Volumen histórico</div>
+          <div class="text-sm font-bold text-zinc-100">{{ carga_total_acumulada|default:0|intcomma }}<span class="text-[10px] text-zinc-500"> kg</span></div>
         </div>
         <div>
-          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Consist.</div>
+          <div class="text-[9px] uppercase tracking-[0.06em] text-zinc-500">Cumpl. sem.</div>
           <div class="text-sm font-bold text-zinc-100">{% if consistencia_pct is not None %}{{ consistencia_pct }}<span class="text-[10px] text-zinc-500">%</span>{% else %}<span class="text-[10px] text-zinc-500">Sin datos</span>{% endif %}</div>
         </div>
         <div>
@@ -1437,7 +1437,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       </div>
       {% endif %}
 
-      <div class="rb-workout-badge">{% if bio_readiness.available %}Vol. {% widthratio bio_readiness.volume_modifier 1 100 %}% · {{ bio_readiness_label }}{% else %}Bio readiness · No disponible{% endif %}</div>
+      <div class="rb-workout-badge">{% if bio_readiness.available %}{% if proximo_entrenamiento.es_deload or "descarga" in proximo_entrenamiento.nombre|lower or "descarga" in proximo_entrenamiento.rutina_nombre|lower %}{% widthratio bio_readiness.volume_modifier 1 100 %}% del plan de descarga · {% if bio_readiness.volume_modifier >= 1 %}sin reducción adicional{% else %}{{ bio_readiness_label }}{% endif %}{% else %}Vol. {% widthratio bio_readiness.volume_modifier 1 100 %}% · {{ bio_readiness_label }}{% endif %}{% else %}Bio readiness · No disponible{% endif %}</div>
       {% if proximo_entrenamiento.ejercicios %}
       <div class="rb-ex-list">
         {% for ej in proximo_entrenamiento.ejercicios|slice:":4" %}
@@ -1538,7 +1538,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <i class="fas fa-moon"></i> Posponer hasta mañana
       </button>
     </form>
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}{% if autoridad_gym.decision_id %}&decision_id={{ autoridad_gym.decision_id|urlencode }}{% else %}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% endif %}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" class="rb-cta" style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);color:var(--td);text-decoration:none;">
       <i class="fas fa-play"></i> Entrenar igualmente
     </a>
     {% else %}
@@ -1560,14 +1560,14 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <i class="fas fa-clock"></i> Posponer hasta mañana
       </button>
     </form>
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}{% if autoridad_gym.decision_id %}&decision_id={{ autoridad_gym.decision_id|urlencode }}{% else %}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% endif %}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}" style="display:block;text-align:center;font-size:11px;color:var(--td);opacity:0.45;text-decoration:none;padding:6px 0;">
       Empezar igualmente →
     </a>
     {% endif %}
 
     {% else %}
     {# Estado normal (entrenar / version_reducida): CTA principal activo #}
-    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
+    <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}{% if autoridad_gym.decision_id %}&decision_id={{ autoridad_gym.decision_id|urlencode }}{% else %}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% endif %}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
       {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
       {% else %}<i class="fas fa-play"></i> Empezar entreno{% endif %}
     </a>
@@ -1843,7 +1843,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {% if analisis_semanal.sesiones_completadas %}
         <div style="font-size:11px;color:var(--td);opacity:0.8;">
           <span style="font-weight:700;font-size:15px;color:var(--ok);">{{ analisis_semanal.sesiones_completadas }}</span>
-          sesión{{ analisis_semanal.sesiones_completadas|pluralize:"es" }}
+          {% if analisis_semanal.sesiones_completadas == 1 %}sesión{% else %}sesiones{% endif %}
         </div>
         {% endif %}
         {% if analisis_semanal.sesiones_esenciales %}

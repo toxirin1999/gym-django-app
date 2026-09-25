@@ -349,17 +349,11 @@ def _check_en_margen(usuario, decision_gym=None):
             texto = 'Hay margen para seguir el plan.'
             modo_reducido = 0
 
-        # Construir URL con parámetros para briefing
-        from urllib.parse import urlencode, quote
-        import json as json_module
-
-        rutina_nombre = entrenamiento.get('rutina_nombre') or entrenamiento.get('nombre_rutina') or ''
-        ejercicios = entrenamiento.get('ejercicios', [])
-
+        # La URL transporta identidad, no el snapshot completo. El briefing
+        # reconstruye la sesión desde la autoridad diaria vigente.
+        from urllib.parse import urlencode
         params = {
             'fecha': timezone.localdate().strftime('%Y-%m-%d'),
-            'rutina_nombre': rutina_nombre,
-            'ejercicios': json_module.dumps(ejercicios),
             'modo_reducido': modo_reducido,
         }
         if decision.get('decision_id'):

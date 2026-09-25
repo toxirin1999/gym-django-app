@@ -1302,7 +1302,18 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
             entrenamiento = None
 
         dias_atras = (fecha_hoy - pendiente.fecha_prevista).days
-        if dias_atras == 1:
+        if pendiente.pospuesta_hasta == fecha_hoy:
+            if dias_atras == 1:
+                origen_tiempo = 'prevista originalmente ayer'
+            elif dias_atras <= 3:
+                origen_tiempo = f'prevista hace {dias_atras} días'
+            else:
+                origen_tiempo = (
+                    f'prevista originalmente el '
+                    f'{pendiente.fecha_prevista.strftime("%-d de %B")}'
+                )
+            contexto_tiempo = f'Reubicada para hoy ({origen_tiempo}).'
+        elif dias_atras == 1:
             contexto_tiempo = 'Quedó pendiente ayer.'
         elif dias_atras <= 3:
             contexto_tiempo = f'Quedó pendiente hace {dias_atras} días.'

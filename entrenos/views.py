@@ -9002,6 +9002,7 @@ def briefing_entrenamiento(request, cliente_id):
     # Fase 6.2: el CTA puede referenciar una versión concreta. Antes de leer o
     # transformar cualquier payload verificamos que continúa siendo vigente.
     decision_id_recibida = request.GET.get('decision_id', '').strip()
+    autoridad_vigente = None
     puede_iniciar_sesion = True
     if decision_id_recibida:
         from django.http import HttpResponse
@@ -9032,35 +9033,32 @@ def briefing_entrenamiento(request, cliente_id):
 
     rutina_nombre = request.GET.get('rutina_nombre', '')
 
-    # Salto 1 → 2: un payload explícito del CTA representa la decisión visible
-    # más reciente y prevalece sobre el cache determinista del calendario.
-    # El cache sigue siendo el transporte normal cuando el enlace no incluye
-    # ejercicios; _calcular_ejercicios_dia es el último fallback.
+    # Salto 1 → 2: con decision_id se reconstruye siempre desde la autoridad
+    # vigente. El payload GET y el cache quedan solo como compatibilidad para
+    # enlaces legacy sin identidad canónica.
     _cache_key_dia = f"transporte_ejercicios_dia_{cliente_id}_{fecha_obj.isoformat()}"
-    ejercicios = None
-    _ejercicios_get = request.GET.get('ejercicios', '')
-    if _ejercicios_get:
-        try:
-            ejercicios = json.loads(_ejercicios_get)
-        except Exception:
-            ejercicios = None
-    if ejercicios is None:
-        ejercicios = cache.get(_cache_key_dia)
-    if ejercicios is None:
-        ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
-
     if decision_id_recibida:
-        ids_payload = {
-            ejercicio.get('_autoridad_gym_decision_id')
-            for ejercicio in (ejercicios or [])
-            if ejercicio.get('_autoridad_gym_decision_id')
-        }
-        if ids_payload and ids_payload != {decision_id_recibida}:
-            from django.http import HttpResponse
-            return HttpResponse(
-                'El plan recibido no pertenece a la decisión vigente. Recarga el plan.',
-                status=409,
-            )
+        entrenamiento_vigente = autoridad_vigente.get('entrenamiento') or {}
+        ejercicios = entrenamiento_vigente.get('ejercicios') or []
+        rutina_nombre = (
+            entrenamiento_vigente.get('rutina_nombre')
+            or entrenamiento_vigente.get('nombre_rutina')
+            or ''
+        )
+    else:
+        # Compatibilidad legacy: enlaces antiguos sin identidad canónica aún
+        # pueden transportar ejercicios o apoyarse en el cache del calendario.
+        ejercicios = None
+        _ejercicios_get = request.GET.get('ejercicios', '')
+        if _ejercicios_get:
+            try:
+                ejercicios = json.loads(_ejercicios_get)
+            except Exception:
+                ejercicios = None
+        if ejercicios is None:
+            ejercicios = cache.get(_cache_key_dia)
+        if ejercicios is None:
+            ejercicios = _calcular_ejercicios_dia(cliente_id, fecha_obj)
 
     from entrenos.services.briefing_service import get_briefing_gym
 

@@ -1,4 +1,5 @@
 from unittest.mock import patch
+from urllib.parse import parse_qs, urlparse
 
 from django.contrib.auth.models import User
 from django.test import TestCase
@@ -59,3 +60,27 @@ class OrganismoRespetaAutoridadGymTests(TestCase):
         protegiendo.assert_called_once_with(self.user, decision_gym=decision)
         en_margen.assert_called_once_with(self.user, decision_gym=decision)
         self.assertEqual(resultado['estado'], 'EN_MARGEN')
+
+    @patch('core.organismo._check_observando', return_value=None)
+    @patch('core.organismo._check_protegiendo', return_value=None)
+    def test_accion_gym_transporta_identidad_no_ejercicios(
+        self, _protegiendo, _observando,
+    ):
+        from core.organismo import resolver_estado_sistema_hoy
+
+        decision = {
+            'decision_id': 'gym-2026-09-25-abc',
+            'postura': 'empujar',
+            'estado': 'entrenar',
+            'entrenamiento': {
+                'rutina_nombre': 'Día canónico',
+                'ejercicios': [{'nombre': 'Press banca', 'series': 3}],
+            },
+        }
+
+        resultado = resolver_estado_sistema_hoy(self.user, decision_gym=decision)
+        query = parse_qs(urlparse(resultado['accion_url']).query)
+
+        self.assertEqual(query['decision_id'], ['gym-2026-09-25-abc'])
+        self.assertNotIn('ejercicios', query)
+        self.assertNotIn('rutina_nombre', query)

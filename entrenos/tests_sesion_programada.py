@@ -317,6 +317,9 @@ class TestCase5_PospuestaAparececeMañana(SesionProgramadaBase):
 
         self.assertEqual(decision['tipo'], 'pendiente')
         self.assertEqual(decision['sesion_programada'].id, self.sp.id)
+        self.assertIn('Reubicada para hoy', decision['mensaje'])
+        self.assertIn('prevista hace 2 días', decision['mensaje'])
+        self.assertNotIn('Quedó pendiente', decision['mensaje'])
 
 
 class TestCase6_CompletarPendienteCierraCorrectamente(SesionProgramadaBase):

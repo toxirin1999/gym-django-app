@@ -1,5 +1,5 @@
 from unittest.mock import patch
-from datetime import date
+from datetime import date, datetime, timezone as dt_timezone
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -89,8 +89,11 @@ class PortadaEvidenciaRealTests(TestCase):
         self.assertNotContains(response, "Día de descanso · Recuperación activa")
         self.assertNotContains(response, "Ver Estoico")
 
-    @patch("clientes.views.timezone.localdate", return_value=date(2026, 8, 28))
-    def test_portada_representa_sesion_pospuesta_con_identidad_y_fecha_efectiva(self, _localdate):
+    @patch(
+        "clientes.views.timezone.now",
+        return_value=datetime(2026, 8, 28, 12, tzinfo=dt_timezone.utc),
+    )
+    def test_portada_representa_sesion_pospuesta_con_identidad_y_fecha_efectiva(self, _now):
         SesionProgramada.objects.create(
             cliente=self.cliente,
             fecha_prevista=date(2026, 8, 28),
@@ -123,3 +126,65 @@ class PortadaEvidenciaRealTests(TestCase):
 
         self.assertContains(response, "Sin prescripción")
         self.assertNotContains(response, "4 × 4–6")
+
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_portada_distingue_carga_aguda_y_volumen_historico(self, decision):
+        decision.return_value = {
+            "tipo": None, "estado": None, "entrenamiento": None,
+            "sesion_programada": None, "mensaje": "", "causa_principal": None,
+            "modo_reducido": False, "distribucion_aviso": None,
+        }
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Carga aguda")
+        self.assertContains(response, "UA")
+        self.assertContains(response, "Volumen histórico")
+        self.assertContains(response, "Cumpl. sem.")
+        self.assertNotContains(response, "Carga semanal")
+        self.assertNotContains(response, "Consist.")
+
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_portada_pluraliza_sesion_sin_tilde_incorrecta(self, decision):
+        decision.return_value = {
+            "tipo": None, "estado": None, "entrenamiento": None,
+            "sesion_programada": None, "mensaje": "", "causa_principal": None,
+            "modo_reducido": False, "distribucion_aviso": None,
+        }
+        with patch("clientes.views._ctx_analisis_semanal", return_value={
+            "hay_datos": True,
+            "sesiones_completadas": 3,
+        }):
+            response = self.client.get(self.url)
+
+        self.assertContains(response, "sesiones")
+        self.assertNotContains(response, "sesiónes")
+
+    @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
+    @patch("clientes.views._ctx_bio")
+    def test_badge_descarga_explica_que_no_hay_reduccion_adicional(self, ctx_bio, decision):
+        ctx_bio.return_value = ({
+            "available": True,
+            "score": 1.0,
+            "volume_modifier": 1.0,
+            "needs_deload": False,
+            "sources": {},
+        }, {})
+        decision.return_value = {
+            "decision_id": "gym-descarga-test",
+            "postura": "empujar",
+            "tipo": "programada", "estado": "entrenar",
+            "entrenamiento": {
+                "nombre": "Descarga activa", "rutina_nombre": "Descarga activa",
+                "ejercicios": [{"nombre": "Curl", "series": 2, "repeticiones": 10}],
+                "es_deload": True,
+            },
+            "sesion_programada": None, "mensaje": "", "causa_principal": "sesion_hoy",
+            "modo_reducido": False, "distribucion_aviso": None,
+        }
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "100% del plan de descarga")
+        self.assertContains(response, "sin reducción adicional")
+        self.assertNotContains(response, "100% · Óptimo")
