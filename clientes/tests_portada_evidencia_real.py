@@ -144,6 +144,57 @@ class PortadaEvidenciaRealTests(TestCase):
         self.assertNotContains(response, "Carga semanal")
         self.assertNotContains(response, "Consist.")
 
+    @patch("entrenos.services.services.EstadisticasService.analizar_acwr_unificado")
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_portada_calcula_acwr_en_primera_carga_y_explica_historial_insuficiente(
+        self, decision, analizar_acwr
+    ):
+        decision.return_value = {
+            "tipo": None, "estado": None, "entrenamiento": None,
+            "sesion_programada": None, "mensaje": "", "causa_principal": None,
+            "modo_reducido": False, "distribucion_aviso": None,
+        }
+        analizar_acwr.return_value = {
+            "acwr_actual": 0,
+            "carga_aguda": 0,
+            "zona_riesgo": "insuficiente_historial",
+            "dias_historial": 12,
+            "dataframe": [],
+        }
+
+        response = self.client.get(self.url)
+
+        analizar_acwr.assert_any_call(self.cliente)
+        self.assertContains(response, "12/28 días", count=3)
+        self.assertNotContains(response, ">0,00<", html=False)
+        self.assertNotContains(response, ">0 UA<", html=False)
+
+    @patch("entrenos.services.services.EstadisticasService.analizar_acwr_unificado")
+    @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
+    def test_portada_distingue_carga_real_cero_de_historial_insuficiente(
+        self, decision, analizar_acwr
+    ):
+        decision.return_value = {
+            "tipo": None, "estado": None, "entrenamiento": None,
+            "sesion_programada": None, "mensaje": "", "causa_principal": None,
+            "modo_reducido": False, "distribucion_aviso": None,
+        }
+        analizar_acwr.return_value = {
+            "acwr_actual": 0,
+            "carga_aguda": 0,
+            "carga_cronica": 15,
+            "zona_riesgo": "desconocida",
+            "dataframe": [],
+        }
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["acwr_actual"], 0.0)
+        self.assertTrue(response.context["acwr_disponible"])
+        self.assertContains(response, "0.00", count=2)
+        self.assertContains(response, "0<span class=\"text-[11px] font-normal text-zinc-500\"> UA</span>", html=True)
+        self.assertNotContains(response, "/28 días")
+
     @patch("entrenos.services.sesion_recomendada.obtener_sesion_recomendada_hoy")
     def test_portada_pluraliza_sesion_sin_tilde_incorrecta(self, decision):
         decision.return_value = {

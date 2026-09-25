@@ -1260,13 +1260,12 @@ def _get_dashboard_context_data(request, cliente):
     (estoico_disponible, contenido_hoy, reflexion_hoy, reflexion_pendiente,
      total_reflexiones, racha_reflexion, logros_estoicos, dias_reflexion) = _ctx_estoico(request, hoy)
 
-    # Cache-only: analizar_acwr_unificado recorre todo el historial (EWMA sin
-    # límite inferior) y puede tardar >10s en frío — bloqueaba el request
-    # principal y provocaba 502 en conexiones móviles con timeout corto. El
-    # cálculo real ahora solo ocurre en widget_acwr (HTMX, hx-trigger="revealed"
-    # en mockup_demo.html), que rellena el mismo cache key para la próxima carga.
-    _acwr_cache_key = f'dashboard_acwr_unificado_{cliente.id}'
-    analis_acwr = cache.get(_acwr_cache_key)
+    # La portada necesita una lectura coherente desde la primera respuesta: el
+    # resumen superior no puede depender de que el usuario abra el detalle HTMX.
+    # El servicio es la autoridad y mantiene su propia caché compartida, por lo
+    # que el widget lazy reutiliza el resultado en vez de recalcularlo.
+    from entrenos.services.services import EstadisticasService as _ES
+    analis_acwr = _ES.analizar_acwr_unificado(cliente)
 
     # Sesiones realizadas con anticipación (fecha planificada > hoy, pero ya hechas)
     from entrenos.models import ActividadRealizada as _AR
@@ -1353,6 +1352,12 @@ def _get_dashboard_context_data(request, cliente):
     if analis_acwr and 'acwr' not in analis_acwr:
         analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)
 
+    _acwr_historial_insuficiente = bool(
+        analis_acwr
+        and analis_acwr.get('zona_riesgo') == 'insuficiente_historial'
+    )
+    _acwr_disponible = bool(analis_acwr) and not _acwr_historial_insuficiente
+
     import urllib.parse
     import json as _json
     acwr_data_json = _json.dumps(analis_acwr.get('dataframe', [])) if analis_acwr else '[]'
@@ -1379,7 +1384,13 @@ def _get_dashboard_context_data(request, cliente):
         'actividades_recientes_focus': actividades_recientes_focus,
         'carga_total_acumulada': carga_total_acumulada,
         'consistencia_pct': consistencia_pct,
-        'acwr_actual': float(analis_acwr.get('acwr_actual', 0.0)) if analis_acwr else 0.0,
+        'acwr_actual': (
+            float(analis_acwr.get('acwr_actual', 0.0))
+            if _acwr_disponible else None
+        ),
+        'acwr_disponible': _acwr_disponible,
+        'acwr_historial_insuficiente': _acwr_historial_insuficiente,
+        'acwr_dias_historial': analis_acwr.get('dias_historial') if analis_acwr else None,
         'metricas_radar': metricas_radar,
         'emociones': emociones,
         'emociones_lista': emociones_lista,
