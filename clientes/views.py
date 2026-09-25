@@ -2088,7 +2088,9 @@ def widget_acwr(request, cliente_id):
     # analizar_acwr_unificado cachea internamente (misma clave que el resto
     # de call sites) — no hace falta duplicar el cache.get/set aquí.
     from entrenos.services.services import EstadisticasService as _ES
-    analis_acwr = _ES.analizar_acwr_unificado(cliente)
+    analis_acwr = _normalizar_acwr_para_portada(
+        _ES.analizar_acwr_unificado(cliente)
+    )
 
     if analis_acwr and 'acwr' not in analis_acwr:
         analis_acwr['acwr'] = analis_acwr.get('acwr_actual', 0.0)

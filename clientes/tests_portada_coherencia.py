@@ -1,4 +1,10 @@
-from django.test import SimpleTestCase
+from unittest.mock import patch
+
+from django.contrib.auth.models import User
+from django.test import SimpleTestCase, TestCase
+from django.urls import reverse
+
+from clientes.models import Cliente
 
 from clientes.views import (
     _filtrar_resumen_semanal_para_portada,
@@ -39,3 +45,25 @@ class PortadaCoherenciaTests(SimpleTestCase):
             _filtrar_resumen_semanal_para_portada(resumen, en_descarga=False),
             resumen,
         )
+
+
+class WidgetAcwrCoherenciaTests(TestCase):
+    def setUp(self):
+        self.user = User.objects.create_user('acwr_portada', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        self.client.force_login(self.user)
+
+    @patch('entrenos.services.services.EstadisticasService.analizar_acwr_unificado')
+    def test_widget_lazy_no_afirma_zona_verde_con_carga_baja(self, analizar):
+        analizar.return_value = {
+            'acwr_actual': 0.49,
+            'zona_riesgo': 'baja_carga',
+            'dias_descanso': 0,
+            'dataframe': [],
+        }
+
+        response = self.client.get(reverse('clientes:widget_acwr', args=[self.cliente.id]))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'Carga Baja')
+        self.assertNotContains(response, 'Ya estás en zona verde')
