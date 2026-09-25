@@ -1806,7 +1806,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
             {% if proyeccion_bloque_gym.fase_temporal == 'proximo' %}
             Comienza el {{ proyeccion_bloque_gym.rango.inicio|date:"d/m" }} · versión {{ proyeccion_bloque_gym.version }}
             {% elif proyeccion_bloque_gym.fase_temporal == 'pendiente_cierre' %}
-            Bloque pendiente de cierre · versión {{ proyeccion_bloque_gym.version }}
+            Bloque finalizado · cierre pendiente · versión {{ proyeccion_bloque_gym.version }}
             {% else %}
             Semana {{ proyeccion_bloque_gym.semana_actual }} de {{ proyeccion_bloque_gym.semanas_previstas }} · versión {{ proyeccion_bloque_gym.version }}
             {% endif %}
@@ -1821,7 +1821,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
             {{ proyeccion_bloque_gym.sesiones_completadas }} / {{ proyeccion_bloque_gym.objetivo_sesiones }}
           </div>
           <div style="margin-top:4px;font-family:var(--font-mono);font-size:8px;color:var(--ink-4);letter-spacing:.06em;text-transform:uppercase;">
-            mínimo válido {{ proyeccion_bloque_gym.minimo_valido }}
+            sesiones del contrato · mínimo válido {{ proyeccion_bloque_gym.minimo_valido }}
           </div>
         </div>
         {% elif proyeccion_bloque_gym.fase_temporal == 'en_curso' %}
@@ -1849,7 +1849,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {% if analisis_semanal.sesiones_completadas %}
         <div style="font-size:11px;color:var(--td);opacity:0.8;">
           <span style="font-weight:700;font-size:15px;color:var(--ok);">{{ analisis_semanal.sesiones_completadas }}</span>
-          {% if analisis_semanal.sesiones_completadas == 1 %}sesión{% else %}sesiones{% endif %}
+          {% if analisis_semanal.sesiones_completadas == 1 %}sesión registrada{% else %}sesiones registradas{% endif %}
         </div>
         {% endif %}
         {% if analisis_semanal.sesiones_esenciales %}

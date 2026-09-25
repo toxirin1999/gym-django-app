@@ -1084,6 +1084,46 @@ def _ctx_sugerencia_activa(cliente, fecha_ref):
         return None
 
 
+def _normalizar_acwr_para_portada(analisis):
+    """Evita que una lectura de carga baja anuncie una zona verde."""
+    if not analisis:
+        return analisis
+    normalizado = dict(analisis)
+    acwr = float(normalizado.get('acwr_actual', normalizado.get('acwr', 0)) or 0)
+    # ``dias_descanso == 0`` significa zona objetivo en el widget legado.
+    # No puede propagarse cuando el ACWR se clasifica como carga baja.
+    if normalizado.get('zona_riesgo') == 'baja_carga' or 0 < acwr < 0.8:
+        normalizado['dias_descanso'] = None
+    return normalizado
+
+
+def _filtrar_resumen_semanal_para_portada(resumen, *, en_descarga):
+    """Quita repeticiones y no presenta progresión de carga durante deload."""
+    resultado = []
+    textos_vistos = set()
+    for item in resumen or []:
+        if not isinstance(item, dict):
+            resultado.append(item)
+            continue
+        texto = str(item.get('texto', ''))
+        clave = ' '.join(texto.casefold().split())
+        # El servicio modela los detalles de una subida como elementos
+        # ``progresion`` separados de su encabezado. En descarga la directiva
+        # completa debe desaparecer, aunque cada detalle no repita "sube carga".
+        if en_descarga and item.get('tipo') == 'progresion':
+            continue
+        if clave and clave in textos_vistos:
+            continue
+        if clave:
+            textos_vistos.add(clave)
+        if en_descarga and any(fragmento in clave for fragmento in (
+            'sube carga', 'subir carga', 'aumentará la carga', 'aumentara la carga',
+        )):
+            continue
+        resultado.append(item)
+    return resultado
+
+
 def _get_dashboard_context_data(request, cliente):
     usuario = request.user
     hoy = timezone.now().date()
@@ -1265,7 +1305,9 @@ def _get_dashboard_context_data(request, cliente):
     # El servicio es la autoridad y mantiene su propia caché compartida, por lo
     # que el widget lazy reutiliza el resultado en vez de recalcularlo.
     from entrenos.services.services import EstadisticasService as _ES
-    analis_acwr = _ES.analizar_acwr_unificado(cliente)
+    analis_acwr = _normalizar_acwr_para_portada(
+        _ES.analizar_acwr_unificado(cliente)
+    )
 
     # Sesiones realizadas con anticipación (fecha planificada > hoy, pero ya hechas)
     from entrenos.models import ActividadRealizada as _AR
@@ -1634,7 +1676,15 @@ def mockup_demo(request):
         if _resumen is None:
             _resumen = get_resumen_semanal_gym(cliente)
             cache.set(_resumen_key, _resumen, 3600)
-        context['resumen_semanal_gym'] = _resumen
+        _proximo = context.get('proximo_entrenamiento') or {}
+        _en_descarga = bool(
+            _proximo.get('es_deload')
+            or 'descarga' in str(_proximo.get('nombre', '')).lower()
+            or 'descarga' in str(_proximo.get('rutina_nombre', '')).lower()
+        )
+        context['resumen_semanal_gym'] = _filtrar_resumen_semanal_para_portada(
+            _resumen, en_descarga=_en_descarga,
+        )
     except Exception:
         context['resumen_semanal_gym'] = []
 

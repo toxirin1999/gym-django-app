@@ -288,7 +288,7 @@ class PortadaBloqueGymViewTests(TestCase):
         self.assertContains(response, reverse('clientes:plan_decisiones'))
         self.assertContains(response, 'Requiere revisión')
 
-    def test_ui_proximo_y_pendiente_cierre_no_dicEN_semana_materializada(self):
+    def test_ui_proximo_y_bloque_finalizado_no_dicEN_semana_materializada(self):
         self._bloque()
         self.client.force_login(self.user)
         with patch('django.utils.timezone.localdate', return_value=date(2026, 8, 2)):
@@ -297,7 +297,7 @@ class PortadaBloqueGymViewTests(TestCase):
         self.assertNotContains(proximo, 'Semana no materializada')
         with patch('django.utils.timezone.localdate', return_value=date(2026, 8, 31)):
             pendiente = self.client.get(reverse('clientes:mockup_demo'))
-        self.assertContains(pendiente, 'Bloque pendiente de cierre')
+        self.assertContains(pendiente, 'Bloque finalizado · cierre pendiente')
         self.assertNotContains(pendiente, 'Semana no materializada')
 
     def test_ui_proximo_pausado_conserva_badge(self):
