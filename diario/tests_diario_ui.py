@@ -209,7 +209,8 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('diario:dashboard_diario'))
 
-        self.assertContains(response, 'Otras prácticas')
+        # Prosoche vive en la cuadrícula principal de módulos junto a Logos,
+        # Gestos y Simbiosis (ya no en un bloque secundario aparte).
         for url_name in ('prosoche_dashboard', 'logos_dashboard', 'simbiosis_dashboard', 'habitos_dashboard'):
             self.assertContains(response, reverse(f'diario:{url_name}'))
         portada = response.content.decode().split('<div class="diario-wrap">', 1)[1]
