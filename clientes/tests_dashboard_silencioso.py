@@ -77,6 +77,80 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
+    def test_descansar_no_abre_briefing_si_el_proximo_es_dia_de_descanso(
+        self, dashboard_contexto, resolver,
+    ):
+        """Un descanso no puede fabricar una sesión de fuerza sin ejercicios."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {
+                "nombre": "Día de Descanso",
+                "rutina_nombre": "Día de Descanso",
+                "ejercicios": [],
+                "total_ejercicios": 0,
+                "es_descanso": True,
+            },
+            "explicacion_decision": {},
+            "acwr_actual": None,
+        }
+        resolver.return_value = {
+            "estado": "SILENCIO",
+            "texto": "No hay nada que forzar ahora.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["quiet_decision"]["estado"], "DESCANSAR")
+        self.assertEqual(
+            response.context["quiet_decision"]["cta_url"],
+            reverse("estiramientos:panel"),
+        )
+        self.assertEqual(
+            response.context["quiet_decision"]["cta_label"],
+            "Movilidad y estiramientos",
+        )
+        self.assertNotIn(
+            reverse("entrenos:briefing_entrenamiento", args=[self.cliente.id]),
+            response.context["quiet_decision"]["cta_url"],
+        )
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_fallback_de_briefing_transporta_sesion_pendiente(
+        self, dashboard_contexto, resolver,
+    ):
+        """Nunca abrir el briefing sin la identidad de la sesión ejecutable."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {
+                "nombre": "Torso",
+                "ejercicios": [{"nombre": "Press"}],
+            },
+            "explicacion_decision": {},
+            "acwr_actual": None,
+            "sesion_programada": SimpleNamespace(pk=75, estado="pendiente"),
+        }
+        resolver.return_value = {
+            "estado": "EN_MARGEN",
+            "texto": "Puedes entrenar.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        briefing = reverse("entrenos:briefing_entrenamiento", args=[self.cliente.id])
+        self.assertEqual(
+            response.context["quiet_decision"]["cta_url"],
+            f"{briefing}?sesion_programada_id=75",
+        )
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
     def test_semana_solo_dice_recuperando_bien_con_energia_y_sueno(
         self, dashboard_contexto, resolver,
     ):

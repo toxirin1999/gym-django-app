@@ -1990,11 +1990,6 @@ def dashboard_silencioso_preview(request):
         }
 
     sesion = context.get('proximo_entrenamiento') or {}
-    accion_url = estado_sistema.get('accion_url')
-    accion_label = estado_sistema.get('accion_label')
-    if not accion_url and sesion:
-        accion_url = reverse('entrenos:briefing_entrenamiento', args=[cliente.id])
-        accion_label = 'Ver mi sesión'
 
     explicacion = context.get('explicacion_decision') or {}
     senales = explicacion.get('senales_activas') or []
@@ -2026,6 +2021,10 @@ def dashboard_silencioso_preview(request):
         'PROTEGIENDO': 'RECUPERAR',
         'OBSERVANDO': 'AJUSTAR',
         'SILENCIO': 'DESCANSAR',
+        'ENTRENAR': 'ENTRENAR',
+        'DESCANSAR': 'DESCANSAR',
+        'RECUPERAR': 'RECUPERAR',
+        'AJUSTAR': 'AJUSTAR',
     }
     estado_operativo = estados_operativos.get(
         str(estado_sistema.get('estado') or '').upper(), 'AJUSTAR',
@@ -2039,12 +2038,44 @@ def dashboard_silencioso_preview(request):
     calendario_url = reverse('entrenos:vista_plan_anual', args=[cliente.id])
     movilidad_url = reverse('estiramientos:panel')
     sesion_programada = context.get('sesion_programada')
+    sesion_pendiente_id = None
     if sesion_programada is not None:
         from entrenos.models import SesionProgramada
         if getattr(sesion_programada, 'estado', None) == SesionProgramada.ESTADO_PENDIENTE:
+            sesion_pendiente_id = sesion_programada.pk
             movilidad_url = (
-                f'{movilidad_url}?sesion_programada_id={sesion_programada.pk}'
+                f'{movilidad_url}?sesion_programada_id={sesion_pendiente_id}'
             )
+
+    # La CTA canónica del Organismo tiene prioridad. Si hoy es descanso no
+    # existe una sesión de fuerza que abrir: se dirige a movilidad, que además
+    # conserva la sesión pendiente cuando la hay. El briefing legacy solo es
+    # seguro como último recurso si transporta ejercicios reales.
+    accion_url = estado_sistema.get('accion_url')
+    accion_label = estado_sistema.get('accion_label')
+    if estado_operativo == 'DESCANSAR':
+        accion_url = movilidad_url
+        accion_label = 'Movilidad y estiramientos'
+    elif not accion_url:
+        ejercicios = sesion.get('ejercicios') or []
+        decision_id = (
+            estado_sistema.get('decision_id')
+            or decision_gym.get('decision_id')
+            or sesion.get('decision_id')
+        )
+        if decision_id:
+            from urllib.parse import urlencode
+            accion_url = '{}?{}'.format(
+                reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
+                urlencode({'decision_id': decision_id}),
+            )
+            accion_label = 'Ver mi sesión'
+        elif ejercicios and sesion_pendiente_id:
+            accion_url = '{}?sesion_programada_id={}'.format(
+                reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
+                sesion_pendiente_id,
+            )
+            accion_label = 'Ver mi sesión'
 
     context.update({
         'quiet_decision': {
