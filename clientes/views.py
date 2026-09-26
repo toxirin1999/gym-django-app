@@ -2036,6 +2036,16 @@ def dashboard_silencioso_preview(request):
         and getattr(checkin, 'horas_sueno', None) is not None
     )
 
+    calendario_url = reverse('entrenos:vista_plan_anual', args=[cliente.id])
+    movilidad_url = reverse('estiramientos:panel')
+    sesion_programada = context.get('sesion_programada')
+    if sesion_programada is not None:
+        from entrenos.models import SesionProgramada
+        if getattr(sesion_programada, 'estado', None) == SesionProgramada.ESTADO_PENDIENTE:
+            movilidad_url = (
+                f'{movilidad_url}?sesion_programada_id={sesion_programada.pk}'
+            )
+
     context.update({
         'quiet_decision': {
             'estado': estado_operativo,
@@ -2053,8 +2063,9 @@ def dashboard_silencioso_preview(request):
         },
         'quiet_insight': insight,
         'quiet_links': {
-            'training': reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
-            'plan': reverse('entrenos:vista_plan_anual', args=[cliente.id]),
+            'routine': calendario_url,
+            'plan': reverse('clientes:plan_decisiones'),
+            'mobility': movilidad_url,
             'memory': reverse('clientes:memoria_entrenador', args=[cliente.id]),
             'life': reverse('diario:dashboard_diario'),
         },

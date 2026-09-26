@@ -5,6 +5,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from clientes.models import BitacoraDiaria, Cliente
 
@@ -35,11 +36,16 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Ahora")
         self.assertContains(response, "Esta semana")
         self.assertContains(response, "Lo que el plan aprendió")
-        self.assertContains(response, "Entreno")
+        self.assertContains(response, "Rutina")
         self.assertContains(response, "Plan")
         self.assertContains(response, "Memoria")
         self.assertContains(response, "Vida")
         self.assertContains(response, reverse("entrenos:vista_plan_anual", args=[self.cliente.id]))
+        self.assertContains(response, reverse("clientes:plan_decisiones"))
+        self.assertNotEqual(
+            response.context["quiet_links"]["routine"],
+            response.context["quiet_links"]["plan"],
+        )
         self.assertContains(response, reverse("clientes:memoria_entrenador", args=[self.cliente.id]))
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
@@ -102,3 +108,53 @@ class DashboardSilenciosoPreviewTests(TestCase):
         con_checkin = self.client.get(self.url)
         self.assertEqual(con_checkin.context["quiet_week"]["titulo"], "RECUPERANDO BIEN")
         self.assertContains(con_checkin, "RECUPERANDO BIEN")
+
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_accesos_secundarios_preservan_sesion_pendiente_y_movilidad(
+        self, dashboard_contexto,
+    ):
+        """La autonomía conserva la sesión pendiente sin esconder movilidad."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+            "sesion_programada": SimpleNamespace(pk=73, estado="pendiente"),
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        calendario = reverse("entrenos:vista_plan_anual", args=[self.cliente.id])
+        self.assertEqual(response.context["quiet_links"]["routine"], calendario)
+        self.assertEqual(
+            response.context["quiet_links"]["mobility"],
+            f"{reverse('estiramientos:panel')}?sesion_programada_id=73",
+        )
+        self.assertContains(response, "Elegir otra rutina")
+        self.assertContains(response, "Movilidad y estiramientos")
+
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_rutina_nav_lleva_al_calendario_sin_parametro_si_no_esta_pendiente(
+        self, dashboard_contexto,
+    ):
+        """La pestaña Rutina no duplica el briefing ni arrastra sesiones cerradas."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+            "sesion_programada": SimpleNamespace(pk=74, estado="completada"),
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        calendario = reverse("entrenos:vista_plan_anual", args=[self.cliente.id])
+        self.assertEqual(response.context["quiet_links"]["routine"], calendario)
+        self.assertEqual(
+            response.context["quiet_links"]["mobility"],
+            reverse("estiramientos:panel"),
+        )
+        self.assertContains(response, "Rutina")
+        self.assertNotContains(response, ">Entreno<")
