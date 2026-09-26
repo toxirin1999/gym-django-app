@@ -331,11 +331,9 @@ class PresenciaCierreViewTests(TestCase):
         self.assertFalse(SeguimientoVires.objects.exists())
         self.assertFalse(RegistroGesto.objects.exists())
         html = response.content.decode()
-        self.assertIn('<option value="" selected>Elige conscientemente</option>', html)
-        self.assertNotIn('<option value="1" selected>', html)
-        self.assertNotIn('<option value="2" selected>', html)
-        self.assertNotIn('<option value="4" selected>', html)
-        self.assertNotIn('<option value="5" selected>', html)
+        self.assertIn('<input type="hidden" name="friccion_no" id="friccion_no_input" value="">', html)
+        self.assertIn('<input type="hidden" name="estado_animo_noche" id="estado_animo_noche_input" value="">', html)
+        self.assertNotIn('class="pastilla-selector seleccionada"', html)
 
     def test_post_invalido_ajax_no_escribe(self):
         response = self.client.post(self.url, {}, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
@@ -683,7 +681,7 @@ class PresenciaCierreViewTests(TestCase):
         self.assertNotIn('id="cierre-form" style="display:none"', edicion)
         self.assertNotIn('id="cierre-guardado-titulo"', edicion)
         self.assertIn('value="3"', edicion)
-        self.assertIn('<option value="5" selected>Pleno</option>', edicion)
+        self.assertIn('<button type="button" class="pastilla-selector seleccionada" data-val="5">Pleno</button>', edicion)
 
     @patch('joi.services.enriquecer_cierre', return_value={'interacciones': [], 'micro_verdad': None})
     @patch('joi.services.parsear_cierre_diario', return_value={'personas': [], 'etiquetas': []})

@@ -77,11 +77,28 @@
     margin-bottom: 0.6rem;
 }
 .habitos-grid {
-    display: flex;
-    flex-wrap: wrap;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
 }
+.habito-chip[data-key="0"] { display: none; }
+.habitos-grid.mostrar-todos .habito-chip[data-key="0"] { display: flex; }
+.habitos-toggle {
+    display: none;
+    width: 100%;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    font-size: 0.78rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.5rem 0;
+    margin-bottom: 1rem;
+    cursor: pointer;
+    font-family: inherit;
+}
+.habitos-toggle:hover { color: var(--text); }
 .habito-chip {
     display: flex;
     align-items: center;
@@ -159,23 +176,51 @@
     text-align: center;
 }
 
+/* Selectores de pastillas: friccion / animo */
+.pastilla-grupo {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0.6rem 0 0.4rem;
+}
+.pastilla-selector {
+    background: rgba(24,24,27,.6);
+    border: 1px solid #27272a;
+    color: #d4d4d8;
+    font-size: 0.75rem;
+    font-family: inherit;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-height: 44px;
+}
+.pastilla-selector:active { border-color: rgba(245,158,11,.5); }
+.pastilla-selector.seleccionada {
+    border-color: rgba(245,158,11,.4);
+    background: rgba(245,158,11,.2);
+    color: #FCD34D;
+}
+.pastilla-grupo.invalido .pastilla-selector { border-color: #EF4444; }
+
 /* ── Submit ── */
 .submit-btn {
     width: 100%;
-    background: var(--accent);
-    color: #0F0D17;
+    background: rgba(217,119,6,.9);
+    color: #09090b;
     border: none;
-    border-radius: var(--radius);
-    padding: 0.85rem;
+    border-radius: 0.75rem;
+    padding: 0.875rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 0.03em;
-    transition: opacity 0.15s;
+    letter-spacing: -0.025em;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+    transition: background 0.15s, opacity 0.15s;
     min-height: 44px;
 }
-.submit-btn:hover { opacity: 0.9; }
+.submit-btn:hover { background: #F59E0B; }
 .submit-btn:disabled { opacity: 0.5; cursor: wait; }
 
 /* ── Intención del día (readonly reminder) ── */
@@ -459,6 +504,7 @@
                 class="habito-chip {% if item.habito.tipo == 'suelto' %}negativo{% endif %} {% if item.completado %}completado{% endif %}"
                  data-id="{{ item.habito.id }}"
                  data-tipo="{{ item.habito.tipo }}"
+                 data-key="{% if item.completado or item.habito.tipo == 'suelto' %}1{% else %}0{% endif %}"
                  aria-pressed="{% if item.completado %}true{% else %}false{% endif %}">
                 <span class="habito-check">{% if item.completado %}✓{% else %}○{% endif %}</span>
                 {{ item.habito.nombre }}
@@ -468,6 +514,7 @@
             </button>
             {% endfor %}
         </div>
+        <button type="button" class="habitos-toggle" id="habitos-toggle"></button>
         {% endif %}
 
         <!-- Límites de hoy -->
@@ -477,21 +524,23 @@
                 <span>Sin peso</span>
                 <span>Muy costoso</span>
             </div>
-            <select name="friccion_no" id="friccion_slider" class="friccion-slider" required aria-label="Fricción de los límites de hoy">
-                <option value="" {% if not form.friccion_no.value %}selected{% endif %}>Elige conscientemente</option>
-                {% for value in "12345" %}<option value="{{ value }}" {% if form.friccion_no.value|stringformat:'s' == value %}selected{% endif %}>{{ value }}</option>{% endfor %}
-            </select>
+            <div class="pastilla-grupo" id="friccion-grupo" role="group" aria-label="Fricción de los límites de hoy">
+                {% for value in "12345" %}
+                <button type="button" class="pastilla-selector{% if form.friccion_no.value|stringformat:'s' == value %} seleccionada{% endif %}" data-val="{{ value }}">{{ value }}</button>
+                {% endfor %}
+            </div>
+            <input type="hidden" name="friccion_no" id="friccion_no_input" value="{{ form.friccion_no.value|default:'' }}">
             <p class="friccion-hint">¿Hubo algo que te costó sostener, decir o no cargar?</p>
         </div>
 
         <div class="friccion-card">
             <div class="section-label">Estado de ánimo al cerrar</div>
-            <select name="estado_animo_noche" required class="friccion-slider" aria-label="Estado de ánimo al cerrar">
-                <option value="" {% if not form.estado_animo_noche.value %}selected{% endif %}>Elige conscientemente</option>
+            <div class="pastilla-grupo" id="animo-grupo" role="group" aria-label="Estado de ánimo al cerrar">
                 {% for value, label in form.fields.estado_animo_noche.choices %}
-                <option value="{{ value }}" {% if form.estado_animo_noche.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                <button type="button" class="pastilla-selector{% if form.estado_animo_noche.value|stringformat:'s' == value|stringformat:'s' %} seleccionada{% endif %}" data-val="{{ value }}">{{ label }}</button>
                 {% endfor %}
-            </select>
+            </div>
+            <input type="hidden" name="estado_animo_noche" id="estado_animo_noche_input" value="{{ form.estado_animo_noche.value|default:'' }}">
         </div>
 
         <!-- Cuerpo al cierre -->
@@ -544,6 +593,21 @@ document.querySelectorAll('.habito-chip').forEach(chip => chip.addEventListener(
 }));
 syncHabitos();
 
+const habitosGrid = document.getElementById('habitos-grid');
+const habitosToggle = document.getElementById('habitos-toggle');
+if (habitosGrid && habitosToggle) {
+    const ocultos = habitosGrid.querySelectorAll('.habito-chip[data-key="0"]').length;
+    const textoVerTodos = '+ Ver todos los hábitos (' + ocultos + ')';
+    if (ocultos > 0) {
+        habitosToggle.style.display = 'block';
+        habitosToggle.textContent = textoVerTodos;
+        habitosToggle.addEventListener('click', () => {
+            const mostrando = habitosGrid.classList.toggle('mostrar-todos');
+            habitosToggle.textContent = mostrando ? 'Mostrar menos' : textoVerTodos;
+        });
+    }
+}
+
 const cuerpoInput = document.getElementById('cuerpo_cierre_input');
 document.querySelectorAll('.cuerpo-chip').forEach(chip => chip.addEventListener('click', () => {
     cuerpoInput.value = chip.dataset.val;
@@ -551,6 +615,22 @@ document.querySelectorAll('.cuerpo-chip').forEach(chip => chip.addEventListener(
         c.classList.toggle('completado', c === chip);
         c.setAttribute('aria-pressed', String(c === chip));
     });
+}));
+
+const friccionGrupo = document.getElementById('friccion-grupo');
+const friccionInput = document.getElementById('friccion_no_input');
+document.querySelectorAll('#friccion-grupo .pastilla-selector').forEach(btn => btn.addEventListener('click', () => {
+    friccionInput.value = btn.dataset.val;
+    document.querySelectorAll('#friccion-grupo .pastilla-selector').forEach(b => b.classList.toggle('seleccionada', b === btn));
+    friccionGrupo.classList.remove('invalido');
+}));
+
+const animoGrupo = document.getElementById('animo-grupo');
+const animoInput = document.getElementById('estado_animo_noche_input');
+document.querySelectorAll('#animo-grupo .pastilla-selector').forEach(btn => btn.addEventListener('click', () => {
+    animoInput.value = btn.dataset.val;
+    document.querySelectorAll('#animo-grupo .pastilla-selector').forEach(b => b.classList.toggle('seleccionada', b === btn));
+    animoGrupo.classList.remove('invalido');
 }));
 
 let simbiosisComprobada = false;
@@ -577,6 +657,10 @@ async function enviarCierre() {
 formCierre.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (!formCierre.reportValidity()) return;
+    let pastillasValidas = true;
+    if (!friccionInput.value) { friccionGrupo.classList.add('invalido'); pastillasValidas = false; }
+    if (!animoInput.value) { animoGrupo.classList.add('invalido'); pastillasValidas = false; }
+    if (!pastillasValidas) return;
     const boton = document.getElementById('submit-btn');
     boton.disabled = true;
     try {
