@@ -2035,7 +2035,7 @@ def dashboard_silencioso_preview(request):
         and getattr(checkin, 'horas_sueno', None) is not None
     )
 
-    calendario_url = reverse('entrenos:vista_plan_anual', args=[cliente.id])
+    rutina_url = reverse('entrenos:rutina_silenciosa_preview', args=[cliente.id])
     movilidad_url = reverse('estiramientos:panel')
     sesion_programada = context.get('sesion_programada')
     sesion_pendiente_id = None
@@ -2094,7 +2094,7 @@ def dashboard_silencioso_preview(request):
         },
         'quiet_insight': insight,
         'quiet_links': {
-            'routine': calendario_url,
+            'routine': rutina_url,
             'plan': reverse('clientes:plan_decisiones'),
             'mobility': movilidad_url,
             'memory': reverse('clientes:memoria_entrenador', args=[cliente.id]),

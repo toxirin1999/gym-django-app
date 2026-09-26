@@ -5095,6 +5095,134 @@ import json
 from entrenos.serializador_plan import serializar_plan_para_sesion
 
 
+def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
+    """Contexto móvil de Rutina apoyado en el mismo plan Helms anual.
+
+    Esta función deliberadamente no decide ni reescribe el plan. Solo reduce el
+    contrato ya usado por ``vista_plan_anual`` a lo necesario para una entrada
+    compacta: fase, semana, acción de hoy y máximos conocidos.
+    """
+    from entrenos.models import SesionProgramada
+
+    hoy = hoy or timezone.localdate()
+    perfil = crear_perfil_desde_cliente(cliente)
+    perfil.maximos_actuales = cliente.one_rm_data or {}
+    perfil.año_planificacion = hoy.year
+
+    cache_key = f'plan_anual_{cliente.id}_{hoy.year}'
+    plan = cache.get(cache_key)
+    if plan is None:
+        plan = agregar_educacion_a_plan(PlanificadorHelms(perfil).generar_plan_anual())
+        if isinstance(plan, dict):
+            cache.set(cache_key, plan, 1800)
+
+    bloques = list((plan or {}).get('plan_por_bloques', []))
+    cursor = date(hoy.year, 1, 1)
+    cursor += timedelta(days=(7 - cursor.weekday()) % 7)
+    fase_actual = None
+    for bloque in bloques:
+        duracion = int(bloque.get('duracion') or 1)
+        inicio = cursor
+        fin = inicio + timedelta(weeks=duracion, days=-1)
+        bloque['_preview_inicio'] = inicio
+        bloque['_preview_fin'] = fin
+        if inicio <= hoy <= fin:
+            fase_actual = bloque
+        cursor = fin + timedelta(days=1)
+    fase_actual = fase_actual or (bloques[0] if bloques else {})
+
+    inicio_semana = hoy - timedelta(days=hoy.weekday())
+    sesiones_semana = {
+        sesion.fecha_prevista: sesion
+        for sesion in SesionProgramada.objects.filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            fecha_prevista__range=(inicio_semana, inicio_semana + timedelta(days=6)),
+        )
+    }
+    semana = []
+    for offset in range(7):
+        fecha_dia = inicio_semana + timedelta(days=offset)
+        sesion = sesiones_semana.get(fecha_dia)
+        semana.append({
+            'fecha': fecha_dia,
+            'numero': fecha_dia.day,
+            'es_hoy': fecha_dia == hoy,
+            'sesion': sesion,
+            'tipo': 'sesion' if sesion else 'descanso',
+        })
+
+    sesion_hoy = SesionProgramada.objects.filter(
+        cliente=cliente,
+        estado=SesionProgramada.ESTADO_PENDIENTE,
+        fecha_prevista=hoy,
+    ).first()
+    if sesion_hoy:
+        hoy_card = {
+            'tipo': 'sesion',
+            'titulo': sesion_hoy.nombre_sesion or 'Sesión programada',
+            'detalle': 'Tu sesión está preparada. Puedes revisar el briefing antes de empezar.',
+            'url': '{}?sesion_programada_id={}'.format(
+                reverse('entrenos:briefing_entrenamiento', args=[cliente.id]), sesion_hoy.pk,
+            ),
+            'cta': 'Ver mi sesión',
+        }
+    else:
+        hoy_card = {
+            'tipo': 'descanso',
+            'titulo': 'Día de descanso',
+            'detalle': 'El plan no programa entreno hoy. La recuperación también sostiene el progreso.',
+            'url': reverse('estiramientos:panel'),
+            'cta': 'Movilidad y estiramientos',
+        }
+
+    nombres_rm = {
+        'press_banca': 'Press banca', 'sentadilla': 'Sentadilla',
+        'peso_muerto': 'Peso muerto', 'press_militar': 'Press militar',
+    }
+    rms = []
+    for clave, etiqueta in nombres_rm.items():
+        valor = (cliente.one_rm_data or {}).get(clave)
+        try:
+            if valor is not None and float(valor) > 0:
+                rms.append({'nombre': etiqueta, 'valor': round(float(valor), 1)})
+        except (TypeError, ValueError):
+            continue
+
+    objetivo = fase_actual.get('objetivo') or fase_actual.get('descripcion') or 'Adaptación sostenible'
+    nombre_fase = fase_actual.get('nombre') or fase_actual.get('tipo_fase') or 'Plan activo'
+    return {
+        'fase': {
+            'nombre': nombre_fase,
+            'objetivo': objetivo,
+            'rpe': '{}–{}'.format(fase_actual.get('rpe_min', 6), fase_actual.get('rpe_max', 10)),
+            'reps': '{}–{}'.format(fase_actual.get('reps_min', 1), fase_actual.get('reps_max', 20)),
+        },
+        'semana': semana,
+        'hoy': hoy_card,
+        'rms': rms[:4],
+        'insight': 'La fase actual organiza la carga para que puedas progresar sin perder margen.',
+    }
+
+
+@login_required
+@require_GET
+def rutina_silenciosa_preview(request, cliente_id):
+    """Preview móvil de Rutina; el calendario legado permanece intacto."""
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    datos = _obtener_contexto_rutina_silenciosa(cliente)
+    calendario_url = reverse('entrenos:vista_plan_anual', args=[cliente.id])
+    return render(request, 'entrenos/rutina_silenciosa_preview.html', {
+        'cliente': cliente,
+        'hoy_fecha': timezone.localdate(),
+        'calendario_url': calendario_url,
+        'movilidad_url': reverse('estiramientos:panel'),
+        'memoria_url': reverse('clientes:memoria_entrenador', args=[cliente.id]),
+        'vida_url': reverse('diario:dashboard_diario'),
+        **datos,
+    })
+
+
 def vista_plan_anual(request, cliente_id):
     """
     Vista para generar y mostrar el plan anual de Helms.

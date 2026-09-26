@@ -33,6 +33,11 @@ urlpatterns = [
     path('gamificacion-resumen/<int:cliente_id>/', views.gamificacion_resumen, name='gamificacion_resumen'),
     path('resumen/<str:rango>/', views.entrenos_filtrados, name='entrenos_filtrados_rango'),
     path('plan-anual/<int:cliente_id>/', views.vista_plan_anual, name='vista_plan_anual'),
+    path(
+        'cliente/<int:cliente_id>/rutina-silenciosa/',
+        views.rutina_silenciosa_preview,
+        name='rutina_silenciosa_preview',
+    ),
     path('historial-detallado/', views.historial_entrenos, name='historial_entrenos'),
     path('ejercicio/<str:nombre>/', views.detalle_ejercicio, name='detalle_ejercicio'),
     path('tabla-ejercicios/', views.ejercicios_realizados_view, name='tabla_ejercicios'),

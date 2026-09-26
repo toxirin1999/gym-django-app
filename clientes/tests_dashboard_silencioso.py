@@ -40,7 +40,10 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Plan")
         self.assertContains(response, "Memoria")
         self.assertContains(response, "Vida")
-        self.assertContains(response, reverse("entrenos:vista_plan_anual", args=[self.cliente.id]))
+        self.assertContains(
+            response,
+            reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id]),
+        )
         self.assertContains(response, reverse("clientes:plan_decisiones"))
         self.assertNotEqual(
             response.context["quiet_links"]["routine"],
@@ -228,8 +231,8 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         response = self.client.get(self.url)
 
-        calendario = reverse("entrenos:vista_plan_anual", args=[self.cliente.id])
-        self.assertEqual(response.context["quiet_links"]["routine"], calendario)
+        rutina = reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id])
+        self.assertEqual(response.context["quiet_links"]["routine"], rutina)
         self.assertEqual(
             response.context["quiet_links"]["mobility"],
             f"{reverse('estiramientos:panel')}?sesion_programada_id=73",
@@ -238,7 +241,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Movilidad y estiramientos")
 
     @patch("clientes.views._get_dashboard_context_data")
-    def test_rutina_nav_lleva_al_calendario_sin_parametro_si_no_esta_pendiente(
+    def test_rutina_nav_lleva_a_la_preview_sin_arrastrar_sesiones_cerradas(
         self, dashboard_contexto,
     ):
         """La pestaña Rutina no duplica el briefing ni arrastra sesiones cerradas."""
@@ -253,8 +256,8 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         response = self.client.get(self.url)
 
-        calendario = reverse("entrenos:vista_plan_anual", args=[self.cliente.id])
-        self.assertEqual(response.context["quiet_links"]["routine"], calendario)
+        rutina = reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id])
+        self.assertEqual(response.context["quiet_links"]["routine"], rutina)
         self.assertEqual(
             response.context["quiet_links"]["mobility"],
             reverse("estiramientos:panel"),
