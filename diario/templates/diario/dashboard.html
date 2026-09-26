@@ -23,6 +23,7 @@
     .hoy-status-item { display: flex; align-items: center; gap: .5rem; color: #7f786f; font: 600 .64rem/1 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
     .hoy-status-value { width: 8px; height: 8px; overflow: hidden; border: 1px solid #5f5952; border-radius: 50%; color: transparent; }
     .hoy-status-value.hecho, .hoy-status-value.joi { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.1); }
+    .hoy-status-value.activo { border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.12); }
     .hoy-btn-primary { display: inline-flex; align-items: center; justify-content: center; min-width: 155px; padding: .9rem 1.35rem; color: #17130e; background: #d5b979; border: 1px solid #d5b979; border-radius: 1px; font: 700 .68rem/1 Manrope, sans-serif; letter-spacing: .12em; text-decoration: none; text-transform: uppercase; transition: transform .2s ease, background .2s ease; }
     .hoy-btn-primary::after { content: '→'; margin-left: 1rem; font-size: 1rem; }
     .hoy-btn-primary:hover { color: #17130e; background: #e3c989; transform: translateY(-2px); }
@@ -40,21 +41,24 @@
     .signal + .signal { padding-left: 1.7rem; border-left: 1px solid var(--line); }
     .signal-label { margin: 0 0 .9rem; color: #d7cec1; font: 600 .8rem/1.2 Manrope, sans-serif; }
     .signal-empty, .radar-badge { margin: 0 0 1rem; color: var(--ash); font: 400 .84rem/1.65 Manrope, sans-serif; }
-    .semana-visual { margin-top: 1.5rem; margin-bottom: 2.4rem; }
+    .semana-visual { margin-top: 1.25rem; margin-bottom: 1.1rem; }
+    .semana-fila { display: flex; align-items: flex-end; justify-content: space-between; flex-wrap: wrap; gap: .75rem 1.5rem; }
+    .semana-dias-col { display: flex; flex-direction: column; }
     .semana-dias { display: flex; gap: .65rem; margin: 1rem 0 .35rem; }
     .semana-dia { width: 15px; height: 15px; border: 1px solid #5f5952; border-radius: 50%; background: transparent; }
     .semana-dia.completo { background: var(--gold); border-color: var(--gold); box-shadow: 0 0 0 3px rgba(196,163,101,.15); }
-    .semana-dias-labels { display: flex; gap: .65rem; margin-bottom: 1.2rem; }
+    .semana-dias-labels { display: flex; gap: .65rem; margin-bottom: 0; }
     .semana-dias-labels span { width: 15px; color: var(--ash); font: 600 .55rem/1 Manrope, sans-serif; letter-spacing: .05em; text-align: center; text-transform: uppercase; }
-    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin: 1.5rem 0; }
+    .semana-link-inline { flex-shrink: 0; }
+    .modules-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .75rem; margin: 0 0 1.5rem; }
     .module-card { display: flex; flex-direction: column; padding: .875rem; background: rgba(24,24,27,.4); border: 1px solid #27272a; border-radius: .75rem; text-decoration: none; transition: border-color .2s ease; }
     .module-card:hover { border-color: rgba(245,158,11,.3); }
     .module-card-head { display: flex; align-items: center; justify-content: space-between; gap: .5rem; margin-bottom: .5rem; }
-    .module-card-title { color: #a1a1aa; font: 600 .72rem/1.2 Manrope, sans-serif; letter-spacing: .05em; text-transform: uppercase; }
+    .module-card-title { color: #a1a1aa; font: 600 .75rem/1.2 Manrope, sans-serif; letter-spacing: .05em; text-transform: uppercase; }
     .module-card-chevron { color: rgba(196,163,101,.55); font: 600 .8rem/1 Manrope, sans-serif; }
-    .module-card-metric { margin-bottom: .3rem; color: var(--ink); font: 500 1rem/1.3 'Crimson Pro', Georgia, serif; }
+    .module-card-metric { margin: .25rem 0 .3rem; color: #f4f4f5; font: 700 .875rem/1.3 Manrope, sans-serif; }
     .module-card-metric .signal-empty, .module-card-metric .radar-badge { margin: 0; font-size: .82rem; }
-    .module-card-desc { overflow: hidden; color: #71717a; font: 400 11px/1.5 Manrope, sans-serif; text-overflow: ellipsis; white-space: nowrap; }
+    .module-card-desc { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden; margin-top: .125rem; color: #71717a; font: 400 11px/1.5 Manrope, sans-serif; }
     .semana-chip { display: inline-flex; align-items: baseline; gap: .3rem; }
     .semana-chip-num { color: var(--ink); font: 500 1.35rem/1 'Crimson Pro', serif; }
     .semana-chip-label { color: var(--ash); font: 600 .57rem/1 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
@@ -67,7 +71,6 @@
         .hoy-cta { justify-self: stretch; }
         .hoy-btn-primary, .hoy-btn-ghost { width: 100%; }
         .signals-grid { grid-template-columns: 1fr; }
-        .modules-grid { grid-template-columns: 1fr; }
         .signal + .signal { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); }
     }
     @media (prefers-reduced-motion: reduce) {
@@ -95,8 +98,8 @@
             </div>
             {% if entreno_fuerza_hoy %}<div class="hoy-badge-fuerza">● Sesión de fuerza completada hoy</div>{% endif %}
             <div class="hoy-status" aria-label="Progreso del ritual">
-                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% endif %}">{% if estado_dia.manana_hecha %}✓{% else %}—{% endif %}</span><span>Mañana</span></div>
-                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% endif %}">{% if estado_dia.noche_hecha %}✓{% else %}—{% endif %}</span><span>Noche</span></div>
+                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% elif ritual_accion_principal == 'apertura' %}activo{% endif %}">{% if estado_dia.manana_hecha %}✓{% elif ritual_accion_principal == 'apertura' %}●{% else %}—{% endif %}</span><span>Mañana</span></div>
+                <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% elif ritual_accion_principal == 'cierre' %}activo{% endif %}">{% if estado_dia.noche_hecha %}✓{% elif ritual_accion_principal == 'cierre' %}●{% else %}—{% endif %}</span><span>Noche</span></div>
                 {% if estado_dia.tiene_lectura_joi %}<div class="hoy-status-item"><span class="hoy-status-value joi">✓</span><span>Lectura</span></div>{% endif %}
             </div>
         </div>
@@ -115,11 +118,15 @@
             <h3 class="signal-label">Revisión semanal</h3>
             {% if revision_semanal %}<p class="signal-empty">{{ revision_semanal.mensaje|truncatechars:150 }}</p>
             {% elif not datos_semana.hay_senales %}<p class="signal-empty">La última semana cerrada todavía no dejó señales suficientes para una revisión.</p>{% endif %}
-            <div class="semana-dias" role="list">
-                {% for dia in dias_semana_ritual %}<span class="semana-dia {% if dia.completo %}completo{% endif %}" role="listitem" aria-label="{{ dia.fecha|date:'l' }}{% if dia.completo %}: ritual completo{% endif %}"></span>{% endfor %}
+            <div class="semana-fila">
+                <div class="semana-dias-col">
+                    <div class="semana-dias" role="list">
+                        {% for dia in dias_semana_ritual %}<span class="semana-dia {% if dia.completo %}completo{% endif %}" role="listitem" aria-label="{{ dia.fecha|date:'l' }}{% if dia.completo %}: ritual completo{% endif %}"></span>{% endfor %}
+                    </div>
+                    <div class="semana-dias-labels" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+                </div>
+                <a href="{% url 'diario:lectura_semanal' %}" class="signal-link semana-link-inline">Abrir revisión&nbsp; →</a>
             </div>
-            <div class="semana-dias-labels" aria-hidden="true"><span>L</span><span>M</span><span>X</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
-            <a href="{% url 'diario:lectura_semanal' %}" class="signal-link">Abrir revisión&nbsp; →</a>
         </div>
 
         <div class="modules-grid">
