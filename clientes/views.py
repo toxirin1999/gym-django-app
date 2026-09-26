@@ -1984,7 +1984,6 @@ def dashboard_silencioso_preview(request):
     except Exception:
         estado_sistema = {
             'estado': 'SILENCIO',
-            'estado_label': 'En pausa',
             'texto': 'Hoy no hace falta forzar una decisión.',
             'accion_label': None,
             'accion_url': None,
@@ -2019,15 +2018,34 @@ def dashboard_silencioso_preview(request):
         carga = 'Alta'
         carga_detalle = f'ACWR {acwr:.2f}'
 
+    # Organismo usa estados internos de coordinación. La portada, en cambio,
+    # debe responder a una pregunta ejecutable: qué hacer hoy. Nunca exponemos
+    # SILENCIO/OBSERVANDO/EN_MARGEN/PROTEGIENDO como si fueran decisiones.
+    estados_operativos = {
+        'EN_MARGEN': 'ENTRENAR',
+        'PROTEGIENDO': 'RECUPERAR',
+        'OBSERVANDO': 'AJUSTAR',
+        'SILENCIO': 'DESCANSAR',
+    }
+    estado_operativo = estados_operativos.get(
+        str(estado_sistema.get('estado') or '').upper(), 'AJUSTAR',
+    )
+
+    tiene_energia_y_sueno = (
+        getattr(checkin, 'energia_subjetiva', None) is not None
+        and getattr(checkin, 'horas_sueno', None) is not None
+    )
+
     context.update({
         'quiet_decision': {
-            'estado': estado_sistema.get('estado_label') or estado_sistema.get('estado') or 'Hoy',
+            'estado': estado_operativo,
             'frase': estado_sistema.get('texto') or decision_gym.get('mensaje') or 'Escucha el ritmo que trae el día.',
             'cta_label': accion_label,
             'cta_url': accion_url,
             'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
         },
         'quiet_week': {
+            'titulo': 'RECUPERANDO BIEN' if tiene_energia_y_sueno else 'DATOS PENDIENTES',
             'energia': getattr(checkin, 'energia_subjetiva', None),
             'sueno': getattr(checkin, 'horas_sueno', None),
             'carga': carga,
