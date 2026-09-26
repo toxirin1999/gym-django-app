@@ -2095,7 +2095,7 @@ def dashboard_silencioso_preview(request):
         'quiet_insight': insight,
         'quiet_links': {
             'routine': rutina_url,
-            'plan': reverse('clientes:plan_decisiones'),
+            'plan': reverse('clientes:trayectoria_plan'),
             'mobility': movilidad_url,
             'memory': reverse('clientes:memoria_entrenador', args=[cliente.id]),
             'life': reverse('diario:dashboard_diario'),

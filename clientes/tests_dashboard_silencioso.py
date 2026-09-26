@@ -44,10 +44,14 @@ class DashboardSilenciosoPreviewTests(TestCase):
             response,
             reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id]),
         )
-        self.assertContains(response, reverse("clientes:plan_decisiones"))
+        self.assertContains(response, reverse("clientes:trayectoria_plan"))
         self.assertNotEqual(
             response.context["quiet_links"]["routine"],
             response.context["quiet_links"]["plan"],
+        )
+        self.assertEqual(
+            response.context["quiet_links"]["plan"],
+            reverse("clientes:trayectoria_plan"),
         )
         self.assertContains(response, reverse("clientes:memoria_entrenador", args=[self.cliente.id]))
 
