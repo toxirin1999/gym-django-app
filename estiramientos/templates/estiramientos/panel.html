@@ -14,40 +14,52 @@
         <a href="{% url 'clientes:mockup_demo' %}" class="mv-back">← Panel principal</a>
     </div>
 
-    <div class="stretch-header">
-        <h1>
-            <i class="fas fa-spa"></i>
-            Movilidad y estiramientos
-        </h1>
-        <p>Recupera rango, baja revoluciones y deja constancia de lo que realmente haces.</p>
-    </div>
+    {% if planes %}
 
-    <section class="mobility-intro" aria-labelledby="mobilityIntroTitle">
-        <div class="mobility-intro__mark" aria-hidden="true">M</div>
-        <div>
-            <p class="mobility-intro__eyebrow">SESIÓN REGISTRABLE</p>
-            <h2 id="mobilityIntroTitle">Movilidad adaptativa</h2>
-            <p>
-                Elige una sesión guiada. Al finalizar guardarás la <strong>duración real</strong>
-                y el <strong>RPE real</strong>; el sistema calculará su
-                <strong>carga de entrenamiento</strong> sin convertirla en volumen de fuerza.
-            </p>
-            <div class="mobility-intro__flow" aria-label="Flujo de registro">
-                <span>1 · Elige</span><span>2 · Muévete</span><span>3 · Guarda</span>
+    <!-- Hero de recuperación -->
+    <section class="mv-hero" aria-labelledby="mvHeroTitle">
+        <p class="mv-hero__eyebrow">Recuperación</p>
+        <h1 id="mvHeroTitle" class="mv-hero__title">Hoy, recuperar también cuenta</h1>
+        <p class="mv-hero__subtitle">Elige cómo quieres moverte.</p>
+
+        {% if planes_movilidad %}
+        {% with primer_plan=planes_movilidad.first %}
+        <a href="{% url 'estiramientos:iniciar_plan' primer_plan.id %}" class="mv-hero__cta">
+            <span>{{ primer_plan.nombre|upper }} · {{ primer_plan.duracion_estimada_min|default:0 }} MIN</span>
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+        </a>
+        {% endwith %}
+        {% endif %}
+
+        <details class="mv-hero__why">
+            <summary>Ver por qué</summary>
+            <div class="mv-hero__why-body">
+                <p class="mobility-intro__eyebrow">SESIÓN REGISTRABLE</p>
+                <p>
+                    Elige una sesión guiada. Al finalizar guardarás la <strong>duración real</strong>
+                    y el <strong>RPE real</strong>; el sistema calculará su
+                    <strong>carga de entrenamiento</strong> sin convertirla en volumen de fuerza.
+                </p>
+                <div class="mobility-intro__flow" aria-label="Flujo de registro">
+                    <span>1 · Elige</span><span>2 · Muévete</span><span>3 · Guarda</span>
+                </div>
             </div>
-            {% if sesion_hoy %}
-            <label class="mobility-swap-toggle" for="mobilitySwapToday">
-                <input type="checkbox" id="mobilitySwapToday"
-                       data-mobility-swap-toggle
-                       data-sesion-hoy-id="{{ sesion_hoy.id }}">
-                <span>Contabilizar como sustituto de la sesión de fuerza de hoy</span>
-            </label>
-            <p id="mobilitySwapHint" class="mobility-swap-hint" hidden>
-                La sesión de fuerza de hoy quedará registrada como adaptada por recuperación activa
-            </p>
-            {% endif %}
-        </div>
+        </details>
     </section>
+
+    {% if sesion_hoy %}
+    <section class="mv-swap-card">
+        <label class="mobility-swap-toggle" for="mobilitySwapToday">
+            <input type="checkbox" id="mobilitySwapToday"
+                   data-mobility-swap-toggle
+                   data-sesion-hoy-id="{{ sesion_hoy.id }}">
+            <span>Contabilizar como sustituto de la sesión de fuerza de hoy</span>
+        </label>
+        <p id="mobilitySwapHint" class="mobility-swap-hint" hidden>
+            La sesión de fuerza de hoy quedará registrada como adaptada por recuperación activa
+        </p>
+    </section>
+    {% endif %}
 
     {% if sesion_programada %}
     <section class="mobility-decision" data-mobility-decision>
@@ -65,49 +77,22 @@
     </section>
     {% endif %}
 
-    {% if planes %}
-    <!-- Filtros y búsqueda -->
-    <div class="filters-section">
-        <div class="search-box">
-            <i class="fas fa-search"></i>
-            <input type="text" id="searchInput" placeholder="Buscar planes... (presiona / para enfocar)"
-                autocomplete="off">
-        </div>
-        <div class="filter-buttons">
-            <button class="filter-btn active" data-filter="all">
-                <i class="fas fa-th"></i>
-                Todos
-            </button>
-            <button class="filter-btn" data-filter="superior">
-                <i class="fas fa-hand-rock"></i>
-                Superior
-            </button>
-            <button class="filter-btn" data-filter="inferior">
-                <i class="fas fa-shoe-prints"></i>
-                Inferior
-            </button>
-            <button class="filter-btn" data-filter="completo">
-                <i class="fas fa-child"></i>
-                Completo
-            </button>
-            <button class="filter-btn" data-filter="cardio">
-                <i class="fas fa-heart-pulse"></i>
-                Cardio Z2
-            </button>
+    <!-- Selector de categoría -->
+    <div class="mv-elige">
+        <p class="mv-elige__label">Elige tu sesión</p>
+        <div class="mv-tabs" role="tablist" aria-label="Categoría de sesión">
+            <button type="button" class="mv-tab is-active" role="tab" id="mv-tab-movilidad"
+                    aria-selected="true" aria-controls="movilidad" data-tab-target="movilidad">Movilidad</button>
+            <button type="button" class="mv-tab" role="tab" id="mv-tab-estiramientos"
+                    aria-selected="false" aria-controls="estiramientos" data-tab-target="estiramientos">Estirar</button>
+            <button type="button" class="mv-tab" role="tab" id="mv-tab-cardio"
+                    aria-selected="false" aria-controls="cardio" data-tab-target="cardio">Zona 2<span class="sr-only"> (Cardio Z2)</span></button>
         </div>
     </div>
 
-    <details class="mv-block" id="movilidad" open>
-        <summary>
-            <div class="mobility-section-heading">
-                <div>
-                    <span>01 PREPARACIÓN &amp; MOVILIDAD ACTIVA</span>
-                    <h2>Sesiones de movilidad</h2>
-                </div>
-                <small>Puedes finalizar y guardar en cualquier momento</small>
-            </div>
-            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
-        </summary>
+    <section class="mv-panel" id="movilidad" role="tabpanel" aria-labelledby="mv-tab-movilidad" data-plan-section="movilidad">
+        <h2 class="sr-only">Sesiones de movilidad</h2>
+        <p class="sr-only">01 PREPARACIÓN &amp; MOVILIDAD ACTIVA. Puedes finalizar y guardar en cualquier momento.</p>
         <div class="plans-grid" data-plan-section="movilidad">
             {% for p in planes_movilidad %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
@@ -115,19 +100,14 @@
                 <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
             {% endfor %}
         </div>
-    </details>
+        {% if planes_movilidad|length > 2 %}
+        <button type="button" class="mv-ver-todas" data-ver-todas="movilidad">Ver todas las sesiones ({{ planes_movilidad|length }})</button>
+        {% endif %}
+    </section>
 
-    <details class="mv-block" id="estiramientos" open>
-        <summary>
-            <div class="mobility-section-heading">
-                <div>
-                    <span>02 VUELTA A LA CALMA &amp; ESTIRAMIENTOS</span>
-                    <h2>Sesiones de estiramientos</h2>
-                </div>
-                <small>Posiciones mantenidas para reducir tensión</small>
-            </div>
-            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
-        </summary>
+    <section class="mv-panel" id="estiramientos" role="tabpanel" aria-labelledby="mv-tab-estiramientos" data-plan-section="estiramientos" hidden>
+        <h2 class="sr-only">Sesiones de estiramientos</h2>
+        <p class="sr-only">02 VUELTA A LA CALMA &amp; ESTIRAMIENTOS. Posiciones mantenidas para reducir tensión.</p>
         <div class="plans-grid" data-plan-section="estiramientos">
             {% for p in planes_estiramientos %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=False %}
@@ -135,19 +115,14 @@
                 <p class="no-plans">No hay sesiones de estiramientos disponibles.</p>
             {% endfor %}
         </div>
-    </details>
+        {% if planes_estiramientos|length > 2 %}
+        <button type="button" class="mv-ver-todas" data-ver-todas="estiramientos">Ver todas las sesiones ({{ planes_estiramientos|length }})</button>
+        {% endif %}
+    </section>
 
-    <details class="mv-block" id="cardio" open>
-        <summary>
-            <div class="mobility-section-heading">
-                <div>
-                    <span>03 CARDIO &amp; FLUJO DE RECUPERACIÓN</span>
-                    <h2>Sesiones de cardio</h2>
-                </div>
-                <small>Zona 2 para sumar sin acumular fatiga</small>
-            </div>
-            <i class="fas fa-chevron-down mv-block-chevron" aria-hidden="true"></i>
-        </summary>
+    <section class="mv-panel" id="cardio" role="tabpanel" aria-labelledby="mv-tab-cardio" data-plan-section="cardio" hidden>
+        <h2 class="sr-only">Sesiones de cardio</h2>
+        <p class="sr-only">03 CARDIO &amp; FLUJO DE RECUPERACIÓN. Zona 2 para sumar sin acumular fatiga.</p>
         <div class="plans-grid" data-plan-section="cardio">
             {% for p in planes_cardio %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
@@ -155,7 +130,10 @@
                 <p class="no-plans">No hay sesiones de cardio disponibles.</p>
             {% endfor %}
         </div>
-    </details>
+        {% if planes_cardio|length > 2 %}
+        <button type="button" class="mv-ver-todas" data-ver-todas="cardio">Ver todas las sesiones ({{ planes_cardio|length }})</button>
+        {% endif %}
+    </section>
 
     <div class="start-hint">
         <i class="fas fa-info-circle"></i>
@@ -169,6 +147,30 @@
     </div>
     {% endif %}
 </div>
+
+<nav class="mv-bottom-nav" aria-label="Navegación principal">
+    <a href="{% url 'clientes:mockup_demo' %}" class="mv-bottom-nav__item is-active">
+        <span class="mv-bottom-nav__dot" aria-hidden="true"></span>
+        <i class="fas fa-house" aria-hidden="true"></i>
+        <span>Ahora</span>
+    </a>
+    <a href="{% url 'clientes:mockup_demo' %}#chapter-entrenamiento" class="mv-bottom-nav__item">
+        <i class="fas fa-dumbbell" aria-hidden="true"></i>
+        <span>Entreno</span>
+    </a>
+    <a href="{% url 'clientes:mockup_demo' %}#chapter-plan" class="mv-bottom-nav__item">
+        <i class="fas fa-calendar-days" aria-hidden="true"></i>
+        <span>Plan</span>
+    </a>
+    <a href="{% url 'clientes:mockup_demo' %}#chapter-memoria" class="mv-bottom-nav__item">
+        <i class="fas fa-chart-simple" aria-hidden="true"></i>
+        <span>Memoria</span>
+    </a>
+    <a href="{% url 'clientes:mockup_demo' %}#chapter-vida" class="mv-bottom-nav__item">
+        <i class="fas fa-leaf" aria-hidden="true"></i>
+        <span>Vida</span>
+    </a>
+</nav>
 {% endblock %}
 
 {% block extra_js %}
@@ -229,13 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <script>
 (function() {
-    // base.html arranca globalmente un sistema de partículas decorativo
-    // (BladeRunnerParticles) que sigue añadiendo un <div> a pantalla
-    // completa con destellos en movimiento, incluso en páginas con fondo
-    // negro sólido como esta. Ese contenedor no tiene id ni clase, así
-    // que lo localizamos por su estilo inline característico
+    // base.html arranca globalmente un sistema de particulas decorativo
+    // (BladeRunnerParticles) que sigue anadiendo un <div> a pantalla
+    // completa con destellos en movimiento, incluso en paginas con fondo
+    // negro solido como esta. Ese contenedor no tiene id ni clase, asi
+    // que lo localizamos por su estilo inline caracteristico
     // (position:fixed, z-index:5, pointer-events:none) y lo retiramos
-    // solo en esta página, sin tocar base.html ni el resto del sitio.
+    // solo en esta pagina, sin tocar base.html ni el resto del sitio.
     function limpiarParticulasResiduales() {
         var body = document.body;
         for (var i = body.children.length - 1; i >= 0; i--) {

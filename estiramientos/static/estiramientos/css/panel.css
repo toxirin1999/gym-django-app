@@ -1,9 +1,11 @@
 /* =====================================================
-   PANEL DE ESTIRAMIENTOS · GYM/OS (fondo negro, sans,
-   tarjetas compactas). Sustituye el tema neón/estrellas
-   anterior, manteniendo los nombres de clase que usa
-   panel.js (plan-card, plan-title, plan-description,
-   filter-btn, plans-grid, hidden) intactos.
+   PANEL DE ESTIRAMIENTOS · GYM/OS (catálogo rediseñado:
+   hero de recuperación, selector de categoría segmentado
+   y lista compacta con iconos anatómicos). Mantiene los
+   nombres de clase que sigue usando panel.js y las
+   plantillas (plan-card, plan-title, plan-description,
+   plans-grid, hidden) para no romper nada que dependa
+   de ellos.
    ===================================================== */
 
 .stretch-container {
@@ -27,7 +29,7 @@
     min-height: 100vh;
     max-width: 640px;
     margin: 0 auto;
-    padding: 14px 16px 56px;
+    padding: 14px 16px 84px;
 }
 
 /* El fondo global (estrellas/atmósfera Blade Runner) queda tapado por el
@@ -54,10 +56,26 @@ html, body { background: #09090b !important; }
 .stretch-container h4, .stretch-container p, .stretch-container span,
 .stretch-container li, .stretch-container small, .stretch-container label,
 .stretch-container a, .stretch-container button, .stretch-container input,
-.stretch-container summary {
+.stretch-container summary,
+.mv-bottom-nav a, .mv-bottom-nav span {
     font-family: var(--mv-font) !important;
     text-transform: none !important;
     letter-spacing: normal !important;
+}
+
+/* Utilidad: presente en el DOM (para lectores de pantalla y para que el
+   contenido siga siendo localizable/verificable) pero fuera de la vista
+   visual, sin ocupar espacio ni alterar el layout compacto. */
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
 }
 
 /* =====================================================
@@ -86,63 +104,91 @@ html, body { background: #09090b !important; }
 }
 .mv-back:hover { color: var(--mv-ink) !important; background: var(--mv-card-2); text-decoration: none; }
 
-.stretch-header {
-    text-align: left;
-    margin: 2px 0 18px;
-    padding: 0;
-    background: none;
-    border: none;
-    border-radius: 0;
+/* =====================================================
+   HERO · RECUPERACIÓN
+   ===================================================== */
+.mv-hero {
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 14px;
+    padding: 20px 18px 18px;
+    border: 1px solid var(--mv-border);
+    border-radius: 18px;
+    /* Sin foto de archivo con licencia disponible en el proyecto: se usa
+       un degradado en capas (radiales + lineal) que evoca un ambiente de
+       recuperación oscuro y desaturado en vez de una imagen de stock sin
+       verificar. Si se aporta una foto real, basta con añadir aquí
+       background-image: url(...); por delante de estos degradados. */
+    background:
+        radial-gradient(120% 90% at 88% 8%, rgba(52, 211, 153, .16), transparent 55%),
+        radial-gradient(90% 70% at 10% 100%, rgba(24, 24, 27, .9), transparent 60%),
+        linear-gradient(165deg, #14231d 0%, #0d1512 45%, #09090b 100%);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
 }
-.stretch-header h1 {
+.mv-hero__eyebrow {
+    margin: 0 0 6px;
+    color: var(--mv-accent) !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.18em !important;
+    text-transform: uppercase !important;
+}
+.mv-hero__title {
+    margin: 0;
+    color: var(--mv-ink) !important;
+    font-size: 23px;
+    font-weight: 800;
+    letter-spacing: -0.01em !important;
+    line-height: 1.18;
+}
+.mv-hero__subtitle {
+    margin: 6px 0 0;
+    color: var(--mv-muted) !important;
+    font-size: 12.5px;
+}
+.mv-hero__cta {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 10px;
-    color: var(--mv-ink) !important;
-    font-size: 22px;
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px 16px;
+    border: 1px solid rgba(52, 211, 153, .4);
+    border-radius: 12px;
+    background: rgba(52, 211, 153, .1);
+    color: var(--mv-accent) !important;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: -0.02em !important;
-    text-shadow: none !important;
-    margin: 0 0 4px;
+    letter-spacing: 0.06em !important;
+    text-transform: uppercase !important;
+    text-decoration: none;
+    transition: transform .1s ease, background .15s ease;
 }
-.stretch-header h1 i { color: var(--mv-accent); font-size: 17px; }
-.stretch-header p {
-    color: var(--mv-muted) !important;
-    font-size: 13px;
-    line-height: 1.5;
-    margin: 0;
-}
+.mv-hero__cta:hover { background: rgba(52, 211, 153, .16); text-decoration: none; }
+.mv-hero__cta:active { transform: scale(0.98); }
+.mv-hero__cta i { font-size: 11px; }
 
-/* =====================================================
-   INTRO · MOVILIDAD ADAPTATIVA
-   ===================================================== */
-.mobility-intro {
-    display: flex;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 16px;
-    padding: 14px;
+.mv-hero__why { margin-top: 10px; }
+.mv-hero__why summary {
+    display: inline-block;
+    list-style: none;
+    color: var(--mv-muted) !important;
+    font-size: 11px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.mv-hero__why summary::-webkit-details-marker { display: none; }
+.mv-hero__why summary::marker { content: ""; }
+.mv-hero__why-body {
+    margin-top: 10px;
+    padding: 12px 14px;
     border: 1px solid var(--mv-border);
     border-radius: 12px;
-    background: var(--mv-card);
+    background: var(--mv-card-2);
 }
-
-.mobility-intro__mark {
-    flex-shrink: 0;
-    display: grid;
-    width: 36px;
-    height: 36px;
-    place-items: center;
-    border: 1px solid rgba(52, 211, 153, .35);
-    border-radius: 10px;
-    background: rgba(52, 211, 153, .12);
-    color: var(--mv-accent) !important;
-    font-size: 15px;
-    font-weight: 800;
-}
-
-.mobility-intro__eyebrow,
-.mobility-section-heading span {
+.mv-hero__why-body .mobility-intro__eyebrow {
     margin: 0 0 4px;
     color: var(--mv-accent) !important;
     font-size: 10px;
@@ -150,28 +196,15 @@ html, body { background: #09090b !important; }
     letter-spacing: 0.12em !important;
     text-transform: uppercase !important;
 }
-/* Jerarquía visual por bloque: 01 emerald (por defecto), 02 indigo, 03 amber. */
-#estiramientos .mobility-section-heading span { color: var(--mv-indigo) !important; }
-#cardio .mobility-section-heading span { color: var(--mv-warn) !important; }
-
-.mobility-intro h2,
-.mobility-section-heading h2 {
+.mv-hero__why-body p:not(.mobility-intro__eyebrow) {
     margin: 0;
-    color: var(--mv-ink) !important;
-    font-size: 15px;
-    font-weight: 700;
-}
-
-.mobility-intro p:not(.mobility-intro__eyebrow) {
-    margin: 6px 0 0;
     color: var(--mv-muted) !important;
-    font-size: 12.5px;
+    font-size: 12px;
     line-height: 1.55;
 }
-.mobility-intro p strong { color: var(--mv-ink-2) !important; font-weight: 700; }
-
-.mobility-intro__flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
-.mobility-intro__flow span {
+.mv-hero__why-body p strong { color: var(--mv-ink-2) !important; font-weight: 700; }
+.mv-hero__why-body .mobility-intro__flow { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.mv-hero__why-body .mobility-intro__flow span {
     padding: 3px 8px;
     border: 1px solid var(--mv-border);
     border-radius: 999px;
@@ -180,21 +213,26 @@ html, body { background: #09090b !important; }
     font-weight: 600;
 }
 
-/* Toggle discreto: sustituir la sesión de fuerza de hoy por esta movilidad */
+/* =====================================================
+   TARJETA DE SUSTITUCIÓN (sesión de fuerza de hoy)
+   ===================================================== */
+.mv-swap-card {
+    margin-bottom: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--mv-border);
+    border-radius: 12px;
+    background: var(--mv-card);
+}
 .mobility-swap-toggle {
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-top: 10px;
-    padding: 7px 10px;
-    border: 1px dashed var(--mv-border);
-    border-radius: 10px;
     color: var(--mv-muted) !important;
     font-size: 11.5px;
     line-height: 1.4;
     cursor: pointer;
 }
-.mobility-swap-toggle:hover { border-color: var(--mv-border-2); color: var(--mv-ink-2) !important; }
+.mobility-swap-toggle:hover { color: var(--mv-ink-2) !important; }
 .mobility-swap-toggle input[type="checkbox"] {
     flex-shrink: 0;
     width: 15px;
@@ -202,7 +240,7 @@ html, body { background: #09090b !important; }
     accent-color: var(--mv-accent);
 }
 .mobility-swap-hint {
-    margin: 4px 0 0;
+    margin: 6px 0 0;
     padding-left: 2px;
     color: var(--mv-muted) !important;
     font-size: 12px;
@@ -213,7 +251,7 @@ html, body { background: #09090b !important; }
    DECISIÓN DE ENTRENAMIENTO PROGRAMADO
    ===================================================== */
 .mobility-decision {
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     padding: 14px;
     border: 1px solid var(--mv-border);
     border-radius: 12px;
@@ -271,163 +309,128 @@ html, body { background: #09090b !important; }
 }
 
 /* =====================================================
-   FILTROS Y BÚSQUEDA
+   SELECTOR DE CATEGORÍA (segmented control)
    ===================================================== */
-.filters-section {
-    margin: 0 0 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
-
-.search-box { width: 100%; position: relative; }
-.search-box input {
-    width: 100%;
-    padding: 9px 12px 9px 34px;
-    background: var(--mv-card-2);
-    border: 1px solid var(--mv-border);
-    border-radius: 10px;
-    color: var(--mv-ink) !important;
-    font-size: 13px;
-}
-.search-box input::placeholder { color: var(--mv-faint); }
-.search-box input:focus { outline: none; border-color: var(--mv-border-2); }
-.search-box i { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--mv-faint); font-size: 12px; pointer-events: none; }
-
-.filter-buttons {
-    display: flex;
-    gap: 6px;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-    margin: 0 -16px;
-    padding-left: 16px;
-    padding-right: 16px;
-}
-.filter-buttons::-webkit-scrollbar { display: none; }
-.filter-btn {
-    flex-shrink: 0;
-    padding: 7px 12px;
-    background: var(--mv-bg);
-    border: 1px solid var(--mv-border);
-    border-radius: 999px;
+.mv-elige { margin: 4px 0 12px; }
+.mv-elige__label {
+    margin: 0 0 10px;
     color: var(--mv-muted) !important;
-    font-size: 11.5px;
-    font-weight: 600;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    transition: all .15s ease;
-    white-space: nowrap;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em !important;
+    text-transform: uppercase !important;
 }
-.filter-btn i { font-size: 10px; }
-.filter-btn:hover { border-color: var(--mv-border-2); color: var(--mv-ink-2) !important; }
-.filter-btn.active {
-    background: var(--mv-border);
-    border-color: var(--mv-border-2);
-    color: var(--mv-ink) !important;
+.mv-tabs {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--mv-border);
+    border-radius: 12px;
+    background: rgba(24, 24, 27, .8);
+}
+.mv-tab {
+    border: 0;
+    border-radius: 9px;
+    background: transparent;
+    color: var(--mv-muted) !important;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 9px 6px;
+    cursor: pointer;
+    transition: background .15s ease, color .15s ease;
+}
+.mv-tab.is-active {
+    background: var(--mv-accent) !important;
+    color: #052e26 !important;
 }
 
 /* =====================================================
-   BLOQUES COLAPSABLES (01 · PREPARACIÓN / 02 · CALMA)
+   PANELES DE SESIONES POR CATEGORÍA
    ===================================================== */
-.mv-block { margin: 18px 0; border: none; }
-.mv-block > summary {
-    list-style: none;
-    cursor: pointer;
-    display: flex;
-    align-items: flex-end;
-    gap: 10px;
-    min-height: 44px;
-}
-.mv-block > summary::-webkit-details-marker { display: none; }
-.mv-block > summary::marker { content: ""; }
-.mv-block > summary .mobility-section-heading { flex: 1; }
-.mv-block-chevron {
-    flex-shrink: 0;
-    margin-bottom: 12px;
-    color: var(--mv-faint) !important;
-    font-size: 12px;
-    transition: transform .15s ease;
-}
-.mv-block[open] .mv-block-chevron { transform: rotate(180deg); }
+.mv-panel[hidden] { display: none !important; }
 
-.mobility-section-heading {
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 0;
-    padding-bottom: 10px;
+.mv-ver-todas {
+    display: block;
+    width: 100%;
+    margin-top: 2px;
+    padding: 8px 0 2px;
+    border: 0;
+    background: transparent;
+    color: var(--mv-muted) !important;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+    text-decoration: underline;
+    text-underline-offset: 4px;
+    cursor: pointer;
 }
-.mobility-section-heading small {
-    max-width: 160px;
-    color: var(--mv-faint) !important;
-    text-align: right;
-    font-size: 10.5px;
-    line-height: 1.4;
-}
+.mv-ver-todas:hover { color: var(--mv-ink-2) !important; }
 
 /* =====================================================
    LISTA DE SESIONES (tarjetas de fila compactas)
    ===================================================== */
 .plans-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 2px; }
 
+/* Solo se muestran las 2 sesiones recomendadas por defecto; "Ver todas
+   las sesiones" añade .mostrar-todas al contenedor para revelar el
+   resto sin necesidad de otra petición al servidor. */
+.plans-grid > .plan-card:nth-child(n+3) { display: none; }
+.plans-grid.mostrar-todas > .plan-card:nth-child(n+3) { display: flex; }
+
 .plan-card {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 12px;
     background: var(--mv-card);
     border: 1px solid var(--mv-border);
-    border-radius: 12px;
+    border-radius: 16px;
     padding: 12px 14px;
     text-decoration: none;
     transition: border-color .15s ease, background .15s ease;
     animation: mvFadeIn .35s ease both;
 }
-.plan-card:hover { border-color: var(--mv-border-2); background: var(--mv-card-2); text-decoration: none; }
+.plan-card:hover { border-color: rgba(52, 211, 153, .3); background: var(--mv-card-2); text-decoration: none; }
+.plan-card:active { border-color: rgba(52, 211, 153, .3); }
 
-/* Acento por bloque temático (no por zona corporal): emerald para
-   Movilidad Activa, indigo para Vuelta a la Calma, amber para el futuro
-   bloque de Cardio Z2 (#cardio). */
-#movilidad .plan-card { border-left: 2px solid rgba(52, 211, 153, .55); }
-#estiramientos .plan-card { border-left: 2px solid rgba(129, 140, 248, .55); }
-#cardio .plan-card { border-left: 2px solid rgba(251, 191, 36, .55); }
-
-.plan-row1 { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.plan-title { color: var(--mv-ink) !important; font-size: 14.5px; font-weight: 700; line-height: 1.3; }
-.plan-time {
+.plan-icon {
     flex-shrink: 0;
-    display: inline-block;
-    background: var(--mv-border);
-    color: var(--mv-ink-2) !important;
-    font-size: 11px;
-    font-weight: 600;
-    white-space: nowrap;
-    border-radius: 6px;
-    padding: 2px 8px;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 999px;
+    border: 1px solid var(--mv-border-2);
+    background: rgba(39, 39, 42, .3);
+    color: var(--mv-muted);
 }
+#movilidad .plan-icon, #cardio .plan-icon { color: var(--mv-accent); }
+#estiramientos .plan-icon { color: var(--mv-indigo); }
 
+.plan-body { flex: 1; min-width: 0; }
+.plan-title {
+    display: block;
+    color: var(--mv-ink) !important;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.3;
+}
 .plan-description {
-    margin: 4px 0 0;
+    display: block;
+    margin: 3px 0 0;
     color: var(--mv-muted) !important;
     font-size: 12px;
-    line-height: 1.5;
+    line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.plan-row3 {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid var(--mv-border);
+.plan-chevron {
+    flex-shrink: 0;
+    color: var(--mv-faint) !important;
+    font-size: 13px;
 }
-.plan-meta { color: var(--mv-faint) !important; font-size: 10.5px; font-weight: 600; letter-spacing: .02em; }
-.plan-start { color: var(--mv-accent) !important; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
-.plan-card:hover .plan-start { text-decoration: underline; }
 
 @keyframes mvFadeIn {
     from { opacity: 0; transform: translateY(6px); }
@@ -462,3 +465,51 @@ html, body { background: #09090b !important; }
 .no-plans p { color: var(--mv-muted) !important; font-size: 12.5px; margin: 0; }
 
 .hidden { display: none !important; }
+
+/* =====================================================
+   BOTTOM NAV (fijo, estándar del panel principal)
+   ===================================================== */
+.mv-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 90;
+    display: flex;
+    align-items: stretch;
+    justify-content: space-around;
+    max-width: 640px;
+    margin: 0 auto;
+    background: rgba(9, 9, 11, .95);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-top: 1px solid var(--mv-border);
+    padding-bottom: env(safe-area-inset-bottom, 0);
+}
+.mv-bottom-nav__item {
+    position: relative;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 9px 4px 8px;
+    color: var(--mv-faint) !important;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.03em !important;
+    text-transform: uppercase !important;
+    text-decoration: none;
+}
+.mv-bottom-nav__item:hover { color: var(--mv-ink-2) !important; text-decoration: none; }
+.mv-bottom-nav__item i { font-size: 15px; }
+.mv-bottom-nav__item.is-active { color: var(--mv-accent) !important; }
+.mv-bottom-nav__dot {
+    position: absolute;
+    top: 2px;
+    width: 3px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--mv-accent);
+}
