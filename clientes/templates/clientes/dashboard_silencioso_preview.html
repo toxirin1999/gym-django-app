@@ -1,0 +1,98 @@
+{% load static %}
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ahora · {{ cliente.nombre|default:request.user.username }}</title>
+  <style>
+    :root { --ink:#ebeee9; --muted:#969d99; --ground:#0a0d0c; --panel:#121715; --line:#26302c; --green:#26c77d; --green-deep:#0d3e2b; --amber:#d7ad58; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--ground); color:var(--ink); font-family: Georgia, "Times New Roman", serif; }
+    body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.26; background:radial-gradient(circle at 80% 0%, #164b36 0, transparent 30rem), linear-gradient(125deg, transparent 49.8%, rgba(255,255,255,.025) 50%, transparent 50.2%); }
+    main { position:relative; width:min(100%, 650px); min-height:100vh; margin:auto; padding:24px 20px 106px; }
+    .eyebrow,.label { font:600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
+    header { display:flex; justify-content:space-between; align-items:center; margin:4px 0 44px; }
+    header strong { font:600 19px/1 Georgia, serif; }
+    .date { color:var(--muted); font:500 11px/1.2 ui-monospace, monospace; letter-spacing:.08em; }
+    h1 { font-size:clamp(42px, 11vw, 64px); font-weight:400; letter-spacing:-.06em; line-height:.91; margin:12px 0 26px; }
+    .decision { border-top:1px solid var(--green); padding-top:14px; }
+    .decision-state { color:var(--green); font:700 12px/1 ui-monospace, monospace; letter-spacing:.12em; text-transform:uppercase; }
+    .decision p { max-width:30rem; margin:15px 0 22px; font-size:23px; line-height:1.18; letter-spacing:-.025em; }
+    .session-name { color:var(--muted); display:block; margin:-11px 0 18px; font:500 12px/1.4 ui-monospace, monospace; }
+    .primary { display:flex; justify-content:space-between; align-items:center; min-height:58px; padding:0 19px; background:var(--green); color:#04140d; text-decoration:none; border-radius:4px; font:700 17px/1 Georgia, serif; }
+    .primary span:last-child { font:500 28px/1 ui-monospace, monospace; }
+    .explain { color:var(--muted); display:inline-block; margin:17px 0 55px; font:500 13px/1.2 ui-monospace, monospace; text-decoration:underline; text-underline-offset:4px; }
+    section { margin:0 0 48px; }
+    h2 { display:flex; gap:12px; align-items:center; margin:0 0 17px; font-weight:400; font-size:22px; letter-spacing:-.035em; }
+    h2:after { content:""; height:1px; flex:1; background:var(--line); }
+    .week { display:grid; grid-template-columns:repeat(3, 1fr); border:1px solid var(--line); background:rgba(18,23,21,.87); }
+    .metric { min-height:119px; padding:16px 12px; border-right:1px solid var(--line); }
+    .metric:last-child { border:0; }
+    .metric b { display:block; margin-top:21px; color:var(--ink); font:400 25px/1 Georgia, serif; letter-spacing:-.06em; }
+    .metric b small { color:var(--muted); font-size:13px; letter-spacing:0; }
+    .metric p { margin:7px 0 0; color:var(--muted); font:500 10px/1.35 ui-monospace, monospace; }
+    .insight { position:relative; padding:23px 23px 22px 26px; border:1px solid #3b4b40; background:linear-gradient(100deg, rgba(14,55,38,.75), rgba(18,23,21,.94)); }
+    .insight:before { content:""; position:absolute; left:0; top:17px; bottom:17px; width:2px; background:var(--amber); }
+    .insight p { margin:12px 0 0; font-size:20px; line-height:1.2; letter-spacing:-.025em; }
+    .deep-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+    .deep-link { min-height:112px; padding:16px; color:var(--ink); text-decoration:none; border:1px solid var(--line); background:#101412; transition:background .16s ease, border-color .16s ease; }
+    .deep-link:hover,.deep-link:focus-visible { background:#18201c; border-color:var(--green); outline:0; }
+    .deep-link span { display:block; color:var(--green); font:600 10px/1 ui-monospace, monospace; letter-spacing:.12em; text-transform:uppercase; }
+    .deep-link b { display:block; margin-top:31px; font:400 21px/1 Georgia, serif; letter-spacing:-.04em; }
+    nav { position:fixed; z-index:2; left:0; right:0; bottom:0; display:flex; justify-content:center; padding:12px 16px 22px; background:linear-gradient(transparent, var(--ground) 28%); }
+    nav div { display:flex; width:min(100%, 618px); justify-content:space-around; padding:14px 8px; border:1px solid #25302b; background:rgba(12,16,14,.96); border-radius:99px; backdrop-filter:blur(13px); }
+    nav a { color:var(--muted); text-decoration:none; font:600 10px/1 ui-monospace, monospace; letter-spacing:.07em; text-transform:uppercase; }
+    nav a[aria-current="page"] { color:var(--green); }
+    @media (min-width:651px) { main { padding-top:38px; } .deep-grid { grid-template-columns:repeat(4,1fr); } .deep-link { min-height:135px; } .deep-link b { margin-top:46px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div><span class="eyebrow">Organismo</span><br><strong>Ahora</strong></div>
+      <span class="date">{{ hoy|date:"D · d M" }}</span>
+    </header>
+
+    <section class="decision" aria-labelledby="decision-title">
+      <span class="decision-state">{{ quiet_decision.estado }}</span>
+      <h1 id="decision-title">Lo que tiene sentido ahora.</h1>
+      <p>{{ quiet_decision.frase }}</p>
+      {% if quiet_decision.sesion_nombre %}<span class="session-name">Próxima sesión · {{ quiet_decision.sesion_nombre }}</span>{% endif %}
+      {% if quiet_decision.cta_url %}
+        <a class="primary" href="{{ quiet_decision.cta_url }}"><span>{{ quiet_decision.cta_label|default:"Ver mi sesión" }}</span><span aria-hidden="true">→</span></a>
+      {% endif %}
+      <a class="explain" href="{{ quiet_links.plan }}">Ver por qué el plan lo recomienda</a>
+    </section>
+
+    <section aria-labelledby="week-title">
+      <h2 id="week-title">Esta semana</h2>
+      <div class="week">
+        <article class="metric"><span class="label">Energía</span><b>{% if quiet_week.energia %}{{ quiet_week.energia }}<small>/10</small>{% else %}—{% endif %}</b><p>Último check-in</p></article>
+        <article class="metric"><span class="label">Sueño</span><b>{% if quiet_week.sueno %}{{ quiet_week.sueno }}<small>h</small>{% else %}—{% endif %}</b><p>Último registro</p></article>
+        <article class="metric"><span class="label">Carga</span><b>{{ quiet_week.carga }}</b><p>{{ quiet_week.carga_detalle }}</p></article>
+      </div>
+    </section>
+
+    <section aria-labelledby="learning-title">
+      <h2 id="learning-title">Lo que aprendió el plan</h2>
+      <article class="insight"><span class="label">Una lectura, no otra tarea</span><p>{{ quiet_insight }}</p></article>
+    </section>
+
+    <section aria-labelledby="more-title">
+      <h2 id="more-title">Profundizar</h2>
+      <div class="deep-grid">
+        <a class="deep-link" href="{{ quiet_links.training }}"><span>Ejecutar</span><b>Entrenamiento</b></a>
+        <a class="deep-link" href="{{ quiet_links.plan }}"><span>Entender</span><b>Plan</b></a>
+        <a class="deep-link" href="{{ quiet_links.memory }}"><span>Recordar</span><b>Memoria</b></a>
+        <a class="deep-link" href="{{ quiet_links.life }}"><span>Registrar</span><b>Vida</b></a>
+      </div>
+    </section>
+  </main>
+  <nav aria-label="Navegación principal"><div>
+    <a aria-current="page" href="{% url 'clientes:dashboard_silencioso_preview' %}">Ahora</a>
+    <a href="{{ quiet_links.training }}">Entreno</a><a href="{{ quiet_links.plan }}">Plan</a>
+    <a href="{{ quiet_links.memory }}">Memoria</a><a href="{{ quiet_links.life }}">Vida</a>
+  </div></nav>
+</body>
+</html>

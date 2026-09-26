@@ -1963,6 +1963,89 @@ def mockup_demo(request):
 
 @login_required
 @require_GET
+def dashboard_silencioso_preview(request):
+    """Preview read-only of a quieter, action-first client dashboard.
+
+    This view deliberately consumes the same decision and session context as the
+    existing dashboard.  It is a presentation experiment, not a second planning
+    engine: detailed panels remain available as destinations from the preview.
+    """
+    cliente = get_object_or_404(Cliente, user=request.user)
+    context = _get_dashboard_context_data(request, cliente)
+    hoy = timezone.localdate()
+    checkin = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).first()
+    decision_gym = context.get('_decision_gym_raw') or {}
+
+    try:
+        from core.organismo import resolver_estado_sistema_hoy
+        estado_sistema = resolver_estado_sistema_hoy(
+            request.user, decision_gym=decision_gym,
+        )
+    except Exception:
+        estado_sistema = {
+            'estado': 'SILENCIO',
+            'estado_label': 'En pausa',
+            'texto': 'Hoy no hace falta forzar una decisión.',
+            'accion_label': None,
+            'accion_url': None,
+        }
+
+    sesion = context.get('proximo_entrenamiento') or {}
+    accion_url = estado_sistema.get('accion_url')
+    accion_label = estado_sistema.get('accion_label')
+    if not accion_url and sesion:
+        accion_url = reverse('entrenos:briefing_entrenamiento', args=[cliente.id])
+        accion_label = 'Ver mi sesión'
+
+    explicacion = context.get('explicacion_decision') or {}
+    senales = explicacion.get('senales_activas') or []
+    insight = next((str(s) for s in senales if s), None)
+    if not insight:
+        insight = decision_gym.get('mensaje') or (
+            'El plan seguirá aprendiendo con tus próximas sesiones.'
+        )
+
+    acwr = context.get('acwr_actual')
+    if acwr is None:
+        carga = 'Sin historial'
+        carga_detalle = 'Aún no hay suficiente carga para leer una tendencia.'
+    elif acwr < 0.8:
+        carga = 'Baja'
+        carga_detalle = f'ACWR {acwr:.2f}'
+    elif acwr <= 1.3:
+        carga = 'Estable'
+        carga_detalle = f'ACWR {acwr:.2f}'
+    else:
+        carga = 'Alta'
+        carga_detalle = f'ACWR {acwr:.2f}'
+
+    context.update({
+        'quiet_decision': {
+            'estado': estado_sistema.get('estado_label') or estado_sistema.get('estado') or 'Hoy',
+            'frase': estado_sistema.get('texto') or decision_gym.get('mensaje') or 'Escucha el ritmo que trae el día.',
+            'cta_label': accion_label,
+            'cta_url': accion_url,
+            'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
+        },
+        'quiet_week': {
+            'energia': getattr(checkin, 'energia_subjetiva', None),
+            'sueno': getattr(checkin, 'horas_sueno', None),
+            'carga': carga,
+            'carga_detalle': carga_detalle,
+        },
+        'quiet_insight': insight,
+        'quiet_links': {
+            'training': reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
+            'plan': reverse('entrenos:vista_plan_anual', args=[cliente.id]),
+            'memory': reverse('clientes:memoria_entrenador', args=[cliente.id]),
+            'life': reverse('diario:dashboard_diario'),
+        },
+    })
+    return render(request, 'clientes/dashboard_silencioso_preview.html', context)
+
+
+@login_required
+@require_GET
 def trayectoria_plan(request):
     """Vista autoservicio y estrictamente read-only de la trayectoria Gym."""
     from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan
