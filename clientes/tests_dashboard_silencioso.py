@@ -183,6 +183,35 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertEqual(con_checkin.context["quiet_week"]["titulo"], "RECUPERANDO BIEN")
         self.assertContains(con_checkin, "RECUPERANDO BIEN")
 
+    def test_datos_pendientes_ofrece_checkin_minimo_en_la_misma_preview(self):
+        """La falta de datos debe poder resolverse desde Ahora, sin salir del flujo."""
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Completar check-in")
+        self.assertContains(response, reverse("clientes:checkin_matutino"))
+        self.assertContains(response, 'name="horas_sueno"')
+        self.assertContains(response, 'name="energia_subjetiva"')
+        self.assertContains(response, 'min="1"')
+        self.assertContains(response, 'max="14"')
+        self.assertContains(response, 'step="0.5"')
+        self.assertContains(response, "Escape")
+
+    def test_checkin_minimo_no_aparece_si_sueno_y_energia_ya_existen(self):
+        BitacoraDiaria.objects.create(
+            cliente=self.cliente,
+            fecha=timezone.localdate(),
+            energia_subjetiva=6,
+            horas_sueno=8,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, "Completar check-in")
+        self.assertNotContains(response, 'id="quietCheckinDialog"')
+
     @patch("clientes.views._get_dashboard_context_data")
     def test_accesos_secundarios_preservan_sesion_pendiente_y_movilidad(
         self, dashboard_contexto,
