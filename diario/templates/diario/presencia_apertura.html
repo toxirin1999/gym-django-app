@@ -23,14 +23,6 @@
     position: relative;
     overflow: hidden;
 }
-.joi-block::before {
-    content: '';
-    position: absolute;
-    top: -30px; right: -30px;
-    width: 120px; height: 120px;
-    border-radius: 50%;
-    background: rgba(255,255,255,0.03);
-}
 .joi-label {
     font-size: 0.7rem;
     font-weight: 600;
@@ -106,6 +98,55 @@
     margin-bottom: 0.75rem;
 }
 
+/* -- Acordeon de campos secundarios (Punto de apoyo / Acto de Soberania) -- */
+.secondary-accordion {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.75rem;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+.secondary-accordion summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1.1rem 1.25rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.secondary-accordion summary::-webkit-details-marker { display: none; }
+.secondary-accordion summary::after {
+    content: '+';
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--muted);
+}
+.secondary-accordion[open] summary::after { content: '-'; }
+.secondary-accordion-body {
+    padding: 0 1.25rem 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.secondary-field-label {
+    font-size: 0.65rem;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 0.4rem;
+}
+.secondary-field .section-subtitle {
+    margin-top: -0.15rem;
+    margin-bottom: 0.4rem;
+}
+
 /* ── Mood selector (4 opciones) — chips horizontales, no tarjetas ── */
 .mood-row {
     display: flex;
@@ -116,7 +157,6 @@
     border: 1.5px solid var(--border);
     background: transparent;
     border-radius: 12px;
-    font-size: 1.05rem;
     cursor: pointer;
     transition: all 0.15s;
     display: flex;
@@ -127,11 +167,11 @@
 }
 .mood-btn span.label { font-size: 0.72rem; color: var(--muted); font-weight: 600; }
 .mood-btn:hover, .mood-btn.selected {
-    border-color: var(--accent);
-    background: var(--accent-light);
+    border-color: rgba(245,158,11,.4);
+    background: rgba(245,158,11,.2);
 }
-.mood-btn.selected span.label { color: var(--accent); }
-.mood-btn.selected { box-shadow: 0 0 0 2px rgba(167,139,250,0.12); }
+.mood-btn.selected span.label { color: #FCD34D; }
+.mood-btn.selected { box-shadow: 0 0 0 2px rgba(245,158,11,.12); }
 
 /* ── Inputs de texto (unificados con cierre) ── */
 .gratitud-input {
@@ -187,20 +227,21 @@ textarea.intencion::placeholder { color: var(--muted); }
 /* ── Submit ── */
 .submit-btn {
     width: 100%;
-    background: var(--accent);
-    color: var(--jds-bg);
+    background: rgba(217,119,6,.9);
+    color: #09090b;
     border: none;
-    border-radius: var(--radius);
-    padding: 0.85rem;
+    border-radius: 0.75rem;
+    padding: 0.875rem;
     font-family: -apple-system, BlinkMacSystemFont, sans-serif;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
-    letter-spacing: 0.03em;
+    letter-spacing: -0.025em;
     margin-top: 0.25rem;
-    transition: opacity 0.15s;
+    box-shadow: 0 10px 15px -3px rgba(0,0,0,.1), 0 4px 6px -4px rgba(0,0,0,.1);
+    transition: background 0.15s;
 }
-.submit-btn:hover { opacity: 0.9; }
+.submit-btn:hover { background: #F59E0B; }
 </style>
 {% endblock %}
 
@@ -265,18 +306,28 @@ textarea.intencion::placeholder { color: var(--muted); }
         <div class="section-card">
             <div class="section-label">¿Cómo estás?</div>
             <div class="mood-row">
-                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 1 %}selected{% endif %}" data-val="1">😔<span class="label">Bajo</span></button>
-                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 2 %}selected{% endif %}" data-val="2">😞<span class="label">Flojo</span></button>
-                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 4 %}selected{% endif %}" data-val="4">🙂<span class="label">Bien</span></button>
-                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 5 %}selected{% endif %}" data-val="5">😊<span class="label">Pleno</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 1 %}selected{% endif %}" data-val="1"><span class="label">Bajo</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 2 %}selected{% endif %}" data-val="2"><span class="label">Flojo</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 4 %}selected{% endif %}" data-val="4"><span class="label">Bien</span></button>
+                <button type="button" class="mood-btn {% if entrada.apertura_confirmada_en and entrada.estado_animo == 5 %}selected{% endif %}" data-val="5"><span class="label">Pleno</span></button>
             </div>
         </div>
 
-        <!-- Punto de apoyo -->
-        <div class="section-card">
-            <div class="section-label">Punto de apoyo</div>
-            <input type="text" name="gratitud_1" class="gratitud-input" placeholder="Algo que no empieza desde cero..." value="{{ entrada.gratitud_1 }}">
-        </div>
+        <!-- Punto de apoyo + Acto de Soberanía (campos secundarios, acordeon compacto) -->
+        <details class="secondary-accordion"{% if entrada.gratitud_1 or soberania_actual %} open{% endif %}>
+            <summary>Punto de apoyo &amp; acto de soberanía</summary>
+            <div class="secondary-accordion-body">
+                <div class="secondary-field">
+                    <div class="secondary-field-label">Punto de apoyo</div>
+                    <input type="text" name="gratitud_1" class="gratitud-input" placeholder="Algo que no empieza desde cero..." value="{{ entrada.gratitud_1 }}">
+                </div>
+                <div class="secondary-field">
+                    <div class="secondary-field-label">Acto de soberanía</div>
+                    <p class="section-subtitle">Algo que harás solo para ti. No para rendir. No para demostrar.</p>
+                    <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy..." value="{{ soberania_actual }}" maxlength="200">
+                </div>
+            </div>
+        </details>
 
         <!-- Molestias -->
         <div class="section-card">
@@ -301,13 +352,6 @@ textarea.intencion::placeholder { color: var(--muted); }
             <textarea name="intencion" class="intencion" placeholder="¿Qué quieres cuidar hoy?">{{ entrada.persona_quiero_ser }}</textarea>
         </div>
 
-        <!-- Acto de Soberanía -->
-        <div class="section-card">
-            <div class="section-label">Acto de Soberanía</div>
-            <p class="section-subtitle">Algo que harás solo para ti. No para rendir. No para demostrar.</p>
-            <input type="text" name="soberania" id="soberania_input" class="soberania-input" placeholder="Tu acto de hoy..." value="{{ soberania_actual }}" maxlength="200">
-        </div>
-
         <button type="submit" class="submit-btn">Comenzar el día</button>
     </form>
     <div id="respuesta-joi-apertura" class="joi-block" role="status" aria-live="polite" hidden>
@@ -325,11 +369,15 @@ document.querySelectorAll('.molestia-chip').forEach(chip => {
     chip.addEventListener('click', () => {
         const val = chip.dataset.val;
         molestiaInput.value = val;
+        // Toggle mutuamente excluyente: fijar val desactiva todas las demas
+        // pastillas (incluida "Ninguna") y viceversa.
         document.querySelectorAll('.molestia-chip').forEach(c => {
+            c.classList.remove('active');
             c.style.borderColor = 'var(--border)';
             c.style.background = 'transparent';
             c.style.color = 'var(--muted)';
         });
+        chip.classList.add('active');
         chip.style.borderColor = 'var(--accent)';
         chip.style.background = 'var(--accent-light)';
         chip.style.color = 'var(--accent)';
