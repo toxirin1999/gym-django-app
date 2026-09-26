@@ -1,98 +1,16 @@
-{% load static %}
 <!doctype html>
 <html lang="es">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#050706">
   <title>Ahora · {{ cliente.nombre|default:request.user.username }}</title>
   <style>
-    :root { --ink:#ebeee9; --muted:#969d99; --ground:#0a0d0c; --panel:#121715; --line:#26302c; --green:#26c77d; --green-deep:#0d3e2b; --amber:#d7ad58; }
-    * { box-sizing:border-box; }
-    body { margin:0; background:var(--ground); color:var(--ink); font-family: Georgia, "Times New Roman", serif; }
-    body:before { content:""; position:fixed; inset:0; pointer-events:none; opacity:.26; background:radial-gradient(circle at 80% 0%, #164b36 0, transparent 30rem), linear-gradient(125deg, transparent 49.8%, rgba(255,255,255,.025) 50%, transparent 50.2%); }
-    main { position:relative; width:min(100%, 650px); min-height:100vh; margin:auto; padding:24px 20px 106px; }
-    .eyebrow,.label { font:600 11px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); }
-    header { display:flex; justify-content:space-between; align-items:center; margin:4px 0 44px; }
-    header strong { font:600 19px/1 Georgia, serif; }
-    .date { color:var(--muted); font:500 11px/1.2 ui-monospace, monospace; letter-spacing:.08em; }
-    h1 { font-size:clamp(42px, 11vw, 64px); font-weight:400; letter-spacing:-.06em; line-height:.91; margin:12px 0 26px; }
-    .decision { border-top:1px solid var(--green); padding-top:14px; }
-    .decision-state { color:var(--green); font:700 12px/1 ui-monospace, monospace; letter-spacing:.12em; text-transform:uppercase; }
-    .decision p { max-width:30rem; margin:15px 0 22px; font-size:23px; line-height:1.18; letter-spacing:-.025em; }
-    .session-name { color:var(--muted); display:block; margin:-11px 0 18px; font:500 12px/1.4 ui-monospace, monospace; }
-    .primary { display:flex; justify-content:space-between; align-items:center; min-height:58px; padding:0 19px; background:var(--green); color:#04140d; text-decoration:none; border-radius:4px; font:700 17px/1 Georgia, serif; }
-    .primary span:last-child { font:500 28px/1 ui-monospace, monospace; }
-    .explain { color:var(--muted); display:inline-block; margin:17px 0 55px; font:500 13px/1.2 ui-monospace, monospace; text-decoration:underline; text-underline-offset:4px; }
-    section { margin:0 0 48px; }
-    h2 { display:flex; gap:12px; align-items:center; margin:0 0 17px; font-weight:400; font-size:22px; letter-spacing:-.035em; }
-    h2:after { content:""; height:1px; flex:1; background:var(--line); }
-    .week { display:grid; grid-template-columns:repeat(3, 1fr); border:1px solid var(--line); background:rgba(18,23,21,.87); }
-    .metric { min-height:119px; padding:16px 12px; border-right:1px solid var(--line); }
-    .metric:last-child { border:0; }
-    .metric b { display:block; margin-top:21px; color:var(--ink); font:400 25px/1 Georgia, serif; letter-spacing:-.06em; }
-    .metric b small { color:var(--muted); font-size:13px; letter-spacing:0; }
-    .metric p { margin:7px 0 0; color:var(--muted); font:500 10px/1.35 ui-monospace, monospace; }
-    .insight { position:relative; padding:23px 23px 22px 26px; border:1px solid #3b4b40; background:linear-gradient(100deg, rgba(14,55,38,.75), rgba(18,23,21,.94)); }
-    .insight:before { content:""; position:absolute; left:0; top:17px; bottom:17px; width:2px; background:var(--amber); }
-    .insight p { margin:12px 0 0; font-size:20px; line-height:1.2; letter-spacing:-.025em; }
-    .deep-grid { display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-    .deep-link { min-height:112px; padding:16px; color:var(--ink); text-decoration:none; border:1px solid var(--line); background:#101412; transition:background .16s ease, border-color .16s ease; }
-    .deep-link:hover,.deep-link:focus-visible { background:#18201c; border-color:var(--green); outline:0; }
-    .deep-link span { display:block; color:var(--green); font:600 10px/1 ui-monospace, monospace; letter-spacing:.12em; text-transform:uppercase; }
-    .deep-link b { display:block; margin-top:31px; font:400 21px/1 Georgia, serif; letter-spacing:-.04em; }
-    nav { position:fixed; z-index:2; left:0; right:0; bottom:0; display:flex; justify-content:center; padding:12px 16px 22px; background:linear-gradient(transparent, var(--ground) 28%); }
-    nav div { display:flex; width:min(100%, 618px); justify-content:space-around; padding:14px 8px; border:1px solid #25302b; background:rgba(12,16,14,.96); border-radius:99px; backdrop-filter:blur(13px); }
-    nav a { color:var(--muted); text-decoration:none; font:600 10px/1 ui-monospace, monospace; letter-spacing:.07em; text-transform:uppercase; }
-    nav a[aria-current="page"] { color:var(--green); }
-    @media (min-width:651px) { main { padding-top:38px; } .deep-grid { grid-template-columns:repeat(4,1fr); } .deep-link { min-height:135px; } .deep-link b { margin-top:46px; } }
+    :root{--paper:#f4f0ea;--ground:#050706;--card:#0d1210;--line:#25302b;--muted:#87908a;--green:#45e39a;--blue:#66cbff;--amber:#f8bb55}*{box-sizing:border-box}html{background:var(--ground)}body{margin:0;min-width:320px;color:var(--paper);background:radial-gradient(ellipse 92% 28% at 58% 0%,rgba(35,60,47,.22),transparent 68%),var(--ground);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body:before{content:"";position:fixed;inset:0;opacity:.15;pointer-events:none;z-index:4;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:5px 5px;mix-blend-mode:soft-light}main{position:relative;width:min(100%,520px);min-height:100vh;margin:0 auto;padding:calc(34px + env(safe-area-inset-top)) 20px 126px}.mono{font:600 11px/1.35 ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;letter-spacing:.23em;text-transform:uppercase}.top{display:grid;grid-template-columns:1fr 124px;gap:18px;align-items:end;padding:6px 8px 29px}.date{margin:0;font:700 25px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.13em}.now{display:block;margin-top:17px;color:#b8d2df}.motto{color:#8a9295;text-align:left;font-size:10px;line-height:1.72}.decision{position:relative;overflow:hidden;min-height:515px;padding:64px 39px 38px;border:1px solid #28332e;border-radius:30px;background:linear-gradient(105deg,rgba(4,8,6,.96) 15%,rgba(8,16,12,.89) 61%,rgba(12,25,20,.73)),radial-gradient(circle at 83% 66%,rgba(92,125,102,.29),transparent 15rem),linear-gradient(140deg,#111916,#07100c 65%,#18251f);box-shadow:0 18px 50px rgba(0,0,0,.3),inset 0 1px rgba(255,255,255,.04)}.decision:after{content:"";position:absolute;width:190px;height:190px;right:-58px;bottom:49px;border:1px solid rgba(144,170,153,.2);border-radius:50%;box-shadow:0 0 0 26px rgba(144,170,153,.04),0 0 0 52px rgba(144,170,153,.025)}.decision>*{position:relative;z-index:1}.eyebrow{color:var(--green)}h1{margin:43px 0 23px;color:var(--paper);font-size:clamp(47px,12.4vw,67px);font-weight:850;letter-spacing:-.072em;line-height:.88;text-transform:uppercase}.decision-copy{max-width:320px;margin:0;font-size:clamp(22px,5.5vw,28px);letter-spacing:-.026em;line-height:1.27}.session-name{display:block;max-width:300px;margin:17px 0 25px;color:#aab3ad;font-size:13px;line-height:1.45}.primary{display:flex;align-items:center;justify-content:center;gap:12px;min-height:68px;margin-top:41px;padding:0 17px;border:2px solid var(--green);border-radius:999px;color:var(--green);text-align:center;text-decoration:none;transition:.18s}.primary:hover,.primary:focus-visible{color:#07120c;background:var(--green);outline:none;box-shadow:0 0 27px rgba(69,227,154,.25)}.primary-icon{font-size:22px;line-height:1}.primary-label{font:800 16px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;letter-spacing:.14em;text-transform:uppercase}.why{display:inline-block;margin-top:27px;color:#b3d8ee;font-size:16px;text-decoration:none;border-bottom:2px solid currentColor;padding-bottom:3px}.card{margin-top:25px;padding:38px 40px;border:1px solid var(--line);border-radius:30px;background:radial-gradient(ellipse at 16% 0%,rgba(38,77,60,.17),transparent 57%),linear-gradient(135deg,rgba(16,24,20,.97),rgba(8,12,10,.97));box-shadow:inset 0 1px rgba(255,255,255,.03)}.section-label{display:block;color:var(--blue)}.week-title{margin:26px 0 29px;font-size:clamp(37px,9.5vw,49px);font-weight:850;letter-spacing:-.066em;line-height:.92;text-transform:uppercase}.metrics{display:grid;grid-template-columns:repeat(3,1fr)}.metric{min-width:0;padding:0 13px 1px;border-left:1px solid #3c4942}.metric:first-child{padding-left:0;border-left:0}.metric:last-child{padding-right:0}.metric-name{display:block;color:#c7d1d5;font-size:15px;line-height:1.1}.metric-value{display:block;margin-top:10px;font-size:clamp(29px,7.8vw,42px);font-weight:800;letter-spacing:-.065em;line-height:1;word-break:break-word}.metric:nth-child(1) .metric-value,.metric:nth-child(3) .metric-value{color:var(--green)}.metric:nth-child(2) .metric-value{color:var(--blue)}.metric:nth-child(3) .metric-value{font-size:clamp(23px,6.5vw,35px)}.metric small{display:block;margin-top:9px;color:var(--muted);font-size:10px;line-height:1.3}.insight{padding-bottom:34px}.insight .section-label{color:var(--amber)}.insight p{margin:29px 0 31px;font-size:clamp(23px,5.7vw,29px);letter-spacing:-.032em;line-height:1.27}.memory-link{color:#b3d8ee;font-size:16px;text-underline-offset:7px}nav{position:fixed;z-index:3;left:0;right:0;bottom:0;padding:15px max(18px,env(safe-area-inset-right)) calc(18px + env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));border-top:1px solid #27322d;background:rgba(4,7,5,.95);backdrop-filter:blur(17px)}nav ul{display:grid;grid-template-columns:repeat(5,1fr);width:min(100%,520px);margin:0 auto;padding:0;list-style:none}nav a{display:flex;flex-direction:column;align-items:center;gap:8px;color:#87919c;text-decoration:none}.nav-icon{display:grid;width:25px;height:25px;place-items:center;color:currentColor;font-size:22px;line-height:1}nav strong{font:700 9px/1 ui-monospace,SFMono-Regular,Menlo,Monaco,monospace;letter-spacing:.12em;text-transform:uppercase}nav a[aria-current="page"]{color:var(--green)}nav a[aria-current="page"]:after{content:"";width:40px;height:3px;margin-top:1px;border-radius:9px;background:var(--green)}@media(max-width:370px){main{padding-inline:13px}.decision{padding:52px 27px 31px;min-height:480px}.card{padding:31px 27px}.top{padding-inline:4px}.date{font-size:21px}.motto{font-size:9px}.primary-label{font-size:13px}}
   </style>
 </head>
-<body>
-  <main>
-    <header>
-      <div><span class="eyebrow">Organismo</span><br><strong>Ahora</strong></div>
-      <span class="date">{{ hoy|date:"D · d M" }}</span>
-    </header>
-
-    <section class="decision" aria-labelledby="decision-title">
-      <span class="decision-state">{{ quiet_decision.estado }}</span>
-      <h1 id="decision-title">Lo que tiene sentido ahora.</h1>
-      <p>{{ quiet_decision.frase }}</p>
-      {% if quiet_decision.sesion_nombre %}<span class="session-name">Próxima sesión · {{ quiet_decision.sesion_nombre }}</span>{% endif %}
-      {% if quiet_decision.cta_url %}
-        <a class="primary" href="{{ quiet_decision.cta_url }}"><span>{{ quiet_decision.cta_label|default:"Ver mi sesión" }}</span><span aria-hidden="true">→</span></a>
-      {% endif %}
-      <a class="explain" href="{{ quiet_links.plan }}">Ver por qué el plan lo recomienda</a>
-    </section>
-
-    <section aria-labelledby="week-title">
-      <h2 id="week-title">Esta semana</h2>
-      <div class="week">
-        <article class="metric"><span class="label">Energía</span><b>{% if quiet_week.energia %}{{ quiet_week.energia }}<small>/10</small>{% else %}—{% endif %}</b><p>Último check-in</p></article>
-        <article class="metric"><span class="label">Sueño</span><b>{% if quiet_week.sueno %}{{ quiet_week.sueno }}<small>h</small>{% else %}—{% endif %}</b><p>Último registro</p></article>
-        <article class="metric"><span class="label">Carga</span><b>{{ quiet_week.carga }}</b><p>{{ quiet_week.carga_detalle }}</p></article>
-      </div>
-    </section>
-
-    <section aria-labelledby="learning-title">
-      <h2 id="learning-title">Lo que aprendió el plan</h2>
-      <article class="insight"><span class="label">Una lectura, no otra tarea</span><p>{{ quiet_insight }}</p></article>
-    </section>
-
-    <section aria-labelledby="more-title">
-      <h2 id="more-title">Profundizar</h2>
-      <div class="deep-grid">
-        <a class="deep-link" href="{{ quiet_links.training }}"><span>Ejecutar</span><b>Entrenamiento</b></a>
-        <a class="deep-link" href="{{ quiet_links.plan }}"><span>Entender</span><b>Plan</b></a>
-        <a class="deep-link" href="{{ quiet_links.memory }}"><span>Recordar</span><b>Memoria</b></a>
-        <a class="deep-link" href="{{ quiet_links.life }}"><span>Registrar</span><b>Vida</b></a>
-      </div>
-    </section>
-  </main>
-  <nav aria-label="Navegación principal"><div>
-    <a aria-current="page" href="{% url 'clientes:dashboard_silencioso_preview' %}">Ahora</a>
-    <a href="{{ quiet_links.training }}">Entreno</a><a href="{{ quiet_links.plan }}">Plan</a>
-    <a href="{{ quiet_links.memory }}">Memoria</a><a href="{{ quiet_links.life }}">Vida</a>
-  </div></nav>
-</body>
+<body><main>
+  <header class="top"><div><p class="date">{{ hoy|date:"l d M" }}</p><span class="mono now">Ahora</span></div><span class="motto mono">Disciplina<br>también<br>es progreso</span></header>
+  <section class="decision" aria-labelledby="decision-title"><span class="mono eyebrow">Decisión de hoy</span><h1 id="decision-title">{{ quiet_decision.estado }}</h1><p class="decision-copy">{{ quiet_decision.frase }}</p>{% if quiet_decision.sesion_nombre %}<span class="session-name">Próxima sesión · {{ quiet_decision.sesion_nombre }}</span>{% endif %}{% if quiet_decision.cta_url %}<a class="primary" href="{{ quiet_decision.cta_url }}"><span class="primary-icon" aria-hidden="true">→</span><span class="primary-label">{{ quiet_decision.cta_label|default:"Ver mi sesión" }}</span></a>{% endif %}<a class="why" href="{{ quiet_links.plan }}">Ver por qué</a></section>
+  <section class="card" aria-labelledby="week-title"><span class="mono section-label">Esta semana</span><h2 class="week-title" id="week-title">Recuperando bien</h2><div class="metrics"><article class="metric"><span class="metric-name">Energía</span><strong class="metric-value">{% if quiet_week.energia %}{{ quiet_week.energia }}/10{% else %}—{% endif %}</strong><small>Último check-in</small></article><article class="metric"><span class="metric-name">Sueño</span><strong class="metric-value">{% if quiet_week.sueno %}{{ quiet_week.sueno }} h{% else %}—{% endif %}</strong><small>Último registro</small></article><article class="metric"><span class="metric-name">Carga</span><strong class="metric-value">{{ quiet_week.carga }}</strong><small>{{ quiet_week.carga_detalle }}</small></article></div></section>
+  <section class="card insight" aria-labelledby="learning-title"><span class="mono section-label">Lo que el plan aprendió</span><p id="learning-title">{{ quiet_insight }}</p><a class="memory-link" href="{{ quiet_links.memory }}">Abrir memoria</a></section>
+</main><nav aria-label="Navegación principal"><ul><li><a aria-current="page" href="{% url 'clientes:dashboard_silencioso_preview' %}"><span class="nav-icon" aria-hidden="true">●</span><strong>Ahora</strong></a></li><li><a href="{{ quiet_links.training }}"><span class="nav-icon" aria-hidden="true">⌁</span><strong>Entreno</strong></a></li><li><a href="{{ quiet_links.plan }}"><span class="nav-icon" aria-hidden="true">▣</span><strong>Plan</strong></a></li><li><a href="{{ quiet_links.memory }}"><span class="nav-icon" aria-hidden="true">▤</span><strong>Memoria</strong></a></li><li><a href="{{ quiet_links.life }}"><span class="nav-icon" aria-hidden="true">◒</span><strong>Vida</strong></a></li></ul></nav></body>
 </html>
