@@ -195,14 +195,14 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         ):
             response = self.client.get(reverse('clientes:trayectoria_plan'))
         html = response.content.decode()
-        self.assertIn('Línea temporal del plan', html)
+        self.assertIn('Fase actual del plan', html)
         self.assertIn('aria-label=', html)
         self.assertIn('min-height: 44px', html)
         self.assertNotIn('<table', html)
         self.assertNotIn('https://', html)
         self.assertNotIn('http://', html)
 
-    def test_plan_presenta_lectura_jerarquica_y_archivo_colapsable(self):
+    def test_plan_presenta_mapa_longitudinal_antes_del_detalle_semanal(self):
         self.client.force_login(self.user)
         with patch(
             'entrenos.services.trayectoria_plan_service._generar_plan_helms',
@@ -211,11 +211,14 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
             response = self.client.get(reverse('clientes:trayectoria_plan'))
         html = response.content.decode()
         self.assertIn('tp-hero', html)
-        self.assertIn('Esta semana', html)
+        self.assertIn('Recorrido del plan', html)
+        self.assertIn('Objetivo del bloque', html)
         self.assertIn('Próximo hito', html)
         self.assertIn('tp-archive', html)
-        self.assertLess(html.index('tp-hero'), html.index('Esta semana'))
-        self.assertLess(html.index('Esta semana'), html.index('Próximo hito'))
+        self.assertIn('Esta semana · detalle', html)
+        self.assertLess(html.index('tp-hero'), html.index('Recorrido del plan'))
+        self.assertLess(html.index('Recorrido del plan'), html.index('Objetivo del bloque'))
+        self.assertLess(html.index('Objetivo del bloque'), html.index('Esta semana · detalle'))
 
     def test_dashboard_ofrece_dos_accesos_a_trayectoria(self):
         plantilla = Path('clientes/templates/clientes/mockup_demo.html').read_text()
@@ -294,8 +297,8 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         })
         self.assertNotIn('Aún no materializada', html)
         self.assertNotIn('La trayectoria no anticipa ni crea sesiones', html)
-        self.assertIn('Pendiente de iniciar', html)
-        self.assertIn('Semana 36', html)
+        self.assertIn('Sin sesiones concretas aún', html)
+        self.assertIn('La dirección del bloque ya está definida.', html)
 
     def test_plantilla_no_incluye_disclaimer_ni_panel_de_limitaciones_crudo(self):
         resultado = self._proyectar()
@@ -309,22 +312,13 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         """Plan conserva una única puerta de vuelta al contexto de hoy."""
         plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
 
-        self.assertEqual(
-            plantilla.count("{% url 'clientes:dashboard_silencioso_preview' %}"),
-            3,
-        )
+        self.assertEqual(plantilla.count("{% url 'clientes:dashboard_silencioso_preview' %}"), 2)
         self.assertNotIn("{% url 'clientes:mockup_demo' %}", plantilla)
 
-    def test_semana_pendiente_explica_y_abre_el_checkin_diario(self):
-        """El CTA de Plan debe abrir el check-in, no una portada ambigua."""
+    def test_semana_pendiente_no_secuestra_plan_con_el_checkin_diario(self):
+        """El check-in es una acción de Ahora; Plan sigue explicando dirección."""
         plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
 
-        self.assertIn(
-            'Registra cómo has dormido y tu energía de hoy para que la lectura diaria del plan se ajuste a ti.',
-            plantilla,
-        )
-        self.assertIn('Abrir check-in de hoy →', plantilla)
-        self.assertIn(
-            "{% url 'clientes:dashboard_silencioso_preview' %}?checkin=1",
-            plantilla,
-        )
+        self.assertNotIn('Abrir check-in de hoy', plantilla)
+        self.assertNotIn('?checkin=1', plantilla)
+        self.assertNotIn('Registra cómo has dormido', plantilla)
