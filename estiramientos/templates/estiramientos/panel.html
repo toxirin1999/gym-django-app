@@ -21,7 +21,7 @@
         <div class="mv-hero__scene" aria-hidden="true">
             <img src="{% static 'estiramientos/images/recovery-hero-gym.png' %}" alt="" class="mv-hero__image">
         </div>
-        <p class="mv-hero__eyebrow">Recuperación</p>
+        <p class="mv-hero__eyebrow"><span class="mv-hero__rule" aria-hidden="true"></span>Recuperación</p>
         <h1 id="mvHeroTitle" class="mv-hero__title"><span>Hoy, recuperar</span><span>también cuenta</span></h1>
         <p class="mv-hero__subtitle">Elige cómo quieres moverte.</p>
 
@@ -31,7 +31,7 @@
            class="mv-hero__cta"
            {% if sesion_programada or sesion_hoy %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' primer_plan.id %}"{% endif %}>
             <span class="mv-hero__cta-label">MOVILIDAD GLOBAL · 4 MIN</span>
-            <i class="fas fa-chevron-right" aria-hidden="true"></i>
+            <svg class="mv-hero__cta-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
         {% endwith %}
         {% endif %}
@@ -100,7 +100,12 @@
         <p class="sr-only">01 PREPARACIÓN &amp; MOVILIDAD ACTIVA. Puedes finalizar y guardar en cualquier momento.</p>
         <div class="plans-grid" data-plan-section="movilidad">
             {% for p in planes_movilidad %}
-                {% if p.codigo != "mobility-recovery-global" %}
+                {% if p.codigo == "mobility-hip-ankle" or p.codigo == "mobility-thoracic-shoulder" %}
+                {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
+                {% endif %}
+            {% endfor %}
+            {% for p in planes_movilidad %}
+                {% if p.codigo != "mobility-recovery-global" and p.codigo != "mobility-hip-ankle" and p.codigo != "mobility-thoracic-shoulder" %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
                 {% endif %}
             {% empty %}
@@ -158,23 +163,23 @@
 <nav class="mv-bottom-nav" aria-label="Navegación principal">
     <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-bottom-nav__item is-active" aria-current="page">
         <span class="mv-bottom-nav__dot" aria-hidden="true"></span>
-        <i class="fas fa-house" aria-hidden="true"></i>
+        <svg class="mv-bottom-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M3.5 10.5L12 3l8.5 7.5v9.2a1.3 1.3 0 0 1-1.3 1.3H4.8a1.3 1.3 0 0 1-1.3-1.3z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 21v-6h6v6" stroke="currentColor" stroke-width="1.7"/></svg>
         <span>Ahora</span>
     </a>
     <a href="{% url 'estiramientos:panel' %}" class="mv-bottom-nav__item">
-        <i class="fas fa-dumbbell" aria-hidden="true"></i>
+        <svg class="mv-bottom-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M4 9v6M7 7v10M17 7v10M20 9v6M7 12h10" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <span>Entreno</span>
     </a>
     <a href="{% url 'clientes:trayectoria_plan' %}" class="mv-bottom-nav__item">
-        <i class="fas fa-calendar-days" aria-hidden="true"></i>
+        <svg class="mv-bottom-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="1.5" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <span>Plan</span>
     </a>
     <a href="{% url 'clientes:dashboard_silencioso_preview' %}#memoria" class="mv-bottom-nav__item">
-        <i class="fas fa-chart-simple" aria-hidden="true"></i>
+        <svg class="mv-bottom-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M5 20V11M10 20V4M15 20v-7M20 20V8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         <span>Memoria</span>
     </a>
     <a href="{% url 'clientes:dashboard_silencioso_preview' %}#vida" class="mv-bottom-nav__item">
-        <i class="fas fa-leaf" aria-hidden="true"></i>
+        <svg class="mv-bottom-nav__icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M20 4C12 4 5 7.5 5 14c0 3 2.1 5 5 5 6.5 0 10-7 10-15z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M4 20c3.5-4.5 7-7 12-10" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
         <span>Vida</span>
     </a>
 </nav>

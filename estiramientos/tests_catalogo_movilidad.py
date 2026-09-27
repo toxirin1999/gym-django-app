@@ -189,12 +189,37 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
     def test_navegacion_mantiene_iconos_y_ahora_como_estado_activo(self):
         response = self.client.get(reverse("estiramientos:panel"))
 
-        self.assertContains(response, 'fa-house')
-        self.assertContains(response, 'fa-dumbbell')
+        self.assertContains(response, 'class="mv-bottom-nav__icon"')
         self.assertContains(
             response,
             'class="mv-bottom-nav__item is-active" aria-current="page"',
         )
+
+    def test_la_composicion_editorial_usa_serif_regla_e_iconos_svg_propios(self):
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        content = response.content.decode()
+        self.assertIn('class="mv-hero__rule"', content)
+        self.assertIn('<svg class="mv-hero__cta-icon"', content)
+        self.assertIn('<svg class="plan-chevron"', content)
+        self.assertIn('<svg class="mv-bottom-nav__icon"', content)
+        self.assertNotIn('fas fa-chevron-right', content)
+        self.assertNotIn('fas fa-house', content)
+
+    def test_las_dos_tarjetas_visibles_se_seleccionan_por_codigo_editorial(self):
+        # Un plan alfabéticamente anterior no puede desplazar la pareja
+        # editorial Cadera + Columna que sigue a la CTA principal.
+        extra = self._crear_plan(
+            "Activación aleatoria", "mobility-random-editorial", "COMPLETO",
+        )
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        content = response.content.decode()
+        cadera_at = content.index(f'data-plan-id="{self.cadera.pk}"')
+        columna_at = content.index(f'data-plan-id="{self.columna.pk}"')
+        extra_at = content.index(f'data-plan-id="{extra.pk}"')
+        self.assertLess(cadera_at, columna_at)
+        self.assertLess(columna_at, extra_at)
 
 
 class SeguridadModalidadMovilidadTests(TestCase):
