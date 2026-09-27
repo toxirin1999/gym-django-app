@@ -250,6 +250,22 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertIn('data-plan-icon="hip-ankle"', content)
         self.assertIn('data-plan-icon="thoracic-shoulder"', content)
 
+    def test_tarjetas_destacadas_exponen_copy_e_iconografia_del_pase_final(self):
+        """La portada conserva su lectura editorial sin mutar el catálogo."""
+        self.cadera.descripcion = "Texto técnico de la base de datos."
+        self.cadera.save(update_fields=["descripcion"])
+        self.columna.descripcion = "Otro texto técnico de la base de datos."
+        self.columna.save(update_fields=["descripcion"])
+
+        response = self.client.get(reverse("estiramientos:panel"))
+        content = response.content.decode()
+
+        self.assertIn("Más rango de movimiento, menos rigidez.", content)
+        self.assertIn("Libera tensión y mejora tu postura.", content)
+        self.assertIn('data-plan-icon-detail="hip-ankle"', content)
+        self.assertIn('data-plan-icon-detail="thoracic-shoulder"', content)
+        self.assertIn('class="mv-editorial-close" aria-hidden="true"', content)
+
 
 class SeguridadModalidadMovilidadTests(TestCase):
     HOY = date(2026, 9, 23)
