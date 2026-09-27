@@ -6,6 +6,7 @@ from django.urls import reverse
 from django.utils import timezone
 from unittest.mock import patch
 from types import SimpleNamespace
+from pathlib import Path
 
 from clientes.models import BitacoraDiaria, Cliente
 
@@ -218,6 +219,14 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         self.assertNotContains(response, "Completar check-in")
         self.assertNotContains(response, 'id="quietCheckinDialog"')
+
+    def test_deeplink_checkin_reutiliza_el_modal_y_limpia_la_url(self):
+        """Plan puede abrir el check-in existente sin cambiar su endpoint."""
+        plantilla = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text()
+
+        self.assertIn("new URLSearchParams(window.location.search).get('checkin') === '1'", plantilla)
+        self.assertIn('window.history.replaceState', plantilla)
+        self.assertIn('openDialog();', plantilla)
 
     @patch("clientes.views._get_dashboard_context_data")
     def test_accesos_secundarios_preservan_sesion_pendiente_y_movilidad(

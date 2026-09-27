@@ -314,3 +314,17 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
             3,
         )
         self.assertNotIn("{% url 'clientes:mockup_demo' %}", plantilla)
+
+    def test_semana_pendiente_explica_y_abre_el_checkin_diario(self):
+        """El CTA de Plan debe abrir el check-in, no una portada ambigua."""
+        plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
+
+        self.assertIn(
+            'Registra cómo has dormido y tu energía de hoy para que la lectura diaria del plan se ajuste a ti.',
+            plantilla,
+        )
+        self.assertIn('Abrir check-in de hoy →', plantilla)
+        self.assertIn(
+            "{% url 'clientes:dashboard_silencioso_preview' %}?checkin=1",
+            plantilla,
+        )

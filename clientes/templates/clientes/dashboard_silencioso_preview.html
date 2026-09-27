@@ -59,6 +59,12 @@
       function closeDialog() { dialog.hidden = true; opener.setAttribute('aria-expanded', 'false'); if (lastFocus) lastFocus.focus(); }
       opener.addEventListener('click', openDialog);
       closer.addEventListener('click', closeDialog);
+      if (new URLSearchParams(window.location.search).get('checkin') === '1') {
+        openDialog();
+        var cleanUrl = new URL(window.location.href);
+        cleanUrl.searchParams.delete('checkin');
+        window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
+      }
       document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !dialog.hidden) { event.preventDefault(); closeDialog(); } });
       form.addEventListener('submit', function (event) {
         event.preventDefault(); error.textContent = '';
