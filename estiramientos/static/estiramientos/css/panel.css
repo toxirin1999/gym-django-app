@@ -32,6 +32,43 @@
     padding: 14px 16px 84px;
 }
 
+/* El layout global de la app centra las páginas y les aplica 24 px de
+   padding al <body>. En un iPhone eso convierte este catálogo en una tarjeta
+   estrecha sobre el fondo azul legado. La recuperación es una superficie de
+   pantalla: el margen debe vivir dentro del catálogo, no fuera de él. */
+@media (max-width: 640px) {
+    html:has(.stretch-container),
+    body:has(.stretch-container) {
+        min-height: 100%;
+        background: #06100b !important;
+    }
+
+    body:has(.stretch-container) {
+        display: block !important;
+        width: 100vw;
+        min-width: 0;
+        padding: 0 !important;
+    }
+
+    body:has(.stretch-container) main {
+        width: 100%;
+        min-height: 100svh;
+    }
+
+    .stretch-container {
+        width: 100%;
+        min-height: 100svh;
+        max-width: none;
+        margin: 0;
+        padding: 14px 16px calc(84px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .mv-bottom-nav {
+        width: 100%;
+        max-width: none;
+    }
+}
+
 /* El fondo global (estrellas/atmósfera Blade Runner) queda tapado por el
    negro mate de arriba; aquí solo se oculta el botón flotante de la
    casita, que esta página sustituye por la cabecera estándar. */

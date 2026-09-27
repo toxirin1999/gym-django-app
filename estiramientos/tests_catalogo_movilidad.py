@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from datetime import date
 
 from django.contrib import admin
@@ -205,6 +206,15 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertIn('<svg class="mv-bottom-nav__icon"', content)
         self.assertNotIn('fas fa-chevron-right', content)
         self.assertNotIn('fas fa-house', content)
+
+    def test_el_panel_reserva_el_lienzo_completo_en_moviles(self):
+        """El padding global no puede encoger la superficie de recuperación."""
+        css_path = Path(__file__).resolve().parent / "static/estiramientos/css/panel.css"
+        css = css_path.read_text()
+
+        self.assertIn("body:has(.stretch-container)", css)
+        self.assertIn("padding: 0 !important", css)
+        self.assertIn("width: 100vw", css)
 
     def test_las_dos_tarjetas_visibles_se_seleccionan_por_codigo_editorial(self):
         # Un plan alfabéticamente anterior no puede desplazar la pareja
