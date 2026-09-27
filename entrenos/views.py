@@ -5102,6 +5102,7 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
     contrato ya usado por ``vista_plan_anual`` a lo necesario para una entrada
     compacta: fase, semana, acción de hoy y máximos conocidos.
     """
+    from django.db.models import Q
     from entrenos.models import SesionProgramada
 
     hoy = hoy or timezone.localdate()
@@ -5132,12 +5133,21 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
     fase_actual = fase_actual or (bloques[0] if bloques else {})
 
     inicio_semana = hoy - timedelta(days=hoy.weekday())
+    fin_semana = inicio_semana + timedelta(days=6)
+    # Una sesión aplazada conserva su fecha prescrita para la memoria del plan,
+    # pero la Rutina representa cuándo se puede ejecutar realmente. Al usar la
+    # fecha efectiva evitamos enseñar descanso el día al que fue trasladada.
     sesiones_semana = {
-        sesion.fecha_prevista: sesion
+        (sesion.pospuesta_hasta or sesion.fecha_prevista): sesion
         for sesion in SesionProgramada.objects.filter(
             cliente=cliente,
             estado=SesionProgramada.ESTADO_PENDIENTE,
-            fecha_prevista__range=(inicio_semana, inicio_semana + timedelta(days=6)),
+        ).filter(
+            Q(pospuesta_hasta__range=(inicio_semana, fin_semana))
+            | Q(
+                pospuesta_hasta__isnull=True,
+                fecha_prevista__range=(inicio_semana, fin_semana),
+            )
         )
     }
     semana = []
@@ -5152,11 +5162,7 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
             'tipo': 'sesion' if sesion else 'descanso',
         })
 
-    sesion_hoy = SesionProgramada.objects.filter(
-        cliente=cliente,
-        estado=SesionProgramada.ESTADO_PENDIENTE,
-        fecha_prevista=hoy,
-    ).first()
+    sesion_hoy = sesiones_semana.get(hoy)
     if sesion_hoy:
         hoy_card = {
             'tipo': 'sesion',

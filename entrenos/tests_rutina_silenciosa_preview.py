@@ -12,6 +12,7 @@ from django.test import TestCase
 from django.urls import reverse
 
 from clientes.models import Cliente
+from entrenos.models import SesionProgramada
 
 
 class RutinaSilenciosaPreviewTests(TestCase):
@@ -69,3 +70,45 @@ class RutinaSilenciosaPreviewTests(TestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 404)
+
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(
+        self, planificador, educacion,
+    ):
+        """La fecha efectiva, no la prescrita, decide la Rutina de hoy."""
+        hoy = date(2026, 9, 26)
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 9, 25),
+            pospuesta_hasta=hoy,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Torso pospuesto",
+        )
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [{"nombre": "Descarga", "duracion": 52}],
+        }
+        educacion.side_effect = lambda plan: plan
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+
+        self.assertEqual(contexto["hoy"]["tipo"], "sesion")
+        self.assertEqual(contexto["hoy"]["titulo"], "Torso pospuesto")
+        self.assertIn("sesion_programada_id=", contexto["hoy"]["url"])
+        sabado = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
+        self.assertEqual(sabado["tipo"], "sesion")
+
+    def test_navegacion_global_de_rutina_vuelve_a_la_preview_no_al_calendario(self):
+        """Rutina es una sección global; el calendario queda como acceso interno."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text()
+
+        self.assertIn(
+            "href=\"{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}\"",
+            plantilla,
+        )
