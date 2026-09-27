@@ -5331,6 +5331,12 @@ def rutina_silenciosa_preview(request, cliente_id):
         'cliente': cliente,
         'hoy_fecha': timezone.localdate(),
         'calendario_url': calendario_url,
+        # La preview semanal consume el mismo contrato JSON que el calendario
+        # legado. No serializamos otra versión del plan en esta vista: el JS
+        # pide el mes de la fecha seleccionada a este endpoint canónico.
+        'entrenamientos_mes_url': reverse(
+            'entrenos:ajax_entrenamientos_mes', args=[cliente.id],
+        ),
         'movilidad_url': reverse('estiramientos:panel'),
         'memoria_url': reverse('clientes:memoria_entrenador', args=[cliente.id]),
         'vida_url': reverse('diario:dashboard_diario'),

@@ -23,6 +23,8 @@
   <script>
     (() => {
       const previews = JSON.parse(document.getElementById('routine-day-previews').textContent).map(day => day.preview);
+      const entrenamientosMesUrl = "{{ entrenamientos_mes_url }}";
+      const briefingUrl = "{% url 'entrenos:briefing_entrenamiento' cliente.id %}";
       const modal = document.getElementById('routine-day-modal');
       const title = document.getElementById('routine-day-title');
       const kind = document.getElementById('routine-day-kind');
@@ -31,10 +33,60 @@
       const empty = document.getElementById('routine-day-empty');
       const cta = document.getElementById('routine-day-cta');
       const close = () => modal.close();
-      document.querySelectorAll('[data-modal-close]').forEach(button => button.addEventListener('click', close));
-      modal.addEventListener('click', event => { if (event.target === modal) close(); });
-      document.querySelectorAll('[data-day-preview]').forEach(button => button.addEventListener('click', () => {
-        const preview = previews[Number(button.dataset.dayPreview)];
+
+      function buildLegacyBriefingUrl(entrenamiento, fecha, fallbackUrl) {
+        if (!entrenamiento) return fallbackUrl || '';
+        const params = new URLSearchParams({ fecha });
+        params.set('rutina_nombre', entrenamiento.nombre_rutina || '');
+        const sesionProgramadaId = Number(entrenamiento.sesion_programada_id);
+        if (Number.isInteger(sesionProgramadaId) && sesionProgramadaId > 0) {
+          params.set('sesion_programada_id', String(sesionProgramadaId));
+        }
+        return `${briefingUrl}?${params.toString()}`;
+      }
+
+      function normalizarEjerciciosLegacy(ejercicios) {
+        return (ejercicios || []).map(ejercicio => {
+          const pesoOriginal = ejercicio.peso_recomendado_kg ?? ejercicio.peso_kg;
+          const peso = pesoOriginal === null || pesoOriginal === undefined || pesoOriginal === ''
+            ? null : Number(pesoOriginal);
+          return {
+            nombre: ejercicio.nombre || 'Ejercicio',
+            series: Number(ejercicio.series) || 0,
+            reps: ejercicio.reps_objetivo || ejercicio.repeticiones || ejercicio.reps || '—',
+            peso: Number.isFinite(peso) ? peso : null,
+          };
+        }).filter(ejercicio => ejercicio.series > 0);
+      }
+
+      async function resolverPreviewLegacy(preview) {
+        const fecha = new Date(`${preview.fecha_efectiva}T12:00:00`);
+        const query = new URLSearchParams({
+          año: String(fecha.getFullYear()),
+          mes: String(fecha.getMonth() + 1),
+        });
+        try {
+          const response = await fetch(`${entrenamientosMesUrl}?${query.toString()}`);
+          if (!response.ok) return preview;
+          const data = await response.json();
+          const entrenamientos = data.entrenamientos || {};
+          const entrenamiento = entrenamientos[preview.fecha_efectiva];
+          if (!entrenamiento) return preview;
+          return {
+            tipo: 'sesion',
+            titulo: entrenamiento.nombre_rutina || preview.titulo || 'Sesión programada',
+            fecha_efectiva: preview.fecha_efectiva,
+            ejercicios: normalizarEjerciciosLegacy(entrenamiento.ejercicios),
+            url: buildLegacyBriefingUrl(entrenamiento, preview.fecha_efectiva, preview.url),
+            cta: 'Revisar sesión',
+          };
+        } catch (error) {
+          console.warn('No se pudo actualizar la preview desde el calendario', error);
+          return preview;
+        }
+      }
+
+      function renderPreview(preview) {
         title.textContent = preview.titulo;
         kind.textContent = preview.tipo === 'sesion' ? 'Sesión programada' : 'Recuperación';
         date.textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${preview.fecha_efectiva}T12:00:00`));
@@ -50,6 +102,14 @@
         cta.hidden = isRest; cta.href = preview.url || ''; cta.textContent = preview.cta || 'Revisar sesión';
         modal.showModal();
         modal.querySelector('[data-modal-close]').focus();
+      }
+
+      document.querySelectorAll('[data-modal-close]').forEach(button => button.addEventListener('click', close));
+      modal.addEventListener('click', event => { if (event.target === modal) close(); });
+      document.querySelectorAll('[data-day-preview]').forEach(button => button.addEventListener('click', async () => {
+        const preview = previews[Number(button.dataset.dayPreview)];
+        const previewCanonica = await resolverPreviewLegacy(preview);
+        renderPreview(previewCanonica);
       }));
     })();
   </script>

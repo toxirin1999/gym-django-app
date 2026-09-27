@@ -217,6 +217,33 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('id="routine-day-modal"', plantilla)
         self.assertNotIn('href="{{ calendario_url }}?año={{ dia.fecha.year }}', plantilla)
 
+    def test_selector_consulta_el_contrato_ajax_del_calendario_para_el_dia_elegido(self):
+        """La preview móvil no duplica el plan: lee el mismo JSON del calendario.
+
+        El plan anual legado ya resuelve sesiones materializadas, aplazamientos y
+        la prescripción Helms. Cada pulsación debe sustituir el preview inicial
+        por ``entrenamientos[YYYY-MM-DD]`` de ese contrato y conservar los
+        parámetros que consume el briefing.
+        """
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.client.force_login(self.user)
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            reverse("entrenos:ajax_entrenamientos_mes", args=[self.cliente.id]),
+        )
+        self.assertIn('const entrenamientosMesUrl = "{{ entrenamientos_mes_url }}"', plantilla)
+        self.assertIn("const entrenamiento = entrenamientos[preview.fecha_efectiva];", plantilla)
+        self.assertIn("function buildLegacyBriefingUrl(entrenamiento, fecha, fallbackUrl)", plantilla)
+        self.assertIn("params.set('rutina_nombre', entrenamiento.nombre_rutina || '');", plantilla)
+        self.assertIn("params.set('sesion_programada_id', String(sesionProgramadaId));", plantilla)
+
     def test_navegacion_global_de_rutina_vuelve_a_la_preview_no_al_calendario(self):
         """Rutina es una sección global; el calendario queda como acceso interno."""
         from pathlib import Path
