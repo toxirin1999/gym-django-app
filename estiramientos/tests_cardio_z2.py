@@ -77,6 +77,23 @@ class PanelCardioZ2Tests(TestCase):
         # La tarjeta de movilidad regular conserva su copy de siempre.
         self.assertContains(response, "Iniciar y registrar", count=1)
 
+    def test_panel_expone_la_jerarquia_visual_de_recuperacion(self):
+        """La piel visual no debe convertir el panel en un catálogo opaco.
+
+        Estos ganchos representan la composición de la pantalla: hero
+        atmosférico, acción recomendada, selector y tarjetas que nombran
+        inequívocamente su acción. No dependen de píxeles ni de JavaScript.
+        """
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        self.assertContains(response, 'class="mv-hero__scene"')
+        self.assertContains(response, 'class="mv-hero__cta-label"')
+        self.assertContains(response, 'class="mv-tabs"')
+        self.assertContains(response, 'class="plan-action"')
+        self.assertContains(response, 'class="start-hint start-hint--quiet"')
+        self.assertContains(response, 'class="mv-bottom-nav"')
+        self.assertContains(response, 'aria-current="page"')
+
 
 class SustitucionAutomaticaHoyTests(TestCase):
     HOY = date.today()

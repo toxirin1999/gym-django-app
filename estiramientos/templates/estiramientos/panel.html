@@ -11,13 +11,18 @@
 <div class="stretch-container">
 
     <div class="mv-topbar">
-        <a href="{% url 'clientes:mockup_demo' %}" class="mv-back">← Panel principal</a>
+        <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-back">← Panel principal</a>
     </div>
 
     {% if planes %}
 
     <!-- Hero de recuperación -->
     <section class="mv-hero" aria-labelledby="mvHeroTitle">
+        <div class="mv-hero__scene" aria-hidden="true">
+            <span class="mv-hero__window"></span>
+            <span class="mv-hero__bench"></span>
+            <span class="mv-hero__mat"></span>
+        </div>
         <p class="mv-hero__eyebrow">Recuperación</p>
         <h1 id="mvHeroTitle" class="mv-hero__title">Hoy, recuperar también cuenta</h1>
         <p class="mv-hero__subtitle">Elige cómo quieres moverte.</p>
@@ -25,7 +30,8 @@
         {% if planes_movilidad %}
         {% with primer_plan=planes_movilidad.first %}
         <a href="{% url 'estiramientos:iniciar_plan' primer_plan.id %}" class="mv-hero__cta">
-            <span>{{ primer_plan.nombre|upper }} · {{ primer_plan.duracion_estimada_min|default:0 }} MIN</span>
+            <span class="mv-hero__cta-label">Iniciar recuperación</span>
+            <span class="mv-hero__cta-meta">{{ primer_plan.nombre }} · {{ primer_plan.duracion_estimada_min|default:0 }} min</span>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </a>
         {% endwith %}
@@ -135,7 +141,7 @@
         {% endif %}
     </section>
 
-    <div class="start-hint">
+    <div class="start-hint start-hint--quiet">
         <i class="fas fa-info-circle"></i>
         <span>Los ejercicios avanzan automáticamente. Puedes pausar o saltar en cualquier momento.</span>
     </div>
@@ -149,24 +155,24 @@
 </div>
 
 <nav class="mv-bottom-nav" aria-label="Navegación principal">
-    <a href="{% url 'clientes:mockup_demo' %}" class="mv-bottom-nav__item is-active">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-bottom-nav__item">
         <span class="mv-bottom-nav__dot" aria-hidden="true"></span>
         <i class="fas fa-house" aria-hidden="true"></i>
         <span>Ahora</span>
     </a>
-    <a href="{% url 'clientes:mockup_demo' %}#chapter-entrenamiento" class="mv-bottom-nav__item">
+    <a href="{% url 'estiramientos:panel' %}" class="mv-bottom-nav__item is-active" aria-current="page">
         <i class="fas fa-dumbbell" aria-hidden="true"></i>
         <span>Entreno</span>
     </a>
-    <a href="{% url 'clientes:mockup_demo' %}#chapter-plan" class="mv-bottom-nav__item">
+    <a href="{% url 'clientes:trayectoria_plan' %}" class="mv-bottom-nav__item">
         <i class="fas fa-calendar-days" aria-hidden="true"></i>
         <span>Plan</span>
     </a>
-    <a href="{% url 'clientes:mockup_demo' %}#chapter-memoria" class="mv-bottom-nav__item">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}#memoria" class="mv-bottom-nav__item">
         <i class="fas fa-chart-simple" aria-hidden="true"></i>
         <span>Memoria</span>
     </a>
-    <a href="{% url 'clientes:mockup_demo' %}#chapter-vida" class="mv-bottom-nav__item">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}#vida" class="mv-bottom-nav__item">
         <i class="fas fa-leaf" aria-hidden="true"></i>
         <span>Vida</span>
     </a>
