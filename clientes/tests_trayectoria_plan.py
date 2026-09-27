@@ -304,3 +304,13 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         })
         self.assertNotIn('Una lectura vertical desde la periodización anual', html)
         self.assertNotIn('Qué no puede afirmar esta lectura', html)
+
+    def test_ctas_de_plan_vuelven_al_dashboard_silencioso(self):
+        """Plan conserva una única puerta de vuelta al contexto de hoy."""
+        plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
+
+        self.assertEqual(
+            plantilla.count("{% url 'clientes:dashboard_silencioso_preview' %}"),
+            3,
+        )
+        self.assertNotIn("{% url 'clientes:mockup_demo' %}", plantilla)
