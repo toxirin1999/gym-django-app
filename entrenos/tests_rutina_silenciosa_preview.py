@@ -8,6 +8,7 @@ from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import TestCase
 from django.urls import reverse
 
@@ -137,6 +138,71 @@ class RutinaSilenciosaPreviewTests(TestCase):
         calcular_ejercicios.assert_called_once_with(
             self.cliente.id, date(2026, 9, 25),
         )
+
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_plan_helms_sin_sesion_programada_da_preview_del_dia(
+        self, planificador, educacion,
+    ):
+        """Un hueco de SesionProgramada no convierte un entreno Helms en descanso."""
+        hoy = date(2026, 9, 25)
+        cache.delete(f"plan_anual_{self.cliente.id}_{hoy.year}")
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [{"nombre": "Descarga", "duracion": 52}],
+            "entrenos_por_fecha": {
+                "2026-09-25": {
+                    "nombre_rutina": "Día 5 - Descarga activa",
+                    "ejercicios": [{
+                        "nombre": "Press inclinado", "series": 3,
+                        "repeticiones": "10-15", "peso_kg": 40,
+                    }],
+                },
+            },
+        }
+        educacion.side_effect = lambda plan: plan
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+        viernes = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
+
+        self.assertEqual(viernes["tipo"], "sesion")
+        self.assertEqual(viernes["preview"]["titulo"], "Día 5 - Descarga activa")
+        self.assertEqual(viernes["preview"]["ejercicios"][0]["nombre"], "Press inclinado")
+        self.assertEqual(viernes["preview"]["fecha_efectiva"], "2026-09-25")
+        self.assertIn("?fecha=2026-09-25", viernes["preview"]["url"])
+        self.assertNotIn("sesion_programada_id", viernes["preview"]["url"])
+        self.assertEqual(contexto["hoy"]["tipo"], "sesion")
+
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_sesion_cerrada_no_resucita_desde_plan_helms(
+        self, planificador, educacion,
+    ):
+        """El fallback sólo cubre sesiones no materializadas, nunca historial cerrado."""
+        hoy = date(2026, 9, 25)
+        cache.delete(f"plan_anual_{self.cliente.id}_{hoy.year}")
+        SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=hoy,
+            estado=SesionProgramada.ESTADO_COMPLETADA,
+            nombre_sesion="Sesión ya cerrada",
+        )
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [{"nombre": "Descarga", "duracion": 52}],
+            "entrenos_por_fecha": {
+                hoy.isoformat(): {
+                    "nombre_rutina": "Día 5 - Descarga activa",
+                    "ejercicios": [{"nombre": "Press", "series": 3}],
+                },
+            },
+        }
+        educacion.side_effect = lambda plan: plan
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+        viernes = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
+
+        self.assertEqual(viernes["tipo"], "descanso")
 
     def test_selector_renderiza_dialogo_local_y_no_enlaza_dias_al_calendario(self):
         """El calendario legado es explícito; los días abren una preview local."""

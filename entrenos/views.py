@@ -5137,41 +5137,49 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
     # Una sesión aplazada conserva su fecha prescrita para la memoria del plan,
     # pero la Rutina representa cuándo se puede ejecutar realmente. Al usar la
     # fecha efectiva evitamos enseñar descanso el día al que fue trasladada.
-    sesiones_semana = {
-        (sesion.pospuesta_hasta or sesion.fecha_prevista): sesion
-        for sesion in SesionProgramada.objects.filter(
-            cliente=cliente,
-            estado=SesionProgramada.ESTADO_PENDIENTE,
-        ).filter(
-            Q(pospuesta_hasta__range=(inicio_semana, fin_semana))
-            | Q(
-                pospuesta_hasta__isnull=True,
-                fecha_prevista__range=(inicio_semana, fin_semana),
-            )
-        )
-    }
-    def _preview_sesion(fecha_efectiva, sesion):
-        """Contrato pequeño, serializable y canónico para el selector semanal.
+    sesiones_programadas = list(SesionProgramada.objects.filter(
+        cliente=cliente,
+    ).filter(
+        Q(pospuesta_hasta__range=(inicio_semana, fin_semana))
+        | Q(fecha_prevista__range=(inicio_semana, fin_semana))
+    ).order_by('id'))
 
-        La fecha efectiva decide dónde aparece la tarjeta; los ejercicios se
-        calculan sobre la fecha prescrita. Así una sesión pospuesta no se
-        transforma accidentalmente en el plan de otro día.
-        """
+    sesiones_semana = {}
+    fechas_bloqueadas_por_historial = set()
+    for sesion in sesiones_programadas:
+        fecha_efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
+        if sesion.estado == SesionProgramada.ESTADO_PENDIENTE:
+            # La pendiente tiene prioridad absoluta: es la fuente de verdad
+            # cuando el usuario ha aplazado o se ha materializado la sesión.
+            sesiones_semana[fecha_efectiva] = sesion
+        else:
+            # Una sesión cerrada/cancelada no debe "resucitar" desde el plan
+            # Helms al volver a abrir Rutina. También bloqueamos su fecha
+            # prescrita cuando fue movida, para no duplicarla en ambos días.
+            fechas_bloqueadas_por_historial.add(fecha_efectiva)
+            fechas_bloqueadas_por_historial.add(sesion.fecha_prevista)
+
+    entrenos_plan_por_fecha = {}
+    for fecha_plan, entreno_plan in (plan or {}).get('entrenos_por_fecha', {}).items():
+        if not isinstance(entreno_plan, dict):
+            continue
         try:
-            ejercicios_origen = _calcular_ejercicios_dia(
-                cliente.id, sesion.fecha_prevista,
-            )
-        except Exception:
-            logger.exception(
-                'No se pudo preparar la preview de sesión %s', sesion.pk,
-            )
-            ejercicios_origen = []
+            if isinstance(fecha_plan, datetime):
+                fecha_normalizada = fecha_plan.date()
+            elif isinstance(fecha_plan, date):
+                fecha_normalizada = fecha_plan
+            else:
+                fecha_normalizada = datetime.fromisoformat(str(fecha_plan)).date()
+        except (TypeError, ValueError, AttributeError):
+            continue
+        entrenos_plan_por_fecha[fecha_normalizada] = entreno_plan
 
+    def _normalizar_ejercicios_preview(ejercicios_origen):
         ejercicios = []
         for ejercicio in ejercicios_origen or []:
             try:
                 series = int(ejercicio.get('series') or 0)
-            except (TypeError, ValueError):
+            except (AttributeError, TypeError, ValueError):
                 series = 0
             if not series:
                 continue
@@ -5191,6 +5199,24 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
                 ),
                 'peso': peso,
             })
+        return ejercicios
+
+    def _preview_sesion(fecha_efectiva, sesion):
+        """Contrato pequeño, serializable y canónico para el selector semanal.
+
+        La fecha efectiva decide dónde aparece la tarjeta; los ejercicios se
+        calculan sobre la fecha prescrita. Así una sesión pospuesta no se
+        transforma accidentalmente en el plan de otro día.
+        """
+        try:
+            ejercicios_origen = _calcular_ejercicios_dia(
+                cliente.id, sesion.fecha_prevista,
+            )
+        except Exception:
+            logger.exception(
+                'No se pudo preparar la preview de sesión %s', sesion.pk,
+            )
+            ejercicios_origen = []
 
         briefing_url = '{}?fecha={}&sesion_programada_id={}'.format(
             reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
@@ -5201,8 +5227,24 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
             'titulo': sesion.nombre_sesion or 'Sesión programada',
             'fecha_efectiva': fecha_efectiva.isoformat(),
             'sesion_programada_id': sesion.pk,
-            'ejercicios': ejercicios,
+            'ejercicios': _normalizar_ejercicios_preview(ejercicios_origen),
             'url': briefing_url,
+            'cta': 'Revisar sesión',
+        }
+
+    def _preview_plan(fecha_dia, entreno_plan):
+        """Preview de la prescripción Helms si aún no se creó su sesión materializada."""
+        return {
+            'tipo': 'sesion',
+            'titulo': entreno_plan.get('nombre_rutina') or 'Sesión programada',
+            'fecha_efectiva': fecha_dia.isoformat(),
+            'ejercicios': _normalizar_ejercicios_preview(
+                entreno_plan.get('ejercicios') or [],
+            ),
+            'url': '{}?fecha={}'.format(
+                reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
+                fecha_dia.isoformat(),
+            ),
             'cta': 'Revisar sesión',
         }
 
@@ -5210,29 +5252,34 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
     for offset in range(7):
         fecha_dia = inicio_semana + timedelta(days=offset)
         sesion = sesiones_semana.get(fecha_dia)
-        semana.append({
-            'fecha': fecha_dia,
-            'numero': fecha_dia.day,
-            'es_hoy': fecha_dia == hoy,
-            'tipo': 'sesion' if sesion else 'descanso',
-            'preview': _preview_sesion(fecha_dia, sesion) if sesion else {
+        entreno_plan = entrenos_plan_por_fecha.get(fecha_dia)
+        if sesion:
+            preview = _preview_sesion(fecha_dia, sesion)
+        elif fecha_dia not in fechas_bloqueadas_por_historial and entreno_plan:
+            preview = _preview_plan(fecha_dia, entreno_plan)
+        else:
+            preview = {
                 'tipo': 'descanso',
                 'titulo': 'Día de descanso',
                 'detalle': 'No hay sesión de fuerza programada. Recuperar también forma parte del plan.',
                 'fecha_efectiva': fecha_dia.isoformat(),
                 'ejercicios': [],
-            },
+            }
+        semana.append({
+            'fecha': fecha_dia,
+            'numero': fecha_dia.day,
+            'es_hoy': fecha_dia == hoy,
+            'tipo': preview['tipo'],
+            'preview': preview,
         })
 
-    sesion_hoy = sesiones_semana.get(hoy)
-    if sesion_hoy:
+    preview_hoy = next((dia['preview'] for dia in semana if dia['fecha'] == hoy), None)
+    if preview_hoy and preview_hoy['tipo'] == 'sesion':
         hoy_card = {
             'tipo': 'sesion',
-            'titulo': sesion_hoy.nombre_sesion or 'Sesión programada',
+            'titulo': preview_hoy['titulo'],
             'detalle': 'Tu sesión está preparada. Puedes revisar el briefing antes de empezar.',
-            'url': '{}?sesion_programada_id={}'.format(
-                reverse('entrenos:briefing_entrenamiento', args=[cliente.id]), sesion_hoy.pk,
-            ),
+            'url': preview_hoy['url'],
             'cta': 'Ver mi sesión',
         }
     else:
