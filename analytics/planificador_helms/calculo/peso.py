@@ -82,7 +82,20 @@ class CalculadorPeso:
             return DEFAULTS_1RM['aislamiento']
 
         # 1) 1RM real si existe; si no, default
+        # Nota: maximos_actuales puede venir con claves ya normalizadas
+        # (minusculas) o con el nombre de movimiento tal cual lo devuelve
+        # CalculadoraEjerciciosTabla (p.ej. "Sentadilla", con mayuscula).
+        # El lookup exacto por nombre_normalizado solo cubre el primer
+        # caso; sin este fallback case-insensitive, una clave capitalizada
+        # nunca hace match aqui y el calculo cae silenciosamente al 1RM
+        # generico de DEFAULTS_1RM (muy por encima del real del cliente),
+        # produciendo pesos objetivo absurdos (>100% del 1RM real).
         one_rm_estimado = maximos_actuales.get(nombre_normalizado)
+        if not one_rm_estimado or one_rm_estimado <= 0:
+            for _clave, _valor in maximos_actuales.items():
+                if normalizar_nombre(_clave) == nombre_normalizado:
+                    one_rm_estimado = _valor
+                    break
         if not one_rm_estimado or one_rm_estimado <= 0:
             one_rm_estimado = _default_one_rm(nombre_normalizado)
 

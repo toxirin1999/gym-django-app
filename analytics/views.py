@@ -1061,11 +1061,26 @@ def explicacion_plan_helms(request):
                     rango_reps=bloque_actual_info.get('rep_range', ''),
                 )
 
-            elif fase_activa_bd.nombre_fase != nombre_fase_actual:
-                # Caso 2: Cambio de fase — cerrar la anterior y abrir la nueva
+            elif (fase_activa_bd.nombre_fase != nombre_fase_actual
+                  or fase_activa_bd.fecha_inicio != bloque_actual_info['fecha_inicio']):
+                # Caso 2: Cambio de fase — cerrar la anterior y abrir la nueva.
+                # Ojo: varios bloques del año comparten el mismo nombre (p.ej.
+                # 'Descarga Activa' se repite tras cada bloque). Comparar solo
+                # por nombre hacia una NUEVA ocurrencia con el mismo nombre no
+                # se detectaba como cambio de fase, así que el registro seguia
+                # 'activo' durante meses y 'semanas_completadas' terminaba
+                # reflejando el tiempo real transcurrido (p.ej. 26 semanas) en
+                # vez de la duracion real del bloque (1 semana). Comparar
+                # tambien por fecha_inicio detecta la nueva ocurrencia aunque
+                # comparta nombre con una anterior.
                 fase_activa_bd.marcar_como_completada(maximos)
                 fase_activa_bd.fecha_fin = hoy - timedelta(days=1)
-                fase_activa_bd.semanas_completadas = (hoy - fase_activa_bd.fecha_inicio).days // 7
+                # Duracion real de la fase que se cierra: se usa la duracion
+                # PLANIFICADA del bloque, no los dias de calendario transcurridos
+                # desde fecha_inicio. Con el bug de deteccion por nombre (arriba)
+                # una fase podia quedar 'activa' durante meses antes de cerrarse,
+                # inflando este numero muy por encima de su duracion real.
+                fase_activa_bd.semanas_completadas = fase_activa_bd.semanas_planificadas
                 fase_activa_bd.save()
 
                 HistorialFase.objects.create(
