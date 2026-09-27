@@ -89,6 +89,7 @@ class StretchPlayer {
             currentStep: $('currentStep'),
             totalSteps: $('totalSteps'),
             globalProgress: $('globalProgress'),
+            progressSegments: document.querySelector('[data-progress-segments]'),
             exerciseImage: $('exerciseImage'),
             noImagePlaceholder: $('noImagePlaceholder'),
             placeholderText: $('placeholderText'),
@@ -260,6 +261,7 @@ class StretchPlayer {
             if (this.elements.globalProgress) {
                 this.elements.globalProgress.style.width = `${progressPercent}%`;
             }
+            this.renderProgressSegments();
             if (this.elements.currentStep) {
                 this.elements.currentStep.textContent = this.state.currentIndex + 1;
             }
@@ -515,6 +517,24 @@ class StretchPlayer {
         this.render();
         this.start();
         this.showToast('Sesión reiniciada', 'success');
+    }
+
+    renderProgressSegments() {
+        const container = this.elements.progressSegments;
+        if (!container) return;
+        if (container.children.length !== this.totalSteps) {
+            container.replaceChildren(...this.steps.map((_, index) => {
+                const segment = document.createElement('span');
+                segment.className = 'player-progress-segment';
+                segment.setAttribute('aria-hidden', 'true');
+                if (index === 0) segment.classList.add('is-active');
+                return segment;
+            }));
+        }
+        Array.from(container.children).forEach((segment, index) => {
+            segment.classList.toggle('is-complete', index < this.state.currentIndex);
+            segment.classList.toggle('is-active', index === this.state.currentIndex);
+        });
     }
 
     finishEarly() {

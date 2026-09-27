@@ -8,7 +8,7 @@
 {% endblock %}
 
 {% block content %}
-<div class="player-container" data-steps='{{ steps|safe }}' data-transition="{{ transition }}"
+<div class="player-container player-container--immersive" data-steps='{{ steps|safe }}' data-transition="{{ transition }}"
     data-plan-id="{{ plan.id }}"
     data-modalidad="{{ plan.modalidad }}"
     data-sesion-programada-id="{{ sesion_programada.id|default:'' }}"
@@ -16,79 +16,60 @@
     data-fecha-destino="{{ fecha_destino }}"
     data-completion-url="{% url 'estiramientos:completar_plan' plan.id %}">
 
-    <div class="player-topbar">
-        <a href="{% url 'estiramientos:panel' %}" class="player-exit">✕ Salir</a>
-    </div>
+    <header class="player-topline">
+        <a href="{% url 'estiramientos:panel' %}" class="player-exit" aria-label="Salir de la sesión">
+            <span aria-hidden="true">×</span> Salir
+        </a>
+        <p class="player-plan-name">{{ plan.nombre }}</p>
+        <p class="player-progress-text"><span id="currentStep">1</span> / <span id="totalSteps">{{ total_steps }}</span></p>
+    </header>
 
-    <!-- Header -->
-    <div class="player-header">
-        <div class="player-title">
-            <i class="fas fa-spa"></i>
-            {{ plan.nombre }}
-        </div>
-        <div class="player-progress-text">
-            <span id="currentStep">1</span> / <span id="totalSteps">{{ total_steps }}</span>
-        </div>
-    </div>
+    <div class="player-progress-segments" data-progress-segments aria-label="Progreso de la sesión"></div>
+    <div class="global-progress" aria-hidden="true"><div class="global-progress-bar" id="globalProgress" style="width: 0%"></div></div>
 
-    <!-- Barra de progreso global -->
-    <div class="global-progress">
-        <div class="global-progress-bar" id="globalProgress" style="width: 0%"></div>
-    </div>
-
-    <!-- Imagen del ejercicio -->
-    <div class="exercise-image-container max-h-[32vh]">
-        <img id="exerciseImage" class="exercise-image" src="" alt="" loading="lazy">
-        <div id="noImagePlaceholder" class="no-image-placeholder">
-            <i class="fas fa-child"></i>
-            <span id="placeholderText">Prepárate</span>
-        </div>
-
-        <!-- Pantalla de transición -->
-        <div id="transitionScreen" class="transition-screen">
-            <div class="transition-text">Siguiente ejercicio</div>
-            <div id="transitionNextName" class="transition-next-name"></div>
-        </div>
-
-        <!-- Timer unificado: anillo de progreso con el tiempo en el centro -->
-        <div class="timer-overlay">
-            <div class="timer-ring bg-zinc-950/85 backdrop-blur-sm rounded-full p-2">
-                <svg class="progress-ring" width="160" height="160">
-                    <circle class="progress-ring-bg" cx="80" cy="80" r="70" />
-                    <circle id="progressRing" class="progress-ring-fill" cx="80" cy="80" r="70" stroke-dasharray="440"
-                        stroke-dashoffset="0" />
+    <main class="player-main-content">
+        <section class="exercise-stage" aria-live="polite">
+            <img id="exerciseImage" class="exercise-image" src="" alt="" loading="eager">
+            <div id="noImagePlaceholder" class="no-image-placeholder">
+                <svg viewBox="0 0 240 240" aria-hidden="true" class="fallback-motion-mark">
+                    <path d="M126 35c12 7 15 20 7 29-10 11-29 6-31-9-1-10 8-23 24-20Zm-24 47c20-11 48-3 58 16l18 38 35-23M113 89l-19 50-39 31m52-15 38 20 18 42m-70-77 31 13" />
+                    <path class="fallback-motion-arc" d="M177 78c31 28 35 69 11 102" />
                 </svg>
-                <div class="timer-display">
-                    <div id="timerSeconds" class="timer-seconds">30</div>
-                    <div id="timerLabel" class="timer-label">{% if plan.modalidad == 'movilidad' %}Moviéndote{% else %}Estirando{% endif %}</div>
+                <span id="placeholderText">Encuentra una postura cómoda</span>
+            </div>
+            <div id="transitionScreen" class="transition-screen">
+                <div class="transition-text">Siguiente ejercicio</div>
+                <div id="transitionNextName" class="transition-next-name"></div>
+            </div>
+            <div class="timer-overlay">
+                <div class="timer-ring">
+                    <svg class="progress-ring" viewBox="0 0 160 160" aria-hidden="true">
+                        <circle class="progress-ring-bg" cx="80" cy="80" r="70" />
+                        <circle id="progressRing" class="progress-ring-fill" cx="80" cy="80" r="70" stroke-dasharray="440" stroke-dashoffset="0" />
+                    </svg>
+                    <div class="timer-display">
+                        <div id="timerSeconds" class="timer-seconds">30</div>
+                        <div id="timerLabel" class="timer-label">Respira</div>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </section>
 
-    <!-- Info del ejercicio -->
-    <div class="exercise-info">
-        <div id="exerciseName" class="exercise-name">Cargando...</div>
-        <div id="exerciseMuscle" class="exercise-muscle">
-            <i class="fas fa-bullseye"></i>
-            <span>-</span>
-        </div>
-        <div id="exerciseDescription" class="exercise-description">
-            Preparando ejercicio...
-        </div>
-    </div>
+        <section class="exercise-info">
+            <div id="exerciseName" class="exercise-name">Cargando...</div>
+            <div id="exerciseMuscle" class="exercise-muscle"><span>-</span></div>
+            <div id="exerciseDescription" class="exercise-description">Preparando ejercicio...</div>
+        </section>
 
-    <!-- Siguiente ejercicio -->
-    <div class="next-exercise">
-        <i class="fas fa-forward"></i>
-        <div>
-            <div class="next-exercise-label">Siguiente</div>
-            <div id="nextExerciseName" class="next-exercise-name">-</div>
-        </div>
-    </div>
+        <section class="next-exercise" aria-label="Siguiente ejercicio">
+            <svg class="next-exercise-icon" viewBox="0 0 96 64" fill="none" aria-hidden="true"><path d="M13 46h17l9-18 16 5 6 15h22"/><path d="M43 24l3-11 9-3 7 6"/></svg>
+            <div class="next-exercise-copy"><div class="next-exercise-label">Siguiente</div><div id="nextExerciseName" class="next-exercise-name">-</div></div>
+            <svg class="next-exercise-arrow" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </section>
+    </main>
 
-    <!-- Controles principales -->
-    <div class="player-controls">
+    <footer class="player-footer">
+    <div class="player-controls" aria-label="Controles de la sesión">
         <div class="control-item">
             <button id="btnRestart" class="control-btn-small" type="button" aria-label="Reiniciar ejercicio (R)">
                 <svg class="w-5 h-5 text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -115,8 +96,8 @@
             <span class="control-label">Saltar</span>
         </div>
     </div>
-
     {% if plan.modalidad == 'movilidad' %}<button id="btnFinishEarly" type="button" class="finish-early-btn" data-secondary-action>Finalizar y registrar hasta aquí</button>{% endif %}
+    </footer>
 </div>
 
 <!-- Overlay de completado -->

@@ -302,6 +302,98 @@ html, body { background: #09090b !important; }
 }
 
 /* =====================================================
+   PLAYER INMERSIVO DE MOVILIDAD
+   La vista activa se lee como una guía de movimiento continua: escena,
+   tiempo, instrucción y siguiente paso. Estas reglas se limitan al
+   modificador para conservar el overlay de finalización histórico.
+   ===================================================== */
+.player-container--immersive {
+    --player-mint: #4ce5ac;
+    --player-ink: #f6f2e9;
+    --player-line: rgba(123, 182, 148, .34);
+    position: relative;
+    max-width: 620px;
+    min-height: 100dvh;
+    height: auto;
+    padding: 28px 22px 22px;
+    justify-content: flex-start;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 88% 16%, rgba(66, 142, 94, .16), transparent 25%),
+        linear-gradient(160deg, #08180f 0%, #030a06 58%, #06140c 100%);
+}
+.player-container--immersive::before {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(180deg, rgba(0,0,0,.06), transparent 32%, rgba(0,0,0,.3));
+}
+.player-container--immersive > * { position: relative; z-index: 1; }
+.player-container--immersive .player-topline {
+    display: grid; grid-template-columns: 1fr minmax(0, 1.7fr) 1fr;
+    align-items: center; gap: 8px; margin: 0 0 22px;
+}
+.player-container--immersive .player-exit {
+    padding: 0; margin: 0; color: var(--player-ink) !important;
+    font-size: 12px; letter-spacing: .17em; font-weight: 700;
+}
+.player-container--immersive .player-exit span { font-size: 28px; font-weight: 300; line-height: .5; }
+.player-container--immersive .player-plan-name,
+.player-container--immersive .player-progress-text {
+    margin: 0; color: #e8eee9 !important; font-size: 12px; font-weight: 700;
+    letter-spacing: .25em; text-transform: uppercase; white-space: nowrap;
+}
+.player-container--immersive .player-plan-name { overflow: hidden; text-overflow: ellipsis; text-align: center; }
+.player-container--immersive .player-progress-text { text-align: right; letter-spacing: .08em; font-size: 15px; }
+.player-container--immersive .player-progress-text span { color: var(--player-ink); }
+.player-progress-segments { display: grid; grid-template-columns: repeat(var(--segment-count, 5), 1fr); gap: 8px; margin-bottom: 20px; }
+.player-progress-segments span { display:block; height: 7px; border-radius: 99px; background: rgba(155, 189, 169, .34); }
+.player-progress-segments span.is-active, .player-progress-segments span.is-complete { background: var(--player-mint); box-shadow: 0 0 12px rgba(76,229,172,.35); }
+.player-container--immersive .global-progress { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
+.player-container--immersive .player-main-content { display: flex; flex-direction: column; }
+.player-container--immersive .exercise-stage {
+    position: relative; min-height: clamp(270px, 46vh, 430px); overflow: visible;
+    border: 1px solid rgba(107, 166, 132, .28); border-radius: 10px;
+    background: radial-gradient(circle at 48% 34%, rgba(70, 165, 105, .2), transparent 41%), #07130c;
+}
+.player-container--immersive .exercise-stage::after {
+    content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+    background: linear-gradient(90deg, rgba(3,13,8,.25), transparent 40%), linear-gradient(0deg, #06130b 0%, transparent 38%);
+}
+.player-container--immersive .exercise-image { display: none; width:100%; height:100%; object-fit:cover; filter: saturate(.82) contrast(1.08) brightness(.8); }
+.player-container--immersive .exercise-image.visible { display:block; }
+.player-container--immersive .no-image-placeholder { background: radial-gradient(circle at 50% 35%, rgba(69, 176, 110,.19), transparent 42%); }
+.player-container--immersive .fallback-motion-mark { width: 62%; max-width:250px; height:auto; fill:none; stroke:#bde4cb; stroke-width:1.15; stroke-linecap:round; stroke-linejoin:round; opacity:.9; }
+.player-container--immersive .fallback-motion-arc { stroke:var(--player-mint); stroke-dasharray:5 7; stroke-width:1.5; }
+.player-container--immersive .no-image-placeholder span { margin-top: 12px; color:rgba(230,243,234,.68); letter-spacing:.08em; text-transform:uppercase; font-size:10px; }
+.player-container--immersive .transition-screen { z-index:3; background:rgba(2,12,7,.91); }
+.player-container--immersive .timer-overlay { z-index:4; bottom:-86px; padding:0; background:none; }
+.player-container--immersive .timer-ring { width:172px; height:172px; border-radius:50%; background:rgba(3,14,8,.88); box-shadow:0 15px 38px rgba(0,0,0,.42); }
+.player-container--immersive .progress-ring { width:172px; height:172px; }
+.player-container--immersive .progress-ring-bg { stroke:rgba(116, 161, 136, .32); stroke-width:7; }
+.player-container--immersive .progress-ring-fill { stroke:var(--player-mint); stroke-width:7; filter:drop-shadow(0 0 6px rgba(76,229,172,.35)); }
+.player-container--immersive .timer-seconds { color:var(--player-ink); font-family:Georgia, 'Times New Roman', serif; font-size:3rem; font-weight:500; text-shadow:none; }
+.player-container--immersive .timer-label { color:var(--player-mint); font-size:11px; font-weight:800; letter-spacing:.28em; }
+.player-container--immersive .exercise-info { margin: 110px 0 20px; padding:0; background:none; border:0; text-align:center; }
+.player-container--immersive .exercise-name { color:var(--player-ink); font-family:Georgia, 'Times New Roman', serif; font-size:clamp(28px, 7vw, 39px); font-weight:500; line-height:1.05; letter-spacing:-.04em; }
+.player-container--immersive .exercise-muscle { margin: 17px 0 14px; padding:8px 18px; border-color:rgba(128,188,150,.38); background:rgba(38,85,57,.38); color:#e6eee8; font-size:10px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+.player-container--immersive .exercise-description { max-width:500px; margin:0 auto; padding:0; background:none; border:0; color:#ced9d1; font-size:16px; line-height:1.45; }
+.player-container--immersive .next-exercise { min-height:94px; margin:0 0 26px; padding:12px 18px; border-color:var(--player-line); border-radius:13px; background:rgba(8,31,18,.62); }
+.player-container--immersive .next-exercise-icon { width:86px; height:58px; flex:0 0 auto; stroke:#d0e5d7; stroke-width:1.25; stroke-linecap:round; stroke-linejoin:round; opacity:.9; }
+.player-container--immersive .next-exercise-copy { padding-left:16px; border-left:1px solid rgba(148,194,165,.27); }
+.player-container--immersive .next-exercise-label { color:#b5c6bb; font-size:10px; font-weight:800; letter-spacing:.2em; text-transform:uppercase; }
+.player-container--immersive .next-exercise-name { margin-top:5px; color:var(--player-ink); font-family:Georgia, 'Times New Roman', serif; font-size:19px; line-height:1.15; }
+.player-container--immersive .next-exercise-arrow { width:22px; margin-left:auto; stroke:#dbe8df; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+.player-container--immersive .player-footer { margin-top:auto; padding-top:4px; }
+.player-container--immersive .player-controls { display:grid; grid-template-columns:1fr 1fr 1fr; align-items:start; gap:12px; margin:0; padding:0; background:none; border:0; }
+.player-container--immersive .control-item { gap:10px; }
+.player-container--immersive .control-btn-small, .player-container--immersive .control-btn-main { display:grid; place-items:center; margin:0; border-radius:50%; }
+.player-container--immersive .control-btn-small { width:72px; height:72px; background:rgba(8,27,16,.72); border:1px solid rgba(129,185,150,.35); color:var(--player-ink); }
+.player-container--immersive .control-btn-main { width:94px; height:94px; background:var(--player-mint); border:0; color:#062116; box-shadow:0 10px 26px rgba(76,229,172,.18); }
+.player-container--immersive .control-btn-small svg { width:30px; height:30px; }.player-container--immersive .control-btn-main svg { width:38px; height:38px; }
+.player-container--immersive .control-label { color:var(--player-ink); font-size:10px; font-weight:800; letter-spacing:.19em; text-transform:uppercase; }
+.player-container--immersive .finish-early-btn { margin:24px auto 0; color:var(--player-mint); border-bottom:1px solid var(--player-mint); border-radius:0; font-size:15px; padding:0 0 3px; }
+@media (max-width: 390px) { .player-container--immersive { padding:20px 16px 18px; } .player-container--immersive .player-plan-name { font-size:10px; } .player-container--immersive .exercise-stage { min-height:245px; } .player-container--immersive .timer-ring,.player-container--immersive .progress-ring { width:154px;height:154px; } .player-container--immersive .timer-overlay{bottom:-77px;} .player-container--immersive .exercise-info{margin-top:97px;} .player-container--immersive .next-exercise-name{font-size:17px;} .player-container--immersive .control-btn-small{width:64px;height:64px;} .player-container--immersive .control-btn-main{width:84px;height:84px;} }
+
+/* =====================================================
    INFO DEL EJERCICIO
    ===================================================== */
 .exercise-info {
@@ -955,3 +1047,5 @@ html, body { background: #09090b !important; }
     border-color: var(--color-success);
     outline: 2px solid rgba(52, 211, 153, 0.2);
 }
+
+/* =====================================================

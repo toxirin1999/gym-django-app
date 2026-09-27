@@ -267,6 +267,54 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertIn('class="mv-editorial-close" aria-hidden="true"', content)
 
 
+class PlayerMovilidadInmersivoTests(TestCase):
+    """Contrato de composición del reproductor guiado de movilidad."""
+
+    def setUp(self):
+        self.plan = EstiramientoPlan.objects.create(
+            nombre="Movilidad global",
+            codigo="mobility-recovery-global-player",
+            modalidad="movilidad",
+            fase="COMPLETO",
+        )
+        primero = EstiramientoEjercicio.objects.create(
+            nombre="Respiración 90/90 con alcance",
+            musculo_objetivo="Respiración · caja torácica",
+            descripcion_corta="Inhala por la nariz. Expande espalda y costillas.",
+        )
+        segundo = EstiramientoEjercicio.objects.create(nombre="Gato-vaca segmentado")
+        EstiramientoPaso.objects.create(
+            plan=self.plan, ejercicio=primero, orden=1, duracion_segundos=36,
+        )
+        EstiramientoPaso.objects.create(
+            plan=self.plan, ejercicio=segundo, orden=2, duracion_segundos=40,
+        )
+
+    def test_player_expone_la_composicion_inmersiva_y_los_controles_reales(self):
+        response = self.client.get(
+            reverse("estiramientos:iniciar_plan", args=[self.plan.pk]),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn('class="player-container player-container--immersive"', content)
+        self.assertIn('class="player-progress-segments"', content)
+        self.assertIn('data-progress-segments', content)
+        self.assertIn('class="exercise-stage"', content)
+        self.assertIn('id="exerciseImage"', content)
+        self.assertIn('id="noImagePlaceholder"', content)
+        self.assertIn('class="timer-overlay"', content)
+        self.assertIn('id="timerSeconds"', content)
+        self.assertIn('class="exercise-name"', content)
+        self.assertIn('class="next-exercise"', content)
+        self.assertIn('id="nextExerciseName"', content)
+        self.assertIn('id="btnRestart"', content)
+        self.assertIn('id="btnPause"', content)
+        self.assertIn('id="btnSkip"', content)
+        self.assertIn('id="btnFinishEarly"', content)
+        self.assertNotIn('class="player-header"', content)
+
+
 class SeguridadModalidadMovilidadTests(TestCase):
     HOY = date(2026, 9, 23)
 
