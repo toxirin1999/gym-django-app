@@ -202,6 +202,21 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         self.assertNotIn('https://', html)
         self.assertNotIn('http://', html)
 
+    def test_plan_presenta_lectura_jerarquica_y_archivo_colapsable(self):
+        self.client.force_login(self.user)
+        with patch(
+            'entrenos.services.trayectoria_plan_service._generar_plan_helms',
+            return_value=PLAN_HELMS,
+        ):
+            response = self.client.get(reverse('clientes:trayectoria_plan'))
+        html = response.content.decode()
+        self.assertIn('tp-hero', html)
+        self.assertIn('Esta semana', html)
+        self.assertIn('Próximo hito', html)
+        self.assertIn('tp-archive', html)
+        self.assertLess(html.index('tp-hero'), html.index('Esta semana'))
+        self.assertLess(html.index('Esta semana'), html.index('Próximo hito'))
+
     def test_dashboard_ofrece_dos_accesos_a_trayectoria(self):
         plantilla = Path('clientes/templates/clientes/mockup_demo.html').read_text()
         self.assertEqual(plantilla.count("{% url 'clientes:trayectoria_plan' %}"), 2)

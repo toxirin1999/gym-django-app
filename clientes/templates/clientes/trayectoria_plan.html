@@ -3,177 +3,22 @@
 <html lang="es">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Trayectoria del plan</title>
-  <link rel="stylesheet" href="{% static 'css/jds.css' %}">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030604">
+  <title>Plan · {{ cliente.nombre|default:"Entrenamiento" }}</title>
   <style>
-    :root { color-scheme: dark; }
-    * { box-sizing: border-box; }
-    body.tp-page { margin: 0; background: #05080b; color: #f2f3f5; font-family: Arial, sans-serif; }
-    .tp-shell { width: min(100%, 720px); margin: 0 auto; padding: 18px 18px 64px; }
-    .tp-back, .tp-action { min-height: 44px; display: inline-flex; align-items: center; color: #72ddff; text-decoration: none; font: 700 11px/1 monospace; letter-spacing: .12em; text-transform: uppercase; }
-    .tp-kicker { margin: 34px 0 10px; color: #72ddff; font: 700 10px/1 monospace; letter-spacing: .18em; text-transform: uppercase; }
-    .tp-title { margin: 0; max-width: 12ch; font: 700 clamp(38px, 11vw, 72px)/.92 Arial, sans-serif; letter-spacing: -.055em; text-transform: uppercase; }
-    .tp-macro { margin: 20px 0 32px; }
-    .tp-macro-label { margin: 0 0 10px; color: #7f8992; font: 700 10px/1 monospace; letter-spacing: .12em; text-transform: uppercase; }
-    .tp-macro-track { display: flex; align-items: stretch; gap: 6px; overflow-x: auto; padding-bottom: 10px; -webkit-overflow-scrolling: touch; }
-    .tp-macro-chip { flex: 0 0 auto; min-width: 108px; border: 1px solid #273039; background: #0d1115; border-radius: 10px; padding: 10px 12px; }
-    .tp-macro-chip--completada { border-color: #26543e; background: #0c1712; }
-    .tp-macro-chip--actual { border: 2px solid #10b981; background: #0d1a15; box-shadow: 0 0 0 1px rgba(16,185,129,.35), 0 0 14px rgba(16,185,129,.25); }
-    .tp-macro-badge { display: inline-block; margin-bottom: 4px; padding: 1px 6px; border-radius: 99px; background: rgba(16,185,129,.18); color: #10b981; font: 700 8px/1.4 monospace; letter-spacing: .08em; text-transform: uppercase; }
-    .tp-macro-chip--pendiente { opacity: .55; }
-    .tp-macro-chip--descarga { min-width: 74px; padding: 10px 8px; opacity: .7; }
-    .tp-macro-chip-nombre { display: block; font-size: 11px; font-weight: 700; color: #f2f3f5; line-height: 1.25; }
-    .tp-macro-chip-sem { display: block; margin-top: 4px; color: #7f8992; font: 9px/1.3 monospace; letter-spacing: .05em; text-transform: uppercase; }
-    .tp-macro-chip--completada .tp-macro-chip-sem { color: #53d88b; }
-    .tp-macro-chip--actual .tp-macro-chip-sem { color: #10b981; }
-    .tp-macro-arrow { flex: 0 0 auto; display: flex; align-items: center; color: #384049; font-size: 12px; }
-    .tp-timeline { position: relative; margin-left: 7px; padding-left: 29px; }
-    .tp-timeline::before { content: ""; position: absolute; inset: 7px auto 0 5px; width: 1px; background: linear-gradient(#72ddff, #ba8cff 48%, #d1a732 78%, transparent); }
-    .tp-node { position: relative; margin-bottom: 16px; border: 1px solid #273039; background: #0d1115; padding: 18px; overflow-wrap: anywhere; }
-    .tp-node::before { content: ""; position: absolute; left: -29px; top: 22px; width: 11px; height: 11px; border: 2px solid #05080b; border-radius: 50%; background: var(--tp-accent, #72ddff); box-shadow: 0 0 0 1px var(--tp-accent, #72ddff); }
-    .tp-node--phase { --tp-accent: #72ddff; }
-    .tp-node--block { --tp-accent: #ba8cff; }
-    .tp-node--week { --tp-accent: #d1a732; }
-    .tp-node--milestone { --tp-accent: #53d88b; border-color: #26543e; }
-    .tp-node--next { --tp-accent: #7f8992; border-style: dashed; }
-    .tp-label { color: var(--tp-accent, #72ddff); font: 700 9px/1.3 monospace; letter-spacing: .15em; text-transform: uppercase; }
-    .tp-heading { margin: 8px 0 5px; font-size: 21px; line-height: 1.15; }
-    .tp-meta { margin: 0; color: #7f8992; font: 10px/1.55 monospace; letter-spacing: .05em; text-transform: uppercase; }
-    .tp-objective { margin: 13px 0 0; color: #cbd0d5; font-size: 14px; line-height: 1.55; }
-    .tp-sessions { display: grid; gap: 8px; margin-top: 16px; }
-    .tp-session { min-height: 58px; display: grid; grid-template-columns: 42px 1fr; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid #252c32; }
-    .tp-date { color: #f2f3f5; font: 700 18px/1 monospace; text-align: center; }
-    .tp-date small { display: block; margin-top: 5px; color: #7f8992; font-size: 8px; letter-spacing: .1em; }
-    .tp-session-name { font-size: 14px; font-weight: 700; }
-    .tp-status { margin-top: 5px; color: #8d969e; font: 9px/1.4 monospace; letter-spacing: .08em; text-transform: uppercase; }
-    .tp-shift { color: #d1a732; }
-    .tp-done { color: #53d88b; }
-    .tp-empty { color: #7f8992; font-size: 13px; line-height: 1.5; }
-    .tp-historial { margin: 24px 0 0 36px; border-top: 1px solid #252c32; color: #7f8992; }
-    .tp-historial summary { min-height: 44px; display: flex; align-items: center; cursor: pointer; font: 700 10px/1 monospace; letter-spacing: .1em; text-transform: uppercase; }
-    .tp-historial ul { margin: 0; padding: 4px 0 14px; list-style: none; }
-    .tp-historial li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid #1a2026; font-size: 12px; }
-    .tp-historial li:first-child { border-top: none; }
-    .tp-historial-nombre { color: #cbd0d5; }
-    .tp-historial-fechas { color: #7f8992; font: 10px/1.4 monospace; letter-spacing: .04em; text-transform: uppercase; white-space: nowrap; }
-    @media (min-width: 640px) {
-      .tp-shell { padding-top: 30px; }
-      .tp-node { padding: 22px 24px; }
-      .tp-timeline { padding-left: 38px; }
-      .tp-node::before { left: -38px; }
-    }
+    :root{--ink:#030604;--paper:#f4f0e9;--line:#21332b;--green:#42e4a0;--blue:#54caff;--amber:#f7bf54;--tap-target:44px}*{box-sizing:border-box}html{background:var(--ink)}body{min-height:100vh;margin:0;background:radial-gradient(110% 32% at 54% -5%,#11271c 0%,transparent 58%),var(--ink);color:var(--paper);font-family:ui-rounded,"Avenir Next",Avenir,"Segoe UI",sans-serif}body:before{content:"";position:fixed;inset:0;z-index:5;opacity:.1;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:4px 4px}.tp-shell{position:relative;width:min(100%,430px);min-height:100vh;margin:0 auto;padding:calc(17px + env(safe-area-inset-top)) 17px calc(104px + env(safe-area-inset-bottom))}.tp-mono,.tp-label,.tp-meta,.tp-session-status,.tp-macro-meta{font-family:"SF Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-weight:700;letter-spacing:.16em;text-transform:uppercase}.tp-top{display:flex;align-items:center;justify-content:space-between;margin:0 0 16px;padding:0 9px}.tp-back{min-height:30px;color:#b7deef;font-size:9px;line-height:30px;text-decoration:none;border-bottom:1px solid transparent}.tp-back:hover,.tp-back:focus-visible{color:var(--green);border-color:var(--green);outline:none}.tp-date{margin:0;color:#929d9b;font-size:7px;line-height:1.5}.tp-hero{position:relative;overflow:hidden;isolation:isolate;min-height:260px;padding:25px 19px 20px;border:1px solid #2c3e35;border-radius:14px;background:radial-gradient(circle at 90% 78%,rgba(66,228,160,.13),transparent 27%),linear-gradient(135deg,#0b1710,#070b09 72%);box-shadow:inset 0 1px rgba(255,255,255,.025)}.tp-hero:after{content:"";position:absolute;z-index:-1;right:-62px;bottom:-93px;width:252px;height:252px;border:1px solid rgba(135,198,161,.18);border-radius:50%;box-shadow:0 0 0 24px rgba(135,198,161,.035),0 0 0 49px rgba(135,198,161,.025)}.tp-label{display:block;color:var(--green);font-size:8px;line-height:1.25}.tp-title{max-width:10ch;margin:13px 0 9px;font-size:39px;font-weight:900;letter-spacing:-.072em;line-height:.92;text-transform:uppercase}.tp-objective{max-width:260px;margin:0;color:#e4e6df;font-size:15px;line-height:1.32}.tp-phase-meta{margin:11px 0 0;color:#9eaaa4;font-size:9px;line-height:1.45}.tp-hero-action{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:17px;padding:0 15px;border:1.5px solid var(--green);border-radius:999px;color:var(--green);font:800 10px/1 "SF Mono",SFMono-Regular,monospace;letter-spacing:.12em;text-decoration:none;text-transform:uppercase;transition:.18s}.tp-hero-action:hover,.tp-hero-action:focus-visible{color:#041009;background:var(--green);outline:none}.tp-cue{margin:10px 0 0;color:#b8d6e5;font-size:10px;text-decoration:underline;text-underline-offset:4px}.tp-card{margin-top:12px;padding:19px;border:1px solid var(--line);border-radius:14px;background:radial-gradient(ellipse at 22% 0%,rgba(35,75,57,.2),transparent 58%),linear-gradient(135deg,#0b120f,#070b09);box-shadow:inset 0 1px rgba(255,255,255,.025)}.tp-card--week{padding-bottom:14px}.tp-card--hito .tp-label{color:var(--amber)}.tp-section-title{margin:10px 0 13px;font-size:27px;font-weight:900;letter-spacing:-.066em;line-height:.9;text-transform:uppercase}.tp-meta{margin:0;color:#8f9b95;font-size:8px;line-height:1.55}.tp-block-copy{margin:13px 0 0;color:#dbe2dc;font-size:13px;line-height:1.35}.tp-block-copy strong{color:var(--green);font-weight:750}.tp-session-list{margin-top:14px;border-top:1px solid #304139}.tp-session{display:grid;grid-template-columns:39px minmax(0,1fr);gap:10px;align-items:center;min-height:61px;border-bottom:1px solid #223029}.tp-session-date{font:700 16px/1 "SF Mono",SFMono-Regular,monospace;text-align:center}.tp-session-date small{display:block;margin-top:4px;color:#829087;font-size:7px;letter-spacing:.12em;text-transform:uppercase}.tp-session-name{font-size:13px;font-weight:750;line-height:1.2}.tp-session-status{margin-top:5px;color:#8d969e;font-size:8px;letter-spacing:.07em;line-height:1.35}.tp-session-status--done{color:var(--green)}.tp-session-status--shift{color:var(--amber)}.tp-empty{margin:12px 0 0;color:#96a19b;font-size:12px;line-height:1.45}.tp-inline-action{display:inline-flex;align-items:center;min-height:44px;margin-top:8px;color:#b7deef;font-size:10px;text-decoration-thickness:1px;text-underline-offset:4px}.tp-hito-title{margin:11px 0 4px;font-size:22px;line-height:1.05;letter-spacing:-.05em}.tp-next{display:flex;gap:10px;align-items:flex-start;margin-top:14px;padding-top:13px;border-top:1px solid #2d4036}.tp-next-mark{flex:0 0 auto;margin-top:3px;color:var(--green);font-size:13px}.tp-next p{margin:0}.tp-next-name{color:#ecf1eb;font-size:13px;font-weight:700}.tp-next-meta{margin-top:4px!important;color:#8e9a93;font-size:9px;line-height:1.4}.tp-archive{margin-top:14px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}.tp-archive summary{display:flex;align-items:center;justify-content:space-between;min-height:58px;cursor:pointer;list-style:none;color:#c7d4cd;font-size:9px}.tp-archive summary::-webkit-details-marker{display:none}.tp-archive summary:after{content:"+";color:var(--green);font-size:20px;font-weight:400}.tp-archive[open] summary:after{content:"−"}.tp-macro-track{display:grid;gap:8px;padding:0 0 15px}.tp-macro-chip{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:9px;align-items:center;min-height:52px;padding:9px 10px;border:1px solid #293931;border-radius:9px;background:#09100d}.tp-macro-chip:before{content:"";width:7px;height:7px;border-radius:99px;background:#647169}.tp-macro-chip--actual{border-color:#386e54;background:#0a1710}.tp-macro-chip--actual:before{background:var(--green);box-shadow:0 0 9px rgba(66,228,160,.7)}.tp-macro-chip--completada:before{background:#79ad8b}.tp-macro-chip--pendiente{opacity:.63}.tp-macro-name{display:block;color:#e9eee9;font-size:12px;font-weight:700;line-height:1.2}.tp-macro-meta{display:block;margin-top:3px;color:#8c9991;font-size:7px;letter-spacing:.08em}.tp-macro-state{color:var(--green);font:700 7px/1 "SF Mono",SFMono-Regular,monospace;letter-spacing:.08em;text-transform:uppercase}.tp-macro-chip--completada .tp-macro-state{color:#8fbd9d}.tp-macro-chip--pendiente .tp-macro-state{color:#98a19d}.tp-closed{margin:0;padding:0 0 13px;list-style:none}.tp-closed li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid #16221c;color:#b8c2bc;font-size:11px}.tp-closed-date{color:#7f8d84;font:700 8px/1.35 "SF Mono",SFMono-Regular,monospace;letter-spacing:.04em;text-align:right;text-transform:uppercase;white-space:nowrap}@media(min-width:431px){.tp-shell{padding-top:28px}.tp-top{margin-bottom:19px}.tp-hero{min-height:272px}}@media(max-width:350px){.tp-shell{padding-inline:12px}.tp-hero,.tp-card{padding-inline:16px}.tp-title{font-size:35px}}
+    /* Tap targets: min-height: 44px. */
   </style>
 </head>
-<body class="tp-page">
+<body>
   <main class="tp-shell">
-    <a class="tp-back" href="{% url 'clientes:mockup_demo' %}">← Panel principal</a>
-    <p class="tp-kicker">Lectura del entrenador · {{ trayectoria.fecha_corte|date:"d M Y" }}</p>
-    <h1 class="tp-title">Trayectoria del plan</h1>
-
-    {% if trayectoria.macrociclo.fases %}
-      <section class="tp-macro" aria-label="Progreso del macrociclo anual">
-        <p class="tp-macro-label">Macrociclo {{ trayectoria.fecha_corte|date:"Y" }}</p>
-        <div class="tp-macro-track">
-          {% for fase in trayectoria.macrociclo.fases %}
-            <div class="tp-macro-chip tp-macro-chip--{{ fase.estado }}{% if fase.objetivo == 'descarga' %} tp-macro-chip--descarga{% endif %}">
-              {% if fase.estado == 'actual' %}<span class="tp-macro-badge">Actual</span><br>{% endif %}
-              <span class="tp-macro-chip-nombre">{{ fase.nombre }}</span>
-              <span class="tp-macro-chip-sem">{{ fase.semanas }} sem{% if fase.estado == 'completada' %} · ✓{% elif fase.estado == 'actual' %} · sem {{ fase.semana_actual }}/{{ fase.semanas }}{% endif %}</span>
-            </div>
-            {% if not forloop.last %}<div class="tp-macro-arrow">→</div>{% endif %}
-          {% endfor %}
-        </div>
-      </section>
-    {% endif %}
-
-    <section class="tp-timeline" aria-label="Línea temporal del plan">
-      {% if trayectoria.periodizacion %}
-        <article class="tp-node tp-node--phase">
-          <div class="tp-label">Fase en curso</div>
-          <h2 class="tp-heading">{{ trayectoria.periodizacion.nombre|default:"Fase sin nombre" }}</h2>
-          <p class="tp-meta">Semana {{ trayectoria.periodizacion.semana_actual }} de {{ trayectoria.periodizacion.semanas }} · {{ trayectoria.periodizacion.inicio|date:"d/m" }}—{{ trayectoria.periodizacion.fin|date:"d/m/Y" }}</p>
-          {% if trayectoria.periodizacion.objetivo %}<p class="tp-objective">{{ trayectoria.periodizacion.objetivo }}</p>{% endif %}
-          {% if trayectoria.periodizacion.reps %}
-            <p class="tp-meta">Reps objetivo {{ trayectoria.periodizacion.reps }} · RPE {{ trayectoria.periodizacion.rpe_inicio }}→{{ trayectoria.periodizacion.rpe_fin }}{% if trayectoria.periodizacion.descanso_seg %} · Descanso {{ trayectoria.periodizacion.descanso_seg }}s{% endif %}</p>
-          {% endif %}
-        </article>
-      {% endif %}
-
-      {% if trayectoria.bloque %}
-        <article class="tp-node tp-node--block">
-          <div class="tp-label">Bloque · {{ trayectoria.bloque.carril }}</div>
-          <h2 class="tp-heading">{{ trayectoria.bloque.objetivo|capfirst }}</h2>
-          <p class="tp-meta">Semana {{ trayectoria.bloque.semana_actual|default:"—" }} de {{ trayectoria.bloque.semanas }} · v{{ trayectoria.bloque.version }}</p>
-          {% if trayectoria.bloque.objetivos_secundarios %}<p class="tp-objective">Énfasis: {{ trayectoria.bloque.objetivos_secundarios|join:", " }}</p>{% endif %}
-          {% if trayectoria.evaluacion_bloque %}
-            <p class="tp-meta">Evaluación del bloque: {{ trayectoria.evaluacion_bloque.estado_resultado_display }} · Revisión {{ trayectoria.evaluacion_bloque.estado_revision_display|lower }}</p>
-          {% endif %}
-        </article>
-      {% endif %}
-
-      {% if trayectoria.semana %}
-        <article class="tp-node tp-node--week">
-          <div class="tp-label">Semana {{ trayectoria.semana.indice|default:"actual" }}</div>
-          <h2 class="tp-heading">{{ trayectoria.semana.objetivo_sesiones }} sesiones objetivo</h2>
-          <p class="tp-meta">Mínimo válido {{ trayectoria.semana.minimo_valido }} · {{ trayectoria.semana.inicio|date:"d/m" }}—{{ trayectoria.semana.fin|date:"d/m" }}</p>
-          <div class="tp-sessions" aria-label="Sesiones de esta semana">
-            {% for sesion in trayectoria.semana.sesiones %}
-              <div class="tp-session">
-                <div class="tp-date">{{ sesion.fecha_efectiva|date:"d" }}<small>{{ sesion.fecha_efectiva|date:"M" }}</small></div>
-                <div>
-                  <div class="tp-session-name">{{ sesion.nombre }}</div>
-                  <div class="tp-status {% if sesion.realizada %}tp-done{% elif sesion.fecha_pospuesta %}tp-shift{% endif %}">
-                    {{ sesion.estado }}
-                    {% if sesion.fecha_pospuesta %} · prevista {{ sesion.fecha_prevista|date:"d/m" }} → {{ sesion.fecha_pospuesta|date:"d/m" }}{% endif %}
-                    {% if sesion.fecha_realizada %} · realizada {{ sesion.fecha_realizada|date:"d/m" }}{% endif %}
-                  </div>
-                </div>
-              </div>
-            {% empty %}
-              <p class="tp-empty">No hay sesiones persistidas para esta semana.</p>
-            {% endfor %}
-          </div>
-          {% if trayectoria.semana.evaluacion %}
-            <p class="tp-objective">Evaluación guardada: {{ trayectoria.semana.evaluacion.estado_cumplimiento }} · {{ trayectoria.semana.evaluacion.estado_revision }}</p>
-          {% endif %}
-        </article>
-      {% else %}
-        <article class="tp-node tp-node--week">
-          <div class="tp-label">Semana {{ trayectoria.fecha_corte|date:"W" }}</div>
-          <h2 class="tp-heading">Pendiente de iniciar</h2>
-          <p class="tp-empty">Todavía no hay un microciclo abierto para esta semana.</p>
-          <a class="tp-action" href="{% url 'clientes:mockup_demo' %}">Completar check-in para abrir semana →</a>
-        </article>
-      {% endif %}
-
-      {% if trayectoria.proximo_hito %}
-        <article class="tp-node tp-node--milestone">
-          <div class="tp-label">Próximo hito</div>
-          <h2 class="tp-heading">{{ trayectoria.proximo_hito.etiqueta }}</h2>
-          {% if trayectoria.proximo_hito.fecha %}<p class="tp-meta">{{ trayectoria.proximo_hito.fecha|date:"l, d F" }}</p>{% endif %}
-        </article>
-      {% endif %}
-
-      {% if trayectoria.macrociclo.siguiente_fase %}
-        <article class="tp-node tp-node--next">
-          <div class="tp-label">Después de esta fase</div>
-          <h2 class="tp-heading">{{ trayectoria.macrociclo.siguiente_fase.nombre }}</h2>
-          <p class="tp-meta">{{ trayectoria.macrociclo.siguiente_fase.semanas }} semana{{ trayectoria.macrociclo.siguiente_fase.semanas|pluralize }} · desde {{ trayectoria.macrociclo.siguiente_fase.inicio|date:"d/m/Y" }}</p>
-        </article>
-      {% endif %}
-    </section>
-
-    {% if trayectoria.macrociclo.fases_cerradas %}
-      <details class="tp-historial">
-        <summary>Fases completadas este año ({{ trayectoria.macrociclo.fases_cerradas|length }})</summary>
-        <ul>
-          {% for fase in trayectoria.macrociclo.fases_cerradas %}
-            <li><span class="tp-historial-nombre">{{ fase.nombre }}</span><span class="tp-historial-fechas">{{ fase.inicio|date:"d M" }}–{{ fase.fin|date:"d M" }} · {{ fase.semanas }} sem</span></li>
-          {% endfor %}
-        </ul>
-      </details>
-    {% endif %}
+    <header class="tp-top"><a class="tp-back tp-mono" href="{% url 'clientes:mockup_demo' %}">← Ahora</a><p class="tp-date tp-mono">Plan activo<br>{{ trayectoria.fecha_corte|date:"d M Y" }}</p></header>
+    <section class="tp-hero" aria-label="Línea temporal del plan" aria-labelledby="plan-phase-title"><span class="tp-label">Fase actual</span><h1 class="tp-title" id="plan-phase-title">{% if trayectoria.periodizacion %}{{ trayectoria.periodizacion.nombre|default:"En preparación" }}{% else %}Plan en preparación{% endif %}</h1>{% if trayectoria.periodizacion and trayectoria.periodizacion.objetivo %}<p class="tp-objective">{{ trayectoria.periodizacion.objetivo }}</p>{% else %}<p class="tp-objective">Una dirección clara, construida sesión a sesión.</p>{% endif %}{% if trayectoria.periodizacion %}<p class="tp-phase-meta">Semana {{ trayectoria.periodizacion.semana_actual }} de {{ trayectoria.periodizacion.semanas }} · {{ trayectoria.periodizacion.inicio|date:"d M" }}—{{ trayectoria.periodizacion.fin|date:"d M" }}</p>{% endif %}<a class="tp-hero-action" href="{% url 'clientes:mockup_demo' %}">Ver decisión de hoy →</a>{% if trayectoria.periodizacion.reps %}<p class="tp-cue">RPE {{ trayectoria.periodizacion.rpe_inicio }}→{{ trayectoria.periodizacion.rpe_fin }} · {{ trayectoria.periodizacion.reps }} reps objetivo</p>{% endif %}</section>
+    <section class="tp-card tp-card--week" aria-labelledby="plan-week-title"><span class="tp-label" style="color:var(--blue)">Esta semana</span>{% if trayectoria.semana %}<h2 class="tp-section-title" id="plan-week-title">{{ trayectoria.semana.objetivo_sesiones }} sesiones<br>con intención</h2><p class="tp-meta">Semana {{ trayectoria.semana.indice|default:"actual" }} · mínimo válido {{ trayectoria.semana.minimo_valido }} · {{ trayectoria.semana.inicio|date:"d/m" }}—{{ trayectoria.semana.fin|date:"d/m" }}</p><div class="tp-session-list" aria-label="Sesiones de esta semana">{% for sesion in trayectoria.semana.sesiones %}<article class="tp-session"><div class="tp-session-date">{{ sesion.fecha_efectiva|date:"d" }}<small>{{ sesion.fecha_efectiva|date:"M" }}</small></div><div><div class="tp-session-name">{{ sesion.nombre }}</div><div class="tp-session-status {% if sesion.realizada %}tp-session-status--done{% elif sesion.fecha_pospuesta %}tp-session-status--shift{% endif %}">{{ sesion.estado }}{% if sesion.fecha_pospuesta %} · {{ sesion.fecha_prevista|date:"d/m" }} → {{ sesion.fecha_pospuesta|date:"d/m" }}{% endif %}{% if sesion.fecha_realizada %} · {{ sesion.fecha_realizada|date:"d/m" }}{% endif %}</div></div></article>{% empty %}<p class="tp-empty">No hay sesiones previstas todavía.</p>{% endfor %}</div>{% if trayectoria.semana.evaluacion %}<p class="tp-block-copy">Evaluación: <strong>{{ trayectoria.semana.evaluacion.estado_cumplimiento }}</strong> · {{ trayectoria.semana.evaluacion.estado_revision }}</p>{% endif %}{% else %}<h2 class="tp-section-title" id="plan-week-title">Pendiente de iniciar</h2><p class="tp-meta">Semana {{ trayectoria.fecha_corte|date:"W" }}</p><p class="tp-empty">Completa el check-in para que el plan abra el siguiente microciclo.</p><a class="tp-inline-action" href="{% url 'clientes:mockup_demo' %}">Completar check-in →</a>{% endif %}{% if trayectoria.bloque %}<p class="tp-block-copy">Ahora: <strong>{{ trayectoria.bloque.objetivo|capfirst }}</strong>{% if trayectoria.bloque.objetivos_secundarios %} · énfasis {{ trayectoria.bloque.objetivos_secundarios|join:", " }}{% endif %}</p>{% endif %}</section>
+    <section class="tp-card tp-card--hito" aria-labelledby="plan-hito-title"><span class="tp-label">Próximo hito</span>{% if trayectoria.proximo_hito %}<h2 class="tp-hito-title" id="plan-hito-title">{{ trayectoria.proximo_hito.etiqueta }}</h2>{% if trayectoria.proximo_hito.fecha %}<p class="tp-meta">{{ trayectoria.proximo_hito.fecha|date:"l, d F" }}</p>{% endif %}{% else %}<h2 class="tp-hito-title" id="plan-hito-title">Sigue construyendo</h2><p class="tp-meta">El siguiente hito aparecerá cuando el plan tenga suficiente contexto.</p>{% endif %}{% if trayectoria.macrociclo.siguiente_fase %}<div class="tp-next"><span class="tp-next-mark">→</span><div><p class="tp-next-name">Después · {{ trayectoria.macrociclo.siguiente_fase.nombre }}</p><p class="tp-next-meta">{{ trayectoria.macrociclo.siguiente_fase.semanas }} semana{{ trayectoria.macrociclo.siguiente_fase.semanas|pluralize }} · desde {{ trayectoria.macrociclo.siguiente_fase.inicio|date:"d/m/Y" }}</p></div></div>{% endif %}</section>
+    {% if trayectoria.macrociclo and trayectoria.macrociclo.fases %}<details class="tp-archive"><summary class="tp-mono">Ver trayectoria completa · {{ trayectoria.fecha_corte|date:"Y" }}</summary><div class="tp-macro-track" aria-label="Macrociclo {{ trayectoria.fecha_corte|date:'Y' }}">{% for fase in trayectoria.macrociclo.fases %}<article class="tp-macro-chip tp-macro-chip--{{ fase.estado }}"><div><span class="tp-macro-name">{{ fase.nombre }}</span><span class="tp-macro-meta">{{ fase.semanas }} sem{% if fase.estado == 'actual' %} · semana {{ fase.semana_actual }}/{{ fase.semanas }}{% endif %}</span></div><span class="tp-macro-state">{% if fase.estado == 'actual' %}Ahora{% elif fase.estado == 'completada' %}Hecha{% else %}Después{% endif %}</span></article>{% endfor %}</div>{% if trayectoria.macrociclo.fases_cerradas %}<ul class="tp-closed">{% for fase in trayectoria.macrociclo.fases_cerradas %}<li><span>{{ fase.nombre }}</span><span class="tp-closed-date">{{ fase.inicio|date:"d M" }}—{{ fase.fin|date:"d M" }}</span></li>{% endfor %}</ul>{% endif %}</details>{% endif %}
   </main>
+  {% if request %}{% include 'includes/bottom_nav.html' with activo='plan' %}{% endif %}
 </body>
 </html>
