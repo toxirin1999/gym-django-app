@@ -74,6 +74,71 @@ class RutinaSilenciosaPreviewTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    @patch("entrenos.views._obtener_contexto_rutina_silenciosa")
+    def test_semana_previa_se_normaliza_a_lunes_y_se_expone_en_url(self, contexto):
+        """La navegación semanal acepta cualquier día, pero comparte su lunes."""
+        contexto.return_value = {
+            "fase": {"nombre": "DESCARGA", "objetivo": "Recuperar"},
+            "semana": [], "hoy": {"tipo": "descanso", "titulo": "Descanso", "detalle": ""},
+            "rms": [], "insight": "Margen.",
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url, {"semana": "2026-09-23"})
+
+        self.assertEqual(response.status_code, 200)
+        contexto.assert_called_once()
+        self.assertEqual(contexto.call_args.kwargs["semana_inicio"], date(2026, 9, 21))
+        self.assertEqual(response.context["semana_inicio"], date(2026, 9, 21))
+        self.assertEqual(response.context["semana_anterior_url"], f"{self.url}?semana=2026-09-14")
+        self.assertEqual(response.context["semana_siguiente_url"], f"{self.url}?semana=2026-09-28")
+
+    @patch("entrenos.views._obtener_contexto_rutina_silenciosa")
+    def test_semana_siguiente_cruza_mes_y_conserva_parametro_compartible(self, contexto):
+        """La siguiente semana no depende del mes visible del calendario legado."""
+        contexto.return_value = {
+            "fase": {"nombre": "DESCARGA", "objetivo": "Recuperar"},
+            "semana": [], "hoy": {"tipo": "descanso", "titulo": "Descanso", "detalle": ""},
+            "rms": [], "insight": "Margen.",
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url, {"semana": "2026-09-28"})
+
+        self.assertEqual(response.context["semana_inicio"], date(2026, 9, 28))
+        self.assertEqual(response.context["semana_siguiente_url"], f"{self.url}?semana=2026-10-05")
+        self.assertContains(response, "28 Sep – 4 Oct")
+
+    @patch("entrenos.views._obtener_contexto_rutina_silenciosa")
+    def test_semana_siguiente_cruza_ano_sin_perder_el_lunes_en_url(self, contexto):
+        """La semana del cambio de año continúa en la misma pantalla."""
+        contexto.return_value = {
+            "fase": {"nombre": "BASE", "objetivo": "Continuidad"},
+            "semana": [], "hoy": {"tipo": "descanso", "titulo": "Descanso", "detalle": ""},
+            "rms": [], "insight": "Margen.",
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url, {"semana": "2026-12-30"})
+
+        self.assertEqual(response.context["semana_inicio"], date(2026, 12, 28))
+        self.assertEqual(response.context["semana_siguiente_url"], f"{self.url}?semana=2027-01-04")
+        self.assertContains(response, "28 Dic – 3 Ene")
+
+    def test_controles_semanales_son_accesibles_y_no_abren_el_calendario_legado(self):
+        """Cambiar de semana ocurre en Rutina; el calendario sigue siendo opcional."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('class="week-nav"', plantilla)
+        self.assertIn('aria-label="Semana anterior"', plantilla)
+        self.assertIn('aria-label="Semana siguiente"', plantilla)
+        self.assertIn('href="{{ semana_anterior_url }}"', plantilla)
+        self.assertIn('href="{{ semana_siguiente_url }}"', plantilla)
+
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(

@@ -5095,7 +5095,18 @@ import json
 from entrenos.serializador_plan import serializar_plan_para_sesion
 
 
-def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
+def _inicio_semana_rutina(valor, referencia):
+    """Devuelve el lunes de una fecha compartible, sin aceptar fechas ambiguas."""
+    if not valor:
+        return referencia - timedelta(days=referencia.weekday())
+    try:
+        fecha = date.fromisoformat(str(valor))
+    except (TypeError, ValueError):
+        return referencia - timedelta(days=referencia.weekday())
+    return fecha - timedelta(days=fecha.weekday())
+
+
+def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
     """Contexto móvil de Rutina apoyado en el mismo plan Helms anual.
 
     Esta función deliberadamente no decide ni reescribe el plan. Solo reduce el
@@ -5106,11 +5117,15 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
     from entrenos.models import SesionProgramada
 
     hoy = hoy or timezone.localdate()
+    inicio_semana = _inicio_semana_rutina(semana_inicio, hoy)
+    fin_semana = inicio_semana + timedelta(days=6)
     perfil = crear_perfil_desde_cliente(cliente)
     perfil.maximos_actuales = cliente.one_rm_data or {}
-    perfil.año_planificacion = hoy.year
+    # El plan que alimenta los siete días debe corresponder al año de la semana
+    # elegida. Así 29 dic–4 ene funciona como una semana normal compartible.
+    perfil.año_planificacion = inicio_semana.year
 
-    cache_key = f'plan_anual_{cliente.id}_{hoy.year}'
+    cache_key = f'plan_anual_{cliente.id}_{inicio_semana.year}'
     plan = cache.get(cache_key)
     if plan is None:
         plan = agregar_educacion_a_plan(PlanificadorHelms(perfil).generar_plan_anual())
@@ -5132,8 +5147,6 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
         cursor = fin + timedelta(days=1)
     fase_actual = fase_actual or (bloques[0] if bloques else {})
 
-    inicio_semana = hoy - timedelta(days=hoy.weekday())
-    fin_semana = inicio_semana + timedelta(days=6)
     # Una sesión aplazada conserva su fecha prescrita para la memoria del plan,
     # pero la Rutina representa cuándo se puede ejecutar realmente. Al usar la
     # fecha efectiva evitamos enseñar descanso el día al que fue trasladada.
@@ -5314,6 +5327,7 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
             'reps': '{}–{}'.format(fase_actual.get('reps_min', 1), fase_actual.get('reps_max', 20)),
         },
         'semana': semana,
+        'semana_inicio': inicio_semana,
         'hoy': hoy_card,
         'rms': rms[:4],
         'insight': 'La fase actual organiza la carga para que puedas progresar sin perder margen.',
@@ -5325,12 +5339,34 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
 def rutina_silenciosa_preview(request, cliente_id):
     """Preview móvil de Rutina; el calendario legado permanece intacto."""
     cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
-    datos = _obtener_contexto_rutina_silenciosa(cliente)
+    hoy = timezone.localdate()
+    semana_inicio = _inicio_semana_rutina(request.GET.get('semana'), hoy)
+    datos = _obtener_contexto_rutina_silenciosa(
+        cliente, hoy=hoy, semana_inicio=semana_inicio,
+    )
     calendario_url = reverse('entrenos:vista_plan_anual', args=[cliente.id])
+    rutina_url = reverse('entrenos:rutina_silenciosa_preview', args=[cliente.id])
+    meses_cortos = (
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic',
+    )
+    semana_fin = semana_inicio + timedelta(days=6)
+    semana_rango = '{} {} – {} {}'.format(
+        semana_inicio.day, meses_cortos[semana_inicio.month - 1],
+        semana_fin.day, meses_cortos[semana_fin.month - 1],
+    )
     return render(request, 'entrenos/rutina_silenciosa_preview.html', {
         'cliente': cliente,
-        'hoy_fecha': timezone.localdate(),
+        'hoy_fecha': hoy,
         'calendario_url': calendario_url,
+        'semana_inicio': semana_inicio,
+        'semana_rango': semana_rango,
+        'semana_anterior_url': '{}?semana={}'.format(
+            rutina_url, (semana_inicio - timedelta(days=7)).isoformat(),
+        ),
+        'semana_siguiente_url': '{}?semana={}'.format(
+            rutina_url, (semana_inicio + timedelta(days=7)).isoformat(),
+        ),
         # La preview semanal consume el mismo contrato JSON que el calendario
         # legado. No serializamos otra versión del plan en esta vista: el JS
         # pide el mes de la fecha seleccionada a este endpoint canónico.
