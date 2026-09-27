@@ -57,6 +57,7 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertContains(response, "Día de descanso")
         self.assertContains(response, "La descarga protege tu adaptación.")
         self.assertContains(response, reverse("entrenos:vista_plan_anual", args=[self.cliente.id]))
+        self.assertContains(response, reverse("clientes:trayectoria_plan"))
         self.assertContains(response, reverse("estiramientos:panel"))
 
     def test_otro_usuario_no_puede_ver_la_preview(self):
