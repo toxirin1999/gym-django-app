@@ -60,6 +60,8 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertContains(response, reverse("entrenos:vista_plan_anual", args=[self.cliente.id]))
         self.assertContains(response, reverse("clientes:trayectoria_plan"))
         self.assertContains(response, reverse("estiramientos:panel"))
+        self.assertContains(response, 'data-day-preview="0"')
+        self.assertContains(response, 'id="routine-day-modal"')
 
     def test_otro_usuario_no_puede_ver_la_preview(self):
         otro = get_user_model().objects.create_user(
@@ -99,6 +101,55 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn("sesion_programada_id=", contexto["hoy"]["url"])
         sabado = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
         self.assertEqual(sabado["tipo"], "sesion")
+
+    @patch("entrenos.views._calcular_ejercicios_dia")
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_dia_pospuesto_tiene_preview_y_cta_con_identidad_original(
+        self, planificador, educacion, calcular_ejercicios,
+    ):
+        """El selector abre el día efectivo sin perder su sesión prescrita."""
+        hoy = date(2026, 9, 26)
+        sesion = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=date(2026, 9, 25),
+            pospuesta_hasta=hoy,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Torso pospuesto",
+        )
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [{"nombre": "Descarga", "duracion": 52}],
+        }
+        educacion.side_effect = lambda plan: plan
+        calcular_ejercicios.return_value = [{
+            "nombre": "Press inclinado", "series": 3,
+            "reps_objetivo": 10, "peso_recomendado_kg": 40,
+        }]
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+        sabado = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
+
+        self.assertEqual(sabado["preview"]["sesion_programada_id"], sesion.pk)
+        self.assertEqual(sabado["preview"]["fecha_efectiva"], "2026-09-26")
+        self.assertIn("sesion_programada_id={}".format(sesion.pk), sabado["preview"]["url"])
+        self.assertEqual(sabado["preview"]["ejercicios"][0]["nombre"], "Press inclinado")
+        calcular_ejercicios.assert_called_once_with(
+            self.cliente.id, date(2026, 9, 25),
+        )
+
+    def test_selector_renderiza_dialogo_local_y_no_enlaza_dias_al_calendario(self):
+        """El calendario legado es explícito; los días abren una preview local."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text()
+
+        self.assertIn('data-day-preview', plantilla)
+        self.assertIn('role="dialog"', plantilla)
+        self.assertIn('id="routine-day-modal"', plantilla)
+        self.assertNotIn('href="{{ calendario_url }}?año={{ dia.fecha.year }}', plantilla)
 
     def test_navegacion_global_de_rutina_vuelve_a_la_preview_no_al_calendario(self):
         """Rutina es una sección global; el calendario queda como acceso interno."""

@@ -5150,6 +5150,62 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
             )
         )
     }
+    def _preview_sesion(fecha_efectiva, sesion):
+        """Contrato pequeño, serializable y canónico para el selector semanal.
+
+        La fecha efectiva decide dónde aparece la tarjeta; los ejercicios se
+        calculan sobre la fecha prescrita. Así una sesión pospuesta no se
+        transforma accidentalmente en el plan de otro día.
+        """
+        try:
+            ejercicios_origen = _calcular_ejercicios_dia(
+                cliente.id, sesion.fecha_prevista,
+            )
+        except Exception:
+            logger.exception(
+                'No se pudo preparar la preview de sesión %s', sesion.pk,
+            )
+            ejercicios_origen = []
+
+        ejercicios = []
+        for ejercicio in ejercicios_origen or []:
+            try:
+                series = int(ejercicio.get('series') or 0)
+            except (TypeError, ValueError):
+                series = 0
+            if not series:
+                continue
+            peso = ejercicio.get('peso_recomendado_kg', ejercicio.get('peso_kg'))
+            try:
+                peso = float(peso) if peso not in (None, '') else None
+            except (TypeError, ValueError):
+                peso = None
+            ejercicios.append({
+                'nombre': str(ejercicio.get('nombre') or 'Ejercicio'),
+                'series': series,
+                'reps': str(
+                    ejercicio.get('reps_objetivo')
+                    or ejercicio.get('repeticiones')
+                    or ejercicio.get('reps')
+                    or '—'
+                ),
+                'peso': peso,
+            })
+
+        briefing_url = '{}?fecha={}&sesion_programada_id={}'.format(
+            reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
+            fecha_efectiva.isoformat(), sesion.pk,
+        )
+        return {
+            'tipo': 'sesion',
+            'titulo': sesion.nombre_sesion or 'Sesión programada',
+            'fecha_efectiva': fecha_efectiva.isoformat(),
+            'sesion_programada_id': sesion.pk,
+            'ejercicios': ejercicios,
+            'url': briefing_url,
+            'cta': 'Revisar sesión',
+        }
+
     semana = []
     for offset in range(7):
         fecha_dia = inicio_semana + timedelta(days=offset)
@@ -5158,8 +5214,14 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None):
             'fecha': fecha_dia,
             'numero': fecha_dia.day,
             'es_hoy': fecha_dia == hoy,
-            'sesion': sesion,
             'tipo': 'sesion' if sesion else 'descanso',
+            'preview': _preview_sesion(fecha_dia, sesion) if sesion else {
+                'tipo': 'descanso',
+                'titulo': 'Día de descanso',
+                'detalle': 'No hay sesión de fuerza programada. Recuperar también forma parte del plan.',
+                'fecha_efectiva': fecha_dia.isoformat(),
+                'ejercicios': [],
+            },
         })
 
     sesion_hoy = sesiones_semana.get(hoy)
