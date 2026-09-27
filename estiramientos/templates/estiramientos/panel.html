@@ -19,19 +19,18 @@
     <!-- Hero de recuperación -->
     <section class="mv-hero" aria-labelledby="mvHeroTitle">
         <div class="mv-hero__scene" aria-hidden="true">
-            <span class="mv-hero__window"></span>
-            <span class="mv-hero__bench"></span>
-            <span class="mv-hero__mat"></span>
+            <img src="{% static 'estiramientos/images/recovery-hero-gym.png' %}" alt="" class="mv-hero__image">
         </div>
         <p class="mv-hero__eyebrow">Recuperación</p>
-        <h1 id="mvHeroTitle" class="mv-hero__title">Hoy, recuperar también cuenta</h1>
+        <h1 id="mvHeroTitle" class="mv-hero__title"><span>Hoy, recuperar</span><span>también cuenta</span></h1>
         <p class="mv-hero__subtitle">Elige cómo quieres moverte.</p>
 
         {% if planes_movilidad %}
         {% with primer_plan=planes_movilidad.first %}
-        <a href="{% url 'estiramientos:iniciar_plan' primer_plan.id %}" class="mv-hero__cta">
-            <span class="mv-hero__cta-label">Iniciar recuperación</span>
-            <span class="mv-hero__cta-meta">{{ primer_plan.nombre }} · {{ primer_plan.duracion_estimada_min|default:0 }} min</span>
+        <a href="{% url 'estiramientos:iniciar_plan' primer_plan.id %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
+           class="mv-hero__cta"
+           {% if sesion_programada or sesion_hoy %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' primer_plan.id %}"{% endif %}>
+            <span class="mv-hero__cta-label">MOVILIDAD GLOBAL · 4 MIN</span>
             <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </a>
         {% endwith %}
@@ -101,7 +100,9 @@
         <p class="sr-only">01 PREPARACIÓN &amp; MOVILIDAD ACTIVA. Puedes finalizar y guardar en cualquier momento.</p>
         <div class="plans-grid" data-plan-section="movilidad">
             {% for p in planes_movilidad %}
+                {% if p.codigo != "mobility-recovery-global" %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
+                {% endif %}
             {% empty %}
                 <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
             {% endfor %}
@@ -155,12 +156,12 @@
 </div>
 
 <nav class="mv-bottom-nav" aria-label="Navegación principal">
-    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-bottom-nav__item">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-bottom-nav__item is-active" aria-current="page">
         <span class="mv-bottom-nav__dot" aria-hidden="true"></span>
         <i class="fas fa-house" aria-hidden="true"></i>
         <span>Ahora</span>
     </a>
-    <a href="{% url 'estiramientos:panel' %}" class="mv-bottom-nav__item is-active" aria-current="page">
+    <a href="{% url 'estiramientos:panel' %}" class="mv-bottom-nav__item">
         <i class="fas fa-dumbbell" aria-hidden="true"></i>
         <span>Entreno</span>
     </a>

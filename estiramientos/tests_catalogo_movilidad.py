@@ -146,6 +146,57 @@ class PanelMovilidadSeparadoTests(TestCase):
         self.assertContains(response, f'data-plan-id="{self.estiramiento.pk}"', count=1)
 
 
+class PanelMovilidadFidelidadVisualTests(TestCase):
+    """Contrato de contenido del catálogo editorial de recuperación."""
+
+    def setUp(self):
+        self.recomendada = self._crear_plan(
+            "Movilidad global", "mobility-recovery-global", "COMPLETO",
+        )
+        self.cadera = self._crear_plan(
+            "Cadera y tobillo", "mobility-hip-ankle", "INFERIOR",
+        )
+        self.columna = self._crear_plan(
+            "Columna torácica y hombros", "mobility-thoracic-shoulder", "SUPERIOR",
+        )
+
+    def _crear_plan(self, nombre, codigo, fase):
+        plan = EstiramientoPlan.objects.create(
+            nombre=nombre,
+            codigo=codigo,
+            modalidad="movilidad",
+            fase=fase,
+        )
+        ejercicio = EstiramientoEjercicio.objects.create(nombre=f"Paso de {nombre}")
+        EstiramientoPaso.objects.create(
+            plan=plan, ejercicio=ejercicio, orden=1, duracion_segundos=240,
+        )
+        return plan
+
+    def test_panel_presenta_hero_editorial_y_evita_duplicar_la_recomendada(self):
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        self.assertEqual(response.status_code, 200)
+        content = response.content.decode()
+        self.assertIn("recovery-hero-gym.png", content)
+        self.assertIn('class="mv-hero__title"', content)
+        self.assertIn("MOVILIDAD GLOBAL · 4 MIN", content)
+        self.assertNotIn('data-plan-id="{}"'.format(self.recomendada.pk), content)
+        self.assertIn('data-plan-id="{}"'.format(self.cadera.pk), content)
+        self.assertIn('data-plan-id="{}"'.format(self.columna.pk), content)
+        self.assertNotIn('class="plan-action"', content)
+
+    def test_navegacion_mantiene_iconos_y_ahora_como_estado_activo(self):
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        self.assertContains(response, 'fa-house')
+        self.assertContains(response, 'fa-dumbbell')
+        self.assertContains(
+            response,
+            'class="mv-bottom-nav__item is-active" aria-current="page"',
+        )
+
+
 class SeguridadModalidadMovilidadTests(TestCase):
     HOY = date(2026, 9, 23)
 

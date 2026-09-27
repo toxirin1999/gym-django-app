@@ -45,12 +45,7 @@
             {% else %}Rutina completa para todo el cuerpo.{% endif %}
         </span>
     </span>
-    <span class="plan-action">
-        {% if p.fase == 'CARDIO' %}Empezar
-        {% elif p.modalidad == 'movilidad' %}Iniciar
-        {% else %}Estirar{% endif %}
-        <i class="fas fa-arrow-right" aria-hidden="true"></i>
-    </span>
+    <i class="fas fa-chevron-right plan-chevron" aria-hidden="true"></i>
     <span class="plan-meta sr-only">{% if p.fase == 'CARDIO' %}Bloque continuo · Estado estable Z2{% else %}{{ p.pasos.count }} ejercicios · {{ p.transicion_segundos }}s transición{% endif %}</span>
     <span class="plan-start sr-only">{% if p.fase == 'CARDIO' %}Iniciar cardio{% elif p.modalidad == 'movilidad' %}Iniciar y registrar{% else %}Iniciar estiramientos{% endif %} →</span>
 </a>
