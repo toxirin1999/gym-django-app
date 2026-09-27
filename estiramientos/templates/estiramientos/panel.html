@@ -10,7 +10,7 @@
 {% block content %}
 <div class="stretch-container">
 
-    <div class="mv-topbar">
+    <div class="mv-topbar" aria-label="Navegación de retorno">
         <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="mv-back">← Panel principal</a>
     </div>
 
@@ -25,15 +25,13 @@
         <h1 id="mvHeroTitle" class="mv-hero__title"><span>Hoy, recuperar</span><span>también cuenta</span></h1>
         <p class="mv-hero__subtitle">Elige cómo quieres moverte.</p>
 
-        {% if planes_movilidad %}
-        {% with primer_plan=planes_movilidad.first %}
-        <a href="{% url 'estiramientos:iniciar_plan' primer_plan.id %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
+        {% if hero_mobility_plan %}
+        <a href="{% url 'estiramientos:iniciar_plan' hero_mobility_plan.id %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion=anadir{% endif %}"
            class="mv-hero__cta"
-           {% if sesion_programada or sesion_hoy %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' primer_plan.id %}"{% endif %}>
+           {% if sesion_programada or sesion_hoy %}data-mobility-plan-url="{% url 'estiramientos:iniciar_plan' hero_mobility_plan.id %}"{% endif %}>
             <span class="mv-hero__cta-label">MOVILIDAD GLOBAL · 4 MIN</span>
             <svg class="mv-hero__cta-icon" aria-hidden="true" viewBox="0 0 24 24" fill="none"><path d="M9 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </a>
-        {% endwith %}
         {% endif %}
 
         <details class="mv-hero__why">
@@ -99,15 +97,11 @@
         <h2 class="sr-only">Sesiones de movilidad</h2>
         <p class="sr-only">01 PREPARACIÓN &amp; MOVILIDAD ACTIVA. Puedes finalizar y guardar en cualquier momento.</p>
         <div class="plans-grid" data-plan-section="movilidad">
-            {% for p in planes_movilidad %}
-                {% if p.codigo == "mobility-hip-ankle" or p.codigo == "mobility-thoracic-shoulder" %}
+            {% for p in featured_mobility_plans %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
-                {% endif %}
             {% endfor %}
-            {% for p in planes_movilidad %}
-                {% if p.codigo != "mobility-recovery-global" and p.codigo != "mobility-hip-ankle" and p.codigo != "mobility-thoracic-shoulder" %}
+            {% for p in remaining_mobility_plans %}
                 {% include "estiramientos/_plan_card.html" with permite_resolucion=True %}
-                {% endif %}
             {% empty %}
                 <p class="no-plans">No hay sesiones de movilidad disponibles.</p>
             {% endfor %}

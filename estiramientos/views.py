@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.db.models import Case, IntegerField, Value, When
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404
@@ -21,6 +22,26 @@ def panel_estiramientos(request):
     )
     planes_estiramientos = planes.filter(
         modalidad=EstiramientoPlan.MODALIDAD_ESTIRAMIENTOS,
+    )
+    # La portada de recuperación no es una clasificación de la base de
+    # datos: es una decisión editorial. Mantenerla explícita evita que un
+    # nombre nuevo o un cambio de fase desplace la CTA o las dos sesiones
+    # recomendadas que componen la pantalla.
+    hero_mobility_plan = (
+        planes_movilidad.filter(codigo="mobility-recovery-global").first()
+        or planes_movilidad.first()
+    )
+    featured_codes = ("mobility-hip-ankle", "mobility-thoracic-shoulder")
+    featured_mobility_plans = planes_movilidad.filter(codigo__in=featured_codes).order_by(
+        Case(
+            When(codigo=featured_codes[0], then=Value(0)),
+            When(codigo=featured_codes[1], then=Value(1)),
+            default=Value(2),
+            output_field=IntegerField(),
+        ),
+    )
+    remaining_mobility_plans = planes_movilidad.exclude(
+        codigo__in=("mobility-recovery-global", *featured_codes),
     )
     sesion = None
     sesion_id = request.GET.get("sesion_programada_id")
@@ -52,6 +73,9 @@ def panel_estiramientos(request):
         "planes_movilidad": planes_movilidad,
         "planes_cardio": planes_cardio,
         "planes_estiramientos": planes_estiramientos,
+        "hero_mobility_plan": hero_mobility_plan,
+        "featured_mobility_plans": featured_mobility_plans,
+        "remaining_mobility_plans": remaining_mobility_plans,
         "sesion_programada": sesion,
         "sesion_hoy": sesion_hoy,
     })

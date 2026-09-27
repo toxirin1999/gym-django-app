@@ -221,6 +221,35 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertLess(cadera_at, columna_at)
         self.assertLess(columna_at, extra_at)
 
+    def test_la_cta_y_las_tarjetas_destacadas_tienen_un_contrato_explicito(self):
+        """El orden de la BD no puede decidir la narrativa de recuperación."""
+        extra = self._crear_plan(
+            "Antes alfabéticamente", "mobility-a-random", "COMPLETO",
+        )
+
+        response = self.client.get(reverse("estiramientos:panel"))
+
+        self.assertEqual(response.context["hero_mobility_plan"], self.recomendada)
+        self.assertQuerySetEqual(
+            response.context["featured_mobility_plans"],
+            [self.cadera, self.columna],
+            ordered=True,
+        )
+        self.assertQuerySetEqual(
+            response.context["remaining_mobility_plans"], [extra], ordered=True,
+        )
+
+    def test_iconos_anatomicos_se_asignan_por_codigo_y_no_por_fase_generica(self):
+        response = self.client.get(reverse("estiramientos:panel"))
+        content = response.content.decode()
+
+        self.assertIn("plan-card--hip-ankle", content)
+        self.assertIn("plan-card--thoracic-shoulder", content)
+        self.assertIn("plan-icon--hip-ankle", content)
+        self.assertIn("plan-icon--thoracic-shoulder", content)
+        self.assertIn('data-plan-icon="hip-ankle"', content)
+        self.assertIn('data-plan-icon="thoracic-shoulder"', content)
+
 
 class SeguridadModalidadMovilidadTests(TestCase):
     HOY = date(2026, 9, 23)
