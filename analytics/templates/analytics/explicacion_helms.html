@@ -267,14 +267,6 @@
     /* ============================================================
        TIMELINE BAR
        ============================================================ */
-    .timeline-section {
-        background: var(--glass-bg);
-        border: 1px solid var(--glass-border);
-        border-radius: 0;
-        padding: 2rem;
-        margin-bottom: 3rem;
-    }
-
     .timeline-bar {
         display: flex;
         height: 40px;
@@ -612,6 +604,130 @@
     .back-nav:hover {
         color: #f2f3f5;
     }
+
+    /* ============================================================
+       AJUSTES DE ESTA PANTALLA
+       (limpieza de cabecera, hero de objetivo actual, y corrección
+       del doble marco dorado en los paneles de fase/timeline)
+       ============================================================ */
+
+    /* Los iconos flotantes del layout global (botón de inicio + FAB de
+       JOI, definidos en templates/base.html e includes/_joi_fab.html)
+       quedan descolgados sobre esta pantalla. Se ocultan solo aquí,
+       sin tocar base.html ni el resto del sitio: la navegación pasa a
+       la Bottom Bar estándar incluida al final de este template. */
+    .home-btn,
+    .joi-fab,
+    #joi-fab-banner {
+        display: none !important;
+    }
+
+    /* El h1 heredaba la tipografía serif global (Cinzel, forzada con
+       !important para todo el sitio en static/css/variables-base.css).
+       La sustituimos aquí por la tipografía sans-serif limpia del
+       sistema, solo en esta cabecera. */
+    .helms-header h1 {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        text-transform: uppercase;
+        color: #f4f4f5;
+    }
+
+    /* Deja espacio para que la Bottom Bar fija no tape el contenido. */
+    .helms-container {
+        padding-bottom: 96px;
+    }
+
+    /* Tag "Metodología Helms" dentro de la tarjeta de Objetivo Actual. */
+    .helms-hero-tag {
+        display: inline-block;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: rgba(217, 158, 62, 0.9);
+        font-weight: 600;
+        margin-bottom: 0.75rem;
+        font-family: monospace;
+    }
+
+    .helms-progress-fill--cyan {
+        background: #22d3ee;
+    }
+
+    .helms-progress-caption {
+        text-align: right;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: #7f8992;
+    }
+
+    /* .helms-panel sustituye a .timeline-section como nombre de clase:
+       ese nombre colisiona con una regla global de
+       static/css/dashboard.css que añade fondo, borde y un marco
+       decorativo dorado en las cuatro esquinas a CUALQUIER
+       .timeline-section del sitio — de ahí el doble marco visible
+       aquí. Renombrar evita la colisión sin tocar CSS compartido por
+       otras páginas. */
+    .helms-panel {
+        background: var(--glass-bg);
+        border: 1px solid var(--glass-border);
+        border-radius: 0;
+        padding: 2rem;
+        margin-bottom: 3rem;
+    }
+
+    /* Tarjetas compactas de Proyección de 1RM */
+    .helms-1rm-card {
+        padding: 0.875rem;
+        background: rgba(24, 24, 27, 0.4);
+        border: 1px solid rgba(39, 39, 42, 0.8);
+        border-radius: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .helms-1rm-card__top {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .helms-1rm-card__name {
+        font-weight: 600;
+        color: #fff;
+    }
+
+    .helms-1rm-card__badge {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        padding: 0.2rem 0.55rem;
+        background: rgba(114, 221, 255, 0.15);
+        color: var(--neon-blue);
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
+    .helms-1rm-card__metrics {
+        font-size: 0.85rem;
+        color: #9da5ad;
+    }
+
+    .helms-1rm-card__metrics strong {
+        color: #f2f3f5;
+        font-family: monospace;
+    }
+
+    .helms-1rm-card__arrow {
+        margin: 0 0.5rem;
+        color: #64748b;
+    }
+
+    .helms-1rm-card__proj strong {
+        color: var(--neon-green);
+        font-weight: 700;
+    }
 </style>
 {% endblock %}
 
@@ -641,19 +757,15 @@
 
         <!-- Status Card -->
         <div class="helms-card">
-            <div class="card-title">Objetivo Actual</div>
+            <span class="helms-hero-tag">Metodología Helms</span>
             <div class="phase-name">{{ fase_actual }}</div>
             <div class="phase-description">{{ descripcion }}</div>
             <div class="progress-container">
-                <div class="progress-labels">
-                    <span>Progreso del bloque</span>
-                    <span>{{ progreso_bloque|floatformat:0 }}%</span>
-                </div>
                 <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" style="width: {{ progreso_bloque }}%;"></div>
+                    <div class="progress-bar-fill helms-progress-fill--cyan" style="width: {{ progreso_bloque }}%;"></div>
                 </div>
-                <div style="text-align: right; margin-top: 0.5rem; font-size: 0.75rem; color: #64748b;">
-                    Semana {{ semana_actual }} / {{ total_semanas }}
+                <div class="helms-progress-caption">
+                    Semana {{ semana_actual }} / {{ total_semanas }} · {{ progreso_bloque|floatformat:0 }}%
                 </div>
             </div>
         </div>
@@ -693,7 +805,7 @@
          ANNUAL TIMELINE
          ============================================================ -->
     {% if bloques_plan %}
-    <div class="timeline-section">
+    <div class="helms-panel">
         <div class="card-title">Tu Año Completo — {{ año_plan }}</div>
 
         <div class="timeline-bar">
@@ -734,7 +846,7 @@
     <!-- ============================================================
          PHASE DETAIL CARDS
          ============================================================ -->
-    <div class="timeline-section" style="margin-bottom: 3rem;">
+    <div class="helms-panel">
         <div class="card-title">Detalle de cada Fase</div>
         <div class="phases-grid">
             {% for bloque in bloques_plan %}
@@ -803,7 +915,7 @@
          PHASE HISTORY (Completed Phases)
          ============================================================ -->
     {% if fases_completadas %}
-    <div class="timeline-section" style="margin-bottom: 3rem;">
+    <div class="helms-panel">
         <div class="card-title">Historial de Fases Completadas</div>
         <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem;">
             Progreso real medido en cada bloque de entrenamiento que has completado.
@@ -940,51 +1052,17 @@
                 </div>
             </div>
 
-            <div style="display: grid; gap: 1rem;">
+            <div>
                 {% for ejercicio, pred in predicciones_1rm.items %}
-                <div
-                    style="padding: 1rem; background: rgba(0,0,0,0.3); border-radius: 0; border: 1px solid rgba(255,255,255,0.05);">
-                    <div
-                        style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                        <div style="font-weight: 600; color: #fff;">{{ ejercicio }}</div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <span style="font-size: 0.75rem; color: #64748b;">Confianza:</span>
-                            <span
-                                style="font-size: 0.75rem; padding: 0.25rem 0.5rem; background: rgba(114,221,255,0.15); color: var(--neon-blue); border-radius: 0;">
-                                {{ pred.confianza }}%</span>
-                        </div>
+                <div class="helms-1rm-card">
+                    <div class="helms-1rm-card__top">
+                        <span class="helms-1rm-card__name">{{ ejercicio }}</span>
+                        <span class="helms-1rm-card__badge">Confianza {{ pred.confianza }}%</span>
                     </div>
-
-                    <div style="display: flex; align-items: center; gap: 1.5rem; margin-bottom: 0.5rem;">
-                        <div>
-                            <div
-                                style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                                Actual</div>
-                            <div style="font-size: 1.5rem; font-weight: 700; color: #94a3b8; font-family: monospace;">
-                                {{ pred.actual }}</div>
-                            <div style="font-size: 0.7rem; color: #64748b;">kg</div>
-                        </div>
-
-                        <div style="flex: 1; display: flex; align-items: center; gap: 0.5rem;">
-                            <div
-                                style="flex: 1; height: 8px; background: rgba(255,255,255,0.1); border-radius: 0; overflow: hidden;">
-                                <div
-                                    style="height: 100%; background: linear-gradient(90deg, var(--neon-blue), var(--neon-green)); width: {% if pred.ganancia_pct > 0 %}{% widthratio pred.ganancia_pct 20 100 %}{% else %}0{% endif %}%; max-width: 100%; transition: width 0.3s ease;">
-                                </div>
-                            </div>
-                            <span style="font-size: 0.9rem; color: var(--neon-green); font-weight: 600;">+
-                                {{ pred.ganancia_pct }}%</span>
-                        </div>
-
-                        <div>
-                            <div
-                                style="font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">
-                                Proyectado</div>
-                            <div
-                                style="font-size: 1.5rem; font-weight: 700; color: var(--neon-green); font-family: monospace;">
-                                {{ pred.proyectado }}</div>
-                            <div style="font-size: 0.7rem; color: var(--neon-green);">+{{ pred.ganancia_kg }} kg</div>
-                        </div>
+                    <div class="helms-1rm-card__metrics">
+                        Actual: <strong>{{ pred.actual }} kg</strong>
+                        <span class="helms-1rm-card__arrow">→</span>
+                        <span class="helms-1rm-card__proj">Proyectado: <strong>{{ pred.proyectado }} kg</strong></span>
                     </div>
                 </div>
                 {% endfor %}
@@ -1109,4 +1187,6 @@
     </div>
 
 </div>
+
+{% include 'includes/bottom_nav.html' with activo='plan' %}
 {% endblock %}

@@ -1005,7 +1005,7 @@ def explicacion_plan_helms(request):
                 'duracion': dur,
                 'fecha_inicio': fecha_inicio_bloque,
                 'fecha_fin': fecha_fin_bloque,
-                'es_actual': (bloque_target is not None and bloque['nombre'] == bloque_target.get('nombre', '')),
+                'es_actual': (bloque_target is not None and bloque is bloque_target),
                 'es_descarga': objetivo == 'descarga',
                 'tipo_color': tipo_color,
                 'porcentaje_anual': round((dur / total_semanas_plan) * 100, 1),
