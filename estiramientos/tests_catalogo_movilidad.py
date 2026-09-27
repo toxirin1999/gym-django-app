@@ -314,6 +314,36 @@ class PlayerMovilidadInmersivoTests(TestCase):
         self.assertIn('id="btnFinishEarly"', content)
         self.assertNotIn('class="player-header"', content)
 
+    def test_player_asigna_ilustracion_estatica_a_ejercicio_canonico_sin_upload(self):
+        """El reproductor no cae al placeholder para los cinco pasos editoriales."""
+        primero = self.plan.pasos.get(orden=1)
+        primero.ejercicio.nombre = "CARs de cadera en cuadrupedia"
+        primero.ejercicio.save(update_fields=["nombre"])
+
+        response = self.client.get(
+            reverse("estiramientos:iniciar_plan", args=[self.plan.pk]),
+        )
+
+        steps = json.loads(response.context["steps"])
+        self.assertEqual(
+            steps[0]["image"],
+            "/static/estiramientos/images/mobility/hip-cars.png",
+        )
+
+    def test_player_prioriza_imagen_subida_sobre_ilustracion_estatica(self):
+        """Una imagen curada en el ejercicio siempre prevalece sobre el fallback."""
+        primero = self.plan.pasos.get(orden=1)
+        primero.ejercicio.nombre = "CARs de cadera en cuadrupedia"
+        primero.ejercicio.imagen = "estiramientos/hip-cars-propia.png"
+        primero.ejercicio.save(update_fields=["nombre", "imagen"])
+
+        response = self.client.get(
+            reverse("estiramientos:iniciar_plan", args=[self.plan.pk]),
+        )
+
+        steps = json.loads(response.context["steps"])
+        self.assertEqual(steps[0]["image"], "/media/estiramientos/hip-cars-propia.png")
+
 
 class SeguridadModalidadMovilidadTests(TestCase):
     HOY = date(2026, 9, 23)

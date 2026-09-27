@@ -4,12 +4,24 @@ from django.db.models import Case, IntegerField, Value, When
 from django.contrib.auth.decorators import login_required
 from django.http import Http404, JsonResponse
 from django.shortcuts import render, get_object_or_404
+from django.templatetags.static import static
 from django.views.decorators.http import require_POST
 
 from entrenos.models import SesionProgramada
 from entrenos.services.sesion_movilidad_adaptativa_service import completar_sesion_movilidad
 from .models import EstiramientoPlan
 import json
+
+
+# Ilustraciones editoriales del reproductor inmersivo. Son un fallback: una
+# imagen que el entrenador haya subido para el ejercicio conserva prioridad.
+PLAYER_MOBILITY_IMAGE_FALLBACKS = {
+    "CARs de cadera en cuadrupedia": "estiramientos/images/mobility/hip-cars.png",
+    "Transición shin box 90/90": "estiramientos/images/mobility/shin-box-9090.png",
+    "Adductor rock back": "estiramientos/images/mobility/adductor-rock-back.png",
+    "Rodilla a pared para tobillo": "estiramientos/images/mobility/knee-to-wall.png",
+    "Elevación activa de puntas y talones": "estiramientos/images/mobility/toe-heel-raises.png",
+}
 
 
 def panel_estiramientos(request):
@@ -94,12 +106,18 @@ def iniciar_plan(request, plan_id: int):
     steps = []
     for p in pasos:
         ej = p.ejercicio
+        fallback_image = PLAYER_MOBILITY_IMAGE_FALLBACKS.get(ej.nombre)
+        image_url = (
+            ej.imagen.url
+            if ej.imagen
+            else static(fallback_image) if fallback_image else ""
+        )
         steps.append({
             "name": ej.nombre,
             "duration": int(p.duracion_segundos),
             "note": ej.descripcion_corta or "",
             "muscle": ej.musculo_objetivo or "",
-            "image": ej.imagen.url if ej.imagen else "",
+            "image": image_url,
         })
 
     sesion = None
