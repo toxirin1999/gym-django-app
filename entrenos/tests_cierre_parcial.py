@@ -159,6 +159,11 @@ class ContratoTemplateCierreParcialTests(TestCase):
         self.assertIn('motivo_cierre', source)
         self.assertIn('No puedes cerrar una sesión sin completar al menos una serie', source)
 
+    def test_campos_del_resumen_externo_se_asocian_al_formulario_de_entreno(self):
+        source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
+        self.assertIn('id="motivo-cierre" name="motivo_cierre" form="workout-form"', source)
+        self.assertIn('name="rpe_global_sesion" id="hid-rpe-global" value="" form="workout-form"', source)
+
     def test_retorno_24_a_18_conserva_principales(self):
         ejercicios = [
             {'nombre': str(i), 'series': 3,

@@ -2058,12 +2058,12 @@ document.addEventListener('DOMContentLoaded', () => {
           <div style="font-size:15px;font-weight:700;">9–10</div><div style="font-size:9px;opacity:.7;">Límite</div>
         </button>
       </div>
-      <input type="hidden" name="rpe_global_sesion" id="hid-rpe-global" value="">
+      <input type="hidden" name="rpe_global_sesion" id="hid-rpe-global" value="" form="workout-form">
     </div>
 
     <div id="motivo-cierre-wrap" style="display:none;margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
       <label for="motivo-cierre" style="display:block;font-size:12px;color:var(--td);margin-bottom:8px;">¿Por qué terminas antes?</label>
-      <select id="motivo-cierre" name="motivo_cierre" style="width:100%;padding:10px;border-radius:8px;background:var(--panel);color:var(--td);border:1px solid var(--bd);">
+      <select id="motivo-cierre" name="motivo_cierre" form="workout-form" style="width:100%;padding:10px;border-radius:8px;background:var(--panel);color:var(--td);border:1px solid var(--bd);">
         <option value="">Selecciona un motivo</option>
         <option value="fatiga">Fatiga</option>
         <option value="tiempo">Falta de tiempo</option>
