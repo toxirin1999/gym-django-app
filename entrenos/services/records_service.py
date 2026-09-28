@@ -79,6 +79,7 @@ class RecordsService:
                 entreno.series.filter(
                     completado=True,
                     ejercicio__nombre__iexact=nombre,
+                    es_aproximacion=False,
                 )
             )
                 

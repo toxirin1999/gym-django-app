@@ -23,7 +23,10 @@ from django.test import TestCase
 from django.utils import timezone
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymDecisionLog, SesionEntrenamiento, RecordPersonal
+from entrenos.models import (
+    EntrenoRealizado, EjercicioOmitidoEntreno, EjercicioRealizado,
+    GymDecisionLog, SesionEntrenamiento, RecordPersonal,
+)
 from entrenos.services.cierre_entrenamiento_service import construir_contexto_cierre
 from joi.models import MensajeJOI
 from rutinas.models import Rutina
@@ -484,6 +487,31 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
         efectos = {item['ejercicio']: item['efecto'] for item in decisiones}
         self.assertEqual(efectos['farmer walk'], 'Añadirá 10 m')
         self.assertEqual(efectos['curl femoral'], 'Añadirá 2 repeticiones')
+
+    def test_agrupa_omisiones_con_el_mismo_motivo_de_cierre(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        nombres = ('Press Arnold', 'Press militar', 'Aperturas')
+        for nombre in nombres:
+            EjercicioOmitidoEntreno.objects.create(
+                entreno=entreno,
+                nombre_ejercicio=nombre,
+                nombre_normalizado=nombre.lower(),
+                motivo='tiempo',
+            )
+            self._crear_log(
+                entreno, nombre.lower(), 'mantener',
+                'Ejercicio omitido por falta de tiempo — no progresar sin evidencia.',
+            )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            decisiones = construir_contexto_cierre(self.cliente, entreno)['decisiones_entrenador']
+
+        self.assertEqual(len(decisiones), 1)
+        self.assertTrue(decisiones[0]['agrupada'])
+        self.assertEqual(decisiones[0]['ejercicio'], '3 ejercicios omitidos')
+        self.assertIn('Falta de tiempo', decisiones[0]['motivo'])
+        self.assertEqual(decisiones[0]['ejercicios'], list(nombres))
 
 
 # ── Caso 5: PRs ────────────────────────────────────────────────────────────────

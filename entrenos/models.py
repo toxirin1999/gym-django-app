@@ -257,12 +257,21 @@ class SerieRealizada(models.Model):
         max_length=15, choices=TECNICA_CHOICES, null=True, blank=True,
         help_text="Calidad de técnica percibida en esta serie"
     )
+    es_aproximacion = models.BooleanField(
+        default=False,
+        help_text=(
+            "Serie preparatoria conservada en el historial, excluida de volumen, "
+            "RPE agregado, 1RM y decisiones de progresión."
+        ),
+    )
 
     def __str__(self):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
 
     @property
     def tonelaje_kg(self):
+        if self.es_aproximacion:
+            return Decimal('0')
         if self.distancia_metros is not None:
             return Decimal('0')
         peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
@@ -270,6 +279,8 @@ class SerieRealizada(models.Model):
 
     @property
     def carga_distancia_kg_m(self):
+        if self.es_aproximacion:
+            return Decimal('0')
         if self.distancia_metros is None:
             return Decimal('0')
         peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
@@ -439,7 +450,9 @@ class EntrenoRealizado(models.Model):
         total = Decimal('0')
 
         series_completadas = list(
-            self.series.filter(completado=True).select_related('ejercicio')
+            self.series.filter(
+                completado=True, es_aproximacion=False
+            ).select_related('ejercicio')
         )
         nombres_con_detalle = {
             serie.ejercicio.nombre.strip().lower()

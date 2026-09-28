@@ -189,7 +189,26 @@ input{background:transparent!important;border:none!important;outline:none!import
   -webkit-tap-highlight-color:transparent;
 }
 .rpe-pick-btn:active{transform:scale(0.93);}
-.rpe-pick-btn.sel{background:var(--green);color:#000!important;}
+.rpe-pick-btn.sel{
+  background:var(--green);color:#000!important;border-color:#7fffd4;
+  box-shadow:0 0 0 2px rgba(16,185,129,.25),0 8px 18px -10px rgba(16,185,129,.95);
+  transform:translateY(-1px);
+}
+.rpe-pick-btn.sel::after{content:'✓';font-size:10px;margin-left:4px;vertical-align:1px;}
+
+/* Serie preparatoria: se conserva, pero no es trabajo efectivo. */
+.serie-aproximacion-toggle{
+  width:100%;min-height:40px;border:1px solid var(--border);border-radius:11px;
+  background:transparent;color:var(--td);padding:8px 10px;text-align:left;
+  display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;
+}
+.serie-aproximacion-toggle .aprox-state{font-size:10px;text-transform:uppercase;letter-spacing:.1em;}
+.serie-aproximacion-toggle.activa{border-color:rgba(96,165,250,.8);background:rgba(96,165,250,.11);color:#bfdbfe;}
+.serie-plan-result{display:inline-block;margin:4px 0 0;font-size:10px;font-weight:700;letter-spacing:.03em;}
+.serie-plan-result.en-rango{color:var(--green);}
+.serie-plan-result.por-debajo{color:#fbbf24;}
+.serie-plan-result.por-encima{color:#60a5fa;}
+.serie-plan-result.aproximacion{color:#bfdbfe;}
 
 /* HISTORIAL */
 .historial-zona{margin:0 16px 12px;padding:10px 14px;background:var(--surf2);border-radius:10px;font-size:12px;color:var(--td);}
@@ -303,7 +322,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .modal-resumen-full{
   position:absolute;inset:0;background:#000;
   display:flex;flex-direction:column;
-  overflow-y:auto;padding:40px 20px 32px;
+  overflow-y:auto;padding:40px 20px calc(32px + env(safe-area-inset-bottom));
   max-width:520px;margin:0 auto;
 }
 /* ── Header trofeo ── */
@@ -388,7 +407,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sticky-final-btn:disabled{opacity:.38;cursor:not-allowed;color:var(--td);border-color:var(--border);}
 
 /* ── LAYOUT ── */
-.wrap{max-width:480px;margin:0 auto;padding-bottom:70px;}
+.wrap{max-width:480px;margin:0 auto;padding-bottom:calc(58px + env(safe-area-inset-bottom) + 24px);}
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
@@ -1475,6 +1494,8 @@ input{background:transparent!important;border:none!important;outline:none!import
        style="display:{% if forloop.first %}block{% else %}none{% endif %};"
        data-rpe-obj="{{ ejercicio.rpe_objetivo }}"
        data-reps-obj="{{ ejercicio.reps_objetivo }}"
+       data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
+       data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
        data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}"
        data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
        data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}">
@@ -1608,12 +1629,12 @@ input{background:transparent!important;border:none!important;outline:none!import
           <span class="sl-label" style="padding-top:8px;">Esfuerzo (RPE)</span>
           <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
             <div class="rpe-picker-grid" id="rpe-grid-{{ ejercicio.form_id }}-{{ sn }}">
-              <button type="button" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">5</button>
-              <button type="button" class="rpe-pick-btn" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">6</button>
-              <button type="button" class="rpe-pick-btn" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">7</button>
-              <button type="button" class="rpe-pick-btn" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">8</button>
-              <button type="button" class="rpe-pick-btn" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">9</button>
-              <button type="button" class="rpe-pick-btn" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}">10</button>
+              <button type="button" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">5</button>
+              <button type="button" class="rpe-pick-btn" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">6</button>
+              <button type="button" class="rpe-pick-btn" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">7</button>
+              <button type="button" class="rpe-pick-btn" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">8</button>
+              <button type="button" class="rpe-pick-btn" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">9</button>
+              <button type="button" class="rpe-pick-btn" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">10</button>
             </div>
             <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}">Selecciona el RPE real</div>
           </div>
@@ -1629,6 +1650,16 @@ input{background:transparent!important;border:none!important;outline:none!import
         <input type="checkbox" style="display:none;"
                id="check-{{ ejercicio.form_id }}-{{ sn }}"
                name="{{ ejercicio.form_id }}_completado_{{ sn }}" value="1">
+        <input type="checkbox" style="display:none;"
+               id="aproximacion-{{ ejercicio.form_id }}-{{ sn }}"
+               name="{{ ejercicio.form_id }}_aproximacion_{{ sn }}" value="1">
+        <button type="button" class="serie-aproximacion-toggle"
+                id="aproximacion-toggle-{{ ejercicio.form_id }}-{{ sn }}"
+                aria-pressed="false"
+                onclick="toggleAproximacion('{{ ejercicio.form_id }}', {{ sn }})">
+          <span>Aproximación</span>
+          <span class="aprox-state">Cuenta como trabajo</span>
+        </button>
       </div>
 
       {% if not ejercicio.usa_peso and ejercicio.repeticiones_anterior > 0 %}
@@ -2150,6 +2181,10 @@ document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
 });
 const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
 
+function seriesDeTrabajo(series){
+  return (series||[]).filter(serie=>serie && !serie.esAproximacion);
+}
+
 // ── RESTAURAR DESDE localStorage ────────────────────────────────
 (function restaurarSesion(){
   try{
@@ -2179,14 +2214,26 @@ const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
         const row=document.createElement('div');
         row.className='serie-done';
         row.dataset.sn=sn;
+        const resultado=resultadoPlanSerie(fid,sn,s.reps,Boolean(s.esAproximacion));
+        const resultadoBadge=resultado
+          ? '<span class="serie-plan-result '+resultado.clase+'">'+resultado.texto+'</span>' : '';
         row.innerHTML='<div class="sd-check">✓</div>'
-          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong></div>'
+          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>'+resultadoBadge+'</div>'
           +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>'
           +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+totalSets+')" title="Editar esta serie">✎</button>';
         log.appendChild(row);
         // Marcar checkbox
         const cb=document.getElementById('check-'+fid+'-'+sn);
         if(cb)cb.checked=true;
+        const aprox=document.getElementById('aproximacion-'+fid+'-'+sn);
+        const aproxBtn=document.getElementById('aproximacion-toggle-'+fid+'-'+sn);
+        if(aprox)aprox.checked=Boolean(s.esAproximacion);
+        if(aproxBtn && s.esAproximacion){
+          aproxBtn.classList.add('activa');
+          aproxBtn.setAttribute('aria-pressed','true');
+          const state=aproxBtn.querySelector('.aprox-state');
+          if(state)state.textContent='No cuenta como trabajo';
+        }
         // Ocultar el panel de esa serie
         const reg=document.getElementById('reg-'+fid+'-'+sn);
         if(reg)reg.style.display='none';
@@ -2288,7 +2335,9 @@ function actualizarDots(){
     if(!card)return;
     const fid=card.dataset.formId;
     const total=parseInt(card.dataset.totalSets)||0;
-    const comp=(STATE.seriesCompletadas[fid]||[]).length;
+    // Las aproximaciones mantienen la secuencia visual, pero no cuentan como
+    // trabajo completado ni hacen que el ejercicio parezca terminado.
+    const comp=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]).length;
     dot.classList.remove('activo','completado','parcial');
     if(i===STATE.ejActual)dot.classList.add('activo');
     else if(comp>=total && total>0)dot.classList.add('completado');
@@ -2437,6 +2486,7 @@ function guardarSeriePanel(fid,sn,total){
   const reps=parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value||0);
   const rpeRaw=document.getElementById('rpe-hid-'+fid+'-'+sn)?.value||'';
   const rpe=parseFloat(rpeRaw);
+  const esAproximacion=Boolean(document.getElementById('aproximacion-'+fid+'-'+sn)?.checked);
   if(!rpeRaw || !Number.isFinite(rpe)){
     window.alert('Selecciona el RPE real antes de guardar la serie.');
     return;
@@ -2479,6 +2529,7 @@ function guardarSeriePanel(fid,sn,total){
     multiplicador,
     usaDistancia,
     usaTiempo,
+    esAproximacion,
     tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null
   };
 
@@ -2498,6 +2549,7 @@ function guardarSeriePanel(fid,sn,total){
         ? reps+'s'
         : peso+'kg × '+reps+' reps';
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
+    const resultadoPlan=resultadoPlanSerie(fid,sn,reps,esAproximacion);
     const tecnicaBadge=tecnicaGuardada==='buena'
       ? '<span style="font-size:10px;color:#10B981;margin-left:4px;">✔ buena</span>'
       : tecnicaGuardada==='aceptable'
@@ -2505,8 +2557,10 @@ function guardarSeriePanel(fid,sn,total){
         : tecnicaGuardada==='comprometida'
           ? '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>'
           : '';
+    const resultadoBadge=resultadoPlan
+      ? '<span class="serie-plan-result '+resultadoPlan.clase+'">'+resultadoPlan.texto+'</span>' : '';
     row.innerHTML='<div class="sd-check">✓</div>'
-      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong><span id="tecnica-badge-'+fid+'-'+sn+'">'+tecnicaBadge+'</span></div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong><span id="tecnica-badge-'+fid+'-'+sn+'">'+tecnicaBadge+'</span>'+resultadoBadge+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
     if(!filaExistente) log.appendChild(row);
@@ -2620,7 +2674,7 @@ function detectarPR(fid,sn,peso){
 
 // ── MENSAJE MOTIVACIONAL AL COMPLETAR EJERCICIO ──────────────────
 function mostrarMensajeEjercicio(card,fid){
-  const scs=STATE.seriesCompletadas[fid]||[];
+  const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
   if(!scs.length)return;
   const rpeAvg=scs.reduce((a,s)=>a+(s.rpe||8),0)/scs.length;
   const frase=elegirFrase(rpeAvg);
@@ -2689,13 +2743,39 @@ function seleccionarRPE(fidSn,valor){
   const grid=document.getElementById('rpe-grid-'+fidSn);
   if(disp)disp.textContent=valor;
   if(hid)hid.value=valor;
-  if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>b.classList.toggle('sel',parseInt(b.dataset.val)===valor));
+  if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>{
+    const seleccionado=parseInt(b.dataset.val)===valor;
+    b.classList.toggle('sel',seleccionado);
+    b.setAttribute('aria-pressed',String(seleccionado));
+  });
   if(desc){desc.textContent=descripcionRPE(fidSn,valor);desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
   if(navigator.vibrate)navigator.vibrate(8);
 }
 document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
   btn.addEventListener('click',()=>seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val)));
 });
+
+function toggleAproximacion(fid,sn){
+  const input=document.getElementById('aproximacion-'+fid+'-'+sn);
+  const button=document.getElementById('aproximacion-toggle-'+fid+'-'+sn);
+  if(!input||!button)return;
+  input.checked=!input.checked;
+  button.classList.toggle('activa',input.checked);
+  button.setAttribute('aria-pressed',String(input.checked));
+  const state=button.querySelector('.aprox-state');
+  if(state)state.textContent=input.checked?'No cuenta como trabajo':'Cuenta como trabajo';
+}
+
+function resultadoPlanSerie(fid,sn,reps,esAproximacion){
+  if(esAproximacion)return {clase:'aproximacion',texto:'Aproximación · no cuenta como trabajo'};
+  const panel=document.getElementById('reg-'+fid+'-'+sn);
+  if(!panel || panel.dataset.usaTiempo==='1' || panel.dataset.usaDistancia==='1')return null;
+  const minimo=Number(panel.dataset.repsMin||0);
+  const maximo=Number(panel.dataset.repsMax||0);
+  if(minimo && reps<minimo)return {clase:'por-debajo',texto:'Por debajo del rango'};
+  if(maximo && reps>maximo)return {clase:'por-encima',texto:'Por encima del rango'};
+  return {clase:'en-rango',texto:'En rango'};
+}
 
 // Inicializar descripciones RPE en carga
 document.querySelectorAll('.rpe-picker-grid').forEach(grid=>{
@@ -2881,10 +2961,11 @@ function saltarDescanso(fid){
     const div=document.createElement('div');
     div.setAttribute('data-ej-done','1');
     div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
-    const frase=elegirFrase((STATE.seriesCompletadas[fid]||[]).reduce((a,s)=>a+(s.rpe||8),0)/Math.max(1,(STATE.seriesCompletadas[fid]||[]).length));
+    const seriesTrabajo=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
+    const frase=elegirFrase(seriesTrabajo.reduce((a,s)=>a+(s.rpe||8),0)/Math.max(1,seriesTrabajo.length));
     div.innerHTML='<div style="font-size:2rem;color:var(--ok);">'+frase.e+'</div>'
       +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">'+frase.t+'</div>'
-      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+snActual+' series · '+calcVolumenEj(fid)+' kg</div>'
+      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+seriesTrabajo.length+' series de trabajo · '+calcVolumenEj(fid)+' kg</div>'
       +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>';
     if(card)card.appendChild(div);
     const ejIdxAtCompletion=STATE.ejActual;
@@ -2911,14 +2992,15 @@ function calcularDiscos(fid,pesoTotal){
 }
 
 function calcVolumenEj(fid){
-  return STATE.seriesCompletadas[fid].reduce((a,s)=>a+s.peso*s.reps,0).toFixed(0);
+  return seriesDeTrabajo(STATE.seriesCompletadas[fid])
+    .reduce((a,s)=>a+s.peso*s.reps,0).toFixed(0);
 }
 
 function actualizarProgreso(){
   let comp=0,total=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     total+=parseInt(card.dataset.totalSets)||0;
-    comp+=(STATE.seriesCompletadas[card.dataset.formId]||[]).length;
+    comp+=seriesDeTrabajo(STATE.seriesCompletadas[card.dataset.formId]).length;
   });
   const pct=total>0?Math.round(comp/total*100):0;
   const fill=document.getElementById('tb-fill');
@@ -2928,6 +3010,9 @@ function actualizarProgreso(){
 }
 
 function metricasSerie(s){
+  if(s.esAproximacion){
+    return {tonelaje:0,cargaDistancia:0,reps:0,distancia:0,segundos:0};
+  }
   const multiplicador = Number(s.multiplicador || 1);
   const pesoTotal = Number(s.peso || 0) * multiplicador;
   const cantidad = Number(s.reps || 0);
@@ -2950,7 +3035,7 @@ function actualizarSticky(){
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     const fid=card.dataset.formId;
     total+=parseInt(card.dataset.totalSets)||0;
-    const scs=STATE.seriesCompletadas[fid]||[];
+    const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]);
     comp+=scs.length;
     scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;});
   });
@@ -3018,7 +3103,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const fid=card.dataset.formId;
     const t=parseInt(card.dataset.totalSets)||0;
     total+=t;ejTot++;
-    const scs=STATE.seriesCompletadas[fid]||[];
+    const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]);
     comp+=scs.length;
     if(scs.length>=t)ejComp++;
     scs.forEach(s=>{const m=metricasSerie(s);vol+=m.tonelaje;cargaDistancia+=m.cargaDistancia;reps+=m.reps;distanciaTotal+=m.distancia;segundosTrabajo+=m.segundos;if(s.rpe)rpes.push(s.rpe);});
@@ -3075,7 +3160,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const fid=card.dataset.formId;
     const t=parseInt(card.dataset.totalSets)||0;
     const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent||'';
-    const scs=STATE.seriesCompletadas[fid]||[];
+    const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]);
     let volEj=0,cargaDistanciaEj=0;
     scs.forEach(s=>{const m=metricasSerie(s);volEj+=m.tonelaje;cargaDistanciaEj+=m.cargaDistancia;});
     const completo=scs.length>=t&&t>0;
@@ -3324,7 +3409,7 @@ let _envioCierreEnCurso = false;
 
   function _hayRpeSeries(){
     return Object.values(STATE.seriesCompletadas||{}).some(ss=>
-      ss && ss.some(s=>s.rpe && s.rpe > 0)
+      seriesDeTrabajo(ss||[]).some(s=>s.rpe && s.rpe > 0)
     );
   }
 
@@ -3363,6 +3448,8 @@ function sincronizarSeriesConfirmadasConFormulario(form){
         || form.elements.namedItem(fid+'_rpe_'+sn);
       const checkbox=document.getElementById('check-'+fid+'-'+sn)
         || form.elements.namedItem(fid+'_completado_'+sn);
+      const aproximacionInput=document.getElementById('aproximacion-'+fid+'-'+sn)
+        || form.elements.namedItem(fid+'_aproximacion_'+sn);
       let tecnicaInput=form.elements.namedItem(fid+'_tecnica_'+sn);
       if(!tecnicaInput){
         tecnicaInput=document.createElement('input');
@@ -3375,6 +3462,7 @@ function sincronizarSeriesConfirmadasConFormulario(form){
       if(repsInput)repsInput.value=serie.reps;
       if(rpeInput)rpeInput.value=serie.rpe;
       if(checkbox)checkbox.checked = true;
+      if(aproximacionInput)aproximacionInput.checked = Boolean(serie.esAproximacion);
       if(serie.tecnica)tecnicaInput.value=serie.tecnica;
     });
   });
@@ -3382,7 +3470,8 @@ function sincronizarSeriesConfirmadasConFormulario(form){
 
 document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   if (_envioCierreEnCurso) return;
-  const completadas=Object.values(STATE.seriesCompletadas).reduce((n,series)=>n+series.length,0);
+  const completadas=Object.values(STATE.seriesCompletadas)
+    .reduce((n,series)=>n+seriesDeTrabajo(series).length,0);
   const totalPlanificadas=cards.reduce((n,card)=>n+(parseInt(card.dataset.totalSets)||0),0);
   const motivo=document.getElementById('motivo-cierre');
   const errorMotivo=document.getElementById('motivo-cierre-error');

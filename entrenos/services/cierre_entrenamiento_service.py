@@ -111,17 +111,67 @@ def _decisiones_entrenador(cliente, entreno):
         .filter(nombre_lower__in=nombres)
         .values_list('nombre_lower', 'tipo_progresion')
     )
-    return [
-        {
+    # Las omisiones no son cuatro decisiones independientes: todas proceden
+    # del mismo cierre y comparten una única consecuencia (no progresar sin
+    # evidencia). Se agrupan aquí, a partir del registro estructurado de la
+    # omisión, no interpretando el copy del motivo del log.
+    omitidos_por_nombre = {
+        normalizar_ejercicio(omitido.nombre_normalizado or omitido.nombre_ejercicio): omitido
+        for omitido in entreno.ejercicios_omitidos.all()
+    }
+    logs_omitidos = {}
+    for log in logs:
+        nombre = normalizar_ejercicio(log.ejercicio)
+        if log.accion == 'mantener' and nombre in omitidos_por_nombre:
+            logs_omitidos[nombre] = log
+
+    decisiones = []
+    agrupacion_insertada = False
+    if logs_omitidos:
+        omitidos = [
+            omitidos_por_nombre[nombre]
+            for nombre in logs_omitidos
+        ]
+        motivos = {omitido.get_motivo_display().lower() for omitido in omitidos}
+        motivo = next(iter(motivos)) if len(motivos) == 1 else 'motivos registrados'
+        cantidad = len(omitidos)
+        sufijo = '' if cantidad == 1 else 's'
+        decisiones_omitidas = {
+            'ejercicio': f'{cantidad} ejercicio{sufijo} omitido{sufijo}',
+            'accion': 'Mantener',
+            'motivo': f'{motivo.capitalize()} · no progresar sin evidencia.',
+            'efecto': None,
+            'agrupada': True,
+            'ejercicios': [omitido.nombre_ejercicio for omitido in omitidos],
+        }
+
+    for log in logs:
+        nombre = normalizar_ejercicio(log.ejercicio)
+        if nombre in logs_omitidos:
+            if not agrupacion_insertada:
+                decisiones.append(decisiones_omitidas)
+                agrupacion_insertada = True
+            continue
+        decisiones.append({
             'ejercicio': log.ejercicio,
             'accion': log.get_accion_display(),
             'motivo': log.motivo,
             'efecto': _efecto_decision(
                 log, tipos_progresion.get(log.ejercicio.strip().lower()),
             ),
-        }
-        for log in logs
-    ]
+        })
+    return decisiones
+
+
+def _resumen_records(prs):
+    """Mantiene los PRs exactos, compactando solo repeticiones de volumen."""
+    records_volumen = [pr for pr in prs if pr.tipo_record == 'volumen_total']
+    records_individuales = [pr for pr in prs if pr.tipo_record != 'volumen_total']
+    return {
+        'individuales': records_individuales,
+        'volumen': records_volumen,
+        'volumen_agrupado': len(records_volumen) > 1,
+    }
 
 
 def _proxima_vez_decisiones(cliente, ejercicios):
@@ -455,5 +505,6 @@ def construir_contexto_cierre(cliente, entreno):
         'decisiones_entrenador': decisiones_entrenador,
         'proxima_vez': proxima_vez,
         'prs': prs,
+        'resumen_records': _resumen_records(prs),
         'joi_mensaje': joi_mensaje,
     }

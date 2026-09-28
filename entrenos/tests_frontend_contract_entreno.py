@@ -41,6 +41,16 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("descripcionRPE(fidSn,valor)", self.source)
         self.assertIn("control técnico sostenible", self.source)
 
+    def test_registro_distingue_rpe_aproximacion_y_resultado_del_plan(self):
+        self.assertIn("aria-pressed=\"false\"", self.source)
+        self.assertIn("b.setAttribute('aria-pressed'", self.source)
+        self.assertIn('name="{{ ejercicio.form_id }}_aproximacion_{{ sn }}"', self.source)
+        self.assertIn("serie.esAproximacion", self.source)
+        self.assertIn("resultadoPlanSerie", self.source)
+        self.assertIn("Por debajo del rango", self.source)
+        self.assertIn("padding-bottom:calc(58px + env(safe-area-inset-bottom) + 24px)", self.source)
+        self.assertIn("calc(32px + env(safe-area-inset-bottom))", self.source)
+
 
 class BriefingRenderContractTests(SimpleTestCase):
     def test_dead_hang_se_renderiza_en_segundos_sin_kg_reps_ni_calentamiento(self):

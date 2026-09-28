@@ -35,7 +35,9 @@
   /* ── LAYOUT ──────────────────────────────────── */
   .wrap {
     max-width: 480px; margin: 0 auto;
-    padding: 0 16px 140px;
+    /* El cierre puede tener decisiones largas; reserva siempre más que los
+       dos CTAs fijos, también en Safari con área segura. */
+    padding: 0 16px calc(192px + env(safe-area-inset-bottom));
     min-height: 100vh;
   }
 
@@ -131,6 +133,30 @@
     font-size: 13px; color: var(--ink); padding: 6px 0;
   }
   .pr-row + .pr-row { border-top: 1px solid var(--bd); }
+  .pr-volume-summary {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 13px; color: var(--ink); padding: 6px 0;
+  }
+  .pr-details { margin-top: 7px; }
+  .pr-details summary {
+    cursor: pointer; color: var(--td); font-family: var(--fm);
+    font-size: 10px; letter-spacing: .06em; list-style: none;
+  }
+  .pr-details summary::-webkit-details-marker { display: none; }
+  .pr-details summary::after { content: ' +'; color: var(--ok); }
+  .pr-details[open] summary::after { content: ' −'; }
+  .section-note {
+    font-size: 11px; line-height: 1.4; color: var(--tdm); margin-top: -4px;
+  }
+  .decision-exercises { margin-top: 7px; padding-top: 7px; border-top: 1px solid var(--bd); }
+  .decision-exercises summary {
+    cursor: pointer; color: var(--td); font-family: var(--fm);
+    font-size: 10px; letter-spacing: .06em; list-style: none;
+  }
+  .decision-exercises summary::-webkit-details-marker { display: none; }
+  .decision-exercises summary::after { content: ' +'; color: var(--ok); }
+  .decision-exercises[open] summary::after { content: ' −'; }
+  .decision-exercise-list { margin-top: 6px; color: var(--td); font-size: 12px; line-height: 1.5; }
 
   /* ── JOI ──────────────────────────────────────── */
   .joi-card {
@@ -151,7 +177,8 @@
   /* ── CTA ─────────────────────────────────────── */
   .cta-wrap {
     position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 16px; background: linear-gradient(to top, var(--bg) 70%, transparent);
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 70%, transparent);
     max-width: 480px; margin: 0 auto;
     display: flex; flex-direction: column; gap: 8px;
   }
@@ -211,9 +238,22 @@
   <!-- RÉCORDS -->
   <div class="sec-hdr"><span class="sec-tag">Récords</span><div class="sec-line"></div></div>
   <div class="card">
-    {% for pr in prs %}
+    {% for pr in resumen_records.individuales %}
     <div class="pr-row">🏆 Nuevo récord de {{ pr.get_tipo_record_display|lower }} · {{ pr.ejercicio_nombre }}</div>
     {% endfor %}
+    {% if resumen_records.volumen_agrupado %}
+    <div class="pr-volume-summary">🏆 {{ resumen_records.volumen|length }} nuevos récords de volumen</div>
+    <details class="pr-details">
+      <summary>Ver ejercicios</summary>
+      {% for pr in resumen_records.volumen %}
+      <div class="pr-row">Nuevo récord de volumen total · {{ pr.ejercicio_nombre }}</div>
+      {% endfor %}
+    </details>
+    {% else %}
+      {% for pr in resumen_records.volumen %}
+      <div class="pr-row">🏆 Nuevo récord de volumen total · {{ pr.ejercicio_nombre }}</div>
+      {% endfor %}
+    {% endif %}
   </div>
   {% endif %}
 
@@ -226,8 +266,9 @@
   {% endif %}
 
   {% if cambios_relevantes %}
-  <!-- CAMBIOS RELEVANTES -->
-  <div class="sec-hdr"><span class="sec-tag">Cambios relevantes</span><div class="sec-line"></div></div>
+  <!-- EJECUCIÓN: DESCRIBE HOY, NO PRESCRIBE LA PRÓXIMA SESIÓN -->
+  <div class="sec-hdr"><span class="sec-tag">Ejecución de hoy</span><div class="sec-line"></div></div>
+  <p class="section-note">Comparada con tu última sesión compatible.</p>
   <div class="card">
     {% for cambio in cambios_relevantes %}
     <div class="cambio-row">
@@ -239,14 +280,20 @@
   {% endif %}
 
   {% if decisiones_entrenador %}
-  <!-- DECISIONES DEL ENTRENADOR -->
-  <div class="sec-hdr"><span class="sec-tag">Decisiones del entrenador</span><div class="sec-line"></div></div>
+  <!-- DECISIONES: SON LA AUTORIDAD SOBRE LA PRÓXIMA SESIÓN -->
+  <div class="sec-hdr"><span class="sec-tag">Decisión para la próxima sesión</span><div class="sec-line"></div></div>
   <div class="card">
     {% for decision in decisiones_entrenador %}
     <div class="cambio-row">
       <span class="cambio-nombre">
         {{ decision.ejercicio }}<br>
         <span style="color:var(--td);font-size:12px;">{{ decision.accion }} · {{ decision.motivo }}</span>
+        {% if decision.agrupada %}
+        <details class="decision-exercises">
+          <summary>Ver ejercicios omitidos</summary>
+          <div class="decision-exercise-list">{{ decision.ejercicios|join:", " }}</div>
+        </details>
+        {% endif %}
       </span>
       {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% endif %}
     </div>

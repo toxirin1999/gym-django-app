@@ -30,7 +30,9 @@ def _tecnicas_sesion(entreno, ejercicio_normalizado):
 
     return [
         serie.tecnica_calidad
-        for serie in SerieRealizada.objects.filter(entreno=entreno)
+        for serie in SerieRealizada.objects.filter(
+            entreno=entreno, es_aproximacion=False
+        )
         .exclude(tecnica_calidad__isnull=True)
         .exclude(tecnica_calidad='')
         .select_related('ejercicio')
@@ -53,6 +55,7 @@ def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
             entreno=entreno,
             completado=True,
             peso_kg__isnull=False,
+            es_aproximacion=False,
         ).select_related('ejercicio')
         if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
     ]

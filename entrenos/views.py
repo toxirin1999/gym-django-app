@@ -4477,7 +4477,11 @@ def guardar_entrenamiento_activo(request, cliente_id):
         ]
         _ids_con_serie = {
             fid for fid in _ids_planificados
-            if any(bool(request.POST.get(f'{fid}_completado_{i}')) for i in range(1, 11))
+            if any(
+                bool(request.POST.get(f'{fid}_completado_{i}'))
+                and request.POST.get(f'{fid}_aproximacion_{i}', '').lower() not in ('1', 'true', 'on')
+                for i in range(1, 11)
+            )
         }
         _es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         if not _ids_con_serie and _es_ajax:
@@ -4503,7 +4507,11 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     raise ValueError(f'El RPE real de la serie {i} debe estar entre 1 y 10.')
         _hay_series_pendientes = any(
             sum(1 for i in range(1, 11) if f'{fid}_reps_{i}' in request.POST)
-            > sum(1 for i in range(1, 11) if bool(request.POST.get(f'{fid}_completado_{i}')))
+            > sum(
+                1 for i in range(1, 11)
+                if bool(request.POST.get(f'{fid}_completado_{i}'))
+                and request.POST.get(f'{fid}_aproximacion_{i}', '').lower() not in ('1', 'true', 'on')
+            )
             for fid in _ids_planificados
         )
         _motivo_cierre = request.POST.get('motivo_cierre', '').strip()
@@ -4582,6 +4590,11 @@ def guardar_entrenamiento_activo(request, cliente_id):
             mejor_serie_rm = None  # Phase Gym Peso 2.1: peso/reps/rpe_real de la serie que generó mejor_rm_ejercicio
             volumen_ejercicio = Decimal('0.0')  # Inicializamos el volumen por ejercicio
 
+            # Todas las series confirmadas se conservan como historial. Las
+            # aproximaciones son observaciones útiles para el usuario, pero no
+            # son evidencia de trabajo: no alimentan volumen, e1RM, RPE medio
+            # ni las decisiones que se derivan de EjercicioRealizado.
+            series_data_todas = []
             series_data_para_guardar = []
 
             tipo_carga_solicitado = request.POST.get(f'{form_id}_tipo_carga', 'total')
@@ -4616,9 +4629,25 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     # (un solo <form> para todo el entreno) y se guardan como si
                     # fueran series reales.
                     serie_confirmada = bool(request.POST.get(f"{form_id}_completado_{i}"))
+                    es_aproximacion = request.POST.get(
+                        f"{form_id}_aproximacion_{i}", ''
+                    ).lower() in ('1', 'true', 'on')
 
                     if serie_valida and serie_confirmada:
                         semantica_carga = resolver_semantica_carga(tipo_carga_solicitado, peso)
+                        serie_data = {
+                            'serie_numero': i,
+                            'peso': peso,
+                            'reps': reps,
+                            'rpe_real': rpe_real,
+                            'tipo_progresion': tipo_progresion,
+                            'tecnica': tecnica,
+                            'es_aproximacion': es_aproximacion,
+                            **semantica_carga,
+                        }
+                        series_data_todas.append(serie_data)
+                        if es_aproximacion:
+                            continue
                         if peso > 0 and not es_distancia:
                             volumen_ejercicio += semantica_carga['peso_total_kg'] * Decimal(reps)
                         if peso > 0 and reps > 0 and not es_distancia:
@@ -4627,16 +4656,20 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             if rm_serie_actual > mejor_rm_ejercicio:
                                 mejor_rm_ejercicio = rm_serie_actual
                                 mejor_serie_rm = {'peso': peso, 'reps': reps, 'rpe_real': rpe_real}
-                        series_data_para_guardar.append({
-                            'peso': peso, 'reps': reps, 'rpe_real': rpe_real,
-                            'tipo_progresion': tipo_progresion, 'tecnica': tecnica,
-                            **semantica_carga,
-                        })
+                        series_data_para_guardar.append(serie_data)
                         if rpe_real is not None:
                             todos_rpes_sesion.append(rpe_real)
 
                 except (ValueError, TypeError, InvalidOperation):
                     continue
+
+            # Intentar obtener el ejercicio base también cuando el usuario
+            # solo registre aproximaciones: deben quedar en su historial.
+            ej_base = None
+            try:
+                ej_base = EjercicioBase.objects.filter(nombre__iexact=ejercicio_nombre).first()
+            except Exception:
+                pass
 
             if series_data_para_guardar:
                 if mejor_rm_ejercicio > 0 and mejor_serie_rm:
@@ -4655,13 +4688,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
                 # Intentar obtener el grupo muscular desde EjercicioBase para clasificar y para crear SeriesRealizadas
                 grupo = None
-                ej_base = None
-                try:
-                    ej_base = EjercicioBase.objects.filter(nombre__iexact=ejercicio_nombre).first()
-                    if ej_base:
-                        grupo = ej_base.grupo_muscular
-                except Exception:
-                    pass
+                if ej_base:
+                    grupo = ej_base.grupo_muscular
 
                 # Extraer is_recovery_load del formulario (campo por ejercicio)
                 is_recovery_load_str = request.POST.get(f'{form_id}_is_recovery_load', 'false').lower()
@@ -4712,27 +4740,29 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     ),
                 )
 
-                # CREAR SERIES REALIZADAS INDIVIDUALES (Importante para gráficas de detalle)
-                if ej_base:
-                    for idx, s_data in enumerate(series_data_para_guardar, 1):
-                        SerieRealizada.objects.create(
-                            entreno=entreno,
-                            ejercicio=ej_base,
-                            serie_numero=idx,
-                            repeticiones=0 if es_distancia else int(s_data['reps']),
-                            distancia_metros=(Decimal(s_data['reps']) if es_distancia else None),
-                            peso_kg=Decimal(str(s_data['peso'])),
-                            rpe_real=s_data['rpe_real'],
-                            tecnica_calidad=s_data.get('tecnica'),
-                            completado=True,
-                            tipo_carga=s_data['tipo_carga'],
-                            multiplicador_carga=s_data['multiplicador_carga'],
-                            peso_total_kg=s_data['peso_total_kg'],
-                        )
-
                 # Acumulamos el volumen de este ejercicio al total del entreno
                 volumen_total_entreno += volumen_ejercicio
                 ejercicios_procesados_count += 1
+
+            # CREAR SERIES REALIZADAS INDIVIDUALES (incluidas las
+            # aproximaciones, que el agregado de trabajo no incorpora).
+            if ej_base:
+                for s_data in series_data_todas:
+                    SerieRealizada.objects.create(
+                        entreno=entreno,
+                        ejercicio=ej_base,
+                        serie_numero=s_data['serie_numero'],
+                        repeticiones=0 if es_distancia else int(s_data['reps']),
+                        distancia_metros=(Decimal(s_data['reps']) if es_distancia else None),
+                        peso_kg=Decimal(str(s_data['peso'])),
+                        rpe_real=s_data['rpe_real'],
+                        tecnica_calidad=s_data.get('tecnica'),
+                        es_aproximacion=s_data['es_aproximacion'],
+                        completado=True,
+                        tipo_carga=s_data['tipo_carga'],
+                        multiplicador_carga=s_data['multiplicador_carga'],
+                        peso_total_kg=s_data['peso_total_kg'],
+                    )
 
         if ejercicios_procesados_count == 0 and _es_ajax:
             raise ValueError('No puedes cerrar una sesión sin completar al menos una serie.')

@@ -199,6 +199,36 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertEqual(contenido.count('Nuevo récord'), 1)
         self.assertIn('Nuevo récord de volumen total · Press banca', contenido)
 
+    def test_records_de_volumen_repetidos_se_resumen_sin_perder_detalle(self):
+        for nombre in ('Press banca', 'Sentadilla', 'Remo'):
+            RecordPersonal.objects.create(
+                cliente=self.cliente, entreno=self.entreno, ejercicio_nombre=nombre,
+                tipo_record='volumen_total', valor=2000.0, superado=False,
+            )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        contenido = resp.content.decode()
+        self.assertIn('3 nuevos récords de volumen', contenido)
+        self.assertIn('Ver ejercicios', contenido)
+        for nombre in ('Press banca', 'Sentadilla', 'Remo'):
+            self.assertIn(f'Nuevo récord de volumen total · {nombre}', contenido)
+
+    def test_etiquetas_separan_ejecucion_y_decision_futura(self):
+        GymDecisionLog.objects.create(
+            cliente=self.cliente, entreno_origen=self.entreno,
+            ejercicio='press banca', ejercicio_normalizado='press banca',
+            accion='subir_peso', valor_cambio=2.5, motivo='Margen suficiente.',
+        )
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        self.assertContains(resp, 'Ejecución de hoy')
+        self.assertContains(resp, 'Comparada con tu última sesión compatible.')
+        self.assertContains(resp, 'Decisión para la próxima sesión')
+
     def test_entreno_de_otro_cliente_404(self):
         otro_user = User.objects.create_user(username='otro_cliente_62f', password='x')
         otro_cliente, _ = Cliente.objects.get_or_create(
@@ -233,7 +263,7 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
                    return_value=_permiso('progresion_permitida')):
             resp = self.client.get(self._url())
 
-        self.assertContains(resp, 'Decisiones del entrenador')
+        self.assertContains(resp, 'Decisión para la próxima sesión')
         self.assertContains(resp, 'Subir peso')
         self.assertContains(resp, 'Completaste el rango con margen y buena técnica.')
         self.assertContains(resp, 'Aumentará la carga un 2.5%')
