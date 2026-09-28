@@ -140,6 +140,36 @@ def _serializar_sesion(sesion):
     }
 
 
+def _sesiones_helms_semana(plan, inicio, fin):
+    """Lee la prescripción semanal sin materializar contratos ni sesiones."""
+    sesiones = []
+    for fecha_raw, entreno in (plan or {}).get('entrenos_por_fecha', {}).items():
+        if not isinstance(entreno, dict):
+            continue
+        try:
+            fecha_sesion = (
+                fecha_raw if isinstance(fecha_raw, date)
+                else date.fromisoformat(str(fecha_raw)[:10])
+            )
+        except (TypeError, ValueError):
+            continue
+        if not inicio <= fecha_sesion <= fin or not entreno.get('ejercicios'):
+            continue
+        sesiones.append({
+            'id': None,
+            'nombre': entreno.get('nombre_rutina') or 'Sesión programada',
+            'estado': 'prevista',
+            'fecha_prevista': fecha_sesion,
+            'fecha_pospuesta': None,
+            'fecha_efectiva': fecha_sesion,
+            'fecha_realizada': None,
+            'realizada': False,
+            'completa': False,
+            'parcial': False,
+        })
+    return sorted(sesiones, key=lambda sesion: sesion['fecha_efectiva'])
+
+
 def _proximo_hito(fecha, semana, bloque, periodizacion):
     sesiones = semana['sesiones'] if semana else []
     evaluacion = semana['evaluacion'] if semana else None
@@ -182,7 +212,7 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
     fecha = fecha or timezone.localdate()
     limitations = []
     bloque_base = proyectar_bloque_gym(cliente, fecha=fecha)
-    periodizacion, _plan, fases_anio = _periodizacion_actual(cliente, fecha, limitations)
+    periodizacion, plan, fases_anio = _periodizacion_actual(cliente, fecha, limitations)
     macrociclo = _macrociclo(fases_anio, periodizacion)
 
     if not bloque_base.get('disponible'):
@@ -225,6 +255,22 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
     ).first()
     if contrato is None:
         limitations.append('semana_no_materializada')
+        inicio_semana = _inicio_semana(fecha)
+        sesiones_planificadas = _sesiones_helms_semana(
+            plan, inicio_semana, inicio_semana + timedelta(days=6),
+        )
+        if sesiones_planificadas:
+            semana = {
+                'id': None,
+                'indice': periodizacion.get('semana_actual') if periodizacion else None,
+                'inicio': inicio_semana,
+                'fin': inicio_semana + timedelta(days=6),
+                'objetivo_sesiones': len(sesiones_planificadas),
+                'minimo_valido': None,
+                'sesiones': sesiones_planificadas,
+                'evaluacion': None,
+                'origen': 'plan_helms',
+            }
     else:
         sesiones = sorted(
             (_serializar_sesion(s) for s in contrato.sesiones.filter(cliente=cliente)),

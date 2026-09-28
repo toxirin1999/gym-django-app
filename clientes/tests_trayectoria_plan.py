@@ -42,6 +42,20 @@ PLAN_HELMS_MULTIFASE = {
     },
 }
 
+PLAN_HELMS_CON_SESIONES = {
+    **PLAN_HELMS,
+    'entrenos_por_fecha': {
+        '2026-08-24': {
+            'nombre_rutina': 'Día 1 - Fuerza',
+            'ejercicios': [{'nombre': 'Press banca', 'series': 3}],
+        },
+        '2026-08-26': {
+            'nombre_rutina': 'Día 2 - Fuerza',
+            'ejercicios': [{'nombre': 'Sentadilla', 'series': 3}],
+        },
+    },
+}
+
 
 class TrayectoriaPlanTests(TestCase):
     def setUp(self):
@@ -113,6 +127,21 @@ class TrayectoriaPlanTests(TestCase):
         resultado = self._proyectar()
         self.assertEqual(resultado['semana']['evaluacion']['id'], evaluacion.id)
         self.assertEqual(resultado['semana']['evaluacion']['estado_revision'], 'pendiente')
+
+    def test_muestra_sesiones_helms_si_la_semana_no_esta_materializada(self):
+        contrato = self.contrato
+        contrato.delete()
+        with patch(
+            'entrenos.services.trayectoria_plan_service._generar_plan_helms',
+            return_value=PLAN_HELMS_CON_SESIONES,
+        ):
+            resultado = proyectar_trayectoria_plan(self.cliente, fecha=date(2026, 8, 26))
+
+        self.assertIsNone(resultado['semana']['id'])
+        self.assertEqual(
+            [sesion['nombre'] for sesion in resultado['semana']['sesiones']],
+            ['Día 1 - Fuerza', 'Día 2 - Fuerza'],
+        )
 
     def test_balance_informativo_no_crea_hito_de_revision(self):
         EvaluacionSemanalGym.objects.create(
