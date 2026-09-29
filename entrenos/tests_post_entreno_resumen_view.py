@@ -62,6 +62,49 @@ class PostEntrenoResumenViewBase(TestCase):
 
 
 class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
+    def test_cierre_muestra_carga_y_distancia_sin_convertirlas_en_tonelaje(self):
+        """Farmer Walk se comunica en kg·m y metros, nunca como 0 kg."""
+        contexto = {
+            'resumen': {
+                'titulo': 'Push Day', 'n_ejercicios': 1, 'n_series': 2,
+                'rpe_medio': 8, 'duracion_minutos': 12, 'volumen_kg': 0,
+                'repeticiones_totales': 0, 'segundos_totales': 0,
+                'distancia_metros_total': 86,
+                'carga_distancia_kg_m_total': 6192,
+                'trabajo_por_tipo': [{
+                    'nombre': 'Farmer Walk', 'tipo': 'distancia_cargada',
+                    'metros': 86, 'carga_por_mano_kg': 36,
+                    'carga_total_kg': 72, 'carga_distancia_kg_m': 6192,
+                }],
+            },
+            'cambios_relevantes': [], 'lectura_plan': None,
+            'decisiones_entrenador': [], 'proxima_vez': None,
+            'prs': [], 'resumen_records': {
+                'individuales': [], 'volumen': [], 'volumen_agrupado': False,
+            },
+            'joi_mensaje': None,
+        }
+        with patch(
+            'entrenos.services.cierre_entrenamiento_service.construir_contexto_cierre',
+            return_value=contexto,
+        ):
+            resp = self.client.get(self._url())
+
+        contenido = resp.content.decode()
+        self.assertContains(resp, '86 m')
+        self.assertContains(resp, '72 kg total')
+        self.assertContains(resp, '36/mano')
+        self.assertContains(resp, 'kg·m')
+        self.assertNotIn('Farmer Walk</span>\n      <span class="cambio-detalle mantenida">0 kg', contenido)
+
+    def test_cta_reserva_area_segura_sobre_el_final_del_contenido(self):
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+        contenido = resp.content.decode()
+        self.assertIn('padding: 0 16px calc(212px + env(safe-area-inset-bottom))', contenido)
+        self.assertIn('z-index: 20', contenido)
+
     def test_get_devuelve_200(self):
         with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
                    return_value=_permiso('progresion_permitida')):

@@ -3729,6 +3729,21 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio for ejercicio in (ejercicios_planificados or [])
             if _tiene_series_planificadas(ejercicio)
         ]
+        # Configuración de ejecución de Farmer Walk. Aunque un snapshot viejo
+        # no contuviera la carga, la identidad del ejercicio se resuelve en el
+        # servidor antes de renderizar y queda fijada en el plan de esta sesión.
+        for _ejercicio_planificado in ejercicios_planificados:
+            _nombre_planificado = ' '.join(
+                str(_ejercicio_planificado.get('nombre') or '').casefold().split()
+            )
+            if 'farmer' in _nombre_planificado or 'granjero' in _nombre_planificado:
+                _ejercicio_planificado['tipo_progresion'] = 'progresion_distancia'
+                _ejercicio_planificado['peso_kg'] = 36.0
+                _ejercicio_planificado['peso_recomendado_kg'] = 36.0
+                _ejercicio_planificado['peso_inicial_kg'] = 36.0
+                _ejercicio_planificado['tipo_carga_default'] = 'por_mano'
+                _ejercicio_planificado['tipo_carga'] = 'por_mano'
+                _ejercicio_planificado['usa_peso'] = True
 
         from entrenos.services.retorno_ausencia_service import (
             es_primera_sesion_tras_ausencia, limitar_series_retorno,
@@ -4602,6 +4617,16 @@ def guardar_entrenamiento_activo(request, cliente_id):
             tipo_progresion = request.POST.get(f'{form_id}_tipo_progresion', 'peso_reps')
             usa_peso = tipo_progresion in ('peso_reps', 'peso_corporal_lastre')
             es_distancia = tipo_progresion == 'progresion_distancia'
+            # Farmer Walk tiene carga externa contractual: 36 kg por mano
+            # (72 kg total). El servidor la restituye, nunca un hidden input.
+            _nombre_carga = ' '.join(ejercicio_nombre.casefold().split())
+            carga_externa_canonica = (
+                {'peso_kg': 36.0, 'tipo_carga': 'por_mano'}
+                if es_distancia and ('farmer' in _nombre_carga or 'granjero' in _nombre_carga)
+                else None
+            )
+            if carga_externa_canonica:
+                tipo_carga_solicitado = carga_externa_canonica['tipo_carga']
 
             for i in range(1, 11):
                 peso_key, reps_key = f"{form_id}_peso_{i}", f"{form_id}_reps_{i}"
@@ -4614,6 +4639,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     tecnica_str = request.POST.get(f"{form_id}_tecnica_{i}", '').strip()
 
                     peso = float(peso_str) if peso_str else 0.0
+                    if carga_externa_canonica:
+                        peso = carga_externa_canonica['peso_kg']
                     reps = int(reps_str) if reps_str else 0
                     rpe_real = float(rpe_str.replace(',', '.')) if rpe_str else None
                     tecnica = tecnica_str if tecnica_str in ('buena', 'aceptable', 'comprometida') else None

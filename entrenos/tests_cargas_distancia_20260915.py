@@ -100,8 +100,27 @@ class GuardadoDistanciaTests(TestCase):
         self.assertEqual(serie.repeticiones, 0)
         self.assertEqual(serie.distancia_metros, Decimal("47"))
         self.assertEqual(serie.carga_distancia_kg_m, Decimal("3384"))
+        self.assertEqual(serie.peso_kg, Decimal("36"))
+        self.assertEqual(serie.peso_total_kg, Decimal("72"))
+        self.assertEqual(serie.tipo_carga, "por_mano")
         serie.entreno.refresh_from_db()
         self.assertEqual(serie.entreno.volumen_total_kg, Decimal("0"))
+
+    def test_post_farmer_reconstituye_carga_canonica_sin_confiar_en_post(self):
+        response = self.client.post(
+            reverse("entrenos:guardar_entrenamiento_activo", args=[self.cliente.pk]),
+            {
+                "fecha": "2026-09-15", "rutina_nombre": "Carry",
+                "ej1_nombre": "Farmer Carry", "ej1_tipo_progresion": "progresion_distancia",
+                "ej1_tipo_carga": "total", "ej1_peso_1": "1", "ej1_reps_1": "48",
+                "ej1_rpe_1": "7", "ej1_completado_1": "1",
+            },
+        )
+        self.assertEqual(response.status_code, 302)
+        serie = SerieRealizada.objects.get(entreno__cliente=self.cliente)
+        self.assertEqual(serie.peso_kg, Decimal("36"))
+        self.assertEqual(serie.peso_total_kg, Decimal("72"))
+        self.assertEqual(serie.carga_distancia_kg_m, Decimal("3456"))
 
 
 class UiCargaTests(TestCase):

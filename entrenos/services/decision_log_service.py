@@ -87,6 +87,30 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     return None
 
 
+def _distancia_cumple_evidencia(entreno, ejercicio_normalizado, objetivo):
+    """La subida de metros exige todas las series de trabajo con margen."""
+    from entrenos.models import SerieRealizada
+
+    if objetivo is None:
+        return False
+    series = [
+        serie for serie in SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
+    ]
+    if not series:
+        return False
+    for serie in series:
+        if serie.distancia_metros is None:
+            return False
+        if Decimal(str(serie.distancia_metros)) < objetivo:
+            return False
+        if serie.rpe_real is not None and float(serie.rpe_real) >= 9:
+            return False
+    return True
+
+
 def _reps_para_log(reps_media):
     """Mantiene el campo entero legacy sin perder la media para decidir."""
     return int(reps_media.quantize(Decimal('1'), rounding=ROUND_HALF_UP))
@@ -220,6 +244,18 @@ def generar_decisiones_para_entreno(entreno):
         motivo_codigo = ''
 
         objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
+        if tipo_progresion == 'progresion_distancia' and not _distancia_cumple_evidencia(
+            entreno, nombre, objetivo_reps,
+        ):
+            # Una carga externa fija no se progresa con una sola serie corta o
+            # con RPE 9+. Conservamos la evidencia, pero consolidamos antes.
+            accion = 'mantener'
+            valor_cambio = None
+            motivo = (
+                'Distancia o margen insuficiente — consolidar carga y metros '
+                'antes de progresar'
+            )
+            motivo_codigo = 'distancia_sin_margen'
         progresion_por_reps = tipo_progresion in (
             'peso_reps', 'peso_corporal_lastre', 'progresion_reps',
         )

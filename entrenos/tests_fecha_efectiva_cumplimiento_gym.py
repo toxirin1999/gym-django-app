@@ -91,6 +91,18 @@ class FechaEfectivaCumplimientoGymTests(TestCase):
         self.assertEqual(planificada.estado, SesionProgramada.ESTADO_PENDIENTE)
         self.assertEqual(efectiva.estado, SesionProgramada.ESTADO_COMPLETADA)
 
+    def test_batch_cierra_sesion_programada_de_hoy_al_volver_del_entreno(self):
+        """Evita que el panel ofrezca posponer una sesión ya completada hoy."""
+        hoy = self.fecha_real
+        pendiente = self._pendiente(hoy, nombre_sesion=self.rutina.nombre)
+        self._entreno(fecha_ejecucion=hoy)
+
+        _marcar_completadas(self.cliente, hoy)
+
+        pendiente.refresh_from_db()
+        self.assertEqual(pendiente.estado, SesionProgramada.ESTADO_COMPLETADA)
+        self.assertEqual(pendiente.fecha_realizada, hoy)
+
     def test_batch_actividad_standalone_no_cierra_sin_identidad_causal(self):
         planificada = self._pendiente(self.fecha_plan)
         efectiva = self._pendiente(self.fecha_real)

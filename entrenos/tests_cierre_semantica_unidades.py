@@ -87,6 +87,11 @@ class CierreSemanticaUnidadesTests(TestCase):
         self.assertEqual(resumen['repeticiones_totales'], 60)
         self.assertEqual(resumen['segundos_totales'], 67)
         self.assertEqual(resumen['distancia_metros_total'], 45)
+        self.assertEqual(resumen['carga_distancia_kg_m_total'], 1080)
+        self.assertEqual(resumen['carga_distancia_kg_m'], 1080)
+        self.assertEqual(resumen['distancia_metros'], 45)
+        self.assertEqual(resumen['trabajo_por_tipo'][-1]['tipo'], 'distancia_cargada')
+        self.assertEqual(resumen['trabajo_por_tipo'][-1]['distancia_metros'], 45)
 
     def test_resumen_legacy_sin_series_respeta_tipo_de_progresion(self):
         entreno = self._entreno(date(2026, 9, 22))

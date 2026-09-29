@@ -91,6 +91,17 @@ def _efecto_decision(log, tipo_progresion):
     return None
 
 
+def _accion_semantica(log, tipo_progresion):
+    """No presentar metros o segundos como si fueran repeticiones."""
+    if log.accion != 'subir_reps':
+        return log.get_accion_display()
+    if tipo_progresion == 'progresion_distancia':
+        return 'Subir distancia'
+    if tipo_progresion == 'progresion_tiempo':
+        return 'Aumentar tiempo'
+    return log.get_accion_display()
+
+
 def _decisiones_entrenador(cliente, entreno):
     """Decisiones causadas exclusivamente por la sesión que se está cerrando."""
     from django.db.models.functions import Lower
@@ -154,7 +165,9 @@ def _decisiones_entrenador(cliente, entreno):
             continue
         decisiones.append({
             'ejercicio': log.ejercicio,
-            'accion': log.get_accion_display(),
+            'accion': _accion_semantica(
+                log, tipos_progresion.get(log.ejercicio.strip().lower()),
+            ),
             'motivo': log.motivo,
             'efecto': _efecto_decision(
                 log, tipos_progresion.get(log.ejercicio.strip().lower()),
@@ -252,7 +265,9 @@ def calcular_metricas_unidades(entreno, ejercicios):
     }
     series_por_nombre = {}
     for serie in (
-        SerieRealizada.objects.filter(entreno=entreno, completado=True)
+        SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        )
         .select_related('ejercicio')
     ):
         clave = normalizar_ejercicio(serie.ejercicio.nombre)
@@ -262,18 +277,60 @@ def calcular_metricas_unidades(entreno, ejercicios):
     reps = 0
     segundos = 0
     distancia = 0
+    carga_distancia_kg_m = 0
+    carga_externa_total_kg = 0
+    trabajo_por_tipo = []
     for clave, ejercicio in ejercicios_por_nombre.items():
         tipo = tipos.get(clave, 'peso_reps')
         series = series_por_nombre.get(clave)
         if series:
+            item = {
+                'nombre': ejercicio.nombre_ejercicio,
+                'tipo': 'fuerza',
+                'series': len(series),
+                'repeticiones': 0,
+                'segundos': 0,
+                'metros': 0.0,
+                # Alias explícito para consumidores que no deben inferir la
+                # unidad a partir de ``tipo``.
+                'distancia_metros': 0.0,
+                'carga_por_mano_kg': None,
+                'carga_total_kg': None,
+                'carga_distancia_kg_m': 0.0,
+                'tonelaje_kg': 0.0,
+            }
             if tipo == 'progresion_tiempo':
-                segundos += sum(serie.repeticiones or 0 for serie in series)
+                valor = sum(serie.repeticiones or 0 for serie in series)
+                segundos += valor
+                item.update(tipo='tiempo', segundos=valor)
             elif tipo == 'progresion_distancia':
-                distancia += sum(
+                valor = sum(
                     serie.distancia_metros or 0 for serie in series
                 )
+                distancia += valor
+                carga_kgm = sum(float(serie.carga_distancia_kg_m) for serie in series)
+                cargas_totales = [float(serie.peso_total_kg or serie.peso_kg or 0) for serie in series]
+                cargas_por_mano = [float(serie.peso_kg or 0) for serie in series]
+                total = max(cargas_totales, default=0.0)
+                por_mano = max(cargas_por_mano, default=0.0)
+                carga_distancia_kg_m += carga_kgm
+                carga_externa_total_kg = max(carga_externa_total_kg, total)
+                item.update(
+                    tipo='distancia_cargada',
+                    metros=float(valor),
+                    distancia_metros=float(valor),
+                    carga_por_mano_kg=por_mano or None,
+                    carga_total_kg=total or None,
+                    carga_distancia_kg_m=carga_kgm,
+                )
             else:
-                reps += sum(serie.repeticiones or 0 for serie in series)
+                valor = sum(serie.repeticiones or 0 for serie in series)
+                reps += valor
+                item.update(
+                    repeticiones=valor,
+                    tonelaje_kg=sum(float(serie.tonelaje_kg) for serie in series),
+                )
+            trabajo_por_tipo.append(item)
             continue
 
         magnitud_legacy = (ejercicio.series or 0) * (ejercicio.repeticiones or 0)
@@ -286,6 +343,13 @@ def calcular_metricas_unidades(entreno, ejercicios):
         'repeticiones_totales': reps,
         'segundos_totales': segundos,
         'distancia_metros_total': float(distancia),
+        # Alias de lectura para el contrato de cierre; las métricas de carga
+        # externa nunca se mezclan con el tonelaje convencional.
+        'distancia_metros': float(distancia),
+        'carga_distancia_kg_m_total': float(carga_distancia_kg_m),
+        'carga_distancia_kg_m': float(carga_distancia_kg_m),
+        'carga_externa_total_kg': float(carga_externa_total_kg),
+        'trabajo_por_tipo': trabajo_por_tipo,
     }
 
 

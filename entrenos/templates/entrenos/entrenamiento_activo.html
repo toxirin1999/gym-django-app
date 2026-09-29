@@ -109,6 +109,8 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* "Serie 1 — Xkg × X reps": medium para el texto base, bold para los datos */
 .sd-info{flex:1;font-size:14px;font-weight:500;color:var(--td);}
 .sd-info strong{color:#fff;font-weight:700;}
+.serie-feedback{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-top:4px;}
+.serie-technique{display:inline-flex;align-items:center;font-size:10px;font-weight:700;white-space:nowrap;}
 /* badge RPE: fondo surf3, sin borde */
 .sd-rpe{font-size:12px;font-weight:600;color:var(--td);background:var(--surf3);padding:4px 10px;border-radius:10px;border:none;}
 /* botón editar serie guardada */
@@ -204,7 +206,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 }
 .serie-aproximacion-toggle .aprox-state{font-size:10px;text-transform:uppercase;letter-spacing:.1em;}
 .serie-aproximacion-toggle.activa{border-color:rgba(96,165,250,.8);background:rgba(96,165,250,.11);color:#bfdbfe;}
-.serie-plan-result{display:inline-block;margin:4px 0 0;font-size:10px;font-weight:700;letter-spacing:.03em;}
+.serie-plan-result{display:inline-flex;margin:0;font-size:10px;font-weight:700;letter-spacing:.03em;white-space:nowrap;}
 .serie-plan-result.en-rango{color:var(--green);}
 .serie-plan-result.por-debajo{color:#fbbf24;}
 .serie-plan-result.por-encima{color:#60a5fa;}
@@ -407,7 +409,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sticky-final-btn:disabled{opacity:.38;cursor:not-allowed;color:var(--td);border-color:var(--border);}
 
 /* ── LAYOUT ── */
-.wrap{max-width:480px;margin:0 auto;padding-bottom:calc(58px + env(safe-area-inset-bottom) + 24px);}
+.wrap{max-width:480px;margin:0 auto;padding-bottom:calc(112px + env(safe-area-inset-bottom) + 32px);}
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
@@ -1085,6 +1087,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   margin:8px 16px 0;padding:10px 14px;
   background:var(--surf2);border:1px solid rgba(255,255,255,0.08);border-radius:14px;
 }
+.orm-module[hidden]{display:none;}
 .orm-module:has(.orm-module-val:empty){display:none;}
 .orm-module-icon{
   width:28px;height:28px;border-radius:8px;flex-shrink:0;
@@ -1094,6 +1097,9 @@ input{background:transparent!important;border:none!important;outline:none!import
 .orm-module-body{flex:1;min-width:0;}
 .orm-module-val{font-size:13px;font-weight:700;color:var(--green);margin-bottom:3px;}
 .orm-module-caption{font-size:11px;color:var(--td);line-height:1.4;}
+
+.ejercicio-continuar{display:block;width:calc(100% - 32px);margin:16px 16px 4px;padding:14px 16px;border:1px solid rgba(16,185,129,.6);border-radius:14px;background:rgba(16,185,129,.1);color:var(--green);font-size:13px;font-weight:800;letter-spacing:.04em;text-align:center;}
+.ejercicio-continuar:active{background:rgba(16,185,129,.2);}
 
 .sliders-zona{padding:0 0 4px;}
 .sliders-zona .slider-row.rpe-row{padding:8px 12px;gap:6px;}
@@ -1510,7 +1516,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="sa-header">
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
         <div class="sa-obj-wrap">
-          {% if ejercicio.usa_peso %}
+          {% if ejercicio.usa_peso or ejercicio.usa_distancia %}
             <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
@@ -1533,7 +1539,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 
       <div class="peso-reps-grid">
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
-      {% if ejercicio.usa_peso %}
+      {% if ejercicio.usa_peso or ejercicio.usa_distancia %}
       <div class="peso-zona">
         <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} · por mano{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% endif %}</div>
         <div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">
@@ -1620,6 +1626,8 @@ input{background:transparent!important;border:none!important;outline:none!import
         {% endif %}
       {% if ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
       <div class="peso-ultima-vez">Última vez: {{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</div>
+      {% elif ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
+      <div class="peso-ultima-vez">Última vez: {{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</div>
       {% endif %}
       </div>
 
@@ -1657,8 +1665,8 @@ input{background:transparent!important;border:none!important;outline:none!import
                 id="aproximacion-toggle-{{ ejercicio.form_id }}-{{ sn }}"
                 aria-pressed="false"
                 onclick="toggleAproximacion('{{ ejercicio.form_id }}', {{ sn }})">
-          <span>Aproximación</span>
-          <span class="aprox-state">Cuenta como trabajo</span>
+          <span class="aprox-label">Serie de trabajo</span>
+          <span class="aprox-state">Marcar como aproximación</span>
         </button>
       </div>
 
@@ -1695,13 +1703,13 @@ input{background:transparent!important;border:none!important;outline:none!import
     </button>
 
     {% if ejercicio.usa_peso %}
-    <div class="orm-module">
+    <div class="orm-module" id="orm-module-{{ ejercicio.form_id }}" hidden>
       <div class="orm-module-icon">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
       </div>
       <div class="orm-module-body">
         <div class="orm-module-val" id="orm-{{ ejercicio.form_id }}-{{ sn }}"></div>
-        <div class="orm-module-caption">Estimado a partir del peso y las repeticiones registradas hoy.</div>
+        <div class="orm-module-caption">Estimado a partir de las series de trabajo ya guardadas.</div>
       </div>
     </div>
     {% endif %}
@@ -2185,6 +2193,23 @@ function seriesDeTrabajo(series){
   return (series||[]).filter(serie=>serie && !serie.esAproximacion);
 }
 
+function tecnicaSerieBadge(tecnica){
+  if(tecnica==='buena')return '<span class="serie-technique" style="color:#10B981;">✔ Técnica: buena</span>';
+  if(tecnica==='aceptable')return '<span class="serie-technique" style="color:#F1C40F;">~ Técnica: aceptable</span>';
+  if(tecnica==='comprometida')return '<span class="serie-technique" style="color:#E74C3C;">⚠ Técnica: comprometida</span>';
+  return '';
+}
+
+function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
+  const tecnicaBadge=tecnicaSerieBadge(tecnica);
+  const resultado=resultadoPlanSerie(fid,sn,reps,esAproximacion);
+  const resultadoBadge=resultado
+    ? '<span class="serie-plan-result '+resultado.clase+'">'+resultado.texto+'</span>' : '';
+  return (tecnicaBadge||resultadoBadge)
+    ? '<div class="serie-feedback"><span id="tecnica-badge-'+fid+'-'+sn+'">'+tecnicaBadge+'</span>'+resultadoBadge+'</div>'
+    : '<div class="serie-feedback"><span id="tecnica-badge-'+fid+'-'+sn+'"></span></div>';
+}
+
 // ── RESTAURAR DESDE localStorage ────────────────────────────────
 (function restaurarSesion(){
   try{
@@ -2214,11 +2239,9 @@ function seriesDeTrabajo(series){
         const row=document.createElement('div');
         row.className='serie-done';
         row.dataset.sn=sn;
-        const resultado=resultadoPlanSerie(fid,sn,s.reps,Boolean(s.esAproximacion));
-        const resultadoBadge=resultado
-          ? '<span class="serie-plan-result '+resultado.clase+'">'+resultado.texto+'</span>' : '';
         row.innerHTML='<div class="sd-check">✓</div>'
-          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>'+resultadoBadge+'</div>'
+          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>'
+          +feedbackSerieHTML(fid,sn,s.reps,Boolean(s.esAproximacion),s.tecnica)+'</div>'
           +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>'
           +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+totalSets+')" title="Editar esta serie">✎</button>';
         log.appendChild(row);
@@ -2228,12 +2251,7 @@ function seriesDeTrabajo(series){
         const aprox=document.getElementById('aproximacion-'+fid+'-'+sn);
         const aproxBtn=document.getElementById('aproximacion-toggle-'+fid+'-'+sn);
         if(aprox)aprox.checked=Boolean(s.esAproximacion);
-        if(aproxBtn && s.esAproximacion){
-          aproxBtn.classList.add('activa');
-          aproxBtn.setAttribute('aria-pressed','true');
-          const state=aproxBtn.querySelector('.aprox-state');
-          if(state)state.textContent='No cuenta como trabajo';
-        }
+        if(aproxBtn)actualizarControlAproximacion(aproxBtn,Boolean(s.esAproximacion));
         // Ocultar el panel de esa serie
         const reg=document.getElementById('reg-'+fid+'-'+sn);
         if(reg)reg.style.display='none';
@@ -2549,22 +2567,15 @@ function guardarSeriePanel(fid,sn,total){
         ? reps+'s'
         : peso+'kg × '+reps+' reps';
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
-    const resultadoPlan=resultadoPlanSerie(fid,sn,reps,esAproximacion);
-    const tecnicaBadge=tecnicaGuardada==='buena'
-      ? '<span style="font-size:10px;color:#10B981;margin-left:4px;">✔ buena</span>'
-      : tecnicaGuardada==='aceptable'
-        ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
-        : tecnicaGuardada==='comprometida'
-          ? '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>'
-          : '';
-    const resultadoBadge=resultadoPlan
-      ? '<span class="serie-plan-result '+resultadoPlan.clase+'">'+resultadoPlan.texto+'</span>' : '';
     row.innerHTML='<div class="sd-check">✓</div>'
-      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong><span id="tecnica-badge-'+fid+'-'+sn+'">'+tecnicaBadge+'</span>'+resultadoBadge+'</div>'
+      +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'
+      +feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnicaGuardada)+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
-    if(!filaExistente) log.appendChild(row);
+  if(!filaExistente) log.appendChild(row);
   }
+
+  if(!esAproximacion)actualizarORM(fid,sn);
 
   if(navigator.vibrate)navigator.vibrate(40);
 
@@ -2676,14 +2687,26 @@ function detectarPR(fid,sn,peso){
 function mostrarMensajeEjercicio(card,fid){
   const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
   if(!scs.length)return;
-  const rpeAvg=scs.reduce((a,s)=>a+(s.rpe||8),0)/scs.length;
-  const frase=elegirFrase(rpeAvg);
+  const frase=resumenDeEjercicio(fid);
   const div=document.createElement('div');
   div.className='msg-motivacional';
   div.innerHTML='<div style="font-size:1.8rem;margin-bottom:6px;">'+frase.e+'</div>'
     +'<div class="msg-moti-txt">'+frase.t+'</div>'
     +'<div class="msg-moti-sub">'+frase.s+'</div>';
   card.appendChild(div);
+}
+
+function resumenDeEjercicio(fid){
+  const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
+  const rpeAlto=scs.some(s=>(s.rpe||0)>=9);
+  const fueraDeRango=scs.some((s,index)=>{
+    const resultado=resultadoPlanSerie(fid,index+1,s.reps,false);
+    return resultado && resultado.clase==='por-debajo';
+  });
+  if(rpeAlto || fueraDeRango){
+    return {e:'↗',t:'Ejercicio exigente registrado',s:'La próxima sesión conservará margen antes de progresar.'};
+  }
+  return {e:'✓',t:'Ejercicio registrado',s:'Series y esfuerzo guardados para la próxima decisión del plan.'};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────
@@ -2755,15 +2778,21 @@ document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
   btn.addEventListener('click',()=>seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val)));
 });
 
+function actualizarControlAproximacion(button,activa){
+  button.classList.toggle('activa',activa);
+  button.setAttribute('aria-pressed',String(activa));
+  const label=button.querySelector('.aprox-label');
+  const state=button.querySelector('.aprox-state');
+  if(label)label.textContent=activa?'Es aproximación':'Serie de trabajo';
+  if(state)state.textContent=activa?'No cuenta como trabajo':'Marcar como aproximación';
+}
+
 function toggleAproximacion(fid,sn){
   const input=document.getElementById('aproximacion-'+fid+'-'+sn);
   const button=document.getElementById('aproximacion-toggle-'+fid+'-'+sn);
   if(!input||!button)return;
   input.checked=!input.checked;
-  button.classList.toggle('activa',input.checked);
-  button.setAttribute('aria-pressed',String(input.checked));
-  const state=button.querySelector('.aprox-state');
-  if(state)state.textContent=input.checked?'No cuenta como trabajo':'Cuenta como trabajo';
+  actualizarControlAproximacion(button,input.checked);
 }
 
 function resultadoPlanSerie(fid,sn,reps,esAproximacion){
@@ -2831,13 +2860,15 @@ function actualizarORM(fid,sn){
   const pesoInp=document.getElementById('peso-'+fid+'-'+sn);
   const repsInp=document.getElementById('reps-hid-'+fid+'-'+sn);
   const ormEl=document.getElementById('orm-'+fid+'-'+sn);
-  if(!ormEl)return;
+  const module=document.getElementById('orm-module-'+fid);
+  if(!ormEl||!module)return;
   const peso=parseFloat(pesoInp?.value)||0;
   const reps=parseInt(repsInp?.value)||1;
-  if(peso<=0||reps>=15){ormEl.textContent='';return;}
+  if(peso<=0||reps>=15){ormEl.textContent='';module.hidden=true;return;}
   const factor=1.0278-0.0278*Math.max(1,reps);
   const orm=factor>0?Math.round(peso/factor):Math.round(peso);
   ormEl.textContent='1RM estimado: '+orm+' kg';
+  module.hidden=false;
 }
 
 // ── CALCULADORA DISCOS INLINE ───────────────────────────────────
@@ -2886,7 +2917,6 @@ function initSeriePanel(fid,sn){
   if(pesoInp){
     const peso=parseFloat(pesoInp.value)||0;
     calcularDiscosInline(fid,sn,peso);
-    actualizarORM(fid,sn);
   }
 }
 
@@ -2962,14 +2992,23 @@ function saltarDescanso(fid){
     div.setAttribute('data-ej-done','1');
     div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
     const seriesTrabajo=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
-    const frase=elegirFrase(seriesTrabajo.reduce((a,s)=>a+(s.rpe||8),0)/Math.max(1,seriesTrabajo.length));
+    const frase=resumenDeEjercicio(fid);
+    const siguienteNombre=cards[STATE.ejActual+1]?.querySelector('.cyber-ejercicio-nombre')?.textContent?.trim();
+    const metricas=seriesTrabajo.reduce((total,serie)=>{
+      const m=metricasSerie(serie);
+      total.tonelaje+=m.tonelaje;total.distancia+=m.distancia;total.segundos+=m.segundos;
+      return total;
+    },{tonelaje:0,distancia:0,segundos:0});
+    const resumenTrabajo=[seriesTrabajo.length+' series de trabajo'];
+    if(metricas.tonelaje)resumenTrabajo.push(Math.round(metricas.tonelaje)+' kg');
+    if(metricas.distancia)resumenTrabajo.push(metricas.distancia+' m');
+    if(metricas.segundos)resumenTrabajo.push(metricas.segundos+' s');
     div.innerHTML='<div style="font-size:2rem;color:var(--ok);">'+frase.e+'</div>'
       +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">'+frase.t+'</div>'
-      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+seriesTrabajo.length+' series de trabajo · '+calcVolumenEj(fid)+' kg</div>'
-      +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>';
+      +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+resumenTrabajo.join(' · ')+'</div>'
+      +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>'
+      +(siguienteNombre?'<button type="button" class="ejercicio-continuar" onclick="navEjercicio(1)">Continuar con '+siguienteNombre+' →</button>':'');
     if(card)card.appendChild(div);
-    const ejIdxAtCompletion=STATE.ejActual;
-    if(ejIdxAtCompletion+1<cards.length)setTimeout(()=>{if(STATE.ejActual===ejIdxAtCompletion)navEjercicio(1);},2000);
   }else{
     // Mostrar panel de la siguiente serie
     const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
@@ -3363,11 +3402,7 @@ function selTecnica(fid, val){
 
   const badge = document.getElementById('tecnica-badge-'+fid+'-'+sn);
   if(badge){
-    badge.innerHTML = val==='buena'
-      ? '<span style="font-size:10px;color:#10B981;margin-left:4px;">✔ buena</span>'
-      : val==='aceptable'
-        ? '<span style="font-size:10px;color:#F1C40F;margin-left:4px;">~ aceptable</span>'
-        : '<span style="font-size:10px;color:#E74C3C;margin-left:4px;">⚠ comprometida</span>';
+    badge.innerHTML = tecnicaSerieBadge(val);
   }
 }
 

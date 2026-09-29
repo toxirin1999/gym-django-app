@@ -180,7 +180,7 @@ def _marcar_completadas(cliente, fecha_hoy):
         cliente=cliente,
         estado=SesionProgramada.ESTADO_PENDIENTE,
         fecha_prevista__gte=fecha_inicio,
-        fecha_prevista__lt=fecha_hoy,
+        fecha_prevista__lte=fecha_hoy,
     ))
     if not pendientes:
         return

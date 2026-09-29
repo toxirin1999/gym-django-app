@@ -97,17 +97,16 @@ class DecisionLogProgresionDistanciaBase(TestCase):
 
 
 class TestGenerarDecisionesTopeProgresionDistancia(DecisionLogProgresionDistanciaBase):
-    def test_tope_maquina_en_farmer_walk_genera_subir_reps_valor_cambio_5(self):
+    def test_tope_sin_evidencia_de_distancia_controlada_se_consolida(self):
         entreno = self._entreno(self.hoy)
         self._ejercicio_realizado(entreno, es_tope_maquina=True, repeticiones=20)
 
         generar_decisiones_para_entreno(entreno)
 
         log = GymDecisionLog.objects.get(cliente=self.cliente, ejercicio='farmer walk')
-        self.assertEqual(log.accion, 'subir_reps')
-        self.assertEqual(log.valor_cambio, 5)
-        self.assertEqual(log.reps_anteriores, 20)
-        self.assertEqual(log.reps_sugeridas, 25)
+        self.assertEqual(log.accion, 'mantener')
+        self.assertIsNone(log.valor_cambio)
+        self.assertIn('consolidar', log.motivo.lower())
 
 
 class TestProgresionEjecutivaAplicaDistanciaConTope(DecisionLogProgresionDistanciaBase):

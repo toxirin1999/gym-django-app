@@ -37,7 +37,7 @@
     max-width: 480px; margin: 0 auto;
     /* El cierre puede tener decisiones largas; reserva siempre más que los
        dos CTAs fijos, también en Safari con área segura. */
-    padding: 0 16px calc(192px + env(safe-area-inset-bottom));
+    padding: 0 16px calc(212px + env(safe-area-inset-bottom));
     min-height: 100vh;
   }
 
@@ -87,6 +87,31 @@
     font-family: var(--fm); font-size: 11px; color: var(--td);
     letter-spacing: .04em; margin-top: 6px;
   }
+
+  /* ── TRABAJO REGISTRADO ─────────────────────── */
+  .work-grid {
+    display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .work-metric {
+    min-width: 0; padding: 11px 12px; border: 1px solid var(--bd);
+    border-radius: 10px; background: var(--surf2);
+  }
+  .work-metric--wide { grid-column: 1 / -1; }
+  .work-label {
+    display: block; font-family: var(--fm); font-size: 8px; font-weight: 700;
+    color: var(--tdm); letter-spacing: .12em; text-transform: uppercase;
+  }
+  .work-value {
+    display: block; margin-top: 5px; font-family: var(--fd); font-size: 19px;
+    line-height: 1.05; color: var(--ink); letter-spacing: -.01em;
+  }
+  .work-detail {
+    display: block; margin-top: 4px; color: var(--td); font-size: 10px;
+    line-height: 1.35;
+  }
+  .work-loaded { border-color: color-mix(in srgb, var(--accent) 30%, var(--bd)); }
+  .work-loaded .work-value { color: var(--accent); }
 
   /* ── SECCIÓN HEADER ──────────────────────────── */
   .sec-hdr {
@@ -180,8 +205,10 @@
     padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
     background: linear-gradient(to top, var(--bg) 70%, transparent);
     max-width: 480px; margin: 0 auto;
-    display: flex; flex-direction: column; gap: 8px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 20;
+    pointer-events: none;
   }
+  .cta-wrap > * { pointer-events: auto; }
   .btn-volver {
     display: flex; align-items: center; justify-content: center; gap: 10px;
     width: 100%; height: 54px; border-radius: 16px; border: none;
@@ -200,6 +227,11 @@
     cursor: pointer; transition: border-color .15s;
   }
   .btn-analisis:active { border-color: var(--accent); }
+
+  @media (max-width: 380px) {
+    .wrap { padding-left: 12px; padding-right: 12px; }
+    .cta-wrap { padding-left: 12px; padding-right: 12px; }
+  }
 </style>
 </head>
 <body>
@@ -233,6 +265,77 @@
       </div>
     </div>
   </div>
+
+  {% comment %}
+    Las unidades no se suman entre sí. El tonelaje (kg) pertenece a series de
+    peso x repeticiones; una carga transportada se expresa como kg·m y un
+    trabajo isométrico como segundos. Los campos nuevos son opcionales para
+    que cierres históricos sigan siendo legibles.
+  {% endcomment %}
+  {% if resumen.volumen_kg or resumen.repeticiones_totales or resumen.segundos_totales or resumen.distancia_metros_total or resumen.carga_distancia_kg_m_total %}
+  <div class="sec-hdr"><span class="sec-tag">Trabajo registrado</span><div class="sec-line"></div></div>
+  <div class="work-grid" aria-label="Resumen de unidades del entrenamiento">
+    {% if resumen.volumen_kg %}
+    <div class="work-metric">
+      <span class="work-label">Tonelaje</span>
+      <span class="work-value">{{ resumen.volumen_kg|floatformat:0 }} kg</span>
+      <span class="work-detail">peso × repeticiones</span>
+    </div>
+    {% endif %}
+    {% if resumen.repeticiones_totales %}
+    <div class="work-metric">
+      <span class="work-label">Repeticiones</span>
+      <span class="work-value">{{ resumen.repeticiones_totales|floatformat:0 }}</span>
+      <span class="work-detail">series de fuerza</span>
+    </div>
+    {% endif %}
+    {% if resumen.segundos_totales %}
+    <div class="work-metric">
+      <span class="work-label">Tiempo bajo tensión</span>
+      <span class="work-value">{{ resumen.segundos_totales|floatformat:0 }} s</span>
+      <span class="work-detail">series por tiempo</span>
+    </div>
+    {% endif %}
+    {% if resumen.distancia_metros_total %}
+    <div class="work-metric{% if resumen.carga_distancia_kg_m_total %} work-loaded{% endif %}">
+      <span class="work-label">Distancia</span>
+      <span class="work-value">{{ resumen.distancia_metros_total|floatformat:0 }} m</span>
+      {% if resumen.carga_distancia_kg_m_total %}
+        <span class="work-detail">con carga registrada</span>
+      {% else %}
+        <span class="work-detail">trabajo por distancia</span>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if resumen.carga_distancia_kg_m_total %}
+    <div class="work-metric work-metric--wide work-loaded">
+      <span class="work-label">Carga transportada</span>
+      <span class="work-value">{{ resumen.carga_distancia_kg_m_total|floatformat:0 }} kg·m</span>
+      <span class="work-detail">carga × metros · no se mezcla con el tonelaje</span>
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if resumen.trabajo_por_tipo %}
+  <div class="sec-hdr"><span class="sec-tag">Desglose</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for trabajo in resumen.trabajo_por_tipo %}
+    <div class="cambio-row">
+      <span class="cambio-nombre">{{ trabajo.nombre }}</span>
+      <span class="cambio-detalle {% if trabajo.tipo == 'distancia_cargada' %}tope{% else %}mantenida{% endif %}">
+        {% if trabajo.tipo == 'distancia_cargada' %}
+          {{ trabajo.metros|floatformat:0 }} m · {{ trabajo.carga_total_kg|floatformat:0 }} kg total{% if trabajo.carga_por_mano_kg %} ({{ trabajo.carga_por_mano_kg|floatformat:0 }}/mano){% endif %}{% if trabajo.carga_distancia_kg_m %} · {{ trabajo.carga_distancia_kg_m|floatformat:0 }} kg·m{% endif %}
+        {% elif trabajo.tipo == 'tiempo' %}
+          {{ trabajo.segundos|floatformat:0 }} s
+        {% else %}
+          {{ trabajo.repeticiones|floatformat:0 }} reps · {{ trabajo.tonelaje_kg|floatformat:0 }} kg
+        {% endif %}
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
 
   {% if prs %}
   <!-- RÉCORDS -->
@@ -287,7 +390,7 @@
     <div class="cambio-row">
       <span class="cambio-nombre">
         {{ decision.ejercicio }}<br>
-        <span style="color:var(--td);font-size:12px;">{{ decision.accion }} · {{ decision.motivo }}</span>
+        <span style="color:var(--td);font-size:12px;">{% if decision.accion_semantica %}{{ decision.accion_semantica }}{% else %}{{ decision.accion }}{% endif %} · {{ decision.motivo }}</span>
         {% if decision.agrupada %}
         <details class="decision-exercises">
           <summary>Ver ejercicios omitidos</summary>
@@ -295,7 +398,7 @@
         </details>
         {% endif %}
       </span>
-      {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% endif %}
+      {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% elif decision.efecto_semantico %}<span class="cambio-detalle subida">{{ decision.efecto_semantico }}</span>{% endif %}
     </div>
     {% endfor %}
   </div>

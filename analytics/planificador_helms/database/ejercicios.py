@@ -388,6 +388,7 @@ EJERCICIOS_DATABASE = {
         ],
         'compuesto_secundario': [
             {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
+             'peso_kg': 36, 'tipo_carga_default': 'por_mano',
              'patron': 'agarre', 'estabilidad': 'baja', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
         ],
         'aislamiento': [
@@ -405,6 +406,7 @@ EJERCICIOS_DATABASE = {
         'compuesto_principal': [],
         'compuesto_secundario': [
             {'nombre': 'Farmer Walk (Paseo del Granjero)', 'tipo_progresion': 'progresion_distancia',
+             'peso_kg': 36, 'tipo_carga_default': 'por_mano',
              'patron': 'agarre', 'estabilidad': 'baja', 'perfil': 'media', 'posicion': 'pie', 'cadena': 'cerrada'},
             {'nombre': 'Aguante en Barra (Dead Hang)', 'tipo_progresion': 'progresion_tiempo', 'patron': 'agarre',
              'estabilidad': 'media', 'perfil': 'estirado', 'posicion': 'pie', 'cadena': 'cerrada'},

@@ -48,8 +48,36 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("serie.esAproximacion", self.source)
         self.assertIn("resultadoPlanSerie", self.source)
         self.assertIn("Por debajo del rango", self.source)
-        self.assertIn("padding-bottom:calc(58px + env(safe-area-inset-bottom) + 24px)", self.source)
+        self.assertIn("Serie de trabajo", self.source)
+        self.assertIn("Marcar como aproximación", self.source)
+        self.assertIn("Es aproximación", self.source)
+        self.assertIn("No cuenta como trabajo", self.source)
+        self.assertIn("actualizarControlAproximacion", self.source)
+        self.assertIn("padding-bottom:calc(112px + env(safe-area-inset-bottom) + 32px)", self.source)
         self.assertIn("calc(32px + env(safe-area-inset-bottom))", self.source)
+
+    def test_feedback_de_serie_separa_tecnica_y_cumplimiento(self):
+        self.assertIn("function feedbackSerieHTML", self.source)
+        self.assertIn('class="serie-feedback"', self.source)
+        self.assertIn('class="serie-technique"', self.source)
+        self.assertIn("Técnica: buena", self.source)
+        self.assertIn("Por debajo del rango", self.source)
+
+    def test_estimacion_1rm_solo_aparece_tras_guardar_serie_real(self):
+        self.assertIn('id="orm-module-{{ ejercicio.form_id }}" hidden', self.source)
+        self.assertIn("if(!esAproximacion)actualizarORM(fid,sn);", self.source)
+        self.assertNotIn("calcularDiscosInline(fid,sn,peso);\n    actualizarORM(fid,sn);", self.source)
+        self.assertIn("series de trabajo ya guardadas", self.source)
+
+    def test_cierre_de_ejercicio_es_local_y_ofrece_continuar(self):
+        self.assertIn("function resumenDeEjercicio", self.source)
+        self.assertIn("Ejercicio exigente registrado", self.source)
+        self.assertIn("Continuar con ", self.source)
+        self.assertNotIn("setTimeout(()=>{if(STATE.ejActual===ejIdxAtCompletion)navEjercicio(1);},2000);", self.source)
+
+    def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
+        self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
+        self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
 
 
 class BriefingRenderContractTests(SimpleTestCase):
