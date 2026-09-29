@@ -82,7 +82,7 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertContains(resp, 'Volver al panel')
         self.assertContains(resp, 'Ver análisis completo')
         self.assertContains(resp, reverse('entrenos:dashboard_evolucion', kwargs={'cliente_id': self.cliente.id}))
-        self.assertContains(resp, reverse('home'))
+        self.assertContains(resp, reverse('clientes:dashboard_silencioso_preview'))
 
     def test_sin_freno_no_muestra_lectura_plan_ni_proxima_vez(self):
         with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',

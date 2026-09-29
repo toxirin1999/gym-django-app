@@ -207,7 +207,7 @@
 
   <!-- TOPBAR -->
   <div class="topbar">
-    <a href="{% url 'home' %}" class="tb-back">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="tb-back">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M15 18l-6-6 6-6"/>
       </svg>
@@ -320,7 +320,7 @@
 
 <!-- CTA -->
 <div class="cta-wrap">
-  <a href="{% url 'home' %}" class="btn-volver">Volver al panel</a>
+  <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="btn-volver">Volver al panel</a>
   <a href="{% url 'entrenos:dashboard_evolucion' cliente_id=cliente.id %}" class="btn-analisis">Ver análisis completo</a>
 </div>
 </body>
