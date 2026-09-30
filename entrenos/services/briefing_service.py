@@ -188,6 +188,10 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                         f'Tope de peso — conserva {peso_tope:g} kg y consolida '
                         'la distancia con margen antes de subir metros'
                     )
+                    # No dejes que la tarjeta de briefing vuelva a aplicar el
+                    # antiguo +5 m: repetir la mejor distancia conocida es el
+                    # objetivo seguro hasta completar ambas series con margen.
+                    objetivo = reps_tope
             alertas.append({
                 'tipo': 'tope',
                 'icono': '🔝',
@@ -349,11 +353,16 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         a['tipo'] == 'tope' for a in alertas_por_ejercicio.get(n, [])
     )]
     if topes_hoy:
-        nombres_str = ', '.join(topes_hoy[:2])
+        alertas_tope = [
+            alerta
+            for nombre in topes_hoy[:2]
+            for alerta in alertas_por_ejercicio.get(nombre, [])
+            if alerta['tipo'] == 'tope'
+        ]
         mensajes.append({
             'icono': '🔝',
             'tipo': 'tope',
-            'texto': f'{nombres_str}: llegaste al tope de la máquina. Mismo peso — intenta hacer una rep más.',
+            'texto': ' · '.join(alerta['texto'] for alerta in alertas_tope),
         })
 
     # Calibración RPE — solo informativo para gym
