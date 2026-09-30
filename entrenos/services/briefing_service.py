@@ -168,6 +168,15 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 ).order_by('-distancia_metros').values_list('distancia_metros', flat=True).first() or 0
             reps_tope = int(distancia_tope or tope_ej.repeticiones or 0)
             peso_tope = float(tope_ej.peso_kg or 0)
+            # Las sesiones anteriores al contrato de carga-distancia podían
+            # guardar Farmer sin peso. No presentamos ese 0 como si fuera una
+            # carga real: el ejercicio canónico usa 36 kg por mano.
+            nombre_normalizado = ' '.join(nombre.casefold().split())
+            if (
+                usa_distancia and peso_tope <= 0
+                and ('farmer' in nombre_normalizado or 'granjero' in nombre_normalizado)
+            ):
+                peso_tope = 36.0
             objetivo = reps_tope + (5 if usa_distancia else 1)
             texto_tope = (
                 f'Tope de peso — conserva {peso_tope:g} kg y apunta a '
