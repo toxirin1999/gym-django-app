@@ -177,9 +177,12 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 and ('farmer' in nombre_normalizado or 'granjero' in nombre_normalizado)
             ):
                 peso_tope = 36.0
+            carga_legible = f'{peso_tope:g} kg'
+            if 'farmer' in nombre_normalizado or 'granjero' in nombre_normalizado:
+                carga_legible += ' por mano'
             objetivo = reps_tope + (5 if usa_distancia else 1)
             texto_tope = (
-                f'Tope de peso — conserva {peso_tope:g} kg y apunta a '
+                f'Tope de peso — conserva {carga_legible} y apunta a '
                 f'{objetivo} {"m" if usa_distancia else "reps"}'
             )
             if usa_distancia:
@@ -194,7 +197,7 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                     tope_ej.entreno, normalizar_ejercicio(nombre), objetivo_origen,
                 ):
                     texto_tope = (
-                        f'Tope de peso — conserva {peso_tope:g} kg y consolida '
+                        f'Tope de peso — conserva {carga_legible} y consolida '
                         'la distancia con margen antes de subir metros'
                     )
                     # No dejes que la tarjeta de briefing vuelva a aplicar el
@@ -363,7 +366,7 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     )]
     if topes_hoy:
         alertas_tope = [
-            alerta
+            (nombre, alerta)
             for nombre in topes_hoy[:2]
             for alerta in alertas_por_ejercicio.get(nombre, [])
             if alerta['tipo'] == 'tope'
@@ -371,7 +374,10 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         mensajes.append({
             'icono': '🔝',
             'tipo': 'tope',
-            'texto': ' · '.join(alerta['texto'] for alerta in alertas_tope),
+            'texto': ' · '.join(
+                f'{nombre}: {alerta["texto"]}'
+                for nombre, alerta in alertas_tope
+            ),
         })
 
     # Calibración RPE — solo informativo para gym
