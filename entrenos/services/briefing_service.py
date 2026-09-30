@@ -169,13 +169,29 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             reps_tope = int(distancia_tope or tope_ej.repeticiones or 0)
             peso_tope = float(tope_ej.peso_kg or 0)
             objetivo = reps_tope + (5 if usa_distancia else 1)
+            texto_tope = (
+                f'Tope de peso — conserva {peso_tope:g} kg y apunta a '
+                f'{objetivo} {"m" if usa_distancia else "reps"}'
+            )
+            if usa_distancia:
+                from entrenos.services.decision_log_service import (
+                    _distancia_cumple_evidencia, _objetivo_repeticiones_snapshot,
+                    normalizar_ejercicio,
+                )
+                objetivo_origen = _objetivo_repeticiones_snapshot(
+                    tope_ej.entreno, normalizar_ejercicio(nombre),
+                )
+                if not _distancia_cumple_evidencia(
+                    tope_ej.entreno, normalizar_ejercicio(nombre), objetivo_origen,
+                ):
+                    texto_tope = (
+                        f'Tope de peso — conserva {peso_tope:g} kg y consolida '
+                        'la distancia con margen antes de subir metros'
+                    )
             alertas.append({
                 'tipo': 'tope',
                 'icono': '🔝',
-                'texto': (
-                    f'Tope de peso — conserva {peso_tope:g} kg y apunta a '
-                    f'{objetivo} {"m" if usa_distancia else "reps"}'
-                ),
+                'texto': texto_tope,
                 'peso_kg': peso_tope,
                 'reps_objetivo': objetivo,
             })

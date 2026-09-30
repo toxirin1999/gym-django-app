@@ -111,6 +111,56 @@ def _distancia_cumple_evidencia(entreno, ejercicio_normalizado, objetivo):
     return True
 
 
+def reconciliar_progresiones_distancia_heredadas(cliente):
+    """Invalida promociones antiguas de metros que contradicen sus series.
+
+    Antes de que la evidencia por serie fuese autoridad, un Farmer podía crear
+    ``subir_reps`` al tocar el tope aunque hubiera una serie corta o RPE 9.
+    El log queda en la base y se reaplicaba en cada briefing posterior. Solo
+    reconciliamos registros con un entreno de origen verificable; los logs
+    históricos sin origen se conservan porque no se pueden auditar.
+    """
+    from entrenos.models import GymDecisionLog
+    from rutinas.models import EjercicioBase
+
+    logs = GymDecisionLog.objects.filter(
+        cliente=cliente,
+        accion='subir_reps',
+        resultado__isnull=True,
+        entreno_origen__isnull=False,
+    ).select_related('entreno_origen')
+    corregidas = 0
+    for log in logs:
+        ejercicio_base = EjercicioBase.objects.filter(
+            nombre__iexact=log.ejercicio,
+            tipo_progresion='progresion_distancia',
+        ).first()
+        if not ejercicio_base:
+            continue
+        objetivo = _objetivo_repeticiones_snapshot(
+            log.entreno_origen, normalizar_ejercicio(log.ejercicio),
+        )
+        if _distancia_cumple_evidencia(
+            log.entreno_origen, normalizar_ejercicio(log.ejercicio), objetivo,
+        ):
+            continue
+        log.accion = 'mantener'
+        log.valor_cambio = None
+        log.motivo = (
+            'Distancia o margen insuficiente — consolidar carga y metros '
+            'antes de progresar'
+        )
+        log.motivo_codigo = 'distancia_sin_margen'
+        log.estado_aplicacion = 'pospuesta'
+        log.motivo_postergacion = 'Reconciliada con las series reales de origen.'
+        log.save(update_fields=[
+            'accion', 'valor_cambio', 'motivo', 'motivo_codigo',
+            'estado_aplicacion', 'motivo_postergacion',
+        ])
+        corregidas += 1
+    return corregidas
+
+
 def _reps_para_log(reps_media):
     """Mantiene el campo entero legacy sin perder la media para decidir."""
     return int(reps_media.quantize(Decimal('1'), rounding=ROUND_HALF_UP))

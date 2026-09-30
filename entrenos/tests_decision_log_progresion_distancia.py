@@ -19,6 +19,7 @@ from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymAdaptationP
 from entrenos.services.decision_log_service import (
     generar_decisiones_para_entreno,
     evaluar_decisiones_para_entreno,
+    reconciliar_progresiones_distancia_heredadas,
     _decidir_accion,
     _evaluar_log,
 )
@@ -110,6 +111,22 @@ class TestGenerarDecisionesTopeProgresionDistancia(DecisionLogProgresionDistanci
 
 
 class TestProgresionEjecutivaAplicaDistanciaConTope(DecisionLogProgresionDistanciaBase):
+    def test_reconcilia_log_heredado_sin_evidencia_por_series(self):
+        entreno = self._entreno(self.hoy)
+        log = GymDecisionLog.objects.create(
+            cliente=self.cliente, entreno_origen=entreno, ejercicio='Farmer Walk',
+            accion='subir_reps', peso_anterior=36, valor_cambio=5,
+            reps_anteriores=48,
+            motivo='Tope de peso alcanzado — progresión por distancia (+5 m)',
+            resultado=None,
+        )
+
+        self.assertEqual(reconciliar_progresiones_distancia_heredadas(self.cliente), 1)
+        log.refresh_from_db()
+        self.assertEqual(log.accion, 'mantener')
+        self.assertIsNone(log.valor_cambio)
+        self.assertIn('consolidar', log.motivo.lower())
+
     def test_plan_dinamico_fija_reps_objetivo_en_reps_anteriores_mas_5(self):
         log = GymDecisionLog.objects.create(
             cliente=self.cliente, ejercicio='farmer walk', accion='subir_reps',

@@ -264,11 +264,17 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
     logger = logging.getLogger(__name__)
 
     from entrenos.models import GymDecisionLog
+    from entrenos.services.decision_log_service import (
+        reconciliar_progresiones_distancia_heredadas,
+    )
     from entrenos.services.progresion_contextual_service import (
         evaluar_permiso_progresion, _es_ejercicio_principal,
         evaluar_permiso_local_ejercicio,
     )
 
+    # Corrige una sola vez los logs antiguos que se crearon antes de que las
+    # series reales (metros + RPE) fueran la evidencia de autoridad.
+    reconciliar_progresiones_distancia_heredadas(cliente)
     logs_pendientes = list(
         GymDecisionLog.objects
         .filter(cliente=cliente, accion__in=('subir_peso', 'bajar_peso', 'subir_reps'), resultado__isnull=True)
