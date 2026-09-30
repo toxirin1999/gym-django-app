@@ -96,6 +96,26 @@ class TestTopeMaquinaEnCanonica(BaseTopeCanonica):
         )
         self.assertEqual(ej.get('reps_sugeridas_tope'), 9)
 
+    def test_subida_de_peso_materializada_no_es_pisada_por_tope_anterior(self):
+        """El peso contractual del briefing debe ser el inicial de ejecución."""
+        ejercicio_hoy = {
+            'nombre': self.NOMBRE_EJ,
+            'series': 3,
+            'repeticiones': '8-10',
+            'peso_kg': 70.0,
+            'peso_recomendado_kg': 70.0,
+            'rpe_objetivo': 8,
+            'progresion_aplicada': True,
+            'progresion_accion': 'subir_peso',
+            'tipo_ejercicio': 'compuesto_principal',
+            '_autoridad_gym_materializada': True,
+        }
+
+        ej = self._ej_contexto(self._get_vista(ejercicio_hoy))
+
+        self.assertFalse(ej.get('sugerencia_tope'))
+        self.assertAlmostEqual(float(ej.get('peso_inicial_kg') or 0), 70.0, delta=0.01)
+
 
 class TestDistanciaConCargaEnCanonica(BaseTopeCanonica):
     """

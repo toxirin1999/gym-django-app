@@ -28,6 +28,8 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
     def test_objetivo_tope_no_mezcla_rango_original_en_superficies(self):
         self.assertIn('data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
+        self.assertIn('Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
+        self.assertIn('🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
 
     def test_tiempo_no_se_suma_como_repeticiones_en_modal(self):
         self.assertIn("const usaTiempo = document.getElementById('card-'+fid)?.dataset.usaTiempo === '1';", self.source)

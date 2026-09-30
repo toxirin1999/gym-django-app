@@ -3866,10 +3866,29 @@ def vista_entrenamiento_activo(request, cliente_id):
                         2,
                     )
                     sugerencia_tope, reps_sugeridas_tope = calcular_sugerencia_tope(datos_anterior)
-                    if sugerencia_tope and float(datos_anterior.get('peso') or 0) > 0:
+                    # El snapshot canónico es la autoridad del briefing. Si
+                    # éste ya materializó una subida/bajada de carga, no puede
+                    # volver a imponerse un tope antiguo al entrar en la
+                    # ejecución: briefing y primer selector deben empezar en
+                    # el mismo peso contractual.
+                    _accion_peso_materializada = (
+                        ejercicio.get('progresion_accion') in ('subir_peso', 'bajar_peso')
+                        or (ejercicio.get('motivo_peso') or {}).get('tipo') in ('sube', 'baja')
+                    )
+                    if (
+                        sugerencia_tope
+                        and (not _accion_peso_materializada or ejercicio.get('sugerencia_tope'))
+                        and float(datos_anterior.get('peso') or 0) > 0
+                    ):
                         ejercicio['sugerencia_tope'] = True
                         ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
                         ejercicio['peso_inicial_kg'] = float(datos_anterior['peso'])
+                        # En un tope de máquina la meta específica sustituye
+                        # al rango genérico: también es la referencia para el
+                        # feedback de la serie, no solo para el selector.
+                        ejercicio['reps_objetivo'] = reps_sugeridas_tope
+                        ejercicio['reps_min'] = reps_sugeridas_tope
+                        ejercicio['reps_max'] = reps_sugeridas_tope
                     else:
                         ejercicio.setdefault('sugerencia_tope', False)
                     if ejercicio.get('solo_reps') and not reps_objetivo_materializado:
@@ -4170,6 +4189,12 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicio['peso_inicial_kg'] = peso_ant
                     ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
                     ejercicio['sugerencia_tope'] = True
+                    # El objetivo de un tope gobierna el registro de hoy. El
+                    # rango de la rutina sigue siendo contexto, pero no debe
+                    # contradecir la meta de reps que progresa la máquina.
+                    ejercicio['reps_objetivo'] = reps_sugeridas_tope
+                    ejercicio['reps_min'] = reps_sugeridas_tope
+                    ejercicio['reps_max'] = reps_sugeridas_tope
                 elif peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
                 else:

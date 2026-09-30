@@ -102,6 +102,51 @@ def _accion_semantica(log, tipo_progresion):
     return log.get_accion_display()
 
 
+def _ejercicio_completo_en_cierre(entreno, nombre_ejercicio):
+    """Indica si este ejercicio agotó sus series previstas en esta sesión.
+
+    Un cierre parcial describe la sesión completa, no necesariamente cada
+    ejercicio. La versión inmutable es la autoridad del número de series;
+    cuando no haya detalle individual (históricos), el agregado del ejercicio
+    conserva el fallback compatible.
+    """
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    ejercicios_plan = (snapshot.get('entrenamiento') or {}).get('ejercicios') or []
+    nombre_normalizado = normalizar_ejercicio(nombre_ejercicio)
+    plan = next(
+        (
+            ejercicio for ejercicio in ejercicios_plan
+            if normalizar_ejercicio(ejercicio.get('nombre')) == nombre_normalizado
+        ),
+        None,
+    )
+    if not plan:
+        return False
+    try:
+        series_previstas = int(plan.get('series') or 0)
+    except (TypeError, ValueError):
+        return False
+    if series_previstas < 1:
+        return False
+
+    series_reales = [
+        serie for serie in SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == nombre_normalizado
+    ]
+    if series_reales:
+        return len(series_reales) >= series_previstas
+
+    ejercicio = (
+        EjercicioRealizado.objects.filter(
+            entreno=entreno, completado=True, nombre_ejercicio__iexact=nombre_ejercicio,
+        ).first()
+    )
+    return bool(ejercicio and (ejercicio.series or 0) >= series_previstas)
+
+
 def _decisiones_entrenador(cliente, entreno):
     """Decisiones causadas exclusivamente por la sesión que se está cerrando."""
     from django.db.models.functions import Lower
@@ -163,12 +208,22 @@ def _decisiones_entrenador(cliente, entreno):
                 decisiones.append(decisiones_omitidas)
                 agrupacion_insertada = True
             continue
+        motivo = log.motivo
+        if (
+            entreno.estado_cierre == entreno.ESTADO_PARCIAL
+            and entreno.motivo_cierre == 'fatiga'
+            and _ejercicio_completo_en_cierre(entreno, log.ejercicio)
+            and motivo == 'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.'
+        ):
+            # El ejercicio sí recibió toda su dosis. El freno es global por la
+            # fatiga que interrumpió la sesión, no un fallo de ese ejercicio.
+            motivo = 'Cierre parcial por fatiga — ejercicio completado; mantener por prudencia global.'
         decisiones.append({
             'ejercicio': log.ejercicio,
             'accion': _accion_semantica(
                 log, tipos_progresion.get(log.ejercicio.strip().lower()),
             ),
-            'motivo': log.motivo,
+            'motivo': motivo,
             'efecto': _efecto_decision(
                 log, tipos_progresion.get(log.ejercicio.strip().lower()),
             ),

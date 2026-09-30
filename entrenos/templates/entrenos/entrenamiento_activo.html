@@ -1364,9 +1364,9 @@ input{background:transparent!important;border:none!important;outline:none!import
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
-        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 +1 rep{% if ejercicio.reps_sugeridas_tope %} ({{ ejercicio.reps_sugeridas_tope }}){% endif %}</span>
+        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} reps</span>
         {% endif %}
         {% if ejercicio.estancado %}
         <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
@@ -1969,8 +1969,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/>
         </svg>
       </div>
-      <h2 class="mr-title">¡Buen trabajo!</h2>
-      <p class="mr-subtitle">Entrenamiento completado</p>
+      <h2 class="mr-title" id="modal-resumen-title">¡Buen trabajo!</h2>
+      <p class="mr-subtitle" id="modal-resumen-subtitle">Entrenamiento completado</p>
     </div>
 
     <!-- Anillos de actividad -->
@@ -3152,6 +3152,11 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     alert('No puedes cerrar una sesión sin completar al menos una serie');
     return;
   }
+  const esCierreParcial=comp<total;
+  document.getElementById('modal-resumen-title').textContent=
+    esCierreParcial ? 'Sesión parcial guardada' : '¡Buen trabajo!';
+  document.getElementById('modal-resumen-subtitle').textContent=
+    esCierreParcial ? 'La sesión se cerrará con el motivo que indiques.' : 'Entrenamiento completado';
   const motivoWrap=document.getElementById('motivo-cierre-wrap');
   if(motivoWrap)motivoWrap.style.display=comp<total?'block':'none';
   document.getElementById('hid-series-comp').value=comp;

@@ -14,7 +14,10 @@ from django.test import TestCase
 from django.urls import reverse
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymDecisionLog, RecordPersonal
+from entrenos.models import (
+    EntrenoRealizado, EjercicioRealizado, GymDecisionLog, GymDecisionVersion,
+    RecordPersonal,
+)
 from joi.models import MensajeJOI
 from rutinas.models import Rutina
 
@@ -312,3 +315,37 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertContains(resp, 'Aumentará la carga un 2.5%')
         self.assertNotContains(resp, 'Decisión legacy')
         self.assertNotContains(resp, 'Próxima vez')
+
+    def test_cierre_parcial_no_atribuye_dosis_incompleta_a_ejercicio_completado(self):
+        version = GymDecisionVersion.objects.create(
+            cliente=self.cliente, fecha=self.entreno.fecha, version=1,
+            decision_id='cierre-parcial-view', origen=GymDecisionVersion.ORIGEN_MOTOR,
+            fingerprint='a' * 64, base_fingerprint='b' * 64, postura='empujar',
+            snapshot={'entrenamiento': {'ejercicios': [
+                {'nombre': 'Press banca', 'series': 4},
+            ]}},
+        )
+        self.entreno.estado_cierre = EntrenoRealizado.ESTADO_PARCIAL
+        self.entreno.motivo_cierre = 'fatiga'
+        self.entreno.gym_decision_version = version
+        self.entreno.save(update_fields=['estado_cierre', 'motivo_cierre', 'gym_decision_version'])
+        GymDecisionLog.objects.update_or_create(
+            cliente=self.cliente, entreno_origen=self.entreno,
+            ejercicio_normalizado='press banca',
+            defaults={
+                'ejercicio': 'press banca', 'accion': 'mantener',
+                'motivo': 'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.',
+            },
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            resp = self.client.get(self._url())
+
+        self.assertContains(resp, 'ejercicio completado; mantener por prudencia global')
+        self.assertNotContains(resp, 'mantener hasta tolerar la dosis prevista')
+
+    def test_modal_distingue_cierre_parcial_de_entrenamiento_completo(self):
+        source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
+        self.assertIn("esCierreParcial ? 'Sesión parcial guardada' : '¡Buen trabajo!'", source)
+        self.assertIn("esCierreParcial ? 'La sesión se cerrará con el motivo que indiques.' : 'Entrenamiento completado'", source)
