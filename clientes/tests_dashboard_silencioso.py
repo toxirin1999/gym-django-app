@@ -234,6 +234,14 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertIn('window.history.replaceState', plantilla)
         self.assertIn('openDialog();', plantilla)
 
+    def test_tarjetas_y_enlace_de_aplazamiento_conservan_sus_estilos(self):
+        """Un ajuste del enlace no puede desvestir el resto del dashboard."""
+        plantilla = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text()
+
+        self.assertIn('.card{', plantilla)
+        self.assertIn('.metrics{display:grid', plantilla)
+        self.assertIn('.inline-form .secondary-action{font-family:inherit;font-size:9px', plantilla)
+
     @patch("clientes.views._get_dashboard_context_data")
     def test_accesos_secundarios_preservan_sesion_pendiente_y_movilidad(
         self, dashboard_contexto,
