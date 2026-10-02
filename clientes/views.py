@@ -2098,7 +2098,11 @@ def dashboard_silencioso_preview(request):
         # evita que una reubicación que vuelve a tocar hoy quede atrapada.
         'quiet_postpone_url': (
             reverse('clientes:posponer_sesion', args=[sesion_pendiente_id])
-            if sesion_pendiente_id else None
+            if sesion_pendiente_id
+            # Aunque el planificador aún no haya materializado la sesión de
+            # hoy, la portada debe conservar la opción de aplazarla. El
+            # endpoint crea esa identidad canónica antes de mover la cola.
+            else reverse('clientes:posponer_sesion_hoy')
         ),
         'quiet_links': {
             'routine': rutina_url,
@@ -5496,7 +5500,7 @@ def posponer_sesion_hoy_view(request):
 
     posponer_entrenamiento_hoy(cliente, hoy)
     messages.info(request, "La sesión sigue aquí. Hoy no hace falta forzarla.")
-    return redirect('clientes:panel_cliente')
+    return redirect('clientes:dashboard_silencioso_preview')
 
 
 @login_required
@@ -5520,7 +5524,7 @@ def posponer_sesion_view(request, sesion_id):
         motivo='El usuario indicó que hoy no podía entrenar.',
     )
     messages.info(request, "La sesión sigue aquí. Hoy no hace falta forzarla.")
-    return redirect('clientes:panel_cliente')
+    return redirect('clientes:dashboard_silencioso_preview')
 
 
 # ── Phase 10B — Plan suggestion responses ────────────────────────────────────

@@ -165,6 +165,36 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
+    def test_plan_hoy_sin_sesion_materializada_conserva_enlace_para_aplazar(
+        self, dashboard_contexto, resolver,
+    ):
+        """La acción no depende de que exista ya una SesionProgramada."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {"nombre": "Pierna", "ejercicios": [{"nombre": "Sentadilla"}]},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+            "sesion_programada": None,
+        }
+        resolver.return_value = {
+            "estado": "EN_MARGEN",
+            "texto": "Puedes entrenar.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.context["quiet_postpone_url"],
+            reverse("clientes:posponer_sesion_hoy"),
+        )
+        self.assertContains(response, "Hacer esta sesión mañana")
+        self.assertEqual(response.content.count(b'data-postpone-session'), 1)
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
     def test_semana_solo_dice_recuperando_bien_con_energia_y_sueno(
         self, dashboard_contexto, resolver,
     ):
