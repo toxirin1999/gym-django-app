@@ -169,6 +169,35 @@ class ReciboSupervisionGymTests(TestCase):
             'Posponer debe ser visible sin abrir Ajustar decisión.',
         )
 
+    def test_portada_moderna_permite_reposponer_sesion_al_llegar_su_fecha_efectiva(self):
+        """Una reubicación que llega a hoy conserva la acción, sin duplicarse."""
+        from datetime import timedelta
+
+        self.motor.vigente = True
+        self.motor.save(update_fields=["vigente"])
+        sesion = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=self.fecha - timedelta(days=1),
+            pospuesta_hasta=self.fecha,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion="Fuerza A",
+        )
+        portada_sin_dominante = {
+            **self._portada(ejecutable=False),
+            "sesion_dominante": None,
+        }
+
+        html = self._render(
+            portada_sin_dominante,
+            self.motor.snapshot,
+            None,
+            sesion_programada=sesion,
+        )
+
+        self.assertEqual(html.count('data-postpone-session'), 1)
+        self.assertIn('Hacer esta sesión mañana', html)
+        self.assertIn(f'/clientes/sesion/{sesion.id}/posponer/', html)
+
     def test_portada_moderna_on_the_fly_ofrece_mover_la_sesion_gym_a_manana(self):
         self.motor.vigente = True
         self.motor.save(update_fields=["vigente"])

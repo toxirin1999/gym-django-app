@@ -919,20 +919,20 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endif %}
     {% endwith %}
 
-    {% if portada_hoy.sesion_dominante.modulo == 'gym' %}
-      {% if sesion_programada %}
-        {% if sesion_programada.estado == 'pendiente' %}
-        <form data-postpone-session class="rb-session-calendar-action mt-3"
-              method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
-          {% csrf_token %}
-          <span class="rb-session-calendar-copy">
-            <span class="rb-session-calendar-label">Cuándo entrenar</span>
-            <span class="rb-session-calendar-note">Conserva esta sesión y su lugar en el plan.</span>
-          </span>
-          <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
-        </form>
-        {% endif %}
-      {% else %}
+    {% if sesion_programada and sesion_programada.estado == 'pendiente' %}
+    {# La sesión canónica sigue siendo aplazable cuando alcanza su fecha efectiva.
+       La decisión visual puede no tener Gym como dominante, pero no debe esconder
+       una sesión pendiente que el usuario aún puede conservar para mañana. #}
+    <form data-postpone-session class="rb-session-calendar-action mt-3"
+          method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
+      {% csrf_token %}
+      <span class="rb-session-calendar-copy">
+        <span class="rb-session-calendar-label">Cuándo entrenar</span>
+        <span class="rb-session-calendar-note">Conserva esta sesión y su lugar en el plan.</span>
+      </span>
+      <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
+    </form>
+    {% elif portada_hoy.sesion_dominante.modulo == 'gym' %}
       <form data-postpone-session class="rb-session-calendar-action mt-3"
             method="post" action="{% url 'clientes:posponer_sesion_hoy' %}">
         {% csrf_token %}
@@ -942,7 +942,6 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </span>
         <button class="rb-session-calendar-btn" type="submit">Hacer esta sesión mañana</button>
       </form>
-      {% endif %}
     {% endif %}
 
     <!-- Ajustar decisión: un único desplegable, colapsado por defecto. Agrupa
