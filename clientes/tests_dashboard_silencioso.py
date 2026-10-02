@@ -156,6 +156,12 @@ class DashboardSilenciosoPreviewTests(TestCase):
             response.context["quiet_decision"]["cta_url"],
             f"{briefing}?sesion_programada_id=75",
         )
+        self.assertEqual(
+            response.context["quiet_postpone_url"],
+            reverse("clientes:posponer_sesion", args=[75]),
+        )
+        self.assertContains(response, "Hacer esta sesión mañana")
+        self.assertEqual(response.content.count(b'data-postpone-session'), 1)
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")

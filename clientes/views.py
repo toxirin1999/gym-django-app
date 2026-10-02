@@ -2093,6 +2093,13 @@ def dashboard_silencioso_preview(request):
             'carga_detalle': carga_detalle,
         },
         'quiet_insight': insight,
+        # La sesión pendiente es una identidad canónica aunque la portada
+        # haya resuelto otra prioridad visual. Permitir aplazarla de nuevo
+        # evita que una reubicación que vuelve a tocar hoy quede atrapada.
+        'quiet_postpone_url': (
+            reverse('clientes:posponer_sesion', args=[sesion_pendiente_id])
+            if sesion_pendiente_id else None
+        ),
         'quiet_links': {
             'routine': rutina_url,
             'plan': reverse('clientes:trayectoria_plan'),
