@@ -30,6 +30,7 @@ from entrenos.services.sesion_recomendada import (
     calcular_bloque_esencial,
     cerrar_sesion_programada,
     inferir_prioridad_sesion,
+    posponer_sesion_programada,
     obtener_sesion_recomendada_hoy,
     posponer_entrenamiento_hoy,
     saltar_sesion_programada,
@@ -320,6 +321,42 @@ class TestCase5_PospuestaAparececeMañana(SesionProgramadaBase):
         self.assertIn('Reubicada para hoy', decision['mensaje'])
         self.assertIn('prevista hace 2 días', decision['mensaje'])
         self.assertNotIn('Quedó pendiente', decision['mensaje'])
+
+
+class TestAplazamientoEncadenado(SesionProgramadaBase):
+    """Un aplazamiento sucesivo conserva la cola del plan, no la sustituye."""
+
+    def test_reaplazar_mueve_la_siguiente_sesion_despues_de_la_recuperada(self):
+        jueves = self.hoy
+        viernes = jueves + timedelta(days=1)
+        sabado = viernes + timedelta(days=1)
+        domingo = sabado + timedelta(days=1)
+        recuperada = SesionProgramada.objects.create(
+            cliente=self.cliente,
+            fecha_prevista=jueves,
+            pospuesta_hasta=viernes,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Sesión del jueves',
+        )
+        plan = make_mock_planificador({viernes: TRAINING_DAY_NORMAL})
+
+        with patch(
+            'entrenos.services.sesion_recomendada._build_planificador',
+            return_value=plan,
+        ):
+            posponer_sesion_programada(recuperada, sabado)
+
+        recuperada.refresh_from_db()
+        sesion_del_viernes = SesionProgramada.objects.get(
+            cliente=self.cliente,
+            fecha_prevista=viernes,
+        )
+        self.assertEqual(recuperada.pospuesta_hasta, sabado)
+        self.assertEqual(
+            sesion_del_viernes.pospuesta_hasta,
+            domingo,
+            'La sesión prevista para el viernes debe quedar detrás de la aplazada.',
+        )
 
 
 class TestCase6_CompletarPendienteCierraCorrectamente(SesionProgramadaBase):

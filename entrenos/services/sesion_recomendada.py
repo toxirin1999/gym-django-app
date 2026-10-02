@@ -689,10 +689,100 @@ def saltar_sesion_programada(sesion, motivo=''):
 
 
 def posponer_sesion_programada(sesion, hasta, motivo=''):
-    """Postpones a single pending session until a given date."""
-    sesion.pospuesta_hasta = hasta
-    sesion.motivo_estado = motivo or f'Sesión pospuesta hasta {hasta}.'
-    sesion.save(update_fields=['pospuesta_hasta', 'motivo_estado', 'actualizada_en'])
+    """Postpone a pending session while preserving the chronological plan queue.
+
+    A session that was already reubicada is occupying its effective date, not
+    merely its original ``fecha_prevista``.  Moving it again must therefore
+    push the planned session for that effective date (and any materialised
+    sessions after it) behind the recovered session.  Otherwise a Thursday
+    moved to Friday and then Saturday vanishes from the queue while Friday's
+    workout is shown immediately.
+    """
+    fecha_actual = sesion.pospuesta_hasta or sesion.fecha_prevista
+
+    with transaction.atomic():
+        sesion = SesionProgramada.objects.select_for_update().get(pk=sesion.pk)
+        fecha_actual = sesion.pospuesta_hasta or sesion.fecha_prevista
+
+        # Only a re-postponement can collide with a separate workout planned
+        # for the current effective date. A fresh session of today is itself
+        # that planned workout and needs no successor materialised.
+        if (
+            sesion.pospuesta_hasta
+            and fecha_actual != sesion.fecha_prevista
+            and hasta > fecha_actual
+        ):
+            sucesora = (
+                SesionProgramada.objects.select_for_update()
+                .filter(
+                    cliente=sesion.cliente,
+                    fecha_prevista=fecha_actual,
+                    estado=SesionProgramada.ESTADO_PENDIENTE,
+                )
+                .exclude(pk=sesion.pk)
+                .first()
+            )
+            if sucesora is None:
+                try:
+                    entrenamiento = _normalizar_entrenamiento(
+                        _build_planificador(sesion.cliente)
+                        .generar_entrenamiento_para_fecha(fecha_actual)
+                    )
+                    if not _es_descanso(entrenamiento):
+                        prioridad = (
+                            inferir_prioridad_sesion(entrenamiento)
+                            or SesionProgramada.PRIORIDAD_ALTA
+                        )
+                        sucesora = SesionProgramada.objects.create(
+                            cliente=sesion.cliente,
+                            fecha_prevista=fecha_actual,
+                            estado=SesionProgramada.ESTADO_PENDIENTE,
+                            prioridad=prioridad,
+                            nombre_sesion=(
+                                entrenamiento.get('rutina_nombre')
+                                or entrenamiento.get('nombre_rutina')
+                                or ''
+                            ),
+                            bloque_nombre=entrenamiento.get('bloque', ''),
+                            dia_numero=entrenamiento.get('dia'),
+                            motivo_estado='Sesión preservada al reubicar una anterior.',
+                        )
+                except Exception:
+                    logger.exception(
+                        'posponer_sesion_programada: no se pudo materializar la sucesora de %s',
+                        sesion.pk,
+                    )
+
+            # Put every materialised future session after the recovered one.
+            # ``max`` cascades collisions: Thu→Sat makes Fri→Sun; a Saturday
+            # session already in the queue is then moved to Monday, etc.
+            siguientes = list(
+                SesionProgramada.objects.select_for_update()
+                .filter(
+                    cliente=sesion.cliente,
+                    estado=SesionProgramada.ESTADO_PENDIENTE,
+                    fecha_prevista__gte=fecha_actual,
+                )
+                .exclude(pk=sesion.pk)
+                .order_by('fecha_prevista', 'id')
+            )
+            ultimo_hueco = hasta
+            for siguiente in siguientes:
+                fecha_efectiva = siguiente.pospuesta_hasta or siguiente.fecha_prevista
+                if fecha_efectiva < fecha_actual:
+                    continue
+                destino = max(
+                    fecha_efectiva + (hasta - fecha_actual),
+                    ultimo_hueco + timedelta(days=1),
+                )
+                siguiente.pospuesta_hasta = destino
+                siguiente.motivo_estado = 'Sesión reubicada para conservar el orden del plan.'
+                siguiente.save(update_fields=['pospuesta_hasta', 'motivo_estado', 'actualizada_en'])
+                ultimo_hueco = destino
+
+        sesion.pospuesta_hasta = hasta
+        sesion.motivo_estado = motivo or f'Sesión pospuesta hasta {hasta}.'
+        sesion.save(update_fields=['pospuesta_hasta', 'motivo_estado', 'actualizada_en'])
     return sesion
 
 
