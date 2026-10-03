@@ -118,6 +118,36 @@ class DecisionIdEjecucionGymTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
     @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
+    def test_sesion_activa_reconstruye_snapshot_canonico_si_token_no_esta_en_worker(self, resolver):
+        """Un cache local distinto no puede abrir una sesión activa vacía."""
+        resolver.return_value = self._autoridad()
+        GymDecisionVersion.objects.create(
+            cliente=self.cliente,
+            fecha=self.fecha,
+            version=1,
+            decision_id="gym-vigente",
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            vigente=True,
+            fingerprint="fingerprint-vigente",
+            base_fingerprint="base-vigente",
+            postura="avanzar",
+            snapshot=resolver.return_value,
+        )
+        url = reverse("entrenos:entrenamiento_activo", args=[self.cliente.id])
+        response = self.client.get(url, {
+            "fecha": self.fecha.isoformat(),
+            "decision_id": "gym-vigente",
+            # Simula que el briefing se atendió en otro worker de PythonAnywhere.
+            "ejercicios_token": "token-ausente-en-este-worker",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [ejercicio["nombre"] for ejercicio in response.context["ejercicios_planificados"]],
+            ["Press banca"],
+        )
+
+    @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
     def test_briefing_protegido_es_revision_sin_cta_de_inicio(self, resolver):
         protegida = self._autoridad()
         protegida.update({"estado": "recuperar", "postura": "proteger"})

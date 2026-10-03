@@ -3708,6 +3708,18 @@ def vista_entrenamiento_activo(request, cliente_id):
                 except Exception:
                     ejercicios_planificados = None
         if ejercicios_planificados is None:
+            # El token es únicamente un transporte corto para no exponer el
+            # plan completo en la URL. En producción el cache por defecto es
+            # local al proceso: el briefing y la pantalla activa pueden caer
+            # en workers distintos y perderlo. Con una decisión vigente ya
+            # validada, su snapshot es la fuente canónica y compartida; nunca
+            # debemos degradar a un día vacío por un cache miss.
+            if decision_id_recibida and autoridad_vigente:
+                ejercicios_planificados = (
+                    (autoridad_vigente.get('entrenamiento') or {}).get('ejercicios')
+                )
+
+        if ejercicios_planificados is None:
             # Una sesión pendiente aplazada conserva la identidad del día en que
             # fue prescrita. El token es solo transporte: si expira, reconstruir
             # con la fecha de ejecución (hoy) cargaría silenciosamente el plan
