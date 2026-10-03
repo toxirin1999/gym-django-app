@@ -1648,11 +1648,11 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
         {% if ejercicio.sugerencia_tope and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} rep objetivo</span>
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
         {% elif ejercicio.diferencia_peso > 0 %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
         {% elif ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} rep objetivo</span>
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
         {% endif %}
       </div>
       {% elif ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
@@ -1660,7 +1660,7 @@ input{background:transparent!important;border:none!important;outline:none!import
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
         {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} m objetivo</span>
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} m objetivo</span>
         {% endif %}
       </div>
       {% endif %}
