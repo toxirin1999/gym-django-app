@@ -13,7 +13,10 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymAdaptationProfile
+from entrenos.models import (
+    EntrenoRealizado, EjercicioRealizado, GymAdaptationProfile,
+    GymDecisionVersion,
+)
 from entrenos.services.decision_log_service import generar_decisiones_para_entreno, _decidir_accion
 from rutinas.models import EjercicioBase, Rutina
 
@@ -104,3 +107,43 @@ class TestGenerarDecisionesUsaTipoProgresion(DecisionLogProgresionRepsBase):
         self.assertEqual(log.accion, 'subir_reps')
         self.assertEqual(log.reps_anteriores, 10)
         self.assertEqual(log.reps_sugeridas, 11)
+
+    def test_cierre_parcial_por_fatiga_no_pisa_la_lectura_del_ejercicio_completado(self):
+        """La fatiga explica la omisión, no borra la evidencia ya registrada."""
+        EjercicioBase.objects.get_or_create(
+            nombre='Elevaciones de Piernas Colgado',
+            defaults={'grupo_muscular': 'core', 'tipo_progresion': 'progresion_reps'},
+        )
+        anterior = self._entreno(self.hoy - timedelta(days=3))
+        self._ejercicio_realizado(anterior, rpe=7.0, repeticiones=10)
+        parcial = self._entreno(
+            self.hoy,
+            estado_cierre=EntrenoRealizado.ESTADO_PARCIAL,
+            motivo_cierre='fatiga',
+        )
+        parcial.gym_decision_version = GymDecisionVersion.objects.create(
+            cliente=self.cliente,
+            fecha=parcial.fecha,
+            version=1,
+            decision_id='fatiga-completo-prog-reps',
+            origen=GymDecisionVersion.ORIGEN_MOTOR,
+            fingerprint='a' * 64,
+            base_fingerprint='b' * 64,
+            postura='empujar',
+            snapshot={'entrenamiento': {'ejercicios': [{
+                'nombre': 'Elevaciones de Piernas Colgado', 'series': 4,
+            }]}},
+        )
+        parcial.save(update_fields=['gym_decision_version'])
+        self._ejercicio_realizado(parcial, rpe=7.0, repeticiones=10)
+
+        generar_decisiones_para_entreno(parcial)
+
+        from entrenos.models import GymDecisionLog
+        log = GymDecisionLog.objects.get(
+            cliente=self.cliente, entreno_origen=parcial,
+            ejercicio='elevaciones de piernas colgado',
+        )
+        self.assertEqual(log.accion, 'subir_reps')
+        self.assertEqual(log.motivo_codigo, 'progresion_reps')
+        self.assertNotIn('Cierre parcial por fatiga', log.motivo)

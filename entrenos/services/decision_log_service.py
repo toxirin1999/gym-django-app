@@ -87,6 +87,87 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     return None
 
 
+def _ejercicio_completo_en_sesion(entreno, nombre_ejercicio):
+    """Indica si el ejercicio agotó las series previstas para esta sesión.
+
+    El motivo de cierre pertenece a la sesión. Para decidir la progresión de
+    cada ejercicio necesitamos conservar la autoridad individual: la versión
+    inmutable define la dosis y las series reales confirman si se completó.
+    """
+    from entrenos.models import EjercicioRealizado, SerieRealizada
+
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    ejercicios_plan = (snapshot.get('entrenamiento') or {}).get('ejercicios') or []
+    nombre_normalizado = normalizar_ejercicio(nombre_ejercicio)
+    plan = next(
+        (
+            ejercicio for ejercicio in ejercicios_plan
+            if normalizar_ejercicio(ejercicio.get('nombre')) == nombre_normalizado
+        ),
+        None,
+    )
+    if not plan:
+        return False
+    try:
+        series_previstas = int(plan.get('series') or 0)
+    except (TypeError, ValueError):
+        return False
+    if series_previstas < 1:
+        return False
+
+    series_reales = [
+        serie for serie in SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == nombre_normalizado
+    ]
+    if series_reales:
+        return len(series_reales) >= series_previstas
+
+    ejercicio = EjercicioRealizado.objects.filter(
+        entreno=entreno, completado=True,
+        nombre_ejercicio__iexact=nombre_ejercicio,
+    ).first()
+    return bool(ejercicio and (ejercicio.series or 0) >= series_previstas)
+
+
+_MOTIVO_FATIGA_GLOBAL_LEGACY = (
+    'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.'
+)
+
+
+def reconciliar_decisiones_fatiga_parcial(entreno):
+    """Recalcula decisiones antiguas que borraron evidencia de un ejercicio.
+
+    Las versiones anteriores aplicaban el freno de fatiga a toda la sesión.
+    Solo repara logs con ese copy inequívoco y una dosis individual completa;
+    no toca omisiones ni ejercicios que terminaron con series pendientes.
+    """
+    from entrenos.models import GymDecisionLog
+
+    if not (
+        entreno.estado_cierre == entreno.ESTADO_PARCIAL
+        and entreno.motivo_cierre == 'fatiga'
+    ):
+        return 0
+    logs_legados = list(
+        GymDecisionLog.objects.filter(
+            entreno_origen=entreno,
+            motivo=_MOTIVO_FATIGA_GLOBAL_LEGACY,
+        )
+    )
+    ids_a_recalcular = [
+        log.id for log in logs_legados
+        if _ejercicio_completo_en_sesion(entreno, log.ejercicio)
+    ]
+    if not ids_a_recalcular:
+        return 0
+    GymDecisionLog.objects.filter(id__in=ids_a_recalcular).delete()
+    generar_decisiones_para_entreno(entreno)
+    return len(ids_a_recalcular)
+
+
 def _distancia_cumple_evidencia(entreno, ejercicio_normalizado, objetivo):
     """La subida de metros exige todas las series de trabajo con margen."""
     from entrenos.models import SerieRealizada
@@ -404,13 +485,14 @@ def generar_decisiones_para_entreno(entreno):
         elif not motivo_codigo and accion == 'subir_reps':
             motivo_codigo = 'progresion_reps'
 
-        # Un cierre por fatiga invalida una subida para toda la sesión. El
-        # rendimiento observado sigue guardado, pero no se extrapola mientras
-        # el usuario está diciendo que la dosis completa no fue tolerable.
+        # La fatiga protege solo lo que no agotó su propia dosis. Un ejercicio
+        # ya completado conserva la lectura que generan sus series: atribuirle
+        # el cierre global borra evidencia válida y falsea la próxima sesión.
         if (
             entreno.estado_cierre == entreno.ESTADO_PARCIAL
             and entreno.motivo_cierre == 'fatiga'
             and accion in ('subir_peso', 'subir_reps')
+            and not _ejercicio_completo_en_sesion(entreno, nombre)
         ):
             accion = 'mantener'
             valor_cambio = None

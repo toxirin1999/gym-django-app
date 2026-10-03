@@ -316,7 +316,7 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
         self.assertNotContains(resp, 'Decisión legacy')
         self.assertNotContains(resp, 'Próxima vez')
 
-    def test_cierre_parcial_no_atribuye_dosis_incompleta_a_ejercicio_completado(self):
+    def test_cierre_parcial_muestra_la_lectura_propia_del_ejercicio_completado(self):
         version = GymDecisionVersion.objects.create(
             cliente=self.cliente, fecha=self.entreno.fecha, version=1,
             decision_id='cierre-parcial-view', origen=GymDecisionVersion.ORIGEN_MOTOR,
@@ -342,8 +342,15 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
                    return_value=_permiso('progresion_permitida')):
             resp = self.client.get(self._url())
 
-        self.assertContains(resp, 'ejercicio completado; mantener por prudencia global')
-        self.assertNotContains(resp, 'mantener hasta tolerar la dosis prevista')
+        self.assertNotContains(resp, 'Cierre parcial por fatiga')
+        log = GymDecisionLog.objects.get(
+            cliente=self.cliente, entreno_origen=self.entreno,
+            ejercicio_normalizado='press banca',
+        )
+        self.assertNotEqual(
+            log.motivo,
+            'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.',
+        )
 
     def test_modal_distingue_cierre_parcial_de_entrenamiento_completo(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
