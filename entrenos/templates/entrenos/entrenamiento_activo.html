@@ -1078,8 +1078,27 @@ input{background:transparent!important;border:none!important;outline:none!import
   font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace!important;
 }
 
-/* ── "Última vez" compacto dentro de la caja de peso ── */
-.peso-ultima-vez{font-size:11px;color:var(--td);text-align:center;margin-top:0;}
+/* ── REFERENCIA DE LA ÚLTIMA SESIÓN ───────────────────────────────
+   Se mantiene entre los selectores de carga/reps y el RPE: es el dato que
+   permite decidir la serie, no un detalle de historial al final de la vista. */
+.peso-ultima-vez{
+  grid-column:1/-1;
+  display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;
+  min-height:24px;padding:5px 8px 1px;
+  color:var(--td);font-size:10px;line-height:1.25;text-align:center;
+}
+.peso-ultima-vez__label{
+  color:var(--tm);font-size:9px;font-weight:700;letter-spacing:.08em;
+  text-transform:uppercase;
+}
+.peso-ultima-vez__value{
+  color:#fff;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  font-size:11px;font-weight:700;
+}
+.peso-ultima-vez__cue{
+  color:var(--green);font-size:10px;font-weight:700;white-space:nowrap;
+}
+.peso-ultima-vez__cue::before{content:'·';color:var(--tm);margin-right:6px;}
 
 /* ── Módulo 1RM estimado — independiente, tras Guardar serie ── */
 .orm-module{
@@ -1625,9 +1644,25 @@ input{background:transparent!important;border:none!important;outline:none!import
         </div>
         {% endif %}
       {% if ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
-      <div class="peso-ultima-vez">Última vez: {{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</div>
+      <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
+        <span class="peso-ultima-vez__label">Última vez</span>
+        <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
+        {% if ejercicio.sugerencia_tope and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} rep objetivo</span>
+        {% elif ejercicio.diferencia_peso > 0 %}
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
+        {% elif ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} rep objetivo</span>
+        {% endif %}
+      </div>
       {% elif ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
-      <div class="peso-ultima-vez">Última vez: {{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</div>
+      <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
+        <span class="peso-ultima-vez__label">Última vez</span>
+        <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
+        {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior }} m objetivo</span>
+        {% endif %}
+      </div>
       {% endif %}
       </div>
 

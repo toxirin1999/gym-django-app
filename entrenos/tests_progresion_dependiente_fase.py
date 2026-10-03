@@ -16,7 +16,7 @@ recalcular desde e1RM con reducción de descarga.
 """
 
 import json
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.test import TestCase, Client
@@ -108,6 +108,29 @@ class TestCasoRotoDescargaTrasPotencia(ProgresionDependienteFaseBase):
         self.assertLess(peso_mostrado, 95.0,
             msg=f"Peso {peso_mostrado} no refleja una reducción real de descarga")
         self.assertGreater(peso_mostrado, 0)
+
+
+class TestReferenciaUltimaSesionEnRegistro(ProgresionDependienteFaseBase):
+    """La referencia que guía la serie se renderiza antes del selector de RPE."""
+
+    def test_muestra_ultima_sesion_y_cue_de_progresion_en_la_pantalla_activa(self):
+        self._crear_entreno_historico(
+            'Jalón brazos rectos', peso_kg=75.8, repeticiones=10, rpe=7,
+            fecha=date.today() - timedelta(days=2),
+        )
+
+        response = self._get_entrenamiento_activo(
+            self._ejercicio_payload('Jalón brazos rectos', '11', rpe_objetivo=7, peso_kg_plan=75.8),
+        )
+
+        self.assertEqual(response.status_code, 200)
+        html = response.content.decode()
+        referencia = html.index('class="peso-ultima-vez"')
+        rpe = html.index('Esfuerzo (RPE)', referencia)
+        self.assertLess(referencia, rpe)
+        self.assertIn('Referencia de la última sesión', html)
+        self.assertIn('Última vez', html)
+        self.assertIn('rep objetivo', html)
 
 
 # ── Test 2: Client() real, motivo visible debe reflejar el recálculo ────────

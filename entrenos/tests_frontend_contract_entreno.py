@@ -81,6 +81,16 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
 
+    def test_referencia_ultima_sesion_es_parte_del_flujo_de_registro(self):
+        """La referencia queda entre carga/reps y RPE, no oculta en historial."""
+        referencia = self.source.index('class="peso-ultima-vez"')
+        rpe = self.source.index('{# RPE — grid de botones táctiles #}')
+        self.assertLess(referencia, rpe)
+        self.assertIn('peso-ultima-vez__label">Última vez', self.source)
+        self.assertIn('peso-ultima-vez__value', self.source)
+        self.assertIn('peso-ultima-vez__cue', self.source)
+        self.assertIn('aria-label="Referencia de la última sesión"', self.source)
+
 
 class BriefingRenderContractTests(SimpleTestCase):
     def test_dead_hang_se_renderiza_en_segundos_sin_kg_reps_ni_calentamiento(self):
