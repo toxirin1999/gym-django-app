@@ -90,6 +90,16 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('peso-ultima-vez__value', self.source)
         self.assertIn('peso-ultima-vez__cue', self.source)
         self.assertIn('aria-label="Referencia de la última sesión"', self.source)
+        self.assertIn('repeticiones_anterior|floatformat:"0"', self.source)
+
+    def test_composicion_activa_conserva_jerarquia_del_mockup_aprobado(self):
+        """La UI compacta sigue exponiendo la secuencia visual de decisión."""
+        self.assertIn('ACTIVE WORKOUT COMPOSITION', self.source)
+        self.assertIn('.ex-header-combo::after', self.source)
+        self.assertIn('.peso-reps-grid{grid-template-columns:1fr', self.source)
+        self.assertIn('.peso-ultima-vez__rpe', self.source)
+        self.assertIn('grid-auto-flow:column', self.source)
+        self.assertIn('.contingencia-grid .btn-tope-maquina.activo', self.source)
 
 
 class BriefingRenderContractTests(SimpleTestCase):

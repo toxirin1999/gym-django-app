@@ -1157,6 +1157,132 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sp-label-actual,.sp-label-pendiente{display:none;}
 .set-pill.activa .sp-label-actual{display:inline;}
 .set-pill.pendiente .sp-label-pendiente,.set-pill.hecha .sp-label-pendiente{display:inline;}
+
+/* ══════════════════════════════════════════════════════════════════
+   ACTIVE WORKOUT COMPOSITION — the recording surface deliberately
+   mirrors the approved single-screen workout mockup.  These are visual
+   overrides only: ids, input names, events and series state stay intact.
+   ══════════════════════════════════════════════════════════════════ */
+body{background:
+  radial-gradient(ellipse 80% 34% at 50% 0%,rgba(26,72,77,.16),transparent 70%),
+  #050708;}
+.wrap{max-width:420px;padding-bottom:94px;}
+.topbar{padding:9px 18px 5px;background:rgba(5,7,8,.96);}
+.topbar .tb-left{gap:8px!important;}
+.topbar a{display:none!important;}
+.tb-dia{font-size:10px;color:#e5e7eb;font-weight:800;letter-spacing:.075em;}
+.tb-tipo{font-size:10px;color:#aeb7c3;font-weight:700;letter-spacing:.02em;text-transform:uppercase;}
+.tb-progress-wrap{top:0;padding:2px 18px 8px;background:rgba(5,7,8,.96);gap:10px;}
+.tb-track{height:5px;background:#1b2730;}
+.tb-fill{background:linear-gradient(90deg,#00e2aa,#14c9a2);}
+.tb-pct{font-size:11px;color:#c4cbd1;font-weight:700;}
+
+/* The counter belongs with the hero instead of becoming a second navigation
+   strip. The previous/next controls remain present as discreet edge controls:
+   removing them would make the real multi-exercise flow inaccessible. */
+.nav-ej{display:flex;position:relative;height:0;min-height:0;padding:0;z-index:4;pointer-events:none;}
+.nav-ej .nav-centro{display:none;}
+.nav-ej .nav-btn{position:absolute;top:49px;z-index:4;width:28px;height:28px;padding:0;border:1px solid rgba(197,218,218,.2);border-radius:50%;background:rgba(3,10,12,.66);color:transparent;font-size:0;pointer-events:auto;}
+.nav-ej .btn-ej-prev{left:24px;}.nav-ej .btn-ej-next{right:24px;}
+.nav-ej .nav-btn::after{font-size:19px;line-height:1;color:#eaf3f2;}.nav-ej .btn-ej-prev::after{content:'‹';}.nav-ej .btn-ej-next::after{content:'›';}
+.exname{padding:0 18px 7px;background:transparent;}
+.exname-toprow{margin:0 0 5px;min-height:14px;}
+.exname-counter{font-size:11px;color:#aeb7c3;font-weight:700;}
+.ex-header-combo{
+  position:relative;isolation:isolate;min-height:132px;margin:0;
+  border:1px solid rgba(121,151,157,.26);border-radius:12px;overflow:hidden;
+  background:
+    linear-gradient(90deg,rgba(3,9,11,.96) 0%,rgba(3,9,11,.76) 48%,rgba(3,9,11,.24) 100%),
+    radial-gradient(ellipse 44% 120% at 85% 38%,rgba(110,151,161,.3),transparent 60%),
+    repeating-linear-gradient(90deg,transparent 0 19px,rgba(202,224,225,.07) 20px 22px,transparent 23px 39px),
+    linear-gradient(145deg,#0c161a,#1c3034 54%,#061014);
+  box-shadow:inset 0 1px rgba(255,255,255,.05),0 16px 35px rgba(0,0,0,.22);
+}
+.ex-header-combo::after{
+  content:"";position:absolute;z-index:-1;right:9%;top:-26px;width:6px;height:174px;
+  border-radius:8px;background:linear-gradient(#839a9d,#101b1d 34%,#5b7275 66%,#0b1416);
+  box-shadow:-24px 31px 0 -1px rgba(182,201,199,.25),25px 48px 0 -2px rgba(182,201,199,.18);
+  opacity:.72;transform:rotate(2deg);
+}
+.ex-header-card{min-height:92px;align-items:flex-start;padding:18px 15px 7px;gap:9px;}
+.ex-header-icon{display:none;}
+.ex-header-card h2.cyber-ejercicio-nombre{
+  max-width:220px;font-size:27px;line-height:.98;letter-spacing:-.055em;
+  color:#fff;font-weight:800;text-transform:none;
+}
+.ex-aprox-pill{position:absolute;right:10px;top:10px;padding:5px 8px;font-size:9px;background:rgba(5,10,11,.65);}
+.ex-header-combo .exname-meta{position:absolute;z-index:1;left:0;right:0;bottom:0;padding:8px 14px;border-top:1px solid rgba(255,255,255,.1);background:rgba(3,8,10,.45);}
+.exname-meta-line{font-size:10px;color:#d7e0e2;}
+.exname-meta .tipo-carga-select{font-size:9px;padding:3px 8px;background:rgba(0,0,0,.28);}
+.exname-chip{font-size:9px!important;padding:3px 7px!important;}
+
+.contingencia-grid{margin:0 18px 7px;gap:6px;}
+.contingencia-grid .btn-swap-maquina,
+.contingencia-grid .btn-molestia,
+.contingencia-grid .btn-tope-maquina,
+.contingencia-grid .btn-fallo{
+  min-height:43px;border-radius:7px;padding:4px 2px;gap:3px;
+  background:#0d1418;border-color:#263842;color:#d5dce0;font-size:9px;
+}
+.contingencia-grid .btn-swap-maquina svg,.contingencia-grid .btn-molestia svg,
+.contingencia-grid .btn-tope-maquina svg,.contingencia-grid .btn-fallo svg{width:15px;height:15px;}
+.contingencia-grid .btn-tope-maquina.activo,
+.contingencia-grid .btn-tope-maquina:hover{background:rgba(0,203,154,.12);border-color:#00d6a4;color:#00e1aa;box-shadow:0 0 13px rgba(0,218,166,.14);}
+
+/* Separate, calm input rows avoid the dense two-column widget that obscured
+   the hierarchy in the earlier implementation. */
+.peso-reps-grid{grid-template-columns:1fr;margin:0 18px;padding:0;gap:6px;background:transparent;border:0;border-radius:0;}
+.peso-reps-grid > .peso-zona,.peso-reps-grid > .slider-row{
+  padding:8px 10px;background:#11191e;border:1px solid #203039;border-radius:8px;
+}
+.peso-reps-grid .peso-label,.peso-reps-grid .sl-label{margin:0 0 5px;font-size:9px;color:#aab7bd;letter-spacing:.09em;}
+.peso-reps-grid .peso-ctrl,.peso-reps-grid .picker-ctrl{height:43px;padding:2px 3px;background:transparent;border:0;border-radius:0;}
+.peso-reps-grid .peso-btn,.peso-reps-grid .picker-btn{width:36px!important;height:36px!important;border-radius:50%!important;background:#202d35!important;border-color:#3a4c56!important;font-size:23px!important;}
+.peso-reps-grid .peso-btn.menos{border-right:1px solid #3a4c56!important;}
+.peso-reps-grid .peso-btn.mas{border-left:1px solid #3a4c56!important;}
+.peso-reps-grid .peso-input,.peso-reps-grid .picker-val{font-size:30px!important;max-width:130px;color:#fff!important;font-weight:800!important;}
+.peso-reps-grid .peso-kg{font-size:11px;color:#aeb9bf;}
+.peso-reps-grid .peso-lado{display:none;}
+
+/* Last session is a decision row, not a footnote. */
+.peso-ultima-vez{
+  min-height:44px;padding:6px 9px;justify-content:flex-start;gap:7px;
+  background:linear-gradient(90deg,rgba(0,183,137,.15),rgba(4,21,23,.95));
+  border:1px solid rgba(0,224,171,.7);border-radius:7px;color:#fff;
+}
+.peso-ultima-vez__label{width:100%;font-size:8px;color:#b8dfd5;letter-spacing:.14em;line-height:1;margin-bottom:-1px;}
+.peso-ultima-vez__value{font-size:12px;color:#fff;}
+.peso-ultima-vez__rpe{padding:3px 7px;border-radius:5px;background:#24323b;color:#d3dbe0;font-size:9px;font-weight:800;letter-spacing:.04em;}
+.peso-ultima-vez__cue{margin-left:auto;color:#25e0b0;font-size:9px;}
+.peso-ultima-vez__cue::before{display:none;}
+
+.sliders-zona{padding:0;margin:6px 18px 0;}
+.sliders-zona .slider-row.rpe-row{margin:0;padding:8px 10px;background:#11191e;border:1px solid #203039;border-radius:8px;gap:6px;}
+.rpe-row .sl-label{display:flex;justify-content:space-between;align-items:center;font-size:9px;color:#aab7bd;}
+.rpe-row .sl-label::after{content:'Esfuerzo percibido';font-size:8px;font-weight:500;letter-spacing:0;text-transform:none;color:#7f9098;}
+.rpe-pick-btn{height:34px;border-radius:6px;background:#111b20;border-color:#31434d;font-size:13px;}
+.rpe-pick-btn.sel{background:rgba(0,212,160,.16);border-color:#00d9a7;color:#00e4af!important;box-shadow:0 0 12px rgba(0,219,170,.16);}
+.rpe-desc{display:none;}
+.serie-aproximacion-toggle{display:none;}
+
+.btn-guardar{width:calc(100% - 36px);height:40px;margin:7px 18px 7px;border-radius:7px;font-size:13px;background:linear-gradient(90deg,#04dca5,#13cda1);box-shadow:0 10px 22px -14px rgba(0,229,173,.8);}
+.series-log-title{margin:6px 18px 4px;font-size:9px;letter-spacing:.12em;}
+.series-log{margin:0 18px 5px;border-radius:8px;}
+.set-pills-row{margin:0 18px 5px;padding:6px;background:#11191e;border:1px solid #203039;border-radius:8px;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(72px,1fr);grid-template-columns:none;overflow-x:auto;gap:5px;scrollbar-width:none;}
+.set-pills-row::-webkit-scrollbar{display:none;}
+.set-pill{min-height:43px;padding:5px 4px;border-radius:6px;background:#0e161a;gap:2px;font-size:9px;}
+.sp-badge{width:20px;height:20px;font-size:9px;}
+.sp-dash{display:none;}
+.sticky{height:63px;padding:0 17px;background:rgba(4,13,18,.98);}
+.sticky-stats{gap:16px;}.sticky-val{font-size:12px;}.sticky-lbl{font-size:7px;letter-spacing:.08em;}
+.sticky-final-btn{padding:8px 10px;border-radius:7px;font-size:10px;}
+
+@media (max-width:480px){
+  .wrap{max-width:420px;}
+  .topbar{padding-left:18px;padding-right:18px;}
+  .tb-progress-wrap{padding-left:18px;padding-right:18px;}
+  .ex-header-card h2.cyber-ejercicio-nombre{font-size:clamp(23px,7.2vw,27px);}
+}
 </style>
 </head>
 <body>
@@ -1647,6 +1773,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
+        <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
         {% if ejercicio.sugerencia_tope and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
         {% elif ejercicio.diferencia_peso > 0 %}
@@ -1659,6 +1786,7 @@ input{background:transparent!important;border:none!important;outline:none!import
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
+        <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
         {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} m objetivo</span>
         {% endif %}
