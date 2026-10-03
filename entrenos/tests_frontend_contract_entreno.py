@@ -101,6 +101,13 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('grid-auto-flow:column', self.source)
         self.assertIn('.contingencia-grid .btn-tope-maquina.activo', self.source)
 
+    def test_navegacion_solo_muestra_flecha_aplicable(self):
+        self.assertIn('function actualizarNavegacion()', self.source)
+        self.assertIn('const hayAnterior=STATE.ejActual>0;', self.source)
+        self.assertIn('const haySiguiente=STATE.ejActual<cards.length-1;', self.source)
+        self.assertIn('anterior.hidden=!hayAnterior;', self.source)
+        self.assertIn('siguiente.hidden=!haySiguiente;', self.source)
+
 
 class BriefingRenderContractTests(SimpleTestCase):
     def test_dead_hang_se_renderiza_en_segundos_sin_kg_reps_ni_calentamiento(self):

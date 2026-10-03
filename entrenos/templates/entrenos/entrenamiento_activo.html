@@ -2435,6 +2435,7 @@ function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
     actualizarProgreso();
     actualizarSticky();
     actualizarDots();
+    actualizarNavegacion();
     cards.forEach(c=>actualizarSetPills(c.dataset.formId));
     // Banner de recuperación
     const banner=document.createElement('div');
@@ -2502,12 +2503,30 @@ function irEjercicio(idx){
   cards[idx].style.display='block';
   actualizarSticky();
   actualizarDots();
+  actualizarNavegacion();
   window.scrollTo({top:0,behavior:'smooth'});
   {% if modo_reducido and num_principales > 0 %}
   // Show optional block separator when entering the optional section
   const sep=document.getElementById('separador-opcional');
   if(sep) sep.style.display = (idx >= {{ num_principales }}) ? 'block' : 'none';
   {% endif %}
+}
+
+function actualizarNavegacion(){
+  const anterior=document.querySelector('.btn-ej-prev');
+  const siguiente=document.querySelector('.btn-ej-next');
+  const hayAnterior=STATE.ejActual>0;
+  const haySiguiente=STATE.ejActual<cards.length-1;
+  if(anterior){
+    anterior.hidden=!hayAnterior;
+    anterior.disabled=!hayAnterior;
+    anterior.setAttribute('aria-hidden',String(!hayAnterior));
+  }
+  if(siguiente){
+    siguiente.hidden=!haySiguiente;
+    siguiente.disabled=!haySiguiente;
+    siguiente.setAttribute('aria-hidden',String(!haySiguiente));
+  }
 }
 
 function actualizarDots(){
@@ -3783,6 +3802,7 @@ document.addEventListener('DOMContentLoaded',function(){
   actualizarProgreso();
   actualizarSticky();
   actualizarDots();
+  actualizarNavegacion();
   // Init inline disk calc + 1RM for the first serie of each exercise
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
     initSeriePanel(card.dataset.formId,1);
