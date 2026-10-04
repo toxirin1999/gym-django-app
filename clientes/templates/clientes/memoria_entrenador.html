@@ -169,8 +169,8 @@
   {# ── MASTHEAD ── #}
   <p class="mem-kicker">Expediente del entrenador · {{ cliente.id }} · desde {{ cliente.user.date_joined|date:"m·Y" }}</p>
   <h1 class="mem-title">Lo que <span>sé</span> de ti.</h1>
-  <p class="mem-intro">Todo lo que el sistema ha aprendido de <strong>{{ cliente.nombre }}</strong> a partir de sus sesiones, patrones biométricos y respuestas subjetivas. Se actualiza tras cada entrenamiento.</p>
-  <p class="mem-meta">Últ. actualización · <strong>{% now "d/m/Y · H:i" %}</strong></p>
+  <p class="mem-intro">Todo lo que el sistema ha aprendido de <strong>{{ cliente.nombre }}</strong> a partir de sus sesiones, patrones biométricos y respuestas subjetivas.</p>
+  <p class="mem-meta">Datos más recientes{% if data_updated_source %} · {{ data_updated_source }}{% endif %} · <strong>{% if data_updated_at %}{{ data_updated_at|date:"d/m/Y · H:i" }}{% else %}sin registros todavía{% endif %}</strong></p>
 
   <section class="mem-hero" aria-labelledby="memoria-hoy-title">
     <div class="mem-label">Lectura de hoy</div>
@@ -192,7 +192,7 @@
 
     {# ── §01 CARGA Y BIOMETRÍA · 28/14 DÍAS ── #}
     <article class="mem-node mem-node--state">
-      <div class="mem-label">§01 · Carga y biometría</div>
+      <div class="mem-label">Carga y biometría</div>
       <h2 class="mem-heading">Carga y señales fisiológicas</h2>
       <div class="mem-quads">
         <div class="mem-quad">
@@ -243,7 +243,7 @@
     {# ── §02 CALIBRACIÓN RPE ── #}
     {% if rpe_bias %}
     <article class="mem-node mem-node--system">
-      <div class="mem-label">§02 · Calibración de esfuerzo</div>
+      <div class="mem-label">Calibración de esfuerzo</div>
       <h2 class="mem-heading">Sesgo RPE vs FC</h2>
       <div class="mem-big">
         <div class="n">{% if rpe_bias.bias > 0 %}+{% endif %}{{ rpe_bias.bias }}<small>{{ rpe_bias.n_sesiones }} sesiones · {{ rpe_bias.nivel }}</small></div>
@@ -261,7 +261,7 @@
     {# ── §03 PERFIL DE FUERZA ── #}
     {% if perfil_atletico %}
     <article class="mem-node mem-node--good">
-      <div class="mem-label">§03 · Perfil de fuerza</div>
+      <div class="mem-label">Perfil de fuerza</div>
       <details class="mem-collapse">
         <summary>
           1RM estimado
@@ -277,13 +277,16 @@
           {% endfor %}
         </div>
       </details>
+      {% if rm_metadatos_descartados %}
+      <p class="mem-desc">Se han omitido {{ rm_metadatos_descartados }} datos de metadatos no numéricos; estos valores requieren una fuente de 1RM explícita.</p>
+      {% endif %}
     </article>
     {% endif %}
 
     {# ── §04 HYROX PERFIL BASE ── #}
     {% if hyrox_obj %}
     <article class="mem-node mem-node--good">
-      <div class="mem-label">§04 · Hyrox · Perfil base</div>
+      <div class="mem-label">Hyrox · Perfil base</div>
       <h2 class="mem-heading">Capacidades de referencia</h2>
       <div class="mem-stats">
         <div class="mem-stat">
@@ -305,7 +308,7 @@
     {# ── §05 ESTACIONES HYROX ── #}
     {% if estaciones_progreso %}
     <article class="mem-node mem-node--good">
-      <div class="mem-label">§05 · Progreso por estación</div>
+      <div class="mem-label">Progreso por estación</div>
       <h2 class="mem-heading">Evolución en estaciones</h2>
       <div class="mem-list">
         {% for e in estaciones_progreso %}
@@ -313,10 +316,11 @@
           <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
           <div>
             <div class="name">{{ e.estacion }}</div>
-            <div class="meta">{{ e.sesiones }} sesiones · mejor {{ e.mejor_seg }}s</div>
+            <div class="meta">{{ e.sesiones }} intentos comparables · mejor {{ e.mejor_seg }}s</div>
+            <div class="meta">{{ e.primera_fecha|date:"d/m/Y" }} → {{ e.ultima_fecha|date:"d/m/Y" }}{% if e.normalizada %} · Ski/Row normalizado a 1.000 m{% endif %}</div>
             {% if e.estancada and e.sugerencia %}<div class="meta warn">↳ {{ e.sugerencia }}</div>{% endif %}
           </div>
-          <div class="v {% if e.estancada %}warn{% elif e.mejora_pct > 0 %}ok{% elif e.mejora_pct < 0 %}bad{% endif %}">{% if e.mejora_pct > 0 %}+{% endif %}{{ e.mejora_pct }}<small>%</small></div>
+          <div class="v {% if e.estancada %}warn{% elif e.direccion_progreso == 'mejora' %}ok{% elif e.direccion_progreso == 'retroceso' %}bad{% endif %}" style="font-size:13px;white-space:normal;max-width:105px;">{{ e.lectura_progreso }}<small>vs. primera comparable</small></div>
         </div>
         {% endfor %}
       </div>
@@ -326,7 +330,7 @@
     {# ── §06 RÉCORDS PERSONALES ── #}
     {% if records %}
     <article class="mem-node mem-node--good">
-      <div class="mem-label">§06 · Récords personales</div>
+      <div class="mem-label">Récords personales</div>
       <h2 class="mem-heading">Top marcas activas</h2>
       <div class="mem-list">
         {% for r in records %}
@@ -343,41 +347,58 @@
     {# ── §07 DECISIONES DEL PLAN ── #}
     {% if decisiones_total > 0 %}
     <article class="mem-node mem-node--plan">
-      <div class="mem-label">§07 · Decisiones del plan · 90 días</div>
+      <div class="mem-label">Decisiones del plan · 90 días</div>
       <h2 class="mem-heading">Lo que el plan ha decidido</h2>
       <div class="mem-quads">
         {% if decisiones_agrupadas.subir_peso %}
         <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.subir_peso|length }}</div>
+          <div class="v">{{ decisiones_agrupadas.subir_peso }}</div>
           <div class="k">Subidas de peso</div>
         </div>
         {% endif %}
         {% if decisiones_agrupadas.cambiar_variante %}
         <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.cambiar_variante|length }}</div>
+          <div class="v">{{ decisiones_agrupadas.cambiar_variante }}</div>
           <div class="k">Cambios de estímulo</div>
         </div>
         {% endif %}
         {% if decisiones_agrupadas.mantener %}
         <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.mantener|length }}</div>
+          <div class="v">{{ decisiones_agrupadas.mantener }}</div>
           <div class="k">Consolidaciones</div>
         </div>
         {% endif %}
         {% if decisiones_agrupadas.deload %}
         <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.deload|length }}</div>
+          <div class="v">{{ decisiones_agrupadas.deload }}</div>
           <div class="k">Descargas</div>
         </div>
         {% endif %}
       </div>
+      <details class="mem-collapse">
+        <summary>
+          Ver decisiones recientes
+          <span class="mem-count">{{ decisiones_recientes|length }} de {{ decisiones_total }}</span>
+        </summary>
+        <div class="mem-list">
+          {% for decision in decisiones_recientes %}
+          <div class="mem-row">
+            <div class="idx">{{ decision.fecha_creacion|date:"d/m" }}</div>
+            <div>
+              <div class="name">{{ decision.ejercicio }}</div>
+              <div class="meta">{{ decision.accion_label }} · {{ decision.motivo|truncatechars:80 }}</div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </details>
     </article>
     {% endif %}
 
     {# ── §08 ZONAS DE ATENCIÓN ── #}
     {% if zonas_atencion or lesiones_activas %}
     <article class="mem-node mem-node--risk">
-      <div class="mem-label">§08 · Zonas de atención</div>
+      <div class="mem-label">Zonas de atención</div>
       <h2 class="mem-heading">Alertas activas</h2>
       <div class="mem-alerts">
         {% for l in lesiones_activas %}
@@ -401,7 +422,7 @@
     {# ── §09 LO QUE SÉ DE CÓMO ENTRENAS ── #}
     {% if modelo and modelo.tiene_datos %}
     <article class="mem-node mem-node--personal">
-      <div class="mem-label">§09 · Lo que sé de cómo entrenas</div>
+      <div class="mem-label">Lo que sé de cómo entrenas</div>
       <h2 class="mem-heading">Modelo progresivo del usuario</h2>
       <div class="mem-ins">
         {% if modelo.patron_semanal %}
@@ -445,8 +466,8 @@
     {# Umbrales técnicos #}
     {% if modelo.umbral_tecnico %}
     <article class="mem-node mem-node--personal">
-      <div class="mem-label">§09b · Umbrales técnicos</div>
-      <h2 class="mem-heading">Zonas que el plan respeta</h2>
+      <div class="mem-label">Umbrales técnicos registrados</div>
+      <h2 class="mem-heading">Señales técnicas a vigilar</h2>
       <div class="mem-list">
         {% for u in modelo.umbral_tecnico %}
         <div class="mem-row">
@@ -467,10 +488,10 @@
     {# Grupos musculares #}
     {% if modelo.grupos_musculares.rapidos or modelo.grupos_musculares.lentos %}
     <article class="mem-node mem-node--personal">
-      <div class="mem-label">§09c · Progresión muscular</div>
-      <h2 class="mem-heading">Grupos que responden</h2>
+      <div class="mem-label">Tendencia de cargas por grupo</div>
+      <h2 class="mem-heading">Carga máxima registrada</h2>
       {% if modelo.grupos_musculares.rapidos %}
-      <p class="mem-subhead">En progresión positiva</p>
+      <p class="mem-subhead">Con aumento de carga registrada</p>
       <div class="mem-list">
         {% for g in modelo.grupos_musculares.rapidos %}
         <div class="mem-row">
@@ -482,7 +503,7 @@
       </div>
       {% endif %}
       {% if modelo.grupos_musculares.lentos %}
-      <p class="mem-subhead">Rezago / fatiga acumulada</p>
+      <p class="mem-subhead">Sin aumento de carga reciente</p>
       <div class="mem-list">
         {% for g in modelo.grupos_musculares.lentos %}
         <div class="mem-row">
@@ -501,7 +522,7 @@
     {# ── §11 MANUAL DE DAVID ── #}
     {% if manual_patrones %}
     <article class="mem-node mem-node--plan">
-      <div class="mem-label">§11 · Manual de David</div>
+      <div class="mem-label">Manual de David</div>
       <h2 class="mem-heading">Reglas que he anotado</h2>
       <div class="mem-list">
         {% for p in manual_patrones|slice:":3" %}

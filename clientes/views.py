@@ -5112,6 +5112,127 @@ def apple_health_token(request):
     })
 
 
+def _rms_numericos(one_rm_data):
+    """Devuelve solo RMs que son realmente números, no metadatos del JSON."""
+    resultado = []
+    descartados = 0
+    for clave, valor in (one_rm_data or {}).items():
+        # bool es una subclase de int, pero nunca representa un RM.
+        if isinstance(valor, bool) or not isinstance(valor, (int, float, Decimal)):
+            descartados += 1
+            continue
+        if float(valor) <= 0:
+            descartados += 1
+            continue
+        resultado.append((clave, float(valor)))
+    return resultado, descartados
+
+
+def _progreso_estaciones_comparables(hyrox_obj):
+    """Compara solo intentos equivalentes de estaciones HYROX.
+
+    Un bloque HIIT, cardio sustituto o una distancia distinta no es una
+    evidencia comparable del rendimiento de una estación.
+    """
+    from hyrox.models import HyroxActivity
+    from hyrox.training_engine import StagnationEngine
+
+    alias_nombres = {
+        'Rowing': ['rowing', 'remo z', '/ remo', 'remo /'],
+        'SkiErg': ['skierg', 'ski erg', 'ski-erg'],
+        'Sled Push': ['sled push', 'empuje de trineo', 'empuje trineo'],
+        'Sled Pull': ['sled pull', 'jalón de trineo', 'jalon trineo'],
+        'Burpee Broad Jumps': ['burpee broad jump', 'burpee salto', 'burpee con salto'],
+        'Farmers Carry': ['farmers carry', 'caminata de granjero'],
+        'Sandbag Lunges': ['sandbag lunges', 'zancadas con saco'],
+        'Wall Balls': ['wall balls', 'wall ball', 'balón al muro'],
+    }
+    distancia_oficial = {'SkiErg': 1000, 'Rowing': 1000}
+    ergometros = {'SkiErg', 'Rowing'}
+    actividades = (
+        HyroxActivity.objects.filter(
+            sesion__objective=hyrox_obj,
+            sesion__estado='completado',
+            tipo_actividad__in=('hyrox_station', 'ergometro', 'skierg', 'remo'),
+        )
+        .exclude(data_metricas={})
+        .select_related('sesion')
+        .order_by('sesion__fecha', 'id')
+    )
+    tiempos = {}
+    for actividad in actividades:
+        metricas = actividad.data_metricas or {}
+        try:
+            segundos = float(metricas.get('tiempo_segundos') or metricas.get('tiempo_s') or 0)
+        except (TypeError, ValueError):
+            continue
+        if segundos <= 0:
+            continue
+        nombre = (actividad.nombre_ejercicio or '').lower().strip()
+        canon = next((nombre_canon for nombre_canon, aliases in alias_nombres.items()
+                      if any(alias in nombre for alias in aliases)), None)
+        if not canon:
+            continue
+        # Solo Ski/Row pueden venir como bloque ergómetro; el resto debe ser
+        # una estación HYROX explícita, no un sustituto o HIIT con nombre parecido.
+        if actividad.tipo_actividad != 'hyrox_station' and canon not in ergometros:
+            continue
+        if canon in distancia_oficial:
+            try:
+                distancia = (
+                    float(metricas.get('distancia_m') or 0)
+                    or float(metricas.get('distancia_km') or 0) * 1000
+                    or float(metricas.get('distancia') or 0)
+                )
+            except (TypeError, ValueError):
+                continue
+            # Sin distancia no hay forma honesta de normalizar el ergómetro.
+            if distancia <= 0:
+                continue
+            segundos = segundos * distancia_oficial[canon] / distancia
+        tiempos.setdefault(canon, []).append({
+            'segundos': round(segundos),
+            'fecha': actividad.sesion.fecha,
+            'normalizada': canon in distancia_oficial,
+        })
+
+    estancamiento = StagnationEngine.check({
+        estacion: [int(item['segundos']) for item in muestras]
+        for estacion, muestras in tiempos.items()
+    })
+    progreso = []
+    for estacion, muestras in tiempos.items():
+        if len(muestras) < 2:
+            continue
+        primera, ultima = muestras[0], muestras[-1]
+        porcentaje = round((primera['segundos'] - ultima['segundos']) / primera['segundos'] * 100, 1)
+        info = estancamiento.get(estacion, {})
+        if porcentaje > 0:
+            lectura = f"{porcentaje:g}% más rápido"
+            direccion = 'mejora'
+        elif porcentaje < 0:
+            lectura = f"{abs(porcentaje):g}% más lento"
+            direccion = 'retroceso'
+        else:
+            lectura = 'mismo tiempo'
+            direccion = 'estable'
+        progreso.append({
+            'estacion': estacion,
+            'mejor_seg': min(item['segundos'] for item in muestras),
+            'ultimo_seg': ultima['segundos'],
+            'sesiones': len(muestras),
+            'mejora_pct': porcentaje,
+            'lectura_progreso': lectura,
+            'direccion_progreso': direccion,
+            'primera_fecha': primera['fecha'],
+            'ultima_fecha': ultima['fecha'],
+            'normalizada': any(item['normalizada'] for item in muestras),
+            'estancada': info.get('estancada', False),
+            'sugerencia': info.get('sugerencia', ''),
+        })
+    return sorted(progreso, key=lambda item: -item['sesiones'])
+
+
 @login_required
 def memoria_entrenador(request, cliente_id):
     """
@@ -5134,8 +5255,9 @@ def memoria_entrenador(request, cliente_id):
         'peso muerto': 'Peso Muerto', 'peso_muerto': 'Peso Muerto',
         'press militar': 'Press Militar', 'dominadas': 'Dominadas',
     }
+    rms_numericos, rm_metadatos_descartados = _rms_numericos(one_rm)
     visto = set()
-    for key, val in sorted(one_rm.items(), key=lambda x: -x[1]):
+    for key, val in sorted(rms_numericos, key=lambda x: -x[1]):
         label = rm_labels.get(key, key.replace('_', ' ').title())
         if label not in visto:
             visto.add(label)
@@ -5156,84 +5278,21 @@ def memoria_entrenador(request, cliente_id):
             if bias_info['nivel'] != 'insuficiente':
                 rpe_bias = bias_info
 
-            # Progreso por estación
-            _ALIAS_NOMBRES = {
-                'Rowing':            ['rowing', 'remo z', '/ remo', 'remo /'],
-                'SkiErg':            ['skierg', 'ski erg', 'ski-erg'],
-                'Sled Push':         ['sled push', 'empuje de trineo', 'empuje trineo'],
-                'Sled Pull':         ['sled pull', 'jalón de trineo', 'jalon trineo'],
-                'Burpee Broad Jumps': ['burpee broad jump', 'burpee salto', 'burpee con salto'],
-                'Farmers Carry':     ['farmers carry', 'caminata de granjero'],
-                'Sandbag Lunges':    ['sandbag lunges', 'zancadas con saco'],
-                'Wall Balls':        ['wall balls', 'wall ball', 'balón al muro'],
-            }
-            _DIST_OFICIAL_M = {'SkiErg': 1000, 'Rowing': 1000}
-            _TIPOS_ESTACION = ['hyrox_station', 'cardio_sustituto', 'ergometro', 'skierg', 'remo', 'hiit']
-            acts = (HyroxActivity.objects
-                    .filter(sesion__objective=hyrox_obj, sesion__estado='completado',
-                            tipo_actividad__in=_TIPOS_ESTACION)
-                    .exclude(data_metricas={})
-                    .select_related('sesion').order_by('sesion__fecha'))
-
-            tiempos_acum = {}
-            for a in acts:
-                raw_secs = a.data_metricas.get('tiempo_segundos') or a.data_metricas.get('tiempo_s')
-                mins = a.data_metricas.get('tiempo_minutos')
-                if not raw_secs or int(raw_secs) <= 0:
-                    continue
-                if mins and float(mins) > 0 and int(raw_secs) < float(mins) * 60 * 0.5:
-                    raw_secs = round(float(mins) * 60)
-                secs = int(raw_secs)
-                nl = (a.nombre_ejercicio or '').lower().strip()
-                canones = list(dict.fromkeys(
-                    canon for canon, aliases in _ALIAS_NOMBRES.items()
-                    if any(alias in nl for alias in aliases)
-                ))
-                for canon in canones:
-                    secs_canon = secs
-                    dist_oficial = _DIST_OFICIAL_M.get(canon)
-                    if dist_oficial:
-                        dist_m = (
-                            float(a.data_metricas.get('distancia_m') or 0)
-                            or float(a.data_metricas.get('distancia_km') or 0) * 1000
-                            or float(a.data_metricas.get('distancia') or 0)
-                        )
-                        if dist_m > 0 and abs(dist_m - dist_oficial) > dist_oficial * 0.1:
-                            secs_canon = round(secs * dist_oficial / dist_m)
-                    tiempos_acum.setdefault(canon, []).append(secs_canon)
-
-            stag = StagnationEngine.check(tiempos_acum)
-            for station, tiempos in tiempos_acum.items():
-                if len(tiempos) < 2:
-                    continue
-                info = stag.get(station, {})
-                mejor = min(tiempos)
-                ultimo = tiempos[-1]
-                pct = round((tiempos[0] - ultimo) / tiempos[0] * 100, 1) if tiempos[0] > 0 else 0
-                estaciones_progreso.append({
-                    'estacion': station,
-                    'mejor_seg': mejor,
-                    'ultimo_seg': ultimo,
-                    'sesiones': len(tiempos),
-                    'mejora_pct': pct,
-                    'estancada': info.get('estancada', False),
-                    'sugerencia': info.get('sugerencia', ''),
-                })
-            estaciones_progreso.sort(key=lambda x: -x['sesiones'])
+            estaciones_progreso = _progreso_estaciones_comparables(hyrox_obj)
     except Exception:
         pass
 
     # ── 3. DECISIONES DEL PLAN ────────────────────────────────────────────────
     from entrenos.models import GymDecisionLog
-    decisiones = list(
-        GymDecisionLog.objects
-        .filter(cliente=cliente, fecha_creacion__date__gte=hace_90)
-        .order_by('-fecha_creacion')[:20]
+    decisiones_qs = GymDecisionLog.objects.filter(
+        cliente=cliente, fecha_creacion__date__gte=hace_90,
     )
-
-    decisiones_agrupadas = {}
-    for d in decisiones:
-        decisiones_agrupadas.setdefault(d.accion, []).append(d)
+    decisiones_total = decisiones_qs.count()
+    decisiones_recientes = list(decisiones_qs.order_by('-fecha_creacion')[:20])
+    decisiones_agrupadas = {
+        fila['accion']: fila['total']
+        for fila in decisiones_qs.values('accion').annotate(total=Count('id'))
+    }
 
     # ── 4. RÉCORDS PERSONALES ─────────────────────────────────────────────────
     from entrenos.models import RecordPersonal
@@ -5327,6 +5386,43 @@ def memoria_entrenador(request, cliente_id):
     except Exception:
         pass
 
+    # La fecha no representa el render: es el último dato que alimenta este
+    # expediente. Algunas secciones dependen de una fuente distinta.
+    fuentes_actualizacion = []
+    ultima_sesion_gym = EntrenoRealizado.objects.filter(cliente=cliente).aggregate(
+        ultima=Max('fecha')
+    )['ultima']
+    if ultima_sesion_gym:
+        fuentes_actualizacion.append(('sesión de fuerza', ultima_sesion_gym))
+    ultima_decision = decisiones_qs.aggregate(ultima=Max('fecha_creacion'))['ultima']
+    if ultima_decision:
+        fuentes_actualizacion.append(('decisión del plan', ultima_decision))
+    ultima_bio = BitacoraDiaria.objects.filter(cliente=cliente).aggregate(ultima=Max('fecha'))['ultima']
+    if ultima_bio:
+        fuentes_actualizacion.append(('check-in', ultima_bio))
+    if hyrox_obj:
+        from hyrox.models import HyroxSession
+        ultima_hyrox = HyroxSession.objects.filter(objective=hyrox_obj).aggregate(
+            ultima=Max('fecha_actualizacion')
+        )['ultima']
+        if ultima_hyrox:
+            fuentes_actualizacion.append(('sesión HYROX', ultima_hyrox))
+    if manual_patrones:
+        fuentes_actualizacion.append(('manual', manual_patrones[0]['creado_en']))
+
+    def _marca_temporal(valor):
+        if isinstance(valor, datetime):
+            return valor if timezone.is_aware(valor) else timezone.make_aware(valor)
+        return timezone.make_aware(datetime.combine(valor, datetime.max.time()))
+
+    data_updated_at = None
+    data_updated_source = None
+    if fuentes_actualizacion:
+        data_updated_source, _valor_actualizado = max(
+            fuentes_actualizacion, key=lambda fuente: _marca_temporal(fuente[1]),
+        )
+        data_updated_at = _marca_temporal(_valor_actualizado)
+
     # ── 10. SEMÁFORO DE INTENCIÓN ─────────────────────────────────────────────
     semaforo = None
     try:
@@ -5347,7 +5443,8 @@ def memoria_entrenador(request, cliente_id):
         'rpe_bias': rpe_bias,
         'estaciones_progreso': estaciones_progreso,
         'decisiones_agrupadas': decisiones_agrupadas,
-        'decisiones_total': len(decisiones),
+        'decisiones_total': decisiones_total,
+        'decisiones_recientes': decisiones_recientes,
         'records': records,
         'sesiones_semana': sesiones_semana,
         'rpe_medio_gym': rpe_medio_gym,
@@ -5358,6 +5455,9 @@ def memoria_entrenador(request, cliente_id):
         'bio_resumen': bio_resumen,
         'manual_patrones': manual_patrones,
         'semaforo': semaforo,
+        'rm_metadatos_descartados': rm_metadatos_descartados,
+        'data_updated_at': data_updated_at,
+        'data_updated_source': data_updated_source,
     }
     return render(request, 'clientes/memoria_entrenador.html', context)
 

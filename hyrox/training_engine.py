@@ -2735,8 +2735,8 @@ class RPECalibrator:
     Analiza el historial de sesiones con RPE + FC y detecta si el usuario
     tiende a sub o sobreestimar su esfuerzo percibido.
 
-    bias > 0  → subestima: reporta RPE bajo cuando su FC indica más intensidad
-    bias < 0  → sobreestima: reporta RPE alto con FC moderada
+    bias > 0  → sobreestima: reporta RPE alto con FC moderada
+    bias < 0  → subestima: reporta RPE bajo cuando su FC indica más intensidad
     |bias| < 1 → calibración aceptable, no requiere acción
     """
 

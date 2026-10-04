@@ -464,7 +464,9 @@ def calibrar_rpe_personal(sender, instance, created, raw=False, update_fields=No
     """
     Detecta discordancia persistente entre RPE reportado y zona FC real.
     Patrón: avg_RPE ≤ 6.5 pero FC ≥ 80 % FC_max (zona Z4) en 3+ sesiones.
-    Cuando se confirma, guarda el bias en one_rm_data['_rpe_bias'] y dispara JOI.
+    Cuando se confirma, guarda el bias histórico junto con su convención
+    explícita en ``one_rm_data`` y dispara JOI. El consumidor operativo usa
+    ``RPECalibrator``; este snapshot no se emplea para ajustar gym.
     """
     if raw or update_fields is not None:
         return
@@ -525,7 +527,9 @@ def calibrar_rpe_personal(sender, instance, created, raw=False, update_fields=No
         if discordantes < 3:
             return
 
-        # Calcular bias y guardar en one_rm_data
+        # Convención de este detector legado: FC estimada - RPE reportado.
+        # No coincide con RPECalibrator (RPE reportado - RPE esperado), por lo
+        # que se etiqueta y no se reutiliza como si fuera el mismo sesgo.
         rpe_reportado_medio = round(sum(rpcs_reportados) / len(rpcs_reportados), 1)
         rpe_estimado_medio  = round(sum(rpcs_estimados) / len(rpcs_estimados), 1)
         bias = round(rpe_estimado_medio - rpe_reportado_medio, 1)
@@ -537,6 +541,7 @@ def calibrar_rpe_personal(sender, instance, created, raw=False, update_fields=No
             return
 
         one_rm['_rpe_bias'] = bias
+        one_rm['_rpe_bias_convention'] = 'fc_estimated_minus_reported'
         cliente.one_rm_data = one_rm
         cliente.save(update_fields=['one_rm_data'])
 
