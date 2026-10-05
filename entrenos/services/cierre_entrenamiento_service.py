@@ -115,9 +115,6 @@ def _decisiones_entrenador(cliente, entreno):
         .filter(cliente=cliente, entreno_origen=entreno)
         .order_by('fecha_creacion', 'id')
     )
-    if not logs:
-        return []
-
     nombres = [log.ejercicio.strip().lower() for log in logs]
     tipos_progresion = dict(
         EjercicioBase.objects
@@ -133,11 +130,53 @@ def _decisiones_entrenador(cliente, entreno):
         normalizar_ejercicio(omitido.nombre_normalizado or omitido.nombre_ejercicio): omitido
         for omitido in entreno.ejercicios_omitidos.all()
     }
+    # Incluso si por un fallo histórico no se creó GymDecisionLog, una
+    # omisión estructurada sigue siendo una decisión auditable de cierre.
+    if not logs and omitidos_por_nombre:
+        omitidos = list(omitidos_por_nombre.values())
+        motivos = {omitido.get_motivo_display().lower() for omitido in omitidos}
+        motivo = next(iter(motivos)) if len(motivos) == 1 else 'motivos registrados'
+        cantidad = len(omitidos)
+        sufijo = '' if cantidad == 1 else 's'
+        return [{
+            'ejercicio': f'{cantidad} ejercicio{sufijo} omitido{sufijo}',
+            'accion': 'Mantener',
+            'motivo': f'{motivo.capitalize()} · no progresar sin evidencia.',
+            'efecto': None,
+            'agrupada': True,
+            'ejercicios': [omitido.nombre_ejercicio for omitido in omitidos],
+            'evidencia': f'{cantidad} ejercicio{sufijo} sin series de trabajo',
+            'confianza': 'alta' if motivo == 'fatiga' else 'media',
+        }]
+
+    if not logs:
+        return []
+
     logs_omitidos = {}
     for log in logs:
         nombre = normalizar_ejercicio(log.ejercicio)
         if log.accion == 'mantener' and nombre in omitidos_por_nombre:
             logs_omitidos[nombre] = log
+
+    def evidencia_de_ejercicio(nombre):
+        """Expone la evidencia mínima que sostiene una decisión.
+
+        El cierre no debe pedir al atleta que recuerde por qué el plan ha
+        decidido mantener o progresar. El agregado es un fallback para
+        históricos; las series individuales son la fuente más concreta.
+        """
+        clave = normalizar_ejercicio(nombre)
+        ejercicio = next(
+            (ej for ej in entreno.ejercicios_realizados.all()
+             if normalizar_ejercicio(ej.nombre_ejercicio) == clave),
+            None,
+        )
+        if not ejercicio:
+            return None, 'media'
+        partes = [f'{ejercicio.series} series registradas']
+        if ejercicio.rpe is not None:
+            partes.append(f'RPE medio {ejercicio.rpe:g}')
+        return ' · '.join(partes), ('alta' if (ejercicio.series or 0) >= 3 else 'media')
 
     decisiones = []
     agrupacion_insertada = False
@@ -157,6 +196,8 @@ def _decisiones_entrenador(cliente, entreno):
             'efecto': None,
             'agrupada': True,
             'ejercicios': [omitido.nombre_ejercicio for omitido in omitidos],
+            'evidencia': f'{cantidad} ejercicio{sufijo} sin series de trabajo',
+            'confianza': 'alta' if motivo == 'fatiga' else 'media',
         }
 
     for log in logs:
@@ -167,6 +208,7 @@ def _decisiones_entrenador(cliente, entreno):
                 agrupacion_insertada = True
             continue
         motivo = log.motivo
+        evidencia, confianza = evidencia_de_ejercicio(log.ejercicio)
         decisiones.append({
             'ejercicio': log.ejercicio,
             'accion': _accion_semantica(
@@ -176,6 +218,8 @@ def _decisiones_entrenador(cliente, entreno):
             'efecto': _efecto_decision(
                 log, tipos_progresion.get(log.ejercicio.strip().lower()),
             ),
+            'evidencia': evidencia,
+            'confianza': confianza,
         })
     return decisiones
 

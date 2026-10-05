@@ -253,7 +253,7 @@
   <div class="bib">
     <div class="bib-meta">
       <span>ENTRENO GUARDADO · {{ entreno.fecha|date:"D d M Y"|upper }}</span>
-      <span>{{ resumen.n_ejercicios }} EJERCICIO{{ resumen.n_ejercicios|pluralize }}</span>
+      <span>{{ resumen.n_ejercicios }} DE {{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count }} EJERCICIO{{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count|pluralize }}</span>
     </div>
     <div class="bib-body">
       <div class="bib-num">✓</div>
@@ -391,11 +391,11 @@
       <span class="cambio-nombre">
         {{ decision.ejercicio }}<br>
         <span style="color:var(--td);font-size:12px;">{% if decision.accion_semantica %}{{ decision.accion_semantica }}{% else %}{{ decision.accion }}{% endif %} · {{ decision.motivo }}</span>
+        {% if decision.evidencia %}
+        <span style="display:block;color:var(--tdm);font-family:var(--fm);font-size:10px;margin-top:5px;">Evidencia: {{ decision.evidencia }} · confianza {{ decision.confianza }}</span>
+        {% endif %}
         {% if decision.agrupada %}
-        <details class="decision-exercises">
-          <summary>Ver ejercicios omitidos</summary>
-          <div class="decision-exercise-list">{{ decision.ejercicios|join:", " }}</div>
-        </details>
+        <div class="decision-exercise-list" style="margin-top:6px;">{{ decision.ejercicios|join:", " }}</div>
         {% endif %}
       </span>
       {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% elif decision.efecto_semantico %}<span class="cambio-detalle subida">{{ decision.efecto_semantico }}</span>{% endif %}
@@ -415,7 +415,8 @@
   {% if joi_mensaje %}
   <div class="joi-card">
     <div class="joi-label">JOI</div>
-    <div class="joi-msg">{{ joi_mensaje }}</div>
+    <div class="joi-msg">{{ joi_mensaje|truncatechars:180 }}</div>
+    <a href="/joi/habitacion/" style="display:inline-block;margin-top:7px;color:var(--jds-joi);font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-decoration:none;">Abrir la habitación de JOI →</a>
   </div>
   {% endif %}
 

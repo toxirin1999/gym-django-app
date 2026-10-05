@@ -165,6 +165,8 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
                    return_value=_permiso('progresion_permitida')):
             resp = self.client.get(self._url())
         self.assertContains(resp, 'Hoy aguantaste algo más.')
+        self.assertContains(resp, 'Abrir la habitación de JOI')
+        self.assertContains(resp, '/joi/habitacion/')
 
     def test_con_records_muestra_seccion_records(self):
         RecordPersonal.objects.create(

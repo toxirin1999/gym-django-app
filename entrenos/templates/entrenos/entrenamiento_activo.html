@@ -1487,7 +1487,7 @@ body{background:
   <!-- NOMBRE -->
   <div class="exname">
     <div class="exname-toprow">
-      <span class="exname-counter">{{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
+      <span class="exname-counter">Ejercicio actual · {{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
       {% if ejercicio.tipo_ejercicio != 'compuesto_principal' %}
         {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' %}
         <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
@@ -1503,7 +1503,7 @@ body{background:
         <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|lower|capfirst }}</h2>
         {% if ejercicio.aproximaciones %}
         <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
-          <span>Aproximaciones</span><span>›</span>
+          <span>Calentamiento</span><span>›</span>
         </button>
         {% endif %}
       </div>
@@ -2675,8 +2675,14 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     bannerSig.style.borderLeftColor = bajada ? 'var(--rl)' : 'var(--ok)';
     bannerSig.style.color = bajada ? 'var(--rl)' : 'var(--ok)';
     bannerSig.style.background = bajada ? 'rgba(200,75,49,0.06)' : 'rgba(74,222,128,0.06)';
-    bannerSig.innerHTML = `⚡ Ajuste serie anterior: <strong>${resultado.pesoSugerido.toFixed(1)}kg</strong> `
-      + `<span style="opacity:0.75;">(${signo}${resultado.diff}kg)</span>`;
+    const motivo = resultado.deltaRpe > 0
+      ? `RPE ${rpe} frente al objetivo ${rpeObj}`
+      : resultado.deltaReps < 0
+        ? `${reps} reps frente al objetivo ${repsObj}`
+        : 'autorregulación de la serie anterior';
+    bannerSig.innerHTML = `⚡ Propuesta para la próxima serie: <strong>${resultado.pesoSugerido.toFixed(1)} kg</strong> `
+      + `<span style="opacity:0.75;">(${signo}${resultado.diff} kg · ${motivo})</span>`
+      + `<div style="font-size:10px;opacity:0.72;margin-top:3px;">Aplicada al selector; puedes ajustarla antes de guardar.</div>`;
     bannerSig.style.display = 'block';
   }
 }
@@ -2885,10 +2891,17 @@ function resumenDeEjercicio(fid){
     const resultado=resultadoPlanSerie(fid,index+1,s.reps,false);
     return resultado && resultado.clase==='por-debajo';
   });
+  const enRango=scs.filter((s,index)=>{
+    const resultado=resultadoPlanSerie(fid,index+1,s.reps,false);
+    return resultado && resultado.clase==='en-rango';
+  }).length;
   if(rpeAlto || fueraDeRango){
-    return {e:'↗',t:'Ejercicio exigente registrado',s:'La próxima sesión conservará margen antes de progresar.'};
+    const lectura=enRango
+      ? `${enRango}/${scs.length} series recuperaron el rango tras el ajuste.`
+      : `0/${scs.length} series alcanzaron el rango previsto.`;
+    return {e:'↗',t:'Ejercicio exigente registrado',s:lectura+' La próxima sesión conservará margen antes de progresar.'};
   }
-  return {e:'✓',t:'Ejercicio registrado',s:'Series y esfuerzo guardados para la próxima decisión del plan.'};
+  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. Series y esfuerzo guardados para la próxima decisión del plan.`};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────

@@ -456,12 +456,14 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
                    return_value=_permiso('progresion_permitida')):
             ctx = construir_contexto_cierre(self.cliente, entreno)
 
-        self.assertEqual(ctx['decisiones_entrenador'], [{
-            'ejercicio': 'press banca',
-            'accion': actual.get_accion_display(),
-            'motivo': 'La técnica se comprometió',
-            'efecto': 'Reducirá la carga un 5%',
-        }])
+        self.assertEqual(len(ctx['decisiones_entrenador']), 1)
+        decision = ctx['decisiones_entrenador'][0]
+        self.assertEqual(decision['ejercicio'], 'press banca')
+        self.assertEqual(decision['accion'], actual.get_accion_display())
+        self.assertEqual(decision['motivo'], 'La técnica se comprometió')
+        self.assertEqual(decision['efecto'], 'Reducirá la carga un 5%')
+        self.assertEqual(decision['evidencia'], '4 series registradas')
+        self.assertEqual(decision['confianza'], 'alta')
         self.assertIsNone(ctx['proxima_vez'])
 
     def test_subir_reps_distingue_distancia_y_repeticiones(self):
@@ -512,6 +514,23 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
         self.assertEqual(decisiones[0]['ejercicio'], '3 ejercicios omitidos')
         self.assertIn('Falta de tiempo', decisiones[0]['motivo'])
         self.assertEqual(decisiones[0]['ejercicios'], list(nombres))
+
+    def test_omision_estructurada_se_muestra_aunque_falte_log_historico(self):
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        EjercicioOmitidoEntreno.objects.create(
+            entreno=entreno,
+            nombre_ejercicio='Press Arnold',
+            nombre_normalizado='press arnold',
+            motivo='fatiga',
+        )
+
+        with patch('entrenos.services.cierre_entrenamiento_service.evaluar_permiso_progresion',
+                   return_value=_permiso('progresion_permitida')):
+            decisiones = construir_contexto_cierre(self.cliente, entreno)['decisiones_entrenador']
+
+        self.assertEqual(decisiones[0]['ejercicios'], ['Press Arnold'])
+        self.assertIn('Fatiga', decisiones[0]['motivo'])
+        self.assertEqual(decisiones[0]['evidencia'], '1 ejercicio sin series de trabajo')
 
 
 # ── Caso 5: PRs ────────────────────────────────────────────────────────────────
