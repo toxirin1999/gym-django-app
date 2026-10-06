@@ -6,7 +6,7 @@ from rutinas.models import Rutina
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.utils import timezone
 from rutinas.models import EjercicioBase
 
@@ -16,6 +16,30 @@ class GrupoMuscular(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+def _carga_total_efectiva(peso_total_kg, peso_kg, multiplicador_carga):
+    """Devuelve la carga agregada aunque el snapshot legacy esté incompleto.
+
+    ``peso_total_kg`` es la fuente preferida, pero varios entrenos anteriores
+    guardaron únicamente el peso contractual por lado/mano y su multiplicador.
+    Un cero o un valor inválido no puede borrar silenciosamente el otro lado.
+    """
+    try:
+        total = Decimal(str(peso_total_kg))
+    except (InvalidOperation, TypeError, ValueError):
+        total = Decimal('0')
+    if total > 0:
+        return total
+    try:
+        peso = Decimal(str(peso_kg or 0))
+    except (InvalidOperation, TypeError, ValueError):
+        peso = Decimal('0')
+    try:
+        multiplicador = int(multiplicador_carga or 1)
+    except (TypeError, ValueError):
+        multiplicador = 1
+    return peso * max(multiplicador, 1)
 
 
 class EjercicioRealizado(models.Model):
@@ -83,7 +107,9 @@ class EjercicioRealizado(models.Model):
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
     def volumen(self):
-        peso = self.peso_total_kg if self.peso_total_kg is not None else self.peso_kg
+        peso = _carga_total_efectiva(
+            self.peso_total_kg, self.peso_kg, self.multiplicador_carga,
+        )
         return peso * self.series * self.repeticiones
 
 
@@ -269,13 +295,18 @@ class SerieRealizada(models.Model):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
 
     @property
+    def carga_total_efectiva_kg(self):
+        return _carga_total_efectiva(
+            self.peso_total_kg, self.peso_kg, self.multiplicador_carga,
+        )
+
+    @property
     def tonelaje_kg(self):
         if self.es_aproximacion:
             return Decimal('0')
         if self.distancia_metros is not None:
             return Decimal('0')
-        peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
-        return Decimal(str(peso)) * int(self.repeticiones or 0)
+        return self.carga_total_efectiva_kg * int(self.repeticiones or 0)
 
     @property
     def carga_distancia_kg_m(self):
@@ -283,8 +314,7 @@ class SerieRealizada(models.Model):
             return Decimal('0')
         if self.distancia_metros is None:
             return Decimal('0')
-        peso = self.peso_total_kg if self.peso_total_kg is not None else (self.peso_kg or 0)
-        return Decimal(str(peso)) * Decimal(str(self.distancia_metros))
+        return self.carga_total_efectiva_kg * Decimal(str(self.distancia_metros))
 
     class Meta:
         indexes = [
@@ -465,19 +495,18 @@ class EntrenoRealizado(models.Model):
                 ej.completado
                 and ej.nombre_ejercicio.strip().lower() not in nombres_con_detalle
             ):
-                peso = Decimal(str(ej.peso_total_kg if ej.peso_total_kg is not None else (ej.peso_kg or 0)))
+                peso = _carga_total_efectiva(
+                    ej.peso_total_kg, ej.peso_kg, ej.multiplicador_carga,
+                )
                 series = int(ej.series or 0)
                 reps = int(ej.repeticiones or 0)
                 total += peso * series * reps
 
         # 2. Series Realizadas (modelo SerieRealizada, used when logging sets individually)
         for serie in series_completadas:
-            peso = Decimal(str(
-                serie.peso_total_kg if serie.peso_total_kg is not None else (serie.peso_kg or 0)
-            ))
             if serie.distancia_metros is None:
                 reps = int(serie.repeticiones or 0)
-                total += peso * reps
+                total += serie.carga_total_efectiva_kg * reps
 
         # 3. Ejercicios Liftin Detallados (Específicos de importación)
         if hasattr(self, 'ejercicios_liftin_detallados'):

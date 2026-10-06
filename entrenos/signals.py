@@ -203,8 +203,11 @@ def detectar_molestia_recurrente(sender, instance, created, raw=False, **kwargs)
 @receiver(post_save, sender=EntrenoRealizado)
 def detectar_estancamiento(sender, instance, created, raw=False, **kwargs):
     """
-    Para cada ejercicio de la sesión, comprueba si las últimas 3 apariciones
-    tienen el mismo peso y reps (sin tope de máquina). Si es así → GymDecisionLog.
+    Para cada ejercicio de la sesión, comprueba las últimas 3 *sesiones*
+    comparables (sin tope de máquina). Una sesión puede contener varias
+    series: su mejor ejecución representa la evidencia de esa sesión. Nunca
+    se debe convertir una caída de las últimas series por fatiga en tres
+    "apariciones" estancadas de una misma sesión.
     """
     if raw:
         return
@@ -217,19 +220,60 @@ def detectar_estancamiento(sender, instance, created, raw=False, **kwargs):
         ).values_list('nombre_ejercicio', flat=True).distinct()
 
         for nombre in ejercicios_sesion:
-            ultimas = EjercicioRealizado.objects.filter(
+            ejecuciones = list(EjercicioRealizado.objects.filter(
                 entreno__cliente=instance.cliente,
                 nombre_ejercicio__iexact=nombre,
                 completado=True,
                 es_tope_maquina=False,
                 peso_kg__gt=0,
-            ).order_by('-entreno__fecha')[:3]
+            ).order_by('-entreno__fecha', '-entreno_id', '-id'))
 
-            if len(ultimas) < 3:
+            # Agrupar primero por sesión. El registro activo puede guardar una
+            # fila por serie; usar esas filas como si fueran tres entrenos era
+            # la causa de falsos positivos al aparecer fatiga intra-sesión.
+            por_sesion = {}
+            for ejecucion in ejecuciones:
+                if (
+                    ejecucion.entreno_id not in por_sesion
+                    and len(por_sesion) == 3
+                ):
+                    break
+                por_sesion.setdefault(ejecucion.entreno_id, []).append(ejecucion)
+
+            ultimas_sesiones = list(por_sesion.values())[:3]
+
+            if len(ultimas_sesiones) < 3:
                 continue
 
-            pesos = [float(e.peso_kg or 0) for e in ultimas]
-            reps  = [e.repeticiones or 0 for e in ultimas]
+            def mejor_ejecucion(series_sesion):
+                # Peso × reps prioriza la mejor evidencia de capacidad de la
+                # sesión. Así, 30 kg × 15 antes de una caída por fatiga no se
+                # degrada a la última serie de 9 reps.
+                return max(
+                    series_sesion,
+                    key=lambda e: (
+                        float(e.peso_kg or 0) * int(e.repeticiones or 0),
+                        int(e.repeticiones or 0),
+                        float(e.peso_kg or 0),
+                    ),
+                )
+
+            mejores = [mejor_ejecucion(series_sesion) for series_sesion in ultimas_sesiones]
+            pesos = [float(e.peso_kg or 0) for e in mejores]
+            reps = [int(e.repeticiones or 0) for e in mejores]
+
+            # Técnica comprometida es evidencia de que el estímulo no fue
+            # estable; no se prescribe un cambio de variante por estancamiento
+            # hasta tener tres sesiones técnicamente válidas.
+            from entrenos.models import SerieRealizada
+            sesiones_con_tecnica_comprometida = SerieRealizada.objects.filter(
+                entreno_id__in=[series_sesion[0].entreno_id for series_sesion in ultimas_sesiones],
+                ejercicio__nombre__iexact=nombre,
+                completado=True,
+                tecnica_calidad='comprometida',
+            ).exists()
+            if sesiones_con_tecnica_comprometida:
+                continue
 
             # Tolerancia: ±0.5 kg en peso, exacto en reps
             mismo_peso = max(pesos) - min(pesos) <= 0.5

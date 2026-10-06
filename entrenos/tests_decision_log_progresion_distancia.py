@@ -15,13 +15,14 @@ from django.contrib.auth.models import User
 from django.test import TestCase
 
 from clientes.models import Cliente
-from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymAdaptationProfile, GymDecisionLog
+from entrenos.models import EntrenoRealizado, EjercicioRealizado, GymAdaptationProfile, GymDecisionLog, SerieRealizada
 from entrenos.services.decision_log_service import (
     generar_decisiones_para_entreno,
     evaluar_decisiones_para_entreno,
     reconciliar_progresiones_distancia_heredadas,
     _decidir_accion,
     _evaluar_log,
+    _distancia_cumple_evidencia,
 )
 from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
 from rutinas.models import EjercicioBase, Rutina
@@ -108,6 +109,47 @@ class TestGenerarDecisionesTopeProgresionDistancia(DecisionLogProgresionDistanci
         self.assertEqual(log.accion, 'mantener')
         self.assertIsNone(log.valor_cambio)
         self.assertIn('consolidar', log.motivo.lower())
+
+    def test_farmer_2x50_con_rpe_7_cumple_evidencia_de_distancia(self):
+        entreno = self._entreno(self.hoy)
+        for numero in (1, 2):
+            SerieRealizada.objects.create(
+                entreno=entreno,
+                ejercicio=EjercicioBase.objects.get(nombre='Farmer Walk'),
+                serie_numero=numero, repeticiones=0, distancia_metros=50,
+                peso_kg=36, rpe_real=7, completado=True,
+            )
+
+        self.assertTrue(_distancia_cumple_evidencia(entreno, 'farmer walk', 50))
+
+    def test_fatiga_intraserie_no_se_confunde_con_estancamiento_en_el_tope(self):
+        curl = EjercicioBase.objects.create(
+            nombre='Curl Z', grupo_muscular='bíceps', tipo_progresion='peso_reps',
+        )
+        for dias in (6, 3):
+            previo = self._entreno(self.hoy - timedelta(days=dias))
+            self._ejercicio_realizado(
+                previo, nombre=curl.nombre, peso_kg=30, repeticiones=12,
+                es_tope_maquina=True, rpe=7,
+            )
+        hoy = self._entreno(self.hoy)
+        self._ejercicio_realizado(
+            hoy, nombre=curl.nombre, peso_kg=30, repeticiones=12,
+            es_tope_maquina=True, rpe=7,
+        )
+        for numero, reps in enumerate((15, 15, 12, 9, 10), 1):
+            SerieRealizada.objects.create(
+                entreno=hoy, ejercicio=curl, serie_numero=numero,
+                peso_kg=30, repeticiones=reps, rpe_real=7 if numero < 3 else 8,
+                completado=True,
+            )
+
+        generar_decisiones_para_entreno(hoy)
+
+        log = GymDecisionLog.objects.get(entreno_origen=hoy, ejercicio_normalizado='curl z')
+        self.assertEqual(log.accion, 'mantener')
+        self.assertEqual(log.motivo_codigo, 'fatiga_intraserie')
+        self.assertNotIn('cambiar estímulo', log.motivo.lower())
 
 
 class TestProgresionEjecutivaAplicaDistanciaConTope(DecisionLogProgresionDistanciaBase):

@@ -125,10 +125,7 @@ class RecordsService:
             if series_detalladas:
                 vol_val = sum(
                     (
-                        Decimal(str(
-                            serie.peso_total_kg
-                            if serie.peso_total_kg is not None else (serie.peso_kg or 0)
-                        )) * int(serie.repeticiones or 0)
+                        serie.carga_total_efectiva_kg * int(serie.repeticiones or 0)
                         for serie in series_detalladas
                         if serie.distancia_metros is None
                     ),

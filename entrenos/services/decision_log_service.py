@@ -263,6 +263,27 @@ def _tope_sin_margen(ejercicio, historial):
     return max(pesos) - min(pesos) <= 0.5 and len(set(reps)) == 1
 
 
+def _fatiga_intraserie(entreno, ejercicio_normalizado):
+    """Distingue una media plana de una caída real dentro de la sesión.
+
+    El agregado histórico puede redondear una sesión como ``30 kg × 12``
+    aunque las series hayan sido 15, 15, 12, 9 y 10. Eso no es tres sesiones
+    idénticas sin respuesta: es fatiga local durante una dosis que sí aportó
+    repeticiones objetivo. No diagnosticamos estancamiento/variante desde ese
+    promedio.
+    """
+    from entrenos.models import SerieRealizada
+
+    reps = [
+        int(serie.repeticiones or 0)
+        for serie in SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
+    ]
+    return len(reps) >= 2 and len(set(reps)) > 1
+
+
 def _fallo_no_controlado_repetido(ejercicio, historial):
     if not ejercicio.fallo_muscular or ejercicio.fallo_intencional is True:
         return False
@@ -455,14 +476,23 @@ def generar_decisiones_para_entreno(entreno):
         # Solo tras tres ejecuciones idénticas. No pisa señales protectoras:
         # fallo/RPE crítico ya ordenan bajar y técnica ya ordena consolidar.
         if motivo_codigo == 'tope_maquina' and _tope_sin_margen(ej, historial):
-            accion = 'cambiar_variante'
-            valor_cambio = None
-            motivo = (
-                f'Sin progresión en 3 sesiones consecutivas en el tope de máquina '
-                f'({float(peso):g} kg × {reps} reps). '
-                'Cambiar estímulo: variante, rango de reps o tempo.'
-            )
-            motivo_codigo = 'tope_maquina_sin_margen'
+            if _fatiga_intraserie(entreno, nombre):
+                accion = 'mantener'
+                valor_cambio = None
+                motivo = (
+                    'Fatiga entre series — mantener la carga y consolidar '
+                    'volumen o descanso antes de cambiar el estímulo.'
+                )
+                motivo_codigo = 'fatiga_intraserie'
+            else:
+                accion = 'cambiar_variante'
+                valor_cambio = None
+                motivo = (
+                    f'Sin progresión en 3 sesiones consecutivas en el tope de máquina '
+                    f'({float(peso):g} kg × {reps} reps). '
+                    'Cambiar estímulo: variante, rango de reps o tempo.'
+                )
+                motivo_codigo = 'tope_maquina_sin_margen'
 
         # Una molestia aislada leve abre únicamente un límite local y temporal.
         # Las causas que reducen carga y la técnica comprometida conservan la

@@ -93,6 +93,42 @@ class CierreSemanticaUnidadesTests(TestCase):
         self.assertEqual(resumen['trabajo_por_tipo'][-1]['tipo'], 'distancia_cargada')
         self.assertEqual(resumen['trabajo_por_tipo'][-1]['distancia_metros'], 45)
 
+    def test_carga_unilateral_sin_total_persistido_cuenta_ambos_lados(self):
+        """Los históricos sin ``peso_total_kg`` siguen contando ambos lados."""
+        entreno = self._entreno(date(2026, 9, 22))
+        remo = EjercicioBase.objects.create(
+            nombre='Remo unilateral', grupo_muscular='espalda',
+            tipo_progresion='peso_reps',
+        )
+        self._ejercicio(entreno, remo, peso=20, series=4, reps=12)
+        for numero in range(1, 5):
+            SerieRealizada.objects.create(
+                entreno=entreno, ejercicio=remo, serie_numero=numero,
+                repeticiones=12, peso_kg=20, tipo_carga='por_lado',
+                multiplicador_carga=2, completado=True,
+            )
+
+        resumen = _resumen_sesion(entreno, list(entreno.ejercicios_realizados.all()))
+
+        self.assertEqual(entreno.calcular_volumen_total(), 1920)
+        self.assertEqual(resumen['volumen_kg'], 1920)
+
+    def test_distancia_sin_total_persistido_usa_multiplicador_para_kg_m(self):
+        entreno = self._entreno(date(2026, 9, 22))
+        self._ejercicio(entreno, self.farmer, peso=36, series=2, reps=0)
+        for numero in range(1, 3):
+            SerieRealizada.objects.create(
+                entreno=entreno, ejercicio=self.farmer, serie_numero=numero,
+                repeticiones=0, distancia_metros=50, peso_kg=36,
+                tipo_carga='por_mano', multiplicador_carga=2, completado=True,
+            )
+
+        resumen = _resumen_sesion(entreno, list(entreno.ejercicios_realizados.all()))
+
+        self.assertEqual(resumen['carga_distancia_kg_m_total'], 7200)
+        item = resumen['trabajo_por_tipo'][0]
+        self.assertEqual(item['carga_total_kg'], 72)
+
     def test_resumen_legacy_sin_series_respeta_tipo_de_progresion(self):
         entreno = self._entreno(date(2026, 9, 22))
         self._ejercicio(entreno, self.dead_hang, series=2, reps=30)
@@ -124,6 +160,33 @@ class CierreSemanticaUnidadesTests(TestCase):
             'detalle': 'carga mantenida',
         }])
         self.assertNotEqual(anterior_ej.peso_kg, actual_ej.peso_kg)
+
+    def test_cambios_de_tiempo_y_distancia_conservan_sus_unidades(self):
+        anterior = self._entreno(date(2026, 9, 15))
+        self._ejercicio(anterior, self.dead_hang, reps=35)
+        self._ejercicio(anterior, self.farmer, peso=36, reps=0)
+        self._serie(anterior, self.dead_hang, 1, reps=35)
+        self._serie(anterior, self.dead_hang, 2, reps=35)
+        self._serie(anterior, self.farmer, 1, reps=0, peso=36, distancia=49)
+
+        actual = self._entreno(date(2026, 9, 22))
+        dead_hang = self._ejercicio(actual, self.dead_hang, reps=33)
+        farmer = self._ejercicio(actual, self.farmer, peso=36, reps=0)
+        self._serie(actual, self.dead_hang, 1, reps=35)
+        self._serie(actual, self.dead_hang, 2, reps=30)
+        for numero in (1, 2):
+            SerieRealizada.objects.create(
+                entreno=actual, ejercicio=self.farmer, serie_numero=numero,
+                repeticiones=0, distancia_metros=50, peso_kg=36,
+                tipo_carga='por_mano', multiplicador_carga=2, completado=True,
+            )
+
+        cambios = _cambios_relevantes(self.cliente, actual, [dead_hang, farmer])
+
+        self.assertEqual(cambios, [
+            {'nombre': 'Dead Hang', 'tipo': 'tiempo', 'detalle': '65 s totales (antes 70 s)'},
+            {'nombre': 'Farmer Walk', 'tipo': 'distancia', 'detalle': '50 m/serie · 72 kg total (antes 49 m/serie)'},
+        ])
 
     def test_progresion_tiempo_avanza_un_segundo_no_peso(self):
         perfil = GymAdaptationProfile(incremento_peso_pct=5, reduccion_peso_pct=10)

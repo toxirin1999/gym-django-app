@@ -136,14 +136,14 @@
 
   /* ── CAMBIOS RELEVANTES ────────────────────────── */
   .cambio-row {
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 7px 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px; padding: 9px 0;
   }
   .cambio-row + .cambio-row { border-top: 1px solid var(--bd); }
-  .cambio-nombre { font-size: 13px; color: var(--ink); }
+  .cambio-nombre { font-size: 13px; color: var(--ink); min-width: 0; overflow-wrap: anywhere; }
   .cambio-detalle {
     font-family: var(--fm); font-size: 11px; font-weight: 700;
-    flex-shrink: 0; margin-left: 12px; text-align: right;
+    flex: 0 1 52%; min-width: 0; text-align: right; overflow-wrap: anywhere;
   }
   .cambio-detalle.subida   { color: var(--ok); }
   .cambio-detalle.bajada   { color: var(--warn); }
@@ -151,6 +151,10 @@
   .cambio-detalle.mantenida{ color: var(--tdm); }
   /* Descarga reduce carga a propósito: no es una regresión, se lee neutra. */
   .cambio-detalle.bajada_descarga { color: var(--tdm); }
+  .unit-breakdown-row { align-items: center; }
+  .unit-breakdown-row .cambio-detalle { line-height: 1.45; }
+  .unit-piece { display: inline-block; white-space: nowrap; }
+  .unit-piece + .unit-piece::before { content: ' · '; color: var(--tdm); }
 
   /* ── RÉCORDS ───────────────────────────────────── */
   .pr-row {
@@ -198,6 +202,14 @@
     font-style: italic; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
     font-weight: 400;
   }
+  /* El mensaje completo permanece en el DOM (lectores de pantalla y copia),
+     pero el cierre solo presta una presencia breve de JOI. */
+  .joi-msg--extract {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+  }
 
   /* ── CTA ─────────────────────────────────────── */
   .cta-wrap {
@@ -231,6 +243,11 @@
   @media (max-width: 380px) {
     .wrap { padding-left: 12px; padding-right: 12px; }
     .cta-wrap { padding-left: 12px; padding-right: 12px; }
+    .cambio-row { gap: 8px; }
+    .cambio-nombre { font-size: 12px; }
+    .cambio-detalle { font-size: 10px; flex-basis: 56%; }
+    .unit-breakdown-row { display: block; }
+    .unit-breakdown-row .cambio-detalle { display: block; max-width: none; margin-top: 4px; text-align: left; }
   }
 </style>
 </head>
@@ -321,15 +338,18 @@
   <div class="sec-hdr"><span class="sec-tag">Desglose</span><div class="sec-line"></div></div>
   <div class="card">
     {% for trabajo in resumen.trabajo_por_tipo %}
-    <div class="cambio-row">
+    <div class="cambio-row unit-breakdown-row">
       <span class="cambio-nombre">{{ trabajo.nombre }}</span>
       <span class="cambio-detalle {% if trabajo.tipo == 'distancia_cargada' %}tope{% else %}mantenida{% endif %}">
         {% if trabajo.tipo == 'distancia_cargada' %}
-          {{ trabajo.metros|floatformat:0 }} m · {{ trabajo.carga_total_kg|floatformat:0 }} kg total{% if trabajo.carga_por_mano_kg %} ({{ trabajo.carga_por_mano_kg|floatformat:0 }}/mano){% endif %}{% if trabajo.carga_distancia_kg_m %} · {{ trabajo.carga_distancia_kg_m|floatformat:0 }} kg·m{% endif %}
+          <span class="unit-piece">{{ trabajo.metros|floatformat:0 }} m</span>
+          <span class="unit-piece">{{ trabajo.carga_total_kg|floatformat:0 }} kg total{% if trabajo.carga_por_mano_kg %} · {{ trabajo.carga_por_mano_kg|floatformat:0 }}/mano{% endif %}</span>
+          {% if trabajo.carga_distancia_kg_m %}<span class="unit-piece">{{ trabajo.carga_distancia_kg_m|floatformat:0 }} kg·m</span>{% endif %}
         {% elif trabajo.tipo == 'tiempo' %}
-          {{ trabajo.segundos|floatformat:0 }} s
+          <span class="unit-piece">{{ trabajo.segundos|floatformat:0 }} s</span>
         {% else %}
-          {{ trabajo.repeticiones|floatformat:0 }} reps · {{ trabajo.tonelaje_kg|floatformat:0 }} kg
+          <span class="unit-piece">{{ trabajo.repeticiones|floatformat:0 }} reps</span>
+          <span class="unit-piece">{{ trabajo.tonelaje_kg|floatformat:0 }} kg</span>
         {% endif %}
       </span>
     </div>
@@ -371,7 +391,7 @@
   {% if cambios_relevantes %}
   <!-- EJECUCIÓN: DESCRIBE HOY, NO PRESCRIBE LA PRÓXIMA SESIÓN -->
   <div class="sec-hdr"><span class="sec-tag">Ejecución de hoy</span><div class="sec-line"></div></div>
-  <p class="section-note">Comparada con tu última sesión compatible.</p>
+  <p class="section-note">Comparada con tu última sesión compatible. La diferencia de carga no equivale por sí sola a una decisión de progreso.</p>
   <div class="card">
     {% for cambio in cambios_relevantes %}
     <div class="cambio-row">
@@ -415,7 +435,7 @@
   {% if joi_mensaje %}
   <div class="joi-card">
     <div class="joi-label">JOI</div>
-    <div class="joi-msg">{{ joi_mensaje|truncatechars:180 }}</div>
+    <div class="joi-msg joi-msg--extract">{{ joi_mensaje }}</div>
     <a href="/joi/habitacion/" style="display:inline-block;margin-top:7px;color:var(--jds-joi);font-family:var(--fm);font-size:10px;letter-spacing:.06em;text-decoration:none;">Abrir la habitación de JOI →</a>
   </div>
   {% endif %}

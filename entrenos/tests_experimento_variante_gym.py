@@ -230,6 +230,41 @@ class ExperimentoVarianteGymTests(TestCase):
         self.assertEqual(decision.entreno_origen, entrenos[-1])
         self.assertEqual(decision.ejercicio_normalizado, "press banca")
 
+    def test_detector_no_confunde_fatiga_intra_sesion_con_tres_sesiones_estancadas(self):
+        """Dos series objetivo antes de fatiga siguen siendo progreso real.
+
+        El registro activo puede persistir una fila por serie. Antes, las tres
+        últimas filas pertenecían a la sesión actual y fabricaban una decisión
+        de cambiar variante aunque hubiese dos 30 kg × 15 válidas.
+        """
+        for offset in (2, 1):
+            entreno = EntrenoRealizado.objects.create(
+                cliente=self.cliente, rutina=self.rutina,
+                fecha=self.hoy - timedelta(days=offset),
+            )
+            EjercicioRealizado.objects.create(
+                entreno=entreno, nombre_ejercicio="Curl con barra Z",
+                peso_kg=30, repeticiones=12, rpe=7, completado=True,
+            )
+            entreno.save()
+
+        actual = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=self.rutina, fecha=self.hoy,
+        )
+        for reps, rpe in ((15, 7), (15, 7), (12, 8), (9, 8), (10, 7)):
+            EjercicioRealizado.objects.create(
+                entreno=actual, nombre_ejercicio="Curl con barra Z",
+                peso_kg=30, repeticiones=reps, rpe=rpe, completado=True,
+            )
+        actual.save()
+
+        self.assertFalse(GymDecisionLog.objects.filter(
+            cliente=self.cliente,
+            ejercicio__iexact="Curl con barra Z",
+            accion="cambiar_variante",
+            motivo__icontains="Sin progresión",
+        ).exists())
+
     def test_molestia_cierra_fallida_y_plan_vuelve_al_original(self):
         from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
         experimento = self._experimento()

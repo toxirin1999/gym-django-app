@@ -409,7 +409,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .sticky-final-btn:disabled{opacity:.38;cursor:not-allowed;color:var(--td);border-color:var(--border);}
 
 /* ── LAYOUT ── */
-.wrap{max-width:480px;margin:0 auto;padding-bottom:calc(112px + env(safe-area-inset-bottom) + 32px);}
+.wrap{max-width:480px;margin:0 auto;padding-bottom:calc(128px + env(safe-area-inset-bottom) + 32px);}
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
@@ -1166,7 +1166,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 body{background:
   radial-gradient(ellipse 80% 34% at 50% 0%,rgba(26,72,77,.16),transparent 70%),
   #050708;}
-.wrap{max-width:420px;padding-bottom:94px;}
+.wrap{max-width:420px;padding-bottom:calc(96px + env(safe-area-inset-bottom));}
 .topbar{padding:9px 18px 5px;background:rgba(5,7,8,.96);}
 .topbar .tb-left{gap:8px!important;}
 .topbar a{display:none!important;}
@@ -1500,7 +1500,7 @@ body{background:
         <div class="ex-header-icon">
           <i class="fas fa-dumbbell"></i>
         </div>
-        <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|lower|capfirst }}</h2>
+        <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre }}</h2>
         {% if ejercicio.aproximaciones %}
         <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
           <span>Calentamiento</span><span>›</span>

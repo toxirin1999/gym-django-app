@@ -73,6 +73,26 @@ class MetricasCargaTests(TestCase):
         self.assertEqual(valores["peso_maximo"], Decimal("17.5"))
         self.assertEqual(valores["volumen_total"], Decimal("245"))
 
+    def test_record_de_volumen_unilateral_recupera_el_lado_ausente_en_historicos(self):
+        base = EjercicioBase.objects.create(nombre="Remo unilateral", grupo_muscular="Espalda")
+        SerieRealizada.objects.create(
+            entreno=self.entreno, ejercicio=base, serie_numero=1, repeticiones=12,
+            peso_kg=Decimal("20"), tipo_carga="por_lado", multiplicador_carga=2,
+            completado=True,
+        )
+        EjercicioRealizado.objects.create(
+            entreno=self.entreno, nombre_ejercicio=base.nombre, grupo_muscular="Espalda",
+            peso_kg=20, tipo_carga="por_lado", multiplicador_carga=2,
+            series=1, repeticiones=12,
+        )
+
+        valores = {
+            record.tipo_record: record.valor
+            for record in RecordsService.detectar_records_sesion(self.entreno)
+        }
+
+        self.assertEqual(valores["volumen_total"], Decimal("480"))
+
 
 class GuardadoDistanciaTests(TestCase):
     def setUp(self):

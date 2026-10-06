@@ -357,7 +357,7 @@ def calcular_metricas_unidades(entreno, ejercicios):
                 )
                 distancia += valor
                 carga_kgm = sum(float(serie.carga_distancia_kg_m) for serie in series)
-                cargas_totales = [float(serie.peso_total_kg or serie.peso_kg or 0) for serie in series]
+                cargas_totales = [float(serie.carga_total_efectiva_kg) for serie in series]
                 cargas_por_mano = [float(serie.peso_kg or 0) for serie in series]
                 total = max(cargas_totales, default=0.0)
                 por_mano = max(cargas_por_mano, default=0.0)
@@ -409,6 +409,17 @@ def _resumen_sesion(entreno, ejercicios):
     # Si fue versión esencial/reducida, añadir label discreta
     sesion_tipo = '· Sesión ajustada' if entreno.modo_reducido else None
 
+    # El detalle por serie es la autoridad solo cuando existe: allí podemos
+    # recuperar el multiplicador bilateral de snapshots antiguos. Para un
+    # cierre legacy sin series no reconstruimos un volumen desde agregados
+    # heterogéneos; se conserva su total persistido, que es su contrato.
+    hay_series_detalladas = entreno.series.filter(
+        completado=True, es_aproximacion=False,
+    ).exists()
+    volumen_canonico = (
+        float(entreno.calcular_volumen_total()) if hay_series_detalladas else None
+    )
+
     if sesion:
         n_ejercicios_persistidos = len(ejercicios)
         # numero_ejercicios se calcula al final del guardado desde los
@@ -429,7 +440,11 @@ def _resumen_sesion(entreno, ejercicios):
             'n_series': sesion.series_completadas or n_series_calculado,
             'rpe_medio': sesion.rpe_medio,
             'duracion_minutos': sesion.duracion_minutos or entreno.duracion_minutos,
-            'volumen_kg': float(sesion.volumen_sesion or entreno.volumen_total_kg or 0),
+            'volumen_kg': (
+                volumen_canonico
+                if volumen_canonico is not None
+                else float(sesion.volumen_sesion or entreno.volumen_total_kg or 0)
+            ),
             'sesion_tipo': sesion_tipo,
             **calcular_metricas_unidades(entreno, ejercicios),
         }
@@ -439,7 +454,11 @@ def _resumen_sesion(entreno, ejercicios):
         'n_series': n_series_calculado,
         'rpe_medio': None,
         'duracion_minutos': entreno.duracion_minutos,
-        'volumen_kg': float(entreno.volumen_total_kg or 0),
+        'volumen_kg': (
+            volumen_canonico
+            if volumen_canonico is not None
+            else float(entreno.volumen_total_kg or 0)
+        ),
         'sesion_tipo': sesion_tipo,
         **calcular_metricas_unidades(entreno, ejercicios),
     }
@@ -464,7 +483,32 @@ def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallba
     return float(peso), reps
 
 
+def _metricas_comparables_por_unidad(entreno, nombre_ejercicio, tipo_progresion):
+    """Extrae la magnitud comparable sin traducir segundos/metos a reps."""
+    series = [
+        serie for serie in SerieRealizada.objects.filter(
+            entreno=entreno, completado=True, es_aproximacion=False,
+        ).select_related('ejercicio')
+        if normalizar_ejercicio(serie.ejercicio.nombre)
+        == normalizar_ejercicio(nombre_ejercicio)
+    ]
+    if not series:
+        return None
+    if tipo_progresion == 'progresion_tiempo':
+        return {'tipo': 'tiempo', 'segundos': sum(int(serie.repeticiones or 0) for serie in series)}
+    if tipo_progresion == 'progresion_distancia':
+        metros = [float(serie.distancia_metros or 0) for serie in series]
+        return {
+            'tipo': 'distancia',
+            'metros_por_serie': sum(metros) / len(metros),
+            'carga_total_kg': max((float(serie.carga_total_efectiva_kg) for serie in series), default=0),
+        }
+    return None
+
+
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
+    from rutinas.models import EjercicioBase
+
     cambios = []
     for ej in ejercicios:
         if ej.es_tope_maquina:
@@ -483,6 +527,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # el otro rango de reps con su peso naturalmente más ligero/pesado.
         # Se busca la ocurrencia anterior más reciente cuyas reps reales sean
         # compatibles con las de hoy (ver reps_compatibles_con_objetivo).
+        tipo_progresion = (
+            EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
+            .values_list('tipo_progresion', flat=True).first()
+            or 'peso_reps'
+        )
         peso_hoy, reps_hoy = _rendimiento_representativo(
             entreno, ej.nombre_ejercicio, ej.peso_kg, ej.repeticiones,
         )
@@ -503,6 +552,40 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 peso_anterior = peso_candidato
                 break
         if anterior is None:
+            continue
+
+        # La comparación de tiempo/distancia tiene su propia unidad. El peso
+        # solo contextualiza el transporte: no sustituye los metros logrados.
+        actual_unidad = _metricas_comparables_por_unidad(
+            entreno, ej.nombre_ejercicio, tipo_progresion,
+        )
+        anterior_unidad = _metricas_comparables_por_unidad(
+            anterior.entreno, anterior.nombre_ejercicio, tipo_progresion,
+        )
+        if actual_unidad and anterior_unidad and actual_unidad['tipo'] == 'tiempo':
+            actual = actual_unidad['segundos']
+            previo = anterior_unidad['segundos']
+            detalle = f'{actual:g} s totales'
+            if actual != previo:
+                detalle += f' (antes {previo:g} s)'
+            cambios.append({
+                'nombre': ej.nombre_ejercicio,
+                'tipo': 'tiempo',
+                'detalle': detalle,
+            })
+            continue
+        if actual_unidad and anterior_unidad and actual_unidad['tipo'] == 'distancia':
+            actual = actual_unidad['metros_por_serie']
+            previo = anterior_unidad['metros_por_serie']
+            carga = actual_unidad['carga_total_kg']
+            detalle = f'{actual:g} m/serie · {carga:g} kg total'
+            if actual != previo:
+                detalle += f' (antes {previo:g} m/serie)'
+            cambios.append({
+                'nombre': ej.nombre_ejercicio,
+                'tipo': 'distancia',
+                'detalle': detalle,
+            })
             continue
 
         diff = round(peso_hoy - peso_anterior, 2)
