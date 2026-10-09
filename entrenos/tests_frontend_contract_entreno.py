@@ -19,6 +19,12 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("if(comp>=total && total>0)", self.source)
         self.assertIn("pill.classList.add('hecha')", self.source)
 
+    def test_cierre_distingue_revision_de_guardado_definitivo(self):
+        """El CTA fijo abre una revisión; solo el modal confirma el guardado."""
+        self.assertIn('id="btn-mostrar-resumen"', self.source)
+        self.assertIn('<span>Revisar y finalizar</span>', self.source)
+        self.assertIn('id="btn-confirmar-guardar">Guardar entrenamiento</button>', self.source)
+
     def test_calculadora_unica_no_afirma_igualdad_si_hay_resto(self):
         self.assertEqual(self.source.count("function calcularDesgloseDiscos("), 1)
         self.assertIn("0.5,0.25", self.source)
