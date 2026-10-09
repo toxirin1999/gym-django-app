@@ -1509,9 +1509,9 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{{ ejercicio.repeticiones }} m</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
-        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — mismo peso, una rep más">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} reps</span>
+        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m{% else %}reps{% endif %}</span>
         {% endif %}
         {% if ejercicio.estancado %}
         <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
@@ -1769,7 +1769,16 @@ body{background:
           </div>
         </div>
         {% endif %}
-      {% if ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
+      {% if ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
+      <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
+        <span class="peso-ultima-vez__label">Última vez</span>
+        <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
+        <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
+        {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} m objetivo</span>
+        {% endif %}
+      </div>
+      {% elif ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
@@ -1780,15 +1789,6 @@ body{background:
           <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
         {% elif ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
-        {% endif %}
-      </div>
-      {% elif ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
-      <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
-        <span class="peso-ultima-vez__label">Última vez</span>
-        <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
-        <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
-        {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} m objetivo</span>
         {% endif %}
       </div>
       {% endif %}
@@ -2607,7 +2607,9 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   const rpeObj  = parseFloat(panelSig.dataset.rpeObj  || rpe);
   const repsObj = parseFloat(panelSig.dataset.repsObj || reps);
   const usaPeso = panelSig.dataset.usaPeso === '1';
-  if (!usaPeso) return;
+  const usaDistancia = panelSig.dataset.usaDistancia === '1';
+  // Los metros no son reps: no se altera el peso del Farmer por esa métrica.
+  if (!usaPeso || usaDistancia) return;
 
   // Tope activo: congelar peso, no sugerir subida
   const topeInput = document.getElementById('tope-'+fid);

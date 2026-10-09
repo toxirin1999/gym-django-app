@@ -187,14 +187,20 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertIn('data-plan-id="{}"'.format(self.columna.pk), content)
         self.assertNotIn('class="plan-action"', content)
 
-    def test_navegacion_mantiene_iconos_y_ahora_como_estado_activo(self):
-        response = self.client.get(reverse("estiramientos:panel"))
+    def test_navegacion_usa_el_componente_compartido_y_marca_rutina_activa(self):
+        plantilla = (
+            Path(__file__).resolve().parent
+            / "templates/estiramientos/panel.html"
+        ).read_text()
+        componente = (
+            Path(__file__).resolve().parents[1]
+            / "templates/includes/bottom_nav.html"
+        ).read_text()
 
-        self.assertContains(response, 'class="mv-bottom-nav__icon"')
-        self.assertContains(
-            response,
-            'class="mv-bottom-nav__item is-active" aria-current="page"',
-        )
+        self.assertIn("{% include 'includes/bottom_nav.html' with activo='rutina' %}", plantilla)
+        self.assertIn("diario:dashboard_diario", componente)
+        self.assertNotIn("#memoria", plantilla)
+        self.assertNotIn("#vida", plantilla)
 
     def test_la_composicion_editorial_usa_serif_regla_e_iconos_svg_propios(self):
         response = self.client.get(reverse("estiramientos:panel"))
@@ -203,7 +209,7 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         self.assertIn('class="mv-hero__rule"', content)
         self.assertIn('<svg class="mv-hero__cta-icon"', content)
         self.assertIn('<svg class="plan-chevron"', content)
-        self.assertIn('<svg class="mv-bottom-nav__icon"', content)
+        self.assertIn('class="bottom-nav-std__icon"', content)
         self.assertNotIn('fas fa-chevron-right', content)
         self.assertNotIn('fas fa-house', content)
 

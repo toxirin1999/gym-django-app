@@ -29,7 +29,13 @@ urlpatterns = [
     path('joi/', include('joi.urls', namespace='joi')),
     path('estoico/', include('estoico.urls')),
     path('analytics/', include('analytics.urls')),
-    # path('nutricion/', include('nutricion_app_django.urls')),  # Oculto: nutrición no se usa (junio 2026)
+    # Solo se publica el flujo nutricional V2. Las pantallas educativas legacy
+    # permanecen fuera de la superficie pública hasta que se migren.
+    path(
+        'nutricion/',
+        include(('nutricion_app_django.urls_public', 'nutricion_app_django'),
+                namespace='nutricion_app_django'),
+    ),
     path('hyrox/', include('hyrox.urls')), # <-- Módulo Hyrox
     path('rehab/', include('rehab.urls')),
     path('disponibilidad/', include('disponibilidad.urls', namespace='disponibilidad')),

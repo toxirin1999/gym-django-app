@@ -14,9 +14,10 @@
   <style>
     :root {
       --bg: #06070b;
-      --ink: #e8f8ff;
-      --ink-soft: #00e5ff;
-      --ink-mute: #00c8e8;
+      /* La habitación puede ser silenciosa sin pedir esfuerzo visual. */
+      --ink: #f2fbff;
+      --ink-soft: #4eeaff;
+      --ink-mute: #89dff0;
       --accent: #00e5ff;
       --line: rgba(0, 210, 255, 0.35);
     }
@@ -273,7 +274,7 @@
     .postura-zona {
       width: 100%; max-width: 440px;
       margin-top: 0.8rem;
-      opacity: 0.55; transition: opacity 0.4s;
+      opacity: 0.84; transition: opacity 0.4s;
     }
     .postura-zona:focus-within { opacity: 1; }
 
@@ -282,8 +283,8 @@
       line-height: 1.6; color: var(--ink-mute);
       margin-bottom: 0.8rem;
       padding-left: 0.8rem;
-      border-left: 1px solid rgba(0, 220, 255, 0.10);
-      opacity: 0.75;
+      border-left: 1px solid rgba(78, 234, 255, 0.42);
+      opacity: 0.92;
     }
 
     .postura-input-wrap {
@@ -357,22 +358,22 @@
     }
     .narrativa-larga {
       font-size: 0.75rem;
-      color: var(--ink);
-      opacity: 0.48;
+      color: var(--ink-soft);
+      opacity: 0.82;
       margin-top: 0.8rem;
     }
     .narrativa-media {
       font-size: 0.85rem;
       color: var(--ink);
-      opacity: 0.68;
+      opacity: 0.86;
     }
 
     /* ── LIQUID GLASS — mensaje panel (compacto) ── */
     .joi-mensaje-wrap {
       backdrop-filter: blur(16px) saturate(1.4);
       -webkit-backdrop-filter: blur(16px) saturate(1.4);
-      background: rgba(6, 7, 14, 0.35);
-      border: 1px solid rgba(140, 195, 230, 0.09);
+      background: rgba(6, 11, 18, 0.76);
+      border: 1px solid rgba(140, 195, 230, 0.28);
       border-radius: 20px;
       padding: 1.8rem 1.6rem 1.6rem;
     }
@@ -934,7 +935,7 @@
 </div>
 
 
-<a href="/clientes/mockup-demo/" class="nav-fijo left">← panel</a>
+<a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="nav-fijo left">← ahora</a>
 <nav class="joi-coords" style="position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:100;">
   <a href="/joi/habitacion/" class="activa">habitación</a>
   <span>·</span>

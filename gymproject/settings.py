@@ -26,7 +26,16 @@ load_dotenv(BASE_DIR / '.env')
 SECRET_KEY = os.environ['SECRET_KEY']
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DEBUG', 'False') == 'True'
+#
+# ``DEBUG=True`` must never be enough to expose Django's technical error page
+# in a deployed environment.  Local development keeps opting in through
+# ``settings_local.py``; an explicit development environment is additionally
+# required when this base settings module is used directly.
+APP_ENVIRONMENT = os.environ.get('APP_ENVIRONMENT', 'production').strip().lower()
+DEBUG = (
+    APP_ENVIRONMENT in {'development', 'dev', 'local'}
+    and os.environ.get('DEBUG', 'False') == 'True'
+)
 
 # Liftin se conserva como fuente histórica, pero su superficie operativa queda
 # archivada. El flag permite una reversión explícita sin renombrar URLs.

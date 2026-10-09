@@ -282,6 +282,20 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('id="routine-day-modal"', plantilla)
         self.assertNotIn('href="{{ calendario_url }}?año={{ dia.fecha.year }}', plantilla)
 
+    def test_selector_hace_visible_el_dia_elegido_y_anuncia_la_preview(self):
+        """Pulsar un día no puede parecer un control inerte antes del modal."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('aria-pressed="{% if dia.es_hoy %}true{% else %}false{% endif %}"', plantilla)
+        self.assertIn('class="selector-status" data-day-selection aria-live="polite"', plantilla)
+        self.assertIn("function seleccionarDia(button, preview)", plantilla)
+        self.assertIn("day.classList.toggle('is-selected', selected)", plantilla)
+        self.assertIn("seleccionarDia(button, preview);", plantilla)
+
     def test_selector_consulta_el_contrato_ajax_del_calendario_para_el_dia_elegido(self):
         """La preview móvil no duplica el plan: lee el mismo JSON del calendario.
 

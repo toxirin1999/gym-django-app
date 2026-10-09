@@ -29,7 +29,7 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
-        self.assertIn('🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
+        self.assertIn('🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m', self.source)
 
     def test_tiempo_no_se_suma_como_repeticiones_en_modal(self):
         self.assertIn("const usaTiempo = document.getElementById('card-'+fid)?.dataset.usaTiempo === '1';", self.source)
@@ -55,8 +55,10 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("Es aproximación", self.source)
         self.assertIn("No cuenta como trabajo", self.source)
         self.assertIn("actualizarControlAproximacion", self.source)
-        self.assertIn("padding-bottom:calc(112px + env(safe-area-inset-bottom) + 32px)", self.source)
-        self.assertIn("calc(32px + env(safe-area-inset-bottom))", self.source)
+        # El pie fijo incluye la barra de sesión, el área segura y una zona de
+        # respiración para que la última serie nunca quede tapada.
+        self.assertIn("padding-bottom:calc(128px + env(safe-area-inset-bottom) + 32px)", self.source)
+        self.assertIn("padding-bottom:calc(96px + env(safe-area-inset-bottom))", self.source)
 
     def test_feedback_de_serie_separa_tecnica_y_cumplimiento(self):
         self.assertIn("function feedbackSerieHTML", self.source)
@@ -80,6 +82,12 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
+
+    def test_distancia_no_se_presenta_ni_autoregula_como_repeticiones(self):
+        self.assertIn("{% elif ejercicio.usa_distancia %}<span class=\"chip-n\">{{ ejercicio.repeticiones }} m</span>", self.source)
+        self.assertIn("🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m", self.source)
+        self.assertIn("const usaDistancia = panelSig.dataset.usaDistancia === '1';", self.source)
+        self.assertIn("if (!usaPeso || usaDistancia) return;", self.source)
 
     def test_referencia_ultima_sesion_es_parte_del_flujo_de_registro(self):
         """La referencia queda entre carga/reps y RPE, no oculta en historial."""
