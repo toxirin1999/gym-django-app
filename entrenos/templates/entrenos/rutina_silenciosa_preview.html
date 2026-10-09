@@ -23,7 +23,7 @@
   </main>
   {{ semana|json_script:"routine-day-previews" }}
   <dialog id="routine-day-modal" role="dialog" aria-modal="true" aria-labelledby="routine-day-title"><div class="modal-inner"><div class="modal-top"><div><span id="routine-day-kind" class="mono label">Sesión</span><h2 id="routine-day-title" class="modal-title"></h2><p id="routine-day-date" class="modal-date"></p></div><button class="modal-close" type="button" aria-label="Cerrar previsualización" data-modal-close>×</button></div><div id="routine-day-exercises" class="exercise-list"></div><p id="routine-day-empty" class="empty-preview" hidden></p><div class="modal-actions"><button class="close-text" type="button" data-modal-close>Cerrar</button><a id="routine-day-cta" class="cta" href=""></a></div></div></dialog>
-  <nav aria-label="Navegación principal"><ul><li><a href="{% url 'clientes:dashboard_silencioso_preview' %}"><b>●</b><strong>Ahora</strong></a></li><li><a aria-current="page" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}"><b>▦</b><strong>Rutina</strong></a></li><li><a href="{% url 'clientes:trayectoria_plan' %}"><b>▣</b><strong>Plan</strong></a></li><li><a href="{{ memoria_url }}"><b>▤</b><strong>Memoria</strong></a></li><li><a href="{{ vida_url }}"><b>♡</b><strong>Vida</strong></a></li></ul></nav>
+  {% include 'includes/bottom_nav.html' with activo='rutina' %}
   <script>
     (() => {
       const previews = JSON.parse(document.getElementById('routine-day-previews').textContent).map(day => day.preview);

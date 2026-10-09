@@ -572,13 +572,7 @@
 
 </main>
 
-<nav class="mem-nav" aria-label="Navegación principal">
-  <a href="{% url 'clientes:dashboard_silencioso_preview' %}"><span class="mem-nav-icon" aria-hidden="true">⌂</span>Ahora</a>
-  <a href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}"><span class="mem-nav-icon" aria-hidden="true">⌁</span>Rutina</a>
-  <a href="{% url 'clientes:trayectoria_plan' %}"><span class="mem-nav-icon" aria-hidden="true">▣</span>Plan</a>
-  <a aria-current="page" href="{% url 'clientes:memoria_entrenador' cliente.id %}"><span class="mem-nav-icon" aria-hidden="true">▤</span>Memoria</a>
-  <a href="{% url 'diario:dashboard_diario' %}"><span class="mem-nav-icon" aria-hidden="true">♡</span>Vida</a>
-</nav>
+{% include 'includes/bottom_nav.html' with activo='memoria' %}
 
 <script>
 (function(){

@@ -36,9 +36,7 @@ class MemoriaEntrenadorUITests(TestCase):
     def test_plantilla_fija_nav_global_y_secciones_de_profundidad(self):
         plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
 
-        self.assertIn("{% url 'clientes:dashboard_silencioso_preview' %}", plantilla)
-        self.assertIn("{% url 'clientes:trayectoria_plan' %}", plantilla)
-        self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", plantilla)
+        self.assertIn("{% include 'includes/bottom_nav.html' with activo='memoria' %}", plantilla)
         self.assertIn('mem-depth', plantilla)
         self.assertIn('<details', plantilla)
 

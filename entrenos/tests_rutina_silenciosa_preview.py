@@ -331,7 +331,4 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text()
 
-        self.assertIn(
-            "href=\"{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}\"",
-            plantilla,
-        )
+        self.assertIn("{% include 'includes/bottom_nav.html' with activo='rutina' %}", plantilla)
