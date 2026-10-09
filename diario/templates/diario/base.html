@@ -435,6 +435,12 @@
             color: var(--section-color);
             text-shadow: 0 0 10px var(--section-color);
         }
+
+        .diario-feedback__primary { margin-bottom: 0; }
+        .diario-feedback__more { margin-top: .6rem; }
+        .diario-feedback__more summary { width: fit-content; cursor: pointer; color: var(--cyber-primary); font-family: var(--font-primary); font-size: .65rem; letter-spacing: .08em; text-transform: uppercase; }
+        .diario-feedback__list { display: grid; gap: .6rem; margin-top: .6rem; }
+        .diario-feedback__list .alert { margin: 0; opacity: .86; }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -491,12 +497,14 @@
     <!-- Contenido Principal -->
     <main class="cyber-container">
         {% if messages %}
+            <div class="diario-feedback" aria-live="polite">
             {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate-fade-in" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
+                {% if forloop.first %}<div class="alert alert-{{ message.tags }} alert-dismissible fade show animate-fade-in diario-feedback__primary" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endif %}
+                {% if forloop.counter == 2 %}<details class="diario-feedback__more"><summary>Ver {{ forloop.revcounter }} avisos más</summary><div class="diario-feedback__list">{% endif %}
+                {% if not forloop.first %}<div class="alert alert-{{ message.tags }} alert-dismissible fade show animate-fade-in" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>{% endif %}
+                {% if forloop.last and not forloop.first %}</div></details>{% endif %}
             {% endfor %}
+            </div>
         {% endif %}
 
         {% block content %}{% endblock %}

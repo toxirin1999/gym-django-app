@@ -38,6 +38,12 @@
         .diario-nav .navbar-toggler { border-color: rgba(235, 226, 208, .18); }
         .diario-nav .navbar-toggler:focus-visible { outline: 2px solid #d2b777; outline-offset: 3px; box-shadow: none; }
         .diario-main { min-height: calc(100vh - 68px); }
+        .diario-feedback { max-width: 1120px; }
+        .diario-feedback__primary { margin-bottom: 0; border-color: rgba(196, 163, 101, .3); background: rgba(196, 163, 101, .08); color: #e8dfd1; }
+        .diario-feedback__more { margin-top: .55rem; color: #aaa399; }
+        .diario-feedback__more summary { width: fit-content; cursor: pointer; color: #cdb77e; font: 700 .66rem/1.4 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+        .diario-feedback__list { display: grid; gap: .55rem; margin-top: .55rem; }
+        .diario-feedback__list .alert { margin: 0; opacity: .82; }
         .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 2000; padding: .7rem 1rem; color: #111; background: #e2c98f; }
         .skip-link:focus { top: 1rem; }
         @media (max-width: 991.98px) {
@@ -97,8 +103,13 @@
     </nav>
     <main id="contenido-diario" class="diario-main">
         {% if messages %}
-        <div class="container pt-3" aria-live="polite">
-            {% for message in messages %}<div class="alert alert-{{ message.tags }}" role="status">{{ message }}</div>{% endfor %}
+        <div class="container pt-3 diario-feedback" aria-live="polite">
+            {% for message in messages %}
+                {% if forloop.first %}<div class="alert alert-{{ message.tags }} diario-feedback__primary" role="status">{{ message }}</div>{% endif %}
+                {% if forloop.counter == 2 %}<details class="diario-feedback__more"><summary>Ver {{ forloop.revcounter }} avisos más</summary><div class="diario-feedback__list">{% endif %}
+                {% if not forloop.first %}<div class="alert alert-{{ message.tags }}" role="status">{{ message }}</div>{% endif %}
+                {% if forloop.last and not forloop.first %}</div></details>{% endif %}
+            {% endfor %}
         </div>
         {% endif %}
         {% block content %}{% endblock %}
