@@ -2264,7 +2264,7 @@ def widget_acwr(request, cliente_id):
     from django.shortcuts import get_object_or_404
     import json as _json
 
-    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     hoy = timezone.now().date()
 
     # analizar_acwr_unificado cachea internamente (misma clave que el resto
@@ -4307,11 +4307,12 @@ def obtener_estadisticas_plan_anual(cliente):
 
 
 # MODIFICAR tu vista existente del dashboard para incluir estos datos
+@login_required
 def dashboard_cliente(request, cliente_id):
     """
     Vista del dashboard del cliente - MODIFICAR tu vista existente
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     # ... tu lógica existente ...
 
@@ -4526,7 +4527,7 @@ def vista_educacion_helms(request, cliente_id):
     """
     Muestra una página educativa que explica los principios del plan del cliente.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     # Determinar el nivel educativo del cliente
     if cliente.experiencia_años < 1:
@@ -5110,7 +5111,7 @@ def vista_educacion_helms(request, cliente_id):
     Muestra una página educativa que explica los principios del plan del cliente,
     adaptada a su nivel de experiencia.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     # 1. Determinar el nivel educativo del cliente basándose en sus años de experiencia.
     #    Usamos la misma lógica que en el planificador para mantener la consistencia.
@@ -5280,7 +5281,7 @@ def memoria_entrenador(request, cliente_id):
     from datetime import timedelta, date
     from django.db.models import Avg, Max, Count
 
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     hoy = date.today()
     hace_28 = hoy - timedelta(days=28)
     hace_90 = hoy - timedelta(days=90)

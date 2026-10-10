@@ -33,6 +33,8 @@ class LegacyClientScopeTests(TestCase):
             reverse('clientes:lista_revisiones', args=[self.owner_cliente.id]),
             reverse('clientes:agregar_revision', args=[self.owner_cliente.id]),
             reverse('clientes:definir_objetivo', args=[self.owner_cliente.id]),
+            reverse('clientes:vista_educacion_helms', args=[self.owner_cliente.id]),
+            reverse('clientes:memoria_entrenador', args=[self.owner_cliente.id]),
         ]
 
     def test_legacy_client_routes_require_login_and_hide_other_clients(self):
