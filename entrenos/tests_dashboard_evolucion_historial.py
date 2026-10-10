@@ -162,6 +162,21 @@ class ChipSesionNormalSinRegresionTest(DashboardEvolucionHistorialBase):
         self.assertNotIn('Sesión abierta sin ejercicios registrados', tab_historial)
 
 
+class HistorialSinSesionesTests(DashboardEvolucionHistorialBase):
+    """Un historial vacío debe conservar una acción de inicio."""
+
+    def test_historial_vacio_lleva_a_la_rutina(self):
+        _, html = self._get_html()
+
+        tab_historial = self._extraer_tab(html, 'rb-tab-historial')
+        self.assertIn('No hay sesiones registradas', tab_historial)
+        self.assertIn('Ver tu rutina', tab_historial)
+        self.assertIn(
+            reverse('entrenos:rutina_silenciosa_preview', args=[self.cliente.id]),
+            tab_historial,
+        )
+
+
 class NoContaminacionContratoTest(TestCase):
     """Test 6: una sesión incompleta no altera progresion_ejercicios,
     estancamientos/coach_data ni decision_logs."""

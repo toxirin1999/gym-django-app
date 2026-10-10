@@ -1273,7 +1273,7 @@ body {
             </div>
           </div>
           {% empty %}
-          <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>No hay sesiones registradas</p></div>
+          <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>No hay sesiones registradas</p><a class="rb-btn rb-btn-primary rb-btn-sm" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver tu rutina <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
           {% endfor %}
         </div>
       </div>

@@ -93,7 +93,15 @@
         </div>
     </div>
     {% empty %}
-    <p class="text-white">No hay entrenamientos registrados.</p>
+    <section class="bg-[#1a1a1a] text-white rounded-2xl p-6 mb-6 shadow-lg text-center" aria-labelledby="historial-vacio-title">
+        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2">Historial</p>
+        <h2 id="historial-vacio-title" class="text-xl font-bold">Todavía no hay entrenamientos registrados</h2>
+        <p class="mt-2 text-gray-300">Cuando completes una sesión aparecerá aquí con sus series y esfuerzo.</p>
+        <a href="{% url 'clientes:dashboard_silencioso_preview' %}"
+           class="inline-flex mt-5 bg-[#32FF00] hover:bg-lime-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1a1a1a] focus:ring-[#32FF00] text-black font-bold px-4 py-2 rounded-lg">
+            Ver rutina de hoy <span class="ml-2" aria-hidden="true">→</span>
+        </a>
+    </section>
     {% endfor %}
 
 
