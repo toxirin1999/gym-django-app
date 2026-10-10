@@ -34,3 +34,16 @@ class EntrenosFiltradosScopeTests(TestCase):
 
         self.assertContains(response, self.user.cliente_perfil.nombre)
         self.assertContains(response, self.other.cliente_perfil.nombre)
+
+    def test_empty_range_offers_safe_actions_to_regular_user(self):
+        EntrenoRealizado.objects.all().delete()
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(
+            response.context['historial_filtrado_cliente_id'],
+            self.user.cliente_perfil.id,
+        )
+        self.assertContains(response, 'Ver rutina disponible')
+        self.assertContains(response, 'Registrar actividad libre')

@@ -23,7 +23,16 @@
     </tbody>
 </table>
 {% else %}
-<p>No hay entrenamientos registrados en este período.</p>
+<section class="card border-0 shadow-sm p-4 text-center" aria-labelledby="historial-vacio-title">
+    <h3 id="historial-vacio-title" class="h5">No hay entrenamientos registrados en este período.</h3>
+    {% if historial_filtrado_cliente_id %}
+    <p class="text-muted mb-3">Puedes abrir tu rutina disponible o registrar una actividad libre.</p>
+    <div class="d-flex flex-wrap justify-content-center gap-2">
+        <a href="{% url 'entrenos:rutina_silenciosa_preview' historial_filtrado_cliente_id %}" class="btn btn-primary">Ver rutina disponible</a>
+        <a href="{% url 'entrenos:registrar_actividad_libre' historial_filtrado_cliente_id %}" class="btn btn-outline-secondary">Registrar actividad libre</a>
+    </div>
+    {% endif %}
+</section>
 {% endif %}
 
 <a href="{% url 'dashboard' %}" class="btn btn-secondary mt-4">⬅ Volver al panel</a>

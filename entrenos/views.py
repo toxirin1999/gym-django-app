@@ -838,13 +838,18 @@ def entrenos_filtrados(request, rango):
         titulo = "Todos los entrenamientos"
 
     queryset = queryset.select_related('cliente', 'rutina')
+    cliente = None
     if not (request.user.is_staff or request.user.is_superuser):
-        queryset = queryset.filter(cliente__user=request.user)
+        cliente = get_object_or_404(Cliente, user=request.user)
+        queryset = queryset.filter(cliente=cliente)
     queryset = queryset.order_by('-fecha')
 
     return render(request, 'entrenos/entrenos_filtrados.html', {
         'entrenos': queryset,
-        'titulo': titulo
+        'titulo': titulo,
+        'cliente': cliente,
+        # Nombre específico para no colisionar con los context processors globales.
+        'historial_filtrado_cliente_id': cliente.id if cliente else None,
     })
 
 
