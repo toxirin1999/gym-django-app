@@ -37,7 +37,7 @@
         <td>{{ r.peso_corporal }}</td>
         <td>{{ r.grasa_corporal }}</td>
         <td>
-            <form method="post" action="{% url 'eliminar_revision' r.id %}"
+            <form method="post" action="{% url 'clientes:eliminar_revision' r.id %}"
                   onsubmit="return confirm('¿Eliminar esta revisión?');">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-sm btn-outline-danger">🗑 Eliminar</button>
@@ -105,6 +105,6 @@
 </script>
 
 
-<a href="{% url 'agregar_revision' cliente.id %}" class="btn btn-primary mt-3">Añadir Nueva Revisión</a>
-<a href="{% url 'detalle_cliente' cliente.id %}" class="btn btn-secondary mt-3 ms-2">← Volver al detalle del cliente</a>
+<a href="{% url 'clientes:agregar_revision' cliente.id %}" class="btn btn-primary mt-3">Añadir Nueva Revisión</a>
+<a href="{% url 'clientes:detalle_cliente' cliente.id %}" class="btn btn-secondary mt-3 ms-2">← Volver al detalle del cliente</a>
 {% endblock %}

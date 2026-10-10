@@ -2525,8 +2525,9 @@ def calcular_plan_nutricional(request):
     return render(request, 'nutricion/calcular_plan_nutricional.html', {'form': form})
 
 
+@login_required
 def exportar_historial(request, cliente_id):
-    cliente = Cliente.objects.get(pk=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     # Aquí puedes generar PDF o Excel, por ahora solo devolvemos texto
     return HttpResponse(f"Exportando historial de {cliente.nombre}")
 
@@ -2561,7 +2562,7 @@ def generar_retos_semanales(cliente):
 
 @login_required
 def historial_cliente(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     historial = EntrenoRealizado.objects.filter(cliente=cliente).prefetch_related(
         'detalles_ejercicio__ejercicio').order_by('-fecha')
 
@@ -2624,33 +2625,38 @@ def historial_cliente(request, cliente_id):
 
 
 @login_required
+@require_POST
 def eliminar_revision(request, revision_id):
     revision = get_object_or_404(RevisionProgreso, id=revision_id)
+    _obtener_cliente_autorizado(request, revision.cliente_id)
     cliente_id = revision.cliente.id
     revision.delete()
-    return redirect('lista_revisiones', cliente_id=cliente_id)
+    return redirect('clientes:lista_revisiones', cliente_id=cliente_id)
 
 
 @login_required
+@require_POST
 def eliminar_objetivo(request, pk):
     objetivo = get_object_or_404(ObjetivoCliente, pk=pk)
+    _obtener_cliente_autorizado(request, objetivo.cliente_id)
     cliente_id = objetivo.cliente.id
     objetivo.delete()
     messages.success(request, "Objetivo eliminado.")
-    return redirect('detalle_cliente', cliente_id=cliente_id)
+    return redirect('clientes:detalle_cliente', cliente_id=cliente_id)
 
 
 @login_required
 def editar_objetivo(request, pk):
     objetivo = get_object_or_404(ObjetivoCliente, pk=pk)
     cliente = objetivo.cliente
+    _obtener_cliente_autorizado(request, cliente.id)
 
     if request.method == 'POST':
         form = ObjetivoClienteForm(request.POST, instance=objetivo, cliente=cliente)
         if form.is_valid():
             form.save()
             messages.success(request, "Objetivo actualizado.")
-            return redirect('detalle_cliente', cliente_id=cliente.id)
+            return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
     else:
         form = ObjetivoClienteForm(request.POST, instance=objetivo, cliente=cliente)
 
@@ -2663,7 +2669,7 @@ def editar_objetivo(request, pk):
 
 @login_required
 def definir_objetivo(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     if request.method == 'POST':
         form = ObjetivoClienteForm(request.POST, cliente=cliente)
@@ -2672,7 +2678,7 @@ def definir_objetivo(request, cliente_id):
             objetivo.cliente = cliente
             objetivo.save()
             messages.success(request, "Objetivo guardado.")
-            return redirect('detalle_cliente', cliente_id=cliente.id)
+            return redirect('clientes:detalle_cliente', cliente_id=cliente.id)
     else:
         form = ObjetivoClienteForm()
 
@@ -2682,6 +2688,7 @@ def definir_objetivo(request, cliente_id):
     })
 
 
+@gestor_clientes_required
 @require_GET
 def datos_comparacion(request):
     ids = request.GET.getlist('ids[]')
@@ -2710,14 +2717,16 @@ def datos_comparacion(request):
     return JsonResponse(data, safe=False)
 
 
+@gestor_clientes_required
 def comparar_clientes(request):
     clientes = Cliente.objects.all()
     return render(request, 'clientes/comparar.html', {'clientes': clientes})
 
 
+@login_required
 @require_GET
 def datos_graficas(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     revisiones = RevisionProgreso.objects.filter(cliente=cliente).order_by('fecha')
 
     start = request.GET.get('start')
@@ -2740,8 +2749,9 @@ def datos_graficas(request, cliente_id):
     return JsonResponse(data)
 
 
+@login_required
 def lista_revisiones(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     revisiones = cliente.revisiones.order_by('fecha')
 
     start_date = request.GET.get('start')
@@ -2768,14 +2778,14 @@ def lista_revisiones(request, cliente_id):
 
 @login_required
 def agregar_revision(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     if request.method == 'POST':
         form = RevisionProgresoForm(request.POST)
         if form.is_valid():
             revision = form.save(commit=False)
             revision.cliente = cliente
             revision.save()
-            return redirect('lista_revisiones', cliente_id=cliente.id)
+            return redirect('clientes:lista_revisiones', cliente_id=cliente.id)
     else:
         form = RevisionProgresoForm()
     return render(request, 'clientes/agregar_revision.html', {'form': form, 'cliente': cliente})
@@ -4065,13 +4075,14 @@ def asignar_programa_a_cliente(request, programa_id):
 
 
 @login_required
+@require_POST
 def actualizar_recordatorio_peso(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     fecha = request.POST.get("proximo_registro_peso")
     if fecha:
         cliente.proximo_registro_peso = fecha
         cliente.save()
-    return HttpResponseRedirect(reverse("detalle_cliente", args=[cliente.id]))
+    return HttpResponseRedirect(reverse("clientes:detalle_cliente", args=[cliente.id]))
 
 
 from django.shortcuts import render

@@ -643,7 +643,10 @@ a:focus-visible, button:focus-visible {
         <div style="display:flex;align-items:center;gap:8px;">
           <span class="sv" style="font-size:13px;">{{ obj.valor }}</span>
           <a href="{% url 'clientes:editar_objetivo' obj.id %}" style="color:var(--ink-3);font-size:11px;"><i class="fas fa-pencil-alt"></i></a>
-          <a href="{% url 'clientes:eliminar_objetivo' obj.id %}" style="color:var(--danger);font-size:11px;" onclick="return confirm('¿Eliminar?');"><i class="fas fa-trash"></i></a>
+          <form method="post" action="{% url 'clientes:eliminar_objetivo' obj.id %}" style="display:inline;" onsubmit="return confirm('¿Eliminar este objetivo?');">
+            {% csrf_token %}
+            <button type="submit" aria-label="Eliminar objetivo de {{ obj.get_medida_display }}" style="color:var(--danger);font-size:11px;background:none;border:0;padding:0;cursor:pointer;"><i class="fas fa-trash" aria-hidden="true"></i></button>
+          </form>
         </div>
       </div>
       {% endfor %}
