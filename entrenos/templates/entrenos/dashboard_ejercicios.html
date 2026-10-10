@@ -58,8 +58,13 @@
     <!-- ESTADO VACÍO -->
     <div class="empty-state-large">
         <i class="fas fa-dumbbell text-6xl text-gray-600 mb-4" aria-hidden="true"></i>
+        {% if sin_registros_ejercicio %}
+        <h2 class="text-2xl font-bold text-white mb-3">Aún no hay datos analizables</h2>
+        <p class="text-gray-400 mb-6">Tus sesiones todavía no contienen ejercicios analizables. Registra las series de tu próxima rutina para construir una lectura fiable.</p>
+        {% else %}
         <h2 class="text-2xl font-bold text-white mb-3">No hay datos de entrenamientos</h2>
         <p class="text-gray-400 mb-6">Comienza a registrar tus entrenamientos para ver estadísticas detalladas de tu progreso.</p>
+        {% endif %}
         <a href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}" class="btn-primary empty-state-action">
             Ver tu rutina <i class="fas fa-arrow-right" aria-hidden="true"></i>
         </a>

@@ -7343,6 +7343,15 @@ def dashboard_ejercicios(request, cliente_id):
         entreno__cliente=cliente
     ).select_related('entreno').order_by('entreno__fecha')
 
+    # Una sesión cerrada sin ejercicios no aporta señales para el análisis.
+    # Mostrar ceros como si fueran progreso induciría una lectura falsa.
+    if not ejercicios_realizados.exists():
+        return render(request, 'entrenos/dashboard_ejercicios.html', {
+            'cliente': cliente,
+            'sin_datos': True,
+            'sin_registros_ejercicio': True,
+        })
+
     # Agrupar ejercicios por nombre
     ejercicios_agrupados = defaultdict(list)
     for ejercicio in ejercicios_realizados:

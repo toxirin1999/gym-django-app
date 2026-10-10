@@ -5,6 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 
 from clientes.models import Cliente
+from entrenos.models import EntrenoRealizado
+from rutinas.models import Rutina
 
 
 class DashboardEjerciciosEmptyStateTests(TestCase):
@@ -29,3 +31,18 @@ class DashboardEjerciciosEmptyStateTests(TestCase):
             reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id]),
         )
         self.assertContains(response, 'class="btn-primary empty-state-action"')
+
+    def test_sesion_sin_ejercicios_no_se_presenta_como_analitica_a_cero(self):
+        """Una sesión incompleta no es evidencia suficiente para calcular progreso."""
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=Rutina.objects.create(nombre="Rutina sin detalle"),
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.context["sin_datos"])
+        self.assertTrue(response.context["sin_registros_ejercicio"])
+        self.assertContains(response, "todavía no contienen ejercicios analizables")
