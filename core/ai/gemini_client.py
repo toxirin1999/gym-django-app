@@ -1,37 +1,29 @@
-"""
-Central Gemini AI client. Punto único de inicialización y generación de texto.
+"""Cliente único y tolerante a fallo para texto generado con Gemini.
 
-Estado (mayo 2026): usa google.generativeai (SDK legacy).
-Migración a google.genai pendiente de actualizar requirements.txt cuando
-se active Gemini en producción (PythonAnywhere quota).
-
-FutureWarning suprimido aquí para que no se propague a cada módulo.
-
-Para migrar al nuevo SDK:
-  pip install google-genai
-  Cambiar el bloque _setup() para usar google.genai.Client(api_key=...).
+Usa el SDK actual ``google-genai``. La IA sigue siendo opcional: si no está
+instalado el paquete, no hay clave, o la llamada falla, los módulos reciben su
+fallback y el recorrido de entrenamiento no se bloquea.
 """
 import logging
-import warnings
 
 logger = logging.getLogger(__name__)
 
 _genai = None
-
+_types = None
 try:
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", FutureWarning)
-        import google.generativeai as _genai
+    from google import genai as _genai
+    from google.genai import types as _types
 except ImportError:
-    _genai = None
+    pass
 
-_configured = False
+_client = None
 _DEFAULT_MODEL = 'gemini-2.5-flash'
 
 
-def _ensure_configured() -> bool:
-    global _configured
-    if _configured:
+def _ensure_client() -> bool:
+    """Inicializa el cliente bajo demanda, solo cuando hay una clave válida."""
+    global _client
+    if _client is not None:
         return True
     if _genai is None:
         return False
@@ -40,15 +32,14 @@ def _ensure_configured() -> bool:
         api_key = getattr(settings, 'GEMINI_API_KEY', '') or ''
         if not api_key:
             return False
-        _genai.configure(api_key=api_key)
-        _configured = True
+        _client = _genai.Client(api_key=api_key)
         return True
     except Exception:
         return False
 
 
 def is_available() -> bool:
-    """True solo si el SDK está instalado y hay API key configurada."""
+    """True solo si el SDK está instalado y existe una API key configurada."""
     if _genai is None:
         return False
     try:
@@ -66,35 +57,27 @@ def generate_text(
     fallback: str = '',
     timeout: float | None = None,
 ) -> str:
+    """Genera texto o devuelve ``fallback`` sin propagar errores de proveedor.
+
+    ``timeout`` se conserva en la interfaz pública para compatibilidad con los
+    llamadores existentes. El SDK actual gestiona el timeout HTTP en el cliente;
+    ningún llamador del proyecto lo establece hoy.
     """
-    Genera texto con Gemini.
-
-    Devuelve `fallback` si el SDK no está disponible, la API key no está
-    configurada, o se produce cualquier error en la llamada.
-
-    Args:
-        prompt: Texto de entrada para el modelo.
-        system_instruction: Instrucción de sistema (opcional).
-        model: Nombre del modelo Gemini. Por defecto gemini-2.5-flash.
-        fallback: Valor de retorno en caso de fallo.
-        timeout: Timeout en segundos para la llamada HTTP (opcional).
-    """
-    if not is_available():
-        return fallback
-
-    if not _ensure_configured():
+    if not is_available() or not _ensure_client():
         return fallback
 
     try:
-        gemini_model = _genai.GenerativeModel(
-            model,
-            system_instruction=system_instruction or None,
+        config = None
+        if system_instruction:
+            config = _types.GenerateContentConfig(
+                system_instruction=system_instruction,
+            )
+        response = _client.models.generate_content(
+            model=model,
+            contents=prompt,
+            config=config,
         )
-        kwargs: dict = {}
-        if timeout is not None:
-            kwargs['request_options'] = {'retry': None, 'timeout': timeout}
-        response = gemini_model.generate_content(prompt, **kwargs)
         return (response.text or '').strip()
-    except Exception as e:
-        logger.error('[Gemini] Error generando texto: %s', e)
+    except Exception as exc:
+        logger.error('[Gemini] Error generando texto: %s', exc)
         return fallback
