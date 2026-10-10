@@ -68,12 +68,12 @@
     <section class="mobility-decision" data-mobility-decision>
         <p class="mobility-decision__eyebrow">MOVILIDAD · {{ sesion_programada.nombre_sesion }}</p>
         <h2>¿Qué hacemos con tu entrenamiento programado?</h2>
-        <label><input type="radio" name="mobility_resolution" value="anadir" checked> Añadir movilidad y mantenerlo hoy</label>
-        <label><input type="radio" name="mobility_resolution" value="posponer"> Posponer el entrenamiento</label>
-        <label><input type="radio" name="mobility_resolution" value="sustituir"> Sustituirlo por recuperación</label>
-        <label class="mobility-date" hidden>
+        <label><input type="radio" name="mobility_resolution" value="anadir"{% if movilidad_resolucion == 'anadir' %} checked{% endif %}> Añadir movilidad y mantenerlo hoy</label>
+        <label><input type="radio" name="mobility_resolution" value="posponer"{% if movilidad_resolucion == 'posponer' %} checked{% endif %}> Posponer el entrenamiento</label>
+        <label><input type="radio" name="mobility_resolution" value="sustituir"{% if movilidad_resolucion == 'sustituir' %} checked{% endif %}> Sustituirlo por recuperación</label>
+        <label class="mobility-date"{% if movilidad_resolucion != 'posponer' %} hidden{% endif %}>
             Nueva fecha
-            <input type="date" id="mobilityTargetDate">
+            <input type="date" id="mobilityTargetDate" value="{{ movilidad_fecha_destino }}">
         </label>
         <p>Elige después uno de los planes. La decisión viajará al reproductor y solo se aplicará al completar.</p>
         <button type="button" data-primary-action id="mobilityDecisionReady">Decisión preparada</button>

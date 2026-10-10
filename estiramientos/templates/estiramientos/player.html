@@ -17,7 +17,7 @@
     data-completion-url="{% url 'estiramientos:completar_plan' plan.id %}">
 
     <header class="player-topline">
-        <a href="{% url 'estiramientos:panel' %}" class="player-exit" aria-label="Salir de la sesión">
+        <a href="{% url 'estiramientos:panel' %}{% if sesion_programada %}?sesion_programada_id={{ sesion_programada.id }}&amp;resolucion={{ resolucion }}{% if fecha_destino %}&amp;fecha_destino={{ fecha_destino }}{% endif %}{% endif %}" class="player-exit" aria-label="Salir de la sesión y volver a la decisión">
             <span aria-hidden="true">×</span> Salir
         </a>
         <p class="player-plan-name">{{ plan.nombre }}</p>

@@ -244,6 +244,17 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertContains(response, 'Diario')
         self.assertContains(response, 'Hoy')
 
+    def test_vuelta_a_gym_retorna_al_panel_ahora_canonico(self):
+        """Vida no debe devolver al panel heredado tras completar una práctica."""
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(
+            response,
+            reverse('clientes:dashboard_silencioso_preview'),
+        )
+
     def test_dashboard_respeta_reduced_motion_y_tiene_foco_visible(self):
         self.client.force_login(self.user)
         response = self.client.get(reverse('diario:dashboard_diario'))

@@ -117,7 +117,11 @@
           info.append(name, detail); row.append(info); rows.append(row);
         });
         const isRest = preview.tipo === 'descanso';
-        empty.hidden = !isRest; empty.textContent = isRest ? preview.detalle : '';
+        const hasExercises = (preview.ejercicios || []).length > 0;
+        empty.hidden = hasExercises;
+        empty.textContent = isRest
+          ? preview.detalle
+          : 'La sesión está preparada. Ábrela para revisar el detalle antes de empezar.';
         cta.hidden = isRest; cta.href = preview.url || ''; cta.textContent = preview.cta || 'Revisar sesión';
         if (openModal && !modal.open) {
           modal.showModal();

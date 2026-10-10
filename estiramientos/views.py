@@ -57,6 +57,10 @@ def panel_estiramientos(request):
     )
     sesion = None
     sesion_id = request.GET.get("sesion_programada_id")
+    resolucion = request.GET.get("resolucion", "anadir")
+    if resolucion not in {"anadir", "posponer", "sustituir"}:
+        resolucion = "anadir"
+    fecha_destino = request.GET.get("fecha_destino", "")
     if request.user.is_authenticated and sesion_id:
         sesion = get_object_or_404(
             SesionProgramada,
@@ -90,6 +94,12 @@ def panel_estiramientos(request):
         "remaining_mobility_plans": remaining_mobility_plans,
         "sesion_programada": sesion,
         "sesion_hoy": sesion_hoy,
+        # Al salir del reproductor volvemos a este panel con la misma
+        # decisión. Sin ello, una sesión aplazada recuperaba visualmente la
+        # opción "añadir" y el usuario podía guardar otra intención por
+        # accidente.
+        "movilidad_resolucion": resolucion,
+        "movilidad_fecha_destino": fecha_destino,
     })
 
 

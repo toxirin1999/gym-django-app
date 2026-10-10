@@ -93,7 +93,7 @@
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Menú de {{ user.username }}"><i class="far fa-user" aria-hidden="true"></i></a>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="/">Volver a Gym</a></li>
+                            <li><a class="dropdown-item" href="{% url 'clientes:dashboard_silencioso_preview' %}">Volver a Gym</a></li>
                             <li><a class="dropdown-item" href="{% url 'logout' %}">Cerrar sesión</a></li>
                         </ul>
                     </li>

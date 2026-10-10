@@ -393,3 +393,51 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         self.assertIn('Sesión efectiva de hoy: Fuerza reprogramada', html)
         self.assertIn('Hoy</span>', html)
         self.assertIn('→', html)
+
+    def test_detalle_semanal_traduce_estados_sin_convertir_cada_sesion_en_un_cta(self):
+        """El plan informa del calendario; la única acción sigue siendo volver a Ahora."""
+        hoy = date.today()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente,
+            'trayectoria': {
+                'fecha_corte': hoy,
+                'periodizacion': None,
+                'bloque': None,
+                'macrociclo': None,
+                'proximo_hito': None,
+                'semana': {
+                    'inicio': hoy - timedelta(days=hoy.weekday()),
+                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                    'objetivo_sesiones': 4,
+                    'evaluacion': None,
+                    'sesiones': [
+                        {
+                            'nombre': 'Sesión completada', 'estado': 'completada',
+                            'fecha_prevista': hoy - timedelta(days=2),
+                            'fecha_pospuesta': None, 'fecha_efectiva': hoy - timedelta(days=2),
+                            'fecha_realizada': hoy - timedelta(days=2),
+                            'realizada': True, 'completa': True,
+                        },
+                        {
+                            'nombre': 'Sesión reubicada', 'estado': 'pendiente',
+                            'fecha_prevista': hoy - timedelta(days=1),
+                            'fecha_pospuesta': hoy + timedelta(days=1),
+                            'fecha_efectiva': hoy + timedelta(days=1),
+                            'fecha_realizada': None, 'realizada': False, 'completa': False,
+                        },
+                        {
+                            'nombre': 'Sesión futura', 'estado': 'pendiente',
+                            'fecha_prevista': hoy + timedelta(days=2),
+                            'fecha_pospuesta': None, 'fecha_efectiva': hoy + timedelta(days=2),
+                            'fecha_realizada': None, 'realizada': False, 'completa': False,
+                        },
+                    ],
+                },
+            },
+        })
+
+        self.assertIn('Completada', html)
+        self.assertIn('Reprogramada', html)
+        self.assertIn('Pendiente ·', html)
+        self.assertNotIn('>pendiente<', html)
+        self.assertEqual(html.count('<a class="tp-hero-action"'), 1)

@@ -415,6 +415,41 @@ class SeguridadModalidadMovilidadTests(TestCase):
             contenido,
         )
 
+    def test_volver_del_reproductor_conserva_la_decision_de_aplazamiento(self):
+        """Salir no debe borrar una decisión que aún no se ha guardado."""
+        response = self.client.get(
+            reverse("estiramientos:iniciar_plan", args=[self.movilidad.pk]),
+            {
+                "sesion_programada_id": self.sesion.pk,
+                "resolucion": "posponer",
+                "fecha_destino": "2026-09-25",
+            },
+        )
+
+        self.assertContains(
+            response,
+            (
+                f'{reverse("estiramientos:panel")}?sesion_programada_id='
+                f'{self.sesion.pk}&amp;resolucion=posponer&amp;fecha_destino=2026-09-25'
+            ),
+            html=False,
+        )
+        self.assertContains(response, "volver a la decisión")
+
+    def test_panel_restaura_la_decision_de_aplazamiento_al_volver(self):
+        response = self.client.get(
+            reverse("estiramientos:panel"),
+            {
+                "sesion_programada_id": self.sesion.pk,
+                "resolucion": "posponer",
+                "fecha_destino": "2026-09-25",
+            },
+        )
+
+        contenido = response.content.decode()
+        self.assertIn('value="posponer" checked', contenido)
+        self.assertIn('id="mobilityTargetDate" value="2026-09-25"', contenido)
+
     def test_endpoint_adaptativo_rechaza_completar_un_plan_de_estiramientos(self):
         response = self.client.post(
             reverse("estiramientos:completar_plan", args=[self.estiramiento.pk]),

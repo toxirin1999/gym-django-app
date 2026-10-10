@@ -156,6 +156,26 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertLess(plantilla.index(apertura_local), plantilla.index(hidratacion_remota))
         self.assertIn("if (openModal && !modal.open)", plantilla)
 
+    def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
+        """Una sesión materializada sin detalle no puede abrir un modal vacío.
+
+        Puede ocurrir antes de que el calendario legado hidrate los ejercicios
+        o cuando la sesión se creó sin prescripción local. El CTA sigue siendo
+        válido, pero la pantalla debe explicar por qué aún no hay lista.
+        """
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("const hasExercises = (preview.ejercicios || []).length > 0;", plantilla)
+        self.assertIn("empty.hidden = hasExercises;", plantilla)
+        self.assertIn(
+            "La sesión está preparada. Ábrela para revisar el detalle antes de empezar.",
+            plantilla,
+        )
+
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(
