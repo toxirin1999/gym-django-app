@@ -10,12 +10,16 @@ Método
    ``normalizar_zona``: manda el ``grupo_muscular`` registrado (con o sin
    tilde, alias del catálogo); solo si es genérico o falta se infiere por
    el nombre del ejercicio.
-2. Por ejercicio se toma el mejor 1RM estimado (Epley, carga efectiva) en
-   cada ventana. Se descartan cargas de recuperación, series no completadas
-   y registros sin peso.
-3. Un ejercicio cuenta si tiene datos en ambas ventanas. La evolución de la
-   zona es la mediana de sus ejercicios, para que un outlier (+200 % en un
-   accesorio ligero) no domine.
+2. Por ejercicio se toma el mejor 1RM estimado (Epley) en cada ventana,
+   calculado sobre la carga POR UNIDAD (por mano / por lado, tal como se
+   registra en ``peso_kg``). Así un cambio de criterio de registro (antes
+   solo el peso por mano, ahora el total de las dos) no duplica la carga.
+   Se descartan cargas de recuperación, series no completadas y registros
+   sin peso.
+3. Un ejercicio cuenta si tiene datos en ambas ventanas. Un cambio de más
+   de ±``UMBRAL_DUDOSO`` % en un solo periodo es casi siempre un error de
+   registro: se aparta como "dato a revisar" y no entra en la mediana.
+4. La evolución de la zona es la mediana de sus ejercicios fiables.
 """
 import statistics
 import unicodedata
@@ -39,6 +43,8 @@ NOMBRES_ZONA = {
 UMBRAL_RETROCESO = -3.0
 UMBRAL_PROGRESA = 10.0
 UMBRAL_PROGRESA_MUCHO = 30.0
+# Cambio por ejercicio a partir del cual se considera un posible error de registro.
+UMBRAL_DUDOSO = 60.0
 
 # Epley pierde fiabilidad con muchas repeticiones: se limita para no inflar
 # el e1RM de series largas en máquina.
@@ -122,12 +128,26 @@ def _e1rm(carga, reps):
     return carga * (1 + reps / 30.0)
 
 
-def _carga(peso_total_kg, peso_kg, multiplicador):
-    from entrenos.models import _carga_total_efectiva
+def _carga_por_unidad(peso_kg, peso_total_kg, multiplicador):
+    """
+    Carga de una unidad (una mano, un lado, o el total si se registra así).
+
+    ``peso_kg`` es lo que se registra en cada serie y es estable entre
+    criterios de registro; ``peso_total_kg`` solo se usa si falta, dividido
+    entre su multiplicador.
+    """
     try:
-        return float(_carga_total_efectiva(peso_total_kg, peso_kg, multiplicador))
-    except Exception:
-        return float(peso_kg or 0)
+        peso = float(peso_kg or 0)
+    except (TypeError, ValueError):
+        peso = 0.0
+    if peso > 0:
+        return peso
+    try:
+        total = float(peso_total_kg or 0)
+        mult = max(int(multiplicador or 1), 1)
+    except (TypeError, ValueError):
+        return 0.0
+    return total / mult if total > 0 else 0.0
 
 
 def _estado(pct):
@@ -142,9 +162,12 @@ def _estado(pct):
     return 'progresa_mucho'
 
 
-def _lectura(estado, series_semana):
+def _lectura(estado, series_semana, n_dudosos=0):
     """Frase descriptiva y determinista para la fila de cada zona."""
     if estado == 'sin_datos':
+        if n_dudosos:
+            return ('Hay cambios demasiado grandes para ser fiables: '
+                    'revisa cómo se registró el peso de estos ejercicios.')
         if series_semana > 0:
             return 'Lo entrenas, pero no hay ejercicios comparables entre los dos periodos.'
         return 'Sin registros de fuerza en estos periodos.'
@@ -157,10 +180,86 @@ def _lectura(estado, series_semana):
     return 'Tu fuerza estimada ha subido con un volumen ya dentro del rango útil.'
 
 
+def _ventanas(hoy, dias):
+    return hoy - timedelta(days=dias), hoy - timedelta(days=2 * dias)
+
+
+def _filas(cliente, desde, hoy):
+    from entrenos.models import EjercicioRealizado
+    return (
+        EjercicioRealizado.objects
+        .filter(
+            entreno__cliente=cliente,
+            entreno__fecha__gt=desde,
+            entreno__fecha__lte=hoy,
+            completado=True,
+        )
+        .values_list(
+            'entreno__fecha', 'nombre_ejercicio', 'grupo_muscular', 'peso_kg',
+            'peso_total_kg', 'multiplicador_carga', 'tipo_carga', 'repeticiones',
+            'series', 'is_recovery_load',
+        )
+        .order_by('entreno__fecha')
+    )
+
+
+def comparar_ejercicios(cliente, hoy=None, dias=90):
+    """
+    Detalle por ejercicio de las dos ventanas. Lo usan el mapa y el comando
+    ``diagnosticar_evolucion_muscular``.
+
+    Devuelve una lista de dicts::
+
+        {'zona', 'ejercicio', 'pct' | None, 'dudoso': bool,
+         'antes': {'e1rm', 'peso_kg', 'reps', 'fecha', 'tipo_carga',
+                   'multiplicador', 'peso_total_kg'} | None,
+         'ahora': {...} | None}
+    """
+    hoy = hoy or date.today()
+    inicio_actual, inicio_anterior = _ventanas(hoy, dias)
+
+    por_ejercicio = {}
+    for fecha, nombre, grupo, peso, peso_total, mult, tipo, reps, _series, recuperacion in \
+            _filas(cliente, inicio_anterior, hoy):
+        if recuperacion:
+            continue
+        zona = normalizar_zona(grupo, nombre)
+        if zona is None:
+            continue
+        reps = int(reps or 0)
+        e1rm = _e1rm(_carga_por_unidad(peso, peso_total, mult), reps)
+        if e1rm <= 0:
+            continue
+
+        ventana = 'ahora' if fecha > inicio_actual else 'antes'
+        info = por_ejercicio.setdefault((zona, _plano(nombre)), {
+            'zona': zona, 'ejercicio': nombre.strip(), 'antes': None, 'ahora': None,
+        })
+        # Filas ordenadas por fecha: el último nombre visto es el más reciente.
+        info['ejercicio'] = nombre.strip()
+        actual = info[ventana]
+        if actual is None or e1rm > actual['e1rm']:
+            info[ventana] = {
+                'e1rm': e1rm, 'peso_kg': peso, 'reps': reps, 'fecha': fecha,
+                'tipo_carga': tipo, 'multiplicador': mult, 'peso_total_kg': peso_total,
+            }
+
+    resultado = []
+    for info in por_ejercicio.values():
+        pct = None
+        if info['antes'] and info['ahora']:
+            pct = round((info['ahora']['e1rm'] - info['antes']['e1rm'])
+                        / info['antes']['e1rm'] * 100, 1)
+        info['pct'] = pct
+        info['dudoso'] = pct is not None and abs(pct) > UMBRAL_DUDOSO
+        resultado.append(info)
+    return sorted(resultado, key=lambda e: (e['zona'], e['ejercicio']))
+
+
 def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
     """
-    Compara el mejor e1RM de cada ejercicio en ``(hoy-dias, hoy]`` frente a
-    ``(hoy-2·dias, hoy-dias]`` y lo agrega por zona.
+    Compara el mejor e1RM por unidad de cada ejercicio en ``(hoy-dias, hoy]``
+    frente a ``(hoy-2·dias, hoy-dias]`` y lo agrega por zona.
 
     Devuelve::
 
@@ -168,79 +267,41 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
           'periodo_dias': 90,
           'media_pct': 43.7 | None,   # media de las zonas con datos
           'n_con_datos': 4,
+          'n_dudosos': 2,             # ejercicios apartados como dato a revisar
           'grupos': [  # las 12 zonas; con datos primero (pct desc)
             {'zona', 'nombre', 'pct', 'estado', 'n_ejercicios',
              'series_semana', 'lectura',
-             'mejor': {'ejercicio', 'antes', 'ahora', 'pct'} | None},
+             'mejor': {'ejercicio', 'antes', 'ahora', 'pct'} | None,
+             'dudosos': [{'ejercicio', 'antes', 'ahora', 'pct'}]},
           ],
           'estado_por_zona': {'pecho': 'progresa', ...},  # para colorear el SVG
           'lider': <grupo con más progreso> | None,
+          'zonas_sin_registros': ['Antebrazos', ...],
         }
     """
-    from entrenos.models import EjercicioRealizado
-
     hoy = hoy or date.today()
-    inicio_actual = hoy - timedelta(days=dias)
-    inicio_anterior = hoy - timedelta(days=2 * dias)
     inicio_series = hoy - timedelta(days=28)
 
-    filas = (
-        EjercicioRealizado.objects
-        .filter(
-            entreno__cliente=cliente,
-            entreno__fecha__gt=min(inicio_anterior, inicio_series),
-            entreno__fecha__lte=hoy,
-            completado=True,
-        )
-        .values_list(
-            'entreno__fecha', 'nombre_ejercicio', 'grupo_muscular', 'peso_kg',
-            'peso_total_kg', 'multiplicador_carga', 'repeticiones', 'series',
-            'is_recovery_load',
-        )
-    )
-
-    # (zona, clave_ejercicio) -> {'antes': e1rm, 'ahora': e1rm, 'nombre': str, 'fecha': date}
-    por_ejercicio = {}
     series_por_zona = defaultdict(float)
-
-    for fecha, nombre, grupo, peso, peso_total, mult, reps, series, recuperacion in filas:
+    for fecha, nombre, grupo, *_resto, series, _rec in _filas(cliente, inicio_series, hoy):
         zona = normalizar_zona(grupo, nombre)
-        if zona is None:
-            continue
-
-        if fecha > inicio_series:
+        if zona:
             series_por_zona[zona] += series or 0
 
-        if recuperacion or fecha <= inicio_anterior:
+    fiables = defaultdict(list)
+    dudosos = defaultdict(list)
+    for e in comparar_ejercicios(cliente, hoy=hoy, dias=dias):
+        if e['pct'] is None:
             continue
-        e1rm = _e1rm(_carga(peso_total, peso, mult), int(reps or 0))
-        if e1rm <= 0:
-            continue
-
-        ventana = 'ahora' if fecha > inicio_actual else 'antes'
-        clave = (zona, _plano(nombre))
-        info = por_ejercicio.setdefault(clave, {'antes': 0.0, 'ahora': 0.0,
-                                                'nombre': nombre.strip(), 'fecha': fecha})
-        info[ventana] = max(info[ventana], e1rm)
-        if fecha >= info['fecha']:
-            info['nombre'], info['fecha'] = nombre.strip(), fecha
-
-    cambios_por_zona = defaultdict(list)
-    for (zona, _), info in por_ejercicio.items():
-        if info['antes'] > 0 and info['ahora'] > 0:
-            pct = (info['ahora'] - info['antes']) / info['antes'] * 100
-            cambios_por_zona[zona].append({
-                'ejercicio': info['nombre'],
-                'antes': round(info['antes'], 1),
-                'ahora': round(info['ahora'], 1),
-                'pct': round(pct, 1),
-            })
+        resumen = {'ejercicio': e['ejercicio'], 'antes': round(e['antes']['e1rm'], 1),
+                   'ahora': round(e['ahora']['e1rm'], 1), 'pct': e['pct']}
+        (dudosos if e['dudoso'] else fiables)[e['zona']].append(resumen)
 
     grupos = []
     for zona in ZONAS:
-        cambios = cambios_por_zona.get(zona, [])
+        cambios = fiables.get(zona, [])
         pct = round(statistics.median(c['pct'] for c in cambios), 1) if cambios else None
-        grupos.append({
+        grupo = {
             'zona': zona,
             'nombre': NOMBRES_ZONA[zona],
             'pct': pct,
@@ -248,8 +309,11 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
             'n_ejercicios': len(cambios),
             'series_semana': round(series_por_zona.get(zona, 0) / 4.0, 1),
             'mejor': max(cambios, key=lambda c: c['pct']) if cambios else None,
-        })
-        grupos[-1]['lectura'] = _lectura(grupos[-1]['estado'], grupos[-1]['series_semana'])
+            'dudosos': sorted(dudosos.get(zona, []), key=lambda c: -abs(c['pct'])),
+        }
+        grupo['lectura'] = _lectura(grupo['estado'], grupo['series_semana'],
+                                    len(grupo['dudosos']))
+        grupos.append(grupo)
 
     con_datos = sorted((g for g in grupos if g['pct'] is not None), key=lambda g: -g['pct'])
     sin_datos = [g for g in grupos if g['pct'] is None]
@@ -260,8 +324,10 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         'periodo_dias': dias,
         'media_pct': media,
         'n_con_datos': len(con_datos),
+        'n_dudosos': sum(len(g['dudosos']) for g in grupos),
         'grupos': con_datos + sin_datos,
         'estado_por_zona': {g['zona']: g['estado'] for g in grupos},
         'lider': con_datos[0] if con_datos else None,
-        'zonas_sin_registros': [g['nombre'] for g in sin_datos if not g['series_semana']],
+        'zonas_sin_registros': [g['nombre'] for g in sin_datos
+                                if not g['series_semana'] and not g['dudosos']],
     }

@@ -70,7 +70,7 @@ class NormalizarZonaTests(SimpleTestCase):
         )
 
 
-class EvolucionPorGrupoTests(TestCase):
+class _DatosEntrenoMixin:
     HOY = date(2026, 10, 10)
 
     def setUp(self):
@@ -94,6 +94,9 @@ class EvolucionPorGrupoTests(TestCase):
 
     def _grupo(self, resultado, zona):
         return next(g for g in resultado['grupos'] if g['zona'] == zona)
+
+
+class EvolucionPorGrupoTests(_DatosEntrenoMixin, TestCase):
 
     def test_devuelve_todas_las_zonas_aunque_no_haya_datos(self):
         r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
@@ -139,7 +142,7 @@ class EvolucionPorGrupoTests(TestCase):
         self.assertEqual(pecho['n_ejercicios'], 1)
         self.assertAlmostEqual(pecho['pct'], 10.0, places=1)
 
-    def test_mediana_amortigua_valores_extremos(self):
+    def test_valores_extremos_no_cuentan_en_la_mediana(self):
         self._ej(120, 'Curl con barra', 30, 8, 'Bíceps')
         self._ej(10, 'Curl con barra', 33, 8, 'Bíceps')          # +10 %
         self._ej(120, 'Curl martillo', 10, 8, 'Bíceps')
@@ -147,8 +150,10 @@ class EvolucionPorGrupoTests(TestCase):
         self._ej(120, 'Curl en polea', 5, 8, 'Bíceps')
         self._ej(10, 'Curl en polea', 15, 8, 'Bíceps')            # +200 %
         biceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'biceps')
-        self.assertAlmostEqual(biceps['pct'], 15.0, places=1)
-        self.assertEqual(biceps['mejor']['ejercicio'], 'Curl en polea')
+        # El +200 % se aparta como dato a revisar; la mediana usa los fiables.
+        self.assertAlmostEqual(biceps['pct'], 12.5, places=1)
+        self.assertEqual(biceps['mejor']['ejercicio'], 'Curl martillo')
+        self.assertEqual([d['ejercicio'] for d in biceps['dudosos']], ['Curl en polea'])
 
     def test_retroceso_y_estable_no_se_esconden(self):
         self._ej(120, 'Remo con barra', 80, 8, 'Espalda')
@@ -208,6 +213,53 @@ class EvolucionPorGrupoTests(TestCase):
         self.assertAlmostEqual(triceps['series_semana'], 1.5, places=1)  # 6 series / 4
 
 
+class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):
+    """Criterios de registro mezclados y saltos imposibles no deben falsear la zona."""
+
+    def test_compara_por_unidad_aunque_cambie_el_criterio_de_registro(self):
+        # Antes: solo el peso por mano (legacy). Ahora: por mano + multiplicador + total.
+        self._ej(120, 'Curl martillo', 15, 8, 'Bíceps')
+        self._ej(10, 'Curl martillo', 15, 8, 'Bíceps',
+                 tipo_carga='por_mano', multiplicador_carga=2, peso_total_kg=30)
+        biceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'biceps')
+        self.assertEqual(biceps['pct'], 0.0)
+        self.assertEqual(biceps['estado'], 'estable')
+
+    def test_si_solo_hay_total_se_divide_por_el_multiplicador(self):
+        self._ej(120, 'Prensa de piernas', 0, 10, 'Cuádriceps',
+                 tipo_carga='por_lado', multiplicador_carga=2, peso_total_kg=200)
+        self._ej(10, 'Prensa de piernas', 110, 10, 'Cuádriceps')
+        cuads = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'cuadriceps')
+        self.assertAlmostEqual(cuads['pct'], 10.0, places=1)
+
+    def test_saltos_dudosos_quedan_fuera_de_la_mediana_y_se_listan(self):
+        self._ej(120, 'Press francés', 20, 10, 'Tríceps')
+        self._ej(10, 'Press francés', 22, 10, 'Tríceps')          # +10 %
+        self._ej(120, 'Extensión en polea', 30, 10, 'Tríceps')
+        self._ej(10, 'Extensión en polea', 33, 10, 'Tríceps')     # +10 %
+        self._ej(120, 'Patada de tríceps', 20, 10, 'Tríceps')
+        self._ej(10, 'Patada de tríceps', 7, 10, 'Tríceps')       # -65 % → dudoso
+        self._ej(120, 'Fondos en banco', 10, 10, 'Tríceps')
+        self._ej(10, 'Fondos en banco', 25, 10, 'Tríceps')        # +150 % → dudoso
+        triceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'triceps')
+        self.assertAlmostEqual(triceps['pct'], 10.0, places=1)
+        self.assertEqual(triceps['n_ejercicios'], 2)
+        self.assertEqual(sorted(d['ejercicio'] for d in triceps['dudosos']),
+                         ['Fondos en banco', 'Patada de tríceps'])
+        self.assertNotEqual(triceps['mejor']['ejercicio'], 'Fondos en banco')
+
+    def test_zona_con_solo_saltos_dudosos_no_se_colorea(self):
+        self._ej(120, 'Hiperextensiones inversas', 5, 10, 'Isquios')
+        self._ej(10, 'Hiperextensiones inversas', 15, 10, 'Isquios')
+        r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
+        isquios = self._grupo(r, 'isquios')
+        self.assertIsNone(isquios['pct'])
+        self.assertEqual(isquios['estado'], 'sin_datos')
+        self.assertEqual(len(isquios['dudosos']), 1)
+        self.assertIn('revisa cómo se registró', isquios['lectura'])
+        self.assertEqual(r['n_dudosos'], 1)
+
+
 class GruposMuscularesCompatTests(TestCase):
     """El modelo de usuario mantiene su forma (rapidos/lentos) sobre el cálculo nuevo."""
 
@@ -227,3 +279,35 @@ class GruposMuscularesCompatTests(TestCase):
         self.assertEqual(r['rapidos'], [{'grupo': 'Tríceps', 'pct': 60.0}])
         self.assertEqual(r['lentos'], [])
         self.assertIn('Tríceps', r['descripcion'])
+
+
+class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
+    HOY = date.today()
+
+    def test_lista_ejercicios_con_sus_dos_marcas_y_marca_los_dudosos(self):
+        from io import StringIO
+        from django.core.management import call_command
+
+        self._ej(120, 'Curl martillo', 10, 8, 'Bíceps')
+        self._ej(10, 'Curl martillo', 25, 8, 'Bíceps', tipo_carga='total')
+        self._ej(120, 'Press francés', 20, 10, 'Tríceps')
+        self._ej(10, 'Press francés', 22, 10, 'Tríceps')
+        out = StringIO()
+        call_command('diagnosticar_evolucion_muscular', cliente=self.cliente.pk, stdout=out)
+        texto = out.getvalue()
+        self.assertIn('== Bíceps', texto)
+        self.assertIn('Curl martillo: +150.0 %  ⚠ DUDOSO', texto)
+        self.assertIn('25 kg × 8 (total)', texto)
+        self.assertIn('Press francés: +10.0 %', texto)
+        self.assertIn('2 ejercicios · 1 dudosos', texto)
+
+        out = StringIO()
+        call_command('diagnosticar_evolucion_muscular', cliente=self.cliente.pk,
+                     solo_dudosos=True, stdout=out)
+        self.assertNotIn('Press francés', out.getvalue())
+
+    def test_cliente_inexistente(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+        with self.assertRaises(CommandError):
+            call_command('diagnosticar_evolucion_muscular', cliente=999999)

@@ -21,7 +21,7 @@
     <span class="mm-big mm-t-{% if evo.media_pct >= 30 %}progresa_mucho{% elif evo.media_pct >= 10 %}progresa{% elif evo.media_pct >= -3 %}estable{% else %}retrocede{% endif %}">{% if evo.media_pct > 0 %}+{% endif %}{{ evo.media_pct|floatformat:0 }}<small>%</small></span>
     <span class="mm-hero-copy">de mejora media en tu fuerza estimada frente a los {{ evo.periodo_dias }} días anteriores</span>
   </div>
-  <p class="mm-sub">{{ evo.lider.nombre }} lidera ({% if evo.lider.pct > 0 %}+{% endif %}{{ evo.lider.pct|floatformat:0 }} %). {{ evo.n_con_datos }} de {{ evo.grupos|length }} zonas con datos para comparar.</p>
+  <p class="mm-sub">{{ evo.lider.nombre }} lidera ({% if evo.lider.pct > 0 %}+{% endif %}{{ evo.lider.pct|floatformat:0 }} %). {{ evo.n_con_datos }} de {{ evo.grupos|length }} zonas con datos para comparar.{% if evo.n_dudosos %} {{ evo.n_dudosos }} dato{{ evo.n_dudosos|pluralize }} a revisar, fuera del cálculo.{% endif %}</p>
   {% else %}
   <div class="mm-hero">
     <span class="mm-hero-copy mm-hero-copy--solo">Aún sin datos para comparar</span>
@@ -108,13 +108,13 @@
     <span>Por grupo muscular</span>
     <span>Fuerza estimada · {{ evo.periodo_dias }} días</span>
   </div>
-  {% for g in evo.grupos %}{% if g.pct is not None or g.series_semana %}
+  {% for g in evo.grupos %}{% if g.pct is not None or g.series_semana or g.dudosos %}
   <details class="mm-row">
     <summary>
       <span class="mm-row-pct mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:0 }} %{% endif %}</span>
       <span class="mm-row-main">
         <span class="mm-row-name">{{ g.nombre }}</span>
-        <span class="mm-row-state mm-t-{{ g.estado }}">{% if g.estado == 'progresa_mucho' %}Progresa mucho{% elif g.estado == 'progresa' %}Progresa{% elif g.estado == 'estable' %}Estable{% elif g.estado == 'retrocede' %}Retrocede{% else %}Sin comparar{% endif %}</span>
+        <span class="mm-row-state mm-t-{{ g.estado }}">{% if g.estado == 'progresa_mucho' %}Progresa mucho{% elif g.estado == 'progresa' %}Progresa{% elif g.estado == 'estable' %}Estable{% elif g.estado == 'retrocede' %}Retrocede{% else %}Sin comparar{% endif %}{% if g.dudosos %} <span class="mm-row-flag">· {{ g.dudosos|length }} a revisar</span>{% endif %}</span>
       </span>
       <svg class="mm-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </summary>
@@ -126,6 +126,15 @@
       <p class="mm-row-copy">{{ g.lectura }}</p>
       {% if g.mejor %}
       <p class="mm-row-best">Mejor: {{ g.mejor.ejercicio }} · {{ g.mejor.antes|floatformat:1 }} → {{ g.mejor.ahora|floatformat:1 }} kg (1RM est.) · {{ g.n_ejercicios }} ejercicio{{ g.n_ejercicios|pluralize }} comparable{{ g.n_ejercicios|pluralize }}</p>
+      {% endif %}
+      {% if g.dudosos %}
+      <div class="mm-review">
+        <span class="mm-review-k">Dato a revisar · no cuenta en la evolución</span>
+        {% for d in g.dudosos %}
+        <p class="mm-review-item">{{ d.ejercicio }} · {{ d.antes|floatformat:1 }} → {{ d.ahora|floatformat:1 }} kg ({% if d.pct > 0 %}+{% endif %}{{ d.pct|floatformat:0 }} %)</p>
+        {% endfor %}
+        <p class="mm-review-hint">Un cambio así en un solo periodo suele ser un registro distinto del peso: por mano en un periodo y total en otro, o una máquina diferente.</p>
+      </div>
       {% endif %}
     </div>
   </details>
