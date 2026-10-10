@@ -387,6 +387,16 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertIn('.metrics{display:grid', plantilla)
         self.assertIn('.inline-form .secondary-action{font-family:inherit;font-size:9px', plantilla)
 
+    def test_dashboard_y_navegacion_aprovechan_escritorio_sin_alterar_movil(self):
+        """La composición sigue siendo compacta en móvil y gana aire a partir de tablet."""
+        dashboard = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text()
+        navegacion = Path('templates/includes/bottom_nav.html').read_text()
+
+        self.assertIn('@media(min-width:760px)', dashboard)
+        self.assertIn('main{width:min(100% - 48px,680px)', dashboard)
+        self.assertIn('@media(min-width:760px)', navegacion)
+        self.assertIn('.bottom-nav-std ul{width:min(100% - 48px,680px)', navegacion)
+
     @patch("clientes.views._get_dashboard_context_data")
     def test_accesos_secundarios_preservan_sesion_pendiente_y_movilidad(
         self, dashboard_contexto,

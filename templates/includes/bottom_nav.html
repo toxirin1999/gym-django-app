@@ -28,4 +28,5 @@ si ninguna pestaña debe marcarse activa en la página actual).
 .bottom-nav-std a[aria-current="page"]:after{content:"";position:absolute;bottom:-7px;width:23px;height:2px;border-radius:2px;background:#42e4a0}
 .bottom-nav-std a:focus-visible{z-index:1;outline:2px solid #f0c84b;outline-offset:-2px;background:rgba(240,200,75,.12)}
 @media (prefers-reduced-motion:no-preference){.bottom-nav-std a{transition:color .16s ease,background .16s ease,outline-color .16s ease}}
+@media(min-width:760px){.bottom-nav-std ul{width:min(100% - 48px,680px)}.bottom-nav-std a{min-height:48px}}
 </style>
