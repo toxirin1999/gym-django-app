@@ -56,6 +56,16 @@ class DashboardSilenciosoPreviewTests(TestCase):
         )
         self.assertContains(response, reverse("clientes:memoria_entrenador", args=[self.cliente.id]))
 
+    def test_alternativas_de_la_decision_se_recogen_sin_ocultar_destinos(self):
+        """La decisión muestra una vía principal y deja las alternativas bajo demanda."""
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'class="decision-alternatives"')
+        self.assertContains(response, "Otras opciones")
+        self.assertContains(response, reverse("estiramientos:panel"))
+
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
     def test_normaliza_estados_del_organismo_a_decisiones_operativas(
