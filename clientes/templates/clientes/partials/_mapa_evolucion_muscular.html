@@ -1,0 +1,137 @@
+{% comment %}
+  Mapa corporal de evolución — "Lo que sé de ti".
+  Contexto: evolucion_muscular (entrenos.services.evolucion_muscular_service),
+            periodos_evolucion (tupla de días seleccionables).
+  El color de cada zona sale de estado_por_zona: progresa_mucho · progresa ·
+  estable · retrocede · sin_datos.
+{% endcomment %}
+{% with evo=evolucion_muscular e=evolucion_muscular.estado_por_zona %}
+<section class="mm-card" id="evolucion" aria-labelledby="evolucion-title">
+  <div class="mm-head">
+    <h2 class="mem-label" id="evolucion-title">Cómo has evolucionado</h2>
+    <nav class="mm-periodos" aria-label="Periodo de comparación">
+      {% for p in periodos_evolucion %}
+      <a href="?periodo={{ p }}#evolucion" class="mm-periodo{% if p == evo.periodo_dias %} is-on{% endif %}"{% if p == evo.periodo_dias %} aria-current="true"{% endif %}>{{ p }}D</a>
+      {% endfor %}
+    </nav>
+  </div>
+
+  {% if evo.n_con_datos %}
+  <div class="mm-hero">
+    <span class="mm-big mm-t-{% if evo.media_pct >= 30 %}progresa_mucho{% elif evo.media_pct >= 10 %}progresa{% elif evo.media_pct >= -3 %}estable{% else %}retrocede{% endif %}">{% if evo.media_pct > 0 %}+{% endif %}{{ evo.media_pct|floatformat:0 }}<small>%</small></span>
+    <span class="mm-hero-copy">de mejora media en tu fuerza estimada frente a los {{ evo.periodo_dias }} días anteriores</span>
+  </div>
+  <p class="mm-sub">{{ evo.lider.nombre }} lidera ({% if evo.lider.pct > 0 %}+{% endif %}{{ evo.lider.pct|floatformat:0 }} %). {{ evo.n_con_datos }} de {{ evo.grupos|length }} zonas con datos para comparar.</p>
+  {% else %}
+  <div class="mm-hero">
+    <span class="mm-hero-copy mm-hero-copy--solo">Aún sin datos para comparar</span>
+  </div>
+  <p class="mm-sub">Hacen falta registros del mismo ejercicio en los dos periodos de {{ evo.periodo_dias }} días. El mapa se irá coloreando con tus sesiones.</p>
+  {% endif %}
+
+  <div class="mm-bodies">
+    <figure class="mm-fig">
+      <svg viewBox="0 0 160 340" role="img" aria-label="Vista frontal del cuerpo coloreada por evolución de cada zona">
+        <g stroke="#020806" stroke-width="2.5">
+          <circle class="mm-body" cx="80" cy="26" r="16"/>
+          <rect class="mm-body" x="73" y="40" width="14" height="14" rx="4"/>
+          <path class="mm-z mm-{{ e.trapecios }}" data-zona="trapecios" d="M64 54 L80 51 L96 54 L106 64 L54 64 Z"/>
+          <ellipse class="mm-z mm-{{ e.hombros }}" data-zona="hombros" cx="49" cy="74" rx="13" ry="14"/>
+          <ellipse class="mm-z mm-{{ e.hombros }}" data-zona="hombros" cx="111" cy="74" rx="13" ry="14"/>
+          <path class="mm-z mm-{{ e.pecho }}" data-zona="pecho" d="M60 64 Q72 60 79 64 L79 97 Q68 101 58 93 Q53 78 60 64 Z"/>
+          <path class="mm-z mm-{{ e.pecho }}" data-zona="pecho" d="M100 64 Q88 60 81 64 L81 97 Q92 101 102 93 Q107 78 100 64 Z"/>
+          <ellipse class="mm-z mm-{{ e.biceps }}" data-zona="biceps" cx="42" cy="108" rx="9" ry="20"/>
+          <ellipse class="mm-z mm-{{ e.biceps }}" data-zona="biceps" cx="118" cy="108" rx="9" ry="20"/>
+          <ellipse class="mm-z mm-{{ e.antebrazos }}" data-zona="antebrazos" cx="36" cy="152" rx="8" ry="22"/>
+          <ellipse class="mm-z mm-{{ e.antebrazos }}" data-zona="antebrazos" cx="124" cy="152" rx="8" ry="22"/>
+          <circle class="mm-body" cx="33" cy="182" r="7"/>
+          <circle class="mm-body" cx="127" cy="182" r="7"/>
+          <rect class="mm-z mm-{{ e.core }}" data-zona="core" x="64" y="100" width="32" height="62" rx="10"/>
+          <path class="mm-body" d="M62 164 L98 164 L95 180 L65 180 Z"/>
+          <ellipse class="mm-z mm-{{ e.cuadriceps }}" data-zona="cuadriceps" cx="67" cy="219" rx="14" ry="38"/>
+          <ellipse class="mm-z mm-{{ e.cuadriceps }}" data-zona="cuadriceps" cx="93" cy="219" rx="14" ry="38"/>
+          <circle class="mm-body" cx="67" cy="263" r="7"/>
+          <circle class="mm-body" cx="93" cy="263" r="7"/>
+          <ellipse class="mm-z mm-{{ e.gemelos }}" data-zona="gemelos" cx="66" cy="296" rx="9" ry="25"/>
+          <ellipse class="mm-z mm-{{ e.gemelos }}" data-zona="gemelos" cx="94" cy="296" rx="9" ry="25"/>
+          <ellipse class="mm-body" cx="65" cy="329" rx="10" ry="5"/>
+          <ellipse class="mm-body" cx="95" cy="329" rx="10" ry="5"/>
+        </g>
+        <g stroke="#020806" stroke-width="1.5" fill="none" opacity=".7" aria-hidden="true">
+          <path d="M80 104 L80 158"/><path d="M66 121 L94 121"/><path d="M66 141 L94 141"/>
+        </g>
+      </svg>
+      <figcaption>Frente</figcaption>
+    </figure>
+    <figure class="mm-fig">
+      <svg viewBox="0 0 160 340" role="img" aria-label="Vista posterior del cuerpo coloreada por evolución de cada zona">
+        <g stroke="#020806" stroke-width="2.5">
+          <circle class="mm-body" cx="80" cy="26" r="16"/>
+          <rect class="mm-body" x="73" y="40" width="14" height="14" rx="4"/>
+          <path class="mm-z mm-{{ e.trapecios }}" data-zona="trapecios" d="M80 48 L101 61 L92 92 L80 100 L68 92 L59 61 Z"/>
+          <ellipse class="mm-z mm-{{ e.hombros }}" data-zona="hombros" cx="49" cy="74" rx="13" ry="14"/>
+          <ellipse class="mm-z mm-{{ e.hombros }}" data-zona="hombros" cx="111" cy="74" rx="13" ry="14"/>
+          <path class="mm-z mm-{{ e.espalda }}" data-zona="espalda" d="M66 80 L79 101 L79 150 Q66 147 58 128 Q53 102 58 82 Z"/>
+          <path class="mm-z mm-{{ e.espalda }}" data-zona="espalda" d="M94 80 L81 101 L81 150 Q94 147 102 128 Q107 102 102 82 Z"/>
+          <ellipse class="mm-z mm-{{ e.triceps }}" data-zona="triceps" cx="42" cy="108" rx="9" ry="20"/>
+          <ellipse class="mm-z mm-{{ e.triceps }}" data-zona="triceps" cx="118" cy="108" rx="9" ry="20"/>
+          <ellipse class="mm-z mm-{{ e.antebrazos }}" data-zona="antebrazos" cx="36" cy="152" rx="8" ry="22"/>
+          <ellipse class="mm-z mm-{{ e.antebrazos }}" data-zona="antebrazos" cx="124" cy="152" rx="8" ry="22"/>
+          <circle class="mm-body" cx="33" cy="182" r="7"/>
+          <circle class="mm-body" cx="127" cy="182" r="7"/>
+          <rect class="mm-z mm-{{ e.core }}" data-zona="core" x="67" y="152" width="26" height="18" rx="6"/>
+          <ellipse class="mm-z mm-{{ e.gluteos }}" data-zona="gluteos" cx="68" cy="187" rx="14" ry="15"/>
+          <ellipse class="mm-z mm-{{ e.gluteos }}" data-zona="gluteos" cx="92" cy="187" rx="14" ry="15"/>
+          <ellipse class="mm-z mm-{{ e.isquios }}" data-zona="isquios" cx="67" cy="233" rx="13" ry="30"/>
+          <ellipse class="mm-z mm-{{ e.isquios }}" data-zona="isquios" cx="93" cy="233" rx="13" ry="30"/>
+          <ellipse class="mm-z mm-{{ e.gemelos }}" data-zona="gemelos" cx="66" cy="292" rx="11" ry="25"/>
+          <ellipse class="mm-z mm-{{ e.gemelos }}" data-zona="gemelos" cx="94" cy="292" rx="11" ry="25"/>
+          <ellipse class="mm-body" cx="65" cy="329" rx="10" ry="5"/>
+          <ellipse class="mm-body" cx="95" cy="329" rx="10" ry="5"/>
+        </g>
+      </svg>
+      <figcaption>Espalda</figcaption>
+    </figure>
+  </div>
+
+  <ul class="mm-legend" aria-label="Leyenda">
+    <li><span class="mm-sw mm-sw--progresa_mucho"></span>Progresa mucho · +30 %</li>
+    <li><span class="mm-sw mm-sw--progresa"></span>Progresa · +10–30 %</li>
+    <li><span class="mm-sw mm-sw--estable"></span>Estable · −3 a +10 %</li>
+    <li><span class="mm-sw mm-sw--retrocede"></span>Retrocede</li>
+    <li><span class="mm-sw mm-sw--sin_datos"></span>Sin comparar aún</li>
+  </ul>
+</section>
+
+<div class="mm-list">
+  <div class="mm-list-head">
+    <span>Por grupo muscular</span>
+    <span>Fuerza estimada · {{ evo.periodo_dias }} días</span>
+  </div>
+  {% for g in evo.grupos %}{% if g.pct is not None or g.series_semana %}
+  <details class="mm-row">
+    <summary>
+      <span class="mm-row-pct mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:0 }} %{% endif %}</span>
+      <span class="mm-row-main">
+        <span class="mm-row-name">{{ g.nombre }}</span>
+        <span class="mm-row-state mm-t-{{ g.estado }}">{% if g.estado == 'progresa_mucho' %}Progresa mucho{% elif g.estado == 'progresa' %}Progresa{% elif g.estado == 'estable' %}Estable{% elif g.estado == 'retrocede' %}Retrocede{% else %}Sin comparar{% endif %}</span>
+      </span>
+      <svg class="mm-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </summary>
+    <div class="mm-row-body">
+      <div class="mm-row-stats">
+        <div><span class="k">Evolución · {{ evo.periodo_dias }} días</span><span class="v mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:1 }} %{% endif %}</span></div>
+        <div><span class="k">Volumen actual</span><span class="v">{{ g.series_semana|floatformat:1 }}<small> series/sem</small></span></div>
+      </div>
+      <p class="mm-row-copy">{{ g.lectura }}</p>
+      {% if g.mejor %}
+      <p class="mm-row-best">Mejor: {{ g.mejor.ejercicio }} · {{ g.mejor.antes|floatformat:1 }} → {{ g.mejor.ahora|floatformat:1 }} kg (1RM est.) · {{ g.n_ejercicios }} ejercicio{{ g.n_ejercicios|pluralize }} comparable{{ g.n_ejercicios|pluralize }}</p>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}{% endfor %}
+  {% if evo.zonas_sin_registros %}
+  <p class="mm-note">Sin registros de fuerza: {{ evo.zonas_sin_registros|join:", "|lower }}.</p>
+  {% endif %}
+</div>
+{% endwith %}

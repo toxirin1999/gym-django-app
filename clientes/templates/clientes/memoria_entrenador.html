@@ -143,6 +143,50 @@
   .mem-depth-heading{margin:28px 4px 11px;color:var(--blue);font:700 9px/1 var(--font-mono);letter-spacing:.17em;text-transform:uppercase}.mem-depth{margin:0;display:flex;flex-direction:column;gap:10px}.mem-timeline{margin:0;padding:0;gap:10px}.mem-timeline::before,.mem-node::before{display:none}.mem-node{border-color:var(--line);border-radius:16px;background:linear-gradient(135deg,rgba(8,24,17,.97),rgba(5,15,10,.97));padding:17px 16px}.mem-node--risk{border-color:#65352f}.mem-label{font-size:8px;color:var(--blue)}.mem-node--good .mem-label{color:var(--mint)}.mem-node--plan .mem-label{color:#e9c975}.mem-heading{margin:7px 0 4px;font-family:var(--font-display);font-size:25px;text-transform:none;letter-spacing:-.035em}.mem-desc{font-size:13px}.mem-chips{margin-top:11px}.mem-chip{border-color:var(--line);font-size:8px}.mem-quads,.mem-stats{margin-top:13px}.mem-quad,.mem-stat{padding:12px}.mem-quad .v,.mem-stat .v{font-size:25px}.mem-list{margin-top:10px}.mem-row{padding:11px 0}.mem-collapse{margin-top:8px}.mem-collapse summary{font-family:var(--font-display);font-size:21px;text-transform:none}.mem-big{margin-top:10px}.mem-ins{margin-top:10px}.mem-foot{display:none}
   .mem-nav{position:fixed;z-index:4;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:rgba(2,8,6,.96);backdrop-filter:blur(16px);padding:9px max(12px,env(safe-area-inset-left)) calc(9px + env(safe-area-inset-bottom));}.mem-nav a{display:grid;justify-items:center;gap:4px;color:#92a29a;font:700 7px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}.mem-nav .mem-nav-icon{font-size:17px;line-height:1;color:inherit}.mem-nav a[aria-current="page"]{color:var(--mint)}.mem-nav a[aria-current="page"]::after{content:"";width:17px;height:2px;border-radius:99px;background:var(--mint);margin-top:2px}
 
+  /* Mapa corporal de evolución */
+  .mm-card{margin:0 0 12px;padding:18px 16px 16px;border:1px solid var(--line);border-radius:18px;background:var(--panel);display:flex;flex-direction:column;gap:12px}
+  .mm-head{display:flex;justify-content:space-between;align-items:center;gap:8px}.mm-head .mem-label{margin:0}
+  .mm-periodos{display:flex;gap:4px}
+  .mm-periodo{min-width:40px;min-height:30px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:8px;color:var(--ink-muted);font:700 9px/1 var(--font-mono);letter-spacing:.06em;text-decoration:none}
+  .mm-periodo.is-on{background:var(--paper);border-color:var(--paper);color:var(--night)}
+  .mm-hero{display:flex;align-items:baseline;gap:10px}
+  .mm-big{font-family:var(--font-display);font-size:54px;line-height:.95;font-weight:700;letter-spacing:-.05em}.mm-big small{font-size:28px}
+  .mm-hero-copy{font-family:var(--font-display);font-size:19px;line-height:1.15;letter-spacing:-.02em}.mm-hero-copy--solo{font-size:24px}
+  .mm-sub{margin:0;color:var(--ink-muted);font-size:13px;line-height:1.5}
+  .mm-bodies{display:flex;justify-content:space-around;align-items:flex-start;gap:8px;padding:4px 0}
+  .mm-fig{margin:0;flex:1 1 0;max-width:160px;display:flex;flex-direction:column;align-items:center;gap:6px}.mm-fig svg{width:100%;height:auto;display:block}
+  .mm-fig figcaption{color:#8fa198;font:700 8px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase}
+  .mm-body{fill:#16261f}
+  .mm-progresa_mucho,.mm-sw--progresa_mucho{fill:#8ff7cf;background:#8ff7cf}
+  .mm-progresa,.mm-sw--progresa{fill:#2fb985;background:#2fb985}
+  .mm-estable,.mm-sw--estable{fill:#1d6b50;background:#1d6b50}
+  .mm-retrocede,.mm-sw--retrocede{fill:#e0703a;background:#e0703a}
+  .mm-sin_datos,.mm-sw--sin_datos{fill:#23362e;background:#23362e}
+  .mm-t-progresa_mucho{color:#8ff7cf}.mm-t-progresa{color:#2fb985}.mm-t-estable{color:#3f9c78}.mm-t-retrocede{color:#f08a55}.mm-t-sin_datos{color:#8a9e95}
+  .mm-legend{margin:0;padding:12px 0 0;list-style:none;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px;border-top:1px solid var(--line);color:var(--ink-muted);font-size:11px}
+  .mm-legend li{display:flex;align-items:center;gap:7px}
+  .mm-sw{width:10px;height:10px;border-radius:3px;flex:none}.mm-sw--sin_datos{border:1px solid #36504a}
+  .mm-list{margin:0 0 6px;display:flex;flex-direction:column;gap:8px}
+  .mm-list-head{display:flex;justify-content:space-between;padding:10px 4px 2px;font:700 9px/1 var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--blue)}.mm-list-head span+span{color:#8fa198;letter-spacing:.06em}
+  .mm-row{border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+  .mm-row summary{list-style:none;min-height:60px;box-sizing:border-box;padding:10px 14px;display:flex;align-items:center;gap:12px;cursor:pointer}
+  .mm-row summary::-webkit-details-marker{display:none}
+  .mm-row summary:focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:14px}
+  .mm-row-pct{width:64px;flex:none;font:700 19px/1 var(--font-mono)}
+  .mm-row-main{flex:1;display:flex;flex-direction:column;gap:3px;min-width:0}
+  .mm-row-name{font-family:var(--font-display);font-size:18px;letter-spacing:-.02em}
+  .mm-row-state{font:700 9px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+  .mm-chev{color:#8fa198;transition:transform .2s}.mm-row[open] .mm-chev{transform:rotate(180deg)}
+  .mm-row-body{padding:12px 14px 16px;border-top:1px solid #14302a;display:flex;flex-direction:column;gap:10px}
+  .mm-row-stats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .mm-row-stats>div{border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:4px}
+  .mm-row-stats .k{color:#8fa198;font:700 8px/1.2 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+  .mm-row-stats .v{font:700 18px/1 var(--font-mono)}.mm-row-stats .v small{font-size:10px;color:#8fa198;font-weight:400}
+  .mm-row-copy{margin:0;color:var(--ink-muted);font-size:13px;line-height:1.5}
+  .mm-row-best{margin:0;color:#e9c975;font:400 11px/1.5 var(--font-mono)}
+  .mm-note{margin:4px 4px 0;color:#8fa198;font-size:12px;line-height:1.5}
+  @media (prefers-reduced-motion:reduce){.mm-chev{transition:none}}
+
   @media (min-width:640px){
     .mem-shell{padding-top:28px}
     .mem-node{padding:22px 24px}
@@ -189,6 +233,11 @@
     </div>
     {% endwith %}
   </section>
+
+  {# ── MAPA CORPORAL · evolución por grupo muscular ── #}
+  {% if evolucion_muscular %}
+  {% include 'clientes/partials/_mapa_evolucion_muscular.html' %}
+  {% endif %}
 
   <h2 class="mem-depth-heading">Expediente completo</h2>
   <div class="mem-depth" aria-label="Memoria del entrenador, sección a sección">
@@ -486,38 +535,6 @@
         </div>
         {% endfor %}
       </div>
-    </article>
-    {% endif %}
-
-    {# Grupos musculares #}
-    {% if modelo.grupos_musculares.rapidos or modelo.grupos_musculares.lentos %}
-    <article class="mem-node mem-node--personal">
-      <div class="mem-label">Tendencia de cargas por grupo</div>
-      <h2 class="mem-heading">Carga máxima registrada</h2>
-      {% if modelo.grupos_musculares.rapidos %}
-      <p class="mem-subhead">Con aumento de carga registrada</p>
-      <div class="mem-list">
-        {% for g in modelo.grupos_musculares.rapidos %}
-        <div class="mem-row">
-          <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
-          <div><div class="name">{{ g.grupo }}</div></div>
-          <div class="v ok">+{{ g.pct }}<small>%</small></div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
-      {% if modelo.grupos_musculares.lentos %}
-      <p class="mem-subhead">Sin aumento de carga reciente</p>
-      <div class="mem-list">
-        {% for g in modelo.grupos_musculares.lentos %}
-        <div class="mem-row">
-          <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
-          <div><div class="name">{{ g.grupo }}</div></div>
-          <div class="v warn">{{ g.pct }}<small>%</small></div>
-        </div>
-        {% endfor %}
-      </div>
-      {% endif %}
     </article>
     {% endif %}
 

@@ -321,82 +321,41 @@ def _get_ventana_recuperacion(cliente, hoy):
 
 def _get_grupos_musculares(cliente, hoy):
     """
-    Qué grupos musculares progresan más rápido (>5% en 90 días)
-    y cuáles se estancan. Una sola query por ventana temporal.
+    Qué grupos musculares progresan más rápido (>=5 % en 90 días)
+    y cuáles retroceden. Se apoya en ``calcular_evolucion_por_grupo``
+    (todos los ejercicios, e1RM, grupo registrado normalizado).
     """
     resultado = {'rapidos': [], 'lentos': [], 'descripcion': ''}
 
     try:
-        from entrenos.models import EjercicioRealizado
-        from django.db.models import Max
-        hace_90  = hoy - timedelta(days=90)
-        hace_180 = hoy - timedelta(days=180)
-
-        # Una query por ventana: max peso por ejercicio
-        def _max_por_ejercicio(fecha_ini, fecha_fin):
-            return dict(
-                EjercicioRealizado.objects
-                .filter(entreno__cliente=cliente, peso_kg__gt=0,
-                        entreno__fecha__range=(fecha_ini, fecha_fin))
-                .values('nombre_ejercicio')
-                .annotate(mx=Max('peso_kg'))
-                .values_list('nombre_ejercicio', 'mx')
-            )
-
-        ahora_map = _max_por_ejercicio(hace_90, hoy)
-        antes_map = _max_por_ejercicio(hace_180, hace_90)
-
-        progresion_por_grupo = defaultdict(list)
-        for nombre in list(ahora_map.keys())[:20]:
-            ahora = ahora_map.get(nombre)
-            antes  = antes_map.get(nombre)
-            if ahora and antes and float(antes) > 0:
-                pct   = (float(ahora) - float(antes)) / float(antes) * 100
-                grupo = _inferir_grupo(nombre)
-                if grupo:
-                    progresion_por_grupo[grupo].append(pct)
-
-        for grupo, pcts in progresion_por_grupo.items():
-            media = sum(pcts) / len(pcts)
-            if media >= 5:
-                resultado['rapidos'].append({'grupo': grupo, 'pct': round(media, 1)})
-            elif media < 0:
-                resultado['lentos'].append({'grupo': grupo, 'pct': round(media, 1)})
-
-        resultado['rapidos'].sort(key=lambda x: -x['pct'])
-        resultado['lentos'].sort(key=lambda x: x['pct'])
-
-        partes = []
-        if resultado['rapidos']:
-            gs = ', '.join(g['grupo'] for g in resultado['rapidos'][:2])
-            partes.append(f"{gs} en progresión")
-        if resultado['lentos']:
-            gs = ', '.join(g['grupo'] for g in resultado['lentos'][:2])
-            partes.append(f"{gs} estancado")
-        resultado['descripcion'] = '. '.join(partes) + '.' if partes else ''
-
+        from entrenos.services.evolucion_muscular_service import calcular_evolucion_por_grupo
+        evolucion = calcular_evolucion_por_grupo(cliente, hoy=hoy, dias=90)
     except Exception:
-        pass
+        import logging
+        logging.getLogger(__name__).exception('No se pudo calcular la evolución por grupo')
+        return resultado
+
+    for g in evolucion['grupos']:
+        if g['pct'] is None:
+            continue
+        if g['pct'] >= 5:
+            resultado['rapidos'].append({'grupo': g['nombre'], 'pct': g['pct']})
+        elif g['pct'] < 0:
+            resultado['lentos'].append({'grupo': g['nombre'], 'pct': g['pct']})
+
+    resultado['rapidos'].sort(key=lambda x: -x['pct'])
+    resultado['lentos'].sort(key=lambda x: x['pct'])
+
+    partes = []
+    if resultado['rapidos']:
+        gs = ', '.join(g['grupo'] for g in resultado['rapidos'][:2])
+        partes.append(f"{gs} en progresión")
+    if resultado['lentos']:
+        gs = ', '.join(g['grupo'] for g in resultado['lentos'][:2])
+        partes.append(f"{gs} estancado")
+    resultado['descripcion'] = '. '.join(partes) + '.' if partes else ''
 
     return resultado
-
-
-_GRUPO_KEYWORDS = {
-    'Pecho':    ['pecho', 'banca', 'press inclinado', 'aperturas', 'dips'],
-    'Espalda':  ['espalda', 'jalón', 'remo', 'dominada', 'pull'],
-    'Piernas':  ['sentadilla', 'prensa', 'peso muerto', 'femoral', 'zancada', 'hip thrust'],
-    'Hombros':  ['press militar', 'elevacion', 'elevación', 'hombro', 'arnold'],
-    'Bíceps':   ['curl'],
-    'Tríceps':  ['trícep', 'tricep', 'fondos', 'extensión de trícep'],
-}
-
-
-def _inferir_grupo(nombre):
-    nl = nombre.lower()
-    for grupo, kws in _GRUPO_KEYWORDS.items():
-        if any(kw in nl for kw in kws):
-            return grupo
-    return None
 
 
 def _get_ejercicios_emblema(cliente, hoy):

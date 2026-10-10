@@ -5367,6 +5367,20 @@ def memoria_entrenador(request, cliente_id):
     from entrenos.services.modelo_usuario_service import get_modelo_usuario
     modelo_usuario = get_modelo_usuario(cliente, hoy)
 
+    # ── 7b. EVOLUCIÓN POR GRUPO MUSCULAR · mapa corporal ─────────────────────
+    try:
+        periodo_evolucion = int(request.GET.get('periodo', 90))
+    except (TypeError, ValueError):
+        periodo_evolucion = 90
+    if periodo_evolucion not in (30, 90, 180):
+        periodo_evolucion = 90
+    try:
+        from entrenos.services.evolucion_muscular_service import calcular_evolucion_por_grupo
+        evolucion_muscular = calcular_evolucion_por_grupo(cliente, hoy=hoy, dias=periodo_evolucion)
+    except Exception:
+        logger.exception('memoria_entrenador: fallo calculando la evolución por grupo')
+        evolucion_muscular = None
+
     # ── 8. BIO SIGNALS · 14 DÍAS ─────────────────────────────────────────────
     bio_resumen = None
     try:
@@ -5473,6 +5487,8 @@ def memoria_entrenador(request, cliente_id):
         'zonas_atencion': zonas_atencion,
         'lesiones_activas': lesiones_activas,
         'modelo': modelo_usuario,
+        'evolucion_muscular': evolucion_muscular,
+        'periodos_evolucion': (30, 90, 180),
         'bio_resumen': bio_resumen,
         'manual_patrones': manual_patrones,
         'semaforo': semaforo,
