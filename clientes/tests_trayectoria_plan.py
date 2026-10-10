@@ -379,7 +379,7 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         # mismo selector.
         self.assertEqual(html.count('class="tp-hero-action"'), 1)
 
-    def test_semana_vacia_indica_que_la_rutina_conserva_la_siguiente_accion(self):
+    def test_semana_vacia_dirige_a_preparar_las_sesiones_del_bloque(self):
         hoy = date.today()
         html = render_to_string('clientes/trayectoria_plan.html', {
             'cliente': self.cliente,
@@ -398,8 +398,9 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         })
 
         self.assertIn('Esta semana no tiene sesiones registradas en el plan.', html)
-        self.assertIn('La rutina de hoy conserva la siguiente acción disponible.', html)
-        self.assertIn('Ver rutina de hoy', html)
+        self.assertIn('La siguiente acción es preparar las sesiones del bloque.', html)
+        self.assertIn('Preparar sesiones del bloque', html)
+        self.assertIn('href="%s"' % reverse('clientes:plan_decisiones'), html)
         self.assertEqual(html.count('class="tp-hero-action"'), 1)
 
     def test_semana_pendiente_no_secuestra_plan_con_el_checkin_diario(self):
