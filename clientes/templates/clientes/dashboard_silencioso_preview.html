@@ -36,12 +36,12 @@
     <section class="card insight" aria-labelledby="learning-title"><span class="mono section-label">Lo que el plan aprendió</span><p id="learning-title">{{ quiet_insight }}</p><a class="memory-link" href="{{ quiet_links.memory }}">Abrir memoria</a></section>
   </main>
   {% if quiet_week.titulo == "DATOS PENDIENTES" %}
-  <div class="checkin-dialog" id="quietCheckinDialog" role="dialog" aria-modal="true" aria-labelledby="quietCheckinTitle" hidden>
+  <div class="checkin-dialog" id="quietCheckinDialog" role="dialog" aria-modal="true" aria-labelledby="quietCheckinTitle" aria-describedby="quietCheckinDescription" hidden>
     <form class="checkin-panel" id="quietCheckinForm" action="{% url 'clientes:checkin_matutino' %}" method="post">
       {% csrf_token %}
       <span class="mono section-label">Datos de hoy</span>
       <h2 id="quietCheckinTitle">Completar check-in</h2>
-      <p>Solo sueño y energía. Puedes cerrar con Escape.</p>
+      <p id="quietCheckinDescription">Solo sueño y energía. Puedes cerrar con Escape.</p>
       <div class="checkin-fields">
         <label class="checkin-field" for="quietHorasSueno">Horas de sueño
           <input id="quietHorasSueno" name="horas_sueno" type="number" min="1" max="14" step="0.5" inputmode="decimal" required value="{% if quiet_week.sueno is not None %}{{ quiet_week.sueno }}{% endif %}">
@@ -66,8 +66,21 @@
       var error = document.getElementById('quietCheckinError');
       var firstField = document.getElementById('quietHorasSueno');
       var lastFocus;
-      function openDialog() { lastFocus = document.activeElement; dialog.hidden = false; opener.setAttribute('aria-expanded', 'true'); firstField.focus(); }
-      function closeDialog() { dialog.hidden = true; opener.setAttribute('aria-expanded', 'false'); if (lastFocus) lastFocus.focus(); }
+      function getFocusable() {
+        return Array.prototype.slice.call(dialog.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'));
+      }
+      function openDialog() {
+        lastFocus = document.activeElement;
+        dialog.hidden = false;
+        opener.setAttribute('aria-expanded', 'true');
+        firstField.focus();
+      }
+      function closeDialog() {
+        dialog.hidden = true;
+        opener.setAttribute('aria-expanded', 'false');
+        if (lastFocus && lastFocus.isConnected) { lastFocus.focus(); }
+        else { opener.focus(); }
+      }
       opener.addEventListener('click', openDialog);
       closer.addEventListener('click', closeDialog);
       if (new URLSearchParams(window.location.search).get('checkin') === '1') {
@@ -76,7 +89,16 @@
         cleanUrl.searchParams.delete('checkin');
         window.history.replaceState({}, document.title, cleanUrl.pathname + cleanUrl.search + cleanUrl.hash);
       }
-      document.addEventListener('keydown', function (event) { if (event.key === 'Escape' && !dialog.hidden) { event.preventDefault(); closeDialog(); } });
+      dialog.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape') { event.preventDefault(); closeDialog(); return; }
+        if (event.key !== 'Tab') { return; }
+        var focusable = getFocusable();
+        if (!focusable.length) { event.preventDefault(); return; }
+        var first = focusable[0];
+        var last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      });
       form.addEventListener('submit', function (event) {
         event.preventDefault(); error.textContent = '';
         var data = new FormData(form);

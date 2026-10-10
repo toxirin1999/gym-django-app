@@ -284,6 +284,20 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, 'step="0.5"')
         self.assertContains(response, "Escape")
 
+    def test_checkin_modal_declara_y_gestiona_el_foco_de_teclado(self):
+        """El check-in rápido no puede sacar al teclado del diálogo ni perder su origen."""
+        plantilla = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text()
+
+        self.assertIn('aria-modal="true"', plantilla)
+        self.assertIn('aria-describedby="quietCheckinDescription"', plantilla)
+        self.assertIn("firstField.focus();", plantilla)
+        self.assertIn("dialog.addEventListener('keydown'", plantilla)
+        self.assertIn("event.key !== 'Tab'", plantilla)
+        self.assertIn("event.shiftKey && document.activeElement === first", plantilla)
+        self.assertIn("last.focus();", plantilla)
+        self.assertIn("first.focus();", plantilla)
+        self.assertIn("lastFocus && lastFocus.isConnected", plantilla)
+
     def test_checkin_minimo_no_aparece_si_sueno_y_energia_ya_existen(self):
         BitacoraDiaria.objects.create(
             cliente=self.cliente,

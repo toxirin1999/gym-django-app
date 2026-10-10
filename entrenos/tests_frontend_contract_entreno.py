@@ -25,6 +25,26 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('<span>Revisar y finalizar</span>', self.source)
         self.assertIn('id="btn-confirmar-guardar">Guardar entrenamiento</button>', self.source)
 
+    def test_revision_final_es_dialog_accesible_y_devuelve_el_foco(self):
+        """El cierre no deja el foco detrás del overlay ni atrapa al usuario."""
+        self.assertIn('id="modal-resumen-overlay" aria-hidden="true" inert', self.source)
+        self.assertIn('role="dialog" aria-modal="true"', self.source)
+        self.assertIn('function abrirResumen()', self.source)
+        self.assertIn('function cerrarResumen()', self.source)
+        self.assertIn("focoAntesDeResumen=document.activeElement", self.source)
+        self.assertIn("resumenOverlay.removeAttribute('inert');", self.source)
+        self.assertIn("resumenOverlay.setAttribute('inert','');", self.source)
+        self.assertIn("focoAntesDeResumen?.focus?.()", self.source)
+        self.assertIn("if(event.key==='Escape')", self.source)
+        self.assertIn("if(event.key!=='Tab')return", self.source)
+
+    def test_confirmacion_de_cierre_expone_guardado_y_bloquea_doble_envio(self):
+        self.assertIn("if (_envioCierreEnCurso) return;", self.source)
+        self.assertIn("confirmarBtn.setAttribute('aria-busy','true');", self.source)
+        self.assertIn("confirmarBtn.textContent='Guardando…';", self.source)
+        self.assertIn("confirmarBtn.textContent='Reintentar guardado';", self.source)
+        self.assertIn('id="saving-overlay" role="status" aria-live="assertive"', self.source)
+
     def test_calculadora_unica_no_afirma_igualdad_si_hay_resto(self):
         self.assertEqual(self.source.count("function calcularDesgloseDiscos("), 1)
         self.assertIn("0.5,0.25", self.source)

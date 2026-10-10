@@ -2117,8 +2117,8 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- MODAL RESUMEN -->
-<div class="modal-ov" id="modal-resumen-overlay">
-  <div class="modal-resumen-full">
+<div class="modal-ov" id="modal-resumen-overlay" aria-hidden="true" inert>
+  <div class="modal-resumen-full" role="dialog" aria-modal="true" aria-labelledby="modal-resumen-title" aria-describedby="modal-resumen-subtitle" tabindex="-1">
 
     <!-- Cabecera -->
     <div class="mr-header">
@@ -2286,7 +2286,7 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- OVERLAY GUARDANDO -->
-<div id="saving-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
+<div id="saving-overlay" role="status" aria-live="assertive" aria-atomic="true" aria-busy="true" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(4px);z-index:9999;flex-direction:column;align-items:center;justify-content:center;gap:20px;">
   <div style="width:52px;height:52px;border:4px solid rgba(255,255,255,0.15);border-top-color:#4ade80;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
   <p style="color:#fff;font-size:1.1rem;font-weight:600;letter-spacing:0.05em;margin:0;">Guardando entrenamiento…</p>
   <p style="color:rgba(255,255,255,0.5);font-size:0.8rem;margin:0;">Esto puede tardar unos segundos</p>
@@ -3285,7 +3285,7 @@ function actualizarSticky(){
   const puedeFinalizar=comp>=1;
   if(btnFinal){
     btnFinal.disabled=!puedeFinalizar;
-    btnFinal.title=puedeFinalizar?'Finalizar entrenamiento':'Completa al menos una serie para finalizar';
+    btnFinal.title=puedeFinalizar?'Revisa el resumen antes de guardar el entrenamiento':'Completa al menos una serie para revisar y finalizar';
   }
 }
 
@@ -3331,6 +3331,61 @@ document.addEventListener('visibilitychange',()=>{
 document.querySelectorAll('.weight-input').forEach(inp=>{
   inp.addEventListener('focus',function(){this.blur();});
   inp.addEventListener('touchstart',function(e){e.preventDefault();this.blur();},{passive:false});
+});
+
+// El resumen es un paso de confirmación: conserva el foco de origen, lo
+// encierra mientras está abierto y permite volver al registro sin perder el
+// contexto. En móvil esto evita que el teclado virtual o el lector de pantalla
+// salten al contenido que queda detrás del overlay.
+const resumenOverlay=document.getElementById('modal-resumen-overlay');
+const resumenDialog=resumenOverlay?.querySelector('[role="dialog"]');
+let focoAntesDeResumen=null;
+
+function focoResumenDisponible(){
+  return Array.from(resumenDialog?.querySelectorAll(
+    'button:not([disabled]), [href], select:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )||[]).filter(el=>el.offsetParent!==null);
+}
+
+function abrirResumen(){
+  focoAntesDeResumen=document.activeElement;
+  resumenOverlay.removeAttribute('inert');
+  resumenOverlay.classList.add('active');
+  resumenOverlay.setAttribute('aria-hidden','false');
+  requestAnimationFrame(()=>resumenDialog?.focus());
+}
+
+function cerrarResumen(){
+  if(_envioCierreEnCurso)return;
+  resumenOverlay.classList.remove('active');
+  resumenOverlay.setAttribute('aria-hidden','true');
+  resumenOverlay.setAttribute('inert','');
+  requestAnimationFrame(()=>focoAntesDeResumen?.focus?.());
+}
+
+document.addEventListener('keydown',event=>{
+  if(!resumenOverlay?.classList.contains('active'))return;
+  if(event.key==='Escape'){
+    event.preventDefault();
+    cerrarResumen();
+    return;
+  }
+  if(event.key!=='Tab')return;
+  const controles=focoResumenDisponible();
+  if(!controles.length){
+    event.preventDefault();
+    resumenDialog?.focus();
+    return;
+  }
+  const primero=controles[0];
+  const ultimo=controles[controles.length-1];
+  if(event.shiftKey&&document.activeElement===primero){
+    event.preventDefault();
+    ultimo.focus();
+  }else if(!event.shiftKey&&document.activeElement===ultimo){
+    event.preventDefault();
+    primero.focus();
+  }
 });
 
 document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
@@ -3423,10 +3478,10 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('modal-moti-text').textContent=frase.t;
   document.getElementById('modal-moti-sub').textContent=frase.s;
 
-  document.getElementById('modal-resumen-overlay').classList.add('active');
+  abrirResumen();
 });
 
-document.getElementById('btn-volver-editar').addEventListener('click',()=>document.getElementById('modal-resumen-overlay').classList.remove('active'));
+document.getElementById('btn-volver-editar').addEventListener('click',cerrarResumen);
 
 // ── SWAP MÁQUINA OCUPADA ─────────────────────────────────────────
 let _swapFormId = null, _swapNombreOriginal = null;
@@ -3724,6 +3779,8 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   const confirmarBtn=document.getElementById('btn-confirmar-guardar');
   _envioCierreEnCurso = true;
   confirmarBtn.disabled = true;
+  confirmarBtn.setAttribute('aria-busy','true');
+  confirmarBtn.textContent='Guardando…';
   _sessionGuardada = true;
   document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
   const ov = document.getElementById('saving-overlay');
@@ -3772,6 +3829,8 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     _sessionGuardada = false;
     _envioCierreEnCurso = false;
     confirmarBtn.disabled = false;
+    confirmarBtn.removeAttribute('aria-busy');
+    confirmarBtn.textContent='Reintentar guardado';
     if (ov) ov.style.display = 'none';
     window.alert(error.message || 'No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
   });
