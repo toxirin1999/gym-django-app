@@ -11,10 +11,12 @@ from django.test import TestCase, Client
 from django.contrib.auth.models import User
 from django.utils import timezone
 from django.urls import reverse
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from diario.models import ProsocheDiario, ProsocheMes
 from diario.services.estado_diario import calcular_estado_diario_hoy
+from entrenos.models import EntrenoRealizado
+from rutinas.models import Rutina
 
 # Referencia a la implementación real de timezone.localtime, capturada antes
 # de que ningún test la parchee. calcular "hoy" (timezone.localdate) delega
@@ -48,6 +50,7 @@ class DiarioUIEstadoCicloTests(TestCase):
             mes=str(self.hoy.month),
             año=self.hoy.year,
         )
+        self.rutina = Rutina.objects.create(nombre='Rutina de prueba Diario')
 
     def tearDown(self):
         User.objects.all().delete()
@@ -146,6 +149,34 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Día concluido')
         self.assertContains(response, 'Ser paciente hoy')
+
+    def test_sesion_de_fuerza_hoy_se_describe_como_registro_no_orden_del_plan(self):
+        """El Diario nombra un hecho, no deduce que hoy tocaba entrenar."""
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=self.hoy - timedelta(days=1),
+            fecha_ejecucion=self.hoy,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, 'Sesión de fuerza registrada hoy')
+        self.assertNotContains(response, 'Sesión de fuerza completada hoy')
+
+    def test_sesion_planificada_hoy_pero_ejecutada_ayer_no_se_muestra_como_hoy(self):
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=self.rutina,
+            fecha=self.hoy,
+            fecha_ejecucion=self.hoy - timedelta(days=1),
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertNotContains(response, 'Sesión de fuerza registrada hoy')
 
     # Test 5: CTA existe por estado
     @patch('diario.views.timezone.localtime')

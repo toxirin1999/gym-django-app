@@ -97,7 +97,7 @@
                 {% elif estado_dia.estado == 'solo_noche' %}<h2 id="estado-hoy" class="hoy-titulo-estado">Cierre registrado</h2><p class="hoy-detalle-estado">Hoy quedó registrado el cierre, aunque no hubo apertura.</p>
                 {% else %}<h2 id="estado-hoy" class="hoy-titulo-estado"><span class="hoy-badge-concluido">Día concluido</span></h2><p class="hoy-detalle-estado">{% if entrada_hoy.persona_quiero_ser %}Esta mañana buscabas ser: &ldquo;{{ entrada_hoy.persona_quiero_ser }}&rdquo;.{% else %}Apertura y cierre registrados.{% endif %}</p>{% endif %}
             </div>
-            {% if entreno_fuerza_hoy %}<div class="hoy-badge-fuerza">● Sesión de fuerza completada hoy</div>{% endif %}
+            {% if entreno_fuerza_hoy %}<div class="hoy-badge-fuerza">● Sesión de fuerza registrada hoy</div>{% endif %}
             <div class="hoy-status" aria-label="Progreso del ritual">
                 <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.manana_hecha %}hecho{% elif ritual_accion_principal == 'apertura' %}activo{% endif %}">{% if estado_dia.manana_hecha %}✓{% elif ritual_accion_principal == 'apertura' %}●{% else %}—{% endif %}</span><span>Mañana</span></div>
                 <div class="hoy-status-item"><span class="hoy-status-value {% if estado_dia.noche_hecha %}hecho{% elif ritual_accion_principal == 'cierre' %}activo{% endif %}">{% if estado_dia.noche_hecha %}✓{% elif ritual_accion_principal == 'cierre' %}●{% else %}—{% endif %}</span><span>Noche</span></div>

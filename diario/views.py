@@ -134,10 +134,15 @@ def dashboard_diario(request):
     # no condiciona ni bloquea nada del ritual.
     entreno_fuerza_hoy = False
     try:
+        from django.db.models import Q
         from entrenos.models import EntrenoRealizado
         cliente = request.user.cliente_perfil
-        entreno_fuerza_hoy = EntrenoRealizado.objects.filter(
-            cliente=cliente, fecha=hoy
+        entreno_fuerza_hoy = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+            # Las sesiones nuevas guardan su día de ejecución separado del
+            # día planificado. Las históricas no tienen ese campo: ahí la
+            # fecha original sigue siendo la mejor evidencia disponible.
+            Q(fecha_ejecucion=hoy)
+            | Q(fecha=hoy, fecha_ejecucion__isnull=True)
         ).exists()
     except Exception:
         entreno_fuerza_hoy = False
