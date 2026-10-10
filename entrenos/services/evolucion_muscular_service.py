@@ -10,8 +10,11 @@ Método
    ``normalizar_zona``: manda el ``grupo_muscular`` registrado (con o sin
    tilde, alias del catálogo); solo si es genérico o falta se infiere por
    el nombre del ejercicio.
-2. Por ejercicio se toma el mejor 1RM estimado (Epley) en cada ventana,
-   calculado sobre la carga POR UNIDAD (por mano / por lado, tal como se
+2. Por ejercicio se toma el mejor 1RM estimado (Epley) en cada ventana a
+   partir de la MEJOR SERIE DE TRABAJO real (``SerieRealizada``, sin
+   aproximaciones). ``EjercicioRealizado`` guarda la media de las series,
+   que en una pirámide no corresponde a ninguna serie real; solo se usa en
+   entrenos antiguos sin series individuales. La carga se toma POR UNIDAD (por mano / por lado, tal como se
    registra en ``peso_kg``). Así un cambio de criterio de registro (antes
    solo el peso por mano, ahora el total de las dos) no duplica la carga.
    Se descartan cargas de recuperación, series no completadas y registros
@@ -185,6 +188,7 @@ def _ventanas(hoy, dias):
 
 
 def _filas(cliente, desde, hoy):
+    """Agregados por ejercicio y sesión (``EjercicioRealizado``)."""
     from entrenos.models import EjercicioRealizado
     return (
         EjercicioRealizado.objects
@@ -197,7 +201,30 @@ def _filas(cliente, desde, hoy):
         .values_list(
             'entreno__fecha', 'nombre_ejercicio', 'grupo_muscular', 'peso_kg',
             'peso_total_kg', 'multiplicador_carga', 'tipo_carga', 'repeticiones',
-            'series', 'is_recovery_load',
+            'series', 'is_recovery_load', 'entreno_id',
+        )
+        .order_by('entreno__fecha')
+    )
+
+
+def _series(cliente, desde, hoy):
+    """Series de trabajo individuales (``SerieRealizada``), sin aproximaciones."""
+    from entrenos.models import SerieRealizada
+    return (
+        SerieRealizada.objects
+        .filter(
+            entreno__cliente=cliente,
+            entreno__fecha__gt=desde,
+            entreno__fecha__lte=hoy,
+            completado=True,
+            es_aproximacion=False,
+            distancia_metros__isnull=True,
+            repeticiones__gte=1,
+        )
+        .values_list(
+            'entreno__fecha', 'ejercicio__nombre', 'ejercicio__grupo_muscular', 'peso_kg',
+            'peso_total_kg', 'multiplicador_carga', 'tipo_carga', 'repeticiones',
+            'entreno_id',
         )
         .order_by('entreno__fecha')
     )
@@ -212,17 +239,35 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
 
         {'zona', 'ejercicio', 'pct' | None, 'dudoso': bool,
          'antes': {'e1rm', 'peso_kg', 'reps', 'fecha', 'tipo_carga',
-                   'multiplicador', 'peso_total_kg'} | None,
+                   'multiplicador', 'peso_total_kg',
+                   'fuente': 'serie' | 'media'} | None,
          'ahora': {...} | None}
     """
     hoy = hoy or date.today()
     inicio_actual, inicio_anterior = _ventanas(hoy, dias)
 
-    por_ejercicio = {}
-    for fecha, nombre, grupo, peso, peso_total, mult, tipo, reps, _series, recuperacion in \
-            _filas(cliente, inicio_anterior, hoy):
-        if recuperacion:
+    agregados = list(_filas(cliente, inicio_anterior, hoy))
+    # Sesiones/ejercicio marcados como carga de recuperación: ni su media ni sus series cuentan.
+    recuperacion = {(eid, _plano(nombre))
+                    for _f, nombre, *_r, rec, eid in agregados if rec}
+
+    candidatos = []  # (fecha, nombre, grupo, peso, total, mult, tipo, reps, fuente)
+    con_series = set()
+    for fecha, nombre, grupo, peso, total, mult, tipo, reps, eid in \
+            _series(cliente, inicio_anterior, hoy):
+        clave = (eid, _plano(nombre))
+        if clave in recuperacion:
             continue
+        con_series.add(clave)
+        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'serie'))
+    for fecha, nombre, grupo, peso, total, mult, tipo, reps, _series_n, rec, eid in agregados:
+        if rec or (eid, _plano(nombre)) in con_series:
+            continue
+        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'media'))
+    candidatos.sort(key=lambda c: c[0])
+
+    por_ejercicio = {}
+    for fecha, nombre, grupo, peso, peso_total, mult, tipo, reps, fuente in candidatos:
         zona = normalizar_zona(grupo, nombre)
         if zona is None:
             continue
@@ -235,13 +280,14 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
         info = por_ejercicio.setdefault((zona, _plano(nombre)), {
             'zona': zona, 'ejercicio': nombre.strip(), 'antes': None, 'ahora': None,
         })
-        # Filas ordenadas por fecha: el último nombre visto es el más reciente.
+        # Candidatos ordenados por fecha: el último nombre visto es el más reciente.
         info['ejercicio'] = nombre.strip()
         actual = info[ventana]
         if actual is None or e1rm > actual['e1rm']:
             info[ventana] = {
-                'e1rm': e1rm, 'peso_kg': peso, 'reps': reps, 'fecha': fecha,
+                'e1rm': e1rm, 'peso_kg': float(peso or 0), 'reps': reps, 'fecha': fecha,
                 'tipo_carga': tipo, 'multiplicador': mult, 'peso_total_kg': peso_total,
+                'fuente': fuente,
             }
 
     resultado = []
@@ -283,7 +329,7 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
     inicio_series = hoy - timedelta(days=28)
 
     series_por_zona = defaultdict(float)
-    for fecha, nombre, grupo, *_resto, series, _rec in _filas(cliente, inicio_series, hoy):
+    for fecha, nombre, grupo, *_resto, series, _rec, _eid in _filas(cliente, inicio_series, hoy):
         zona = normalizar_zona(grupo, nombre)
         if zona:
             series_por_zona[zona] += series or 0

@@ -15,8 +15,9 @@ def _fmt_ventana(v):
     extra = ''
     if v['multiplicador'] or v['peso_total_kg']:
         extra = f" ×{v['multiplicador'] or '?'} total={v['peso_total_kg'] or '—'}"
+    fuente = 'mejor serie' if v.get('fuente') == 'serie' else 'media de series'
     return (f"{v['peso_kg']:g} kg × {v['reps']} ({tipo}{extra}) "
-            f"e1RM {v['e1rm']:.1f} · {v['fecha']:%d/%m/%y}")
+            f"e1RM {v['e1rm']:.1f} · {v['fecha']:%d/%m/%y} · {fuente}")
 
 
 class Command(BaseCommand):

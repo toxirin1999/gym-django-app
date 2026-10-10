@@ -10,6 +10,7 @@ from entrenos.models import EjercicioRealizado, EntrenoRealizado
 from entrenos.services.evolucion_muscular_service import (
     ZONAS,
     calcular_evolucion_por_grupo,
+    comparar_ejercicios,
     normalizar_zona,
 )
 from entrenos.services.modelo_usuario_service import _get_grupos_musculares
@@ -279,6 +280,68 @@ class GruposMuscularesCompatTests(TestCase):
         self.assertEqual(r['rapidos'], [{'grupo': 'Tríceps', 'pct': 60.0}])
         self.assertEqual(r['lentos'], [])
         self.assertIn('Tríceps', r['descripcion'])
+
+
+class EvolucionDesdeSeriesTests(_DatosEntrenoMixin, TestCase):
+    """Con series individuales guardadas, el e1RM sale de la mejor serie real."""
+
+    def _sesion_con_series(self, dias_atras, nombre, grupo, series, recuperacion=False):
+        """series: [(peso, reps, es_aproximacion)]. Crea el agregado (media) y las series."""
+        from entrenos.models import SerieRealizada
+        from rutinas.models import EjercicioBase
+        base, _ = EjercicioBase.objects.get_or_create(nombre=nombre, defaults={'grupo_muscular': grupo})
+        trabajo = [s for s in series if not s[2]]
+        media_peso = sum(p for p, _, _ in trabajo) / len(trabajo)
+        media_reps = sum(r for _, r, _ in trabajo) // len(trabajo)
+        self._ej(dias_atras, nombre, media_peso, media_reps, grupo, is_recovery_load=recuperacion)
+        entreno = self._entrenos[self.HOY - timedelta(days=dias_atras)]
+        SerieRealizada.objects.bulk_create([
+            SerieRealizada(entreno=entreno, ejercicio=base, serie_numero=i + 1,
+                           peso_kg=p, repeticiones=r, es_aproximacion=aprox, completado=True)
+            for i, (p, r, aprox) in enumerate(series)
+        ])
+
+    def test_piramide_usa_la_mejor_serie_no_la_media(self):
+        # Antes: 80×5 en todas las series. Ahora pirámide 60×8, 70×6, 90×4.
+        # Media de "ahora" = 73.3×6 (e1RM 88) → parecería +-; la mejor serie 90×4 = 102.
+        self._sesion_con_series(120, 'Curl femoral tumbado', 'Isquios',
+                                [(80, 5, False), (80, 5, False), (80, 5, False)])
+        self._sesion_con_series(10, 'Curl femoral tumbado', 'Isquios',
+                                [(60, 8, False), (70, 6, False), (90, 4, False)])
+        r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
+        isquios = self._grupo(r, 'isquios')
+        # 80×(1+5/30)=93.33 → 90×(1+4/30)=102.0 → +9.3 %
+        self.assertAlmostEqual(isquios['pct'], 9.3, places=1)
+
+    def test_las_series_de_aproximacion_no_cuentan(self):
+        self._sesion_con_series(120, 'Press banca con barra', 'Pecho',
+                                [(100, 5, False)])
+        self._sesion_con_series(10, 'Press banca con barra', 'Pecho',
+                                [(140, 1, True), (100, 5, False)])
+        pecho = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'pecho')
+        self.assertEqual(pecho['pct'], 0.0)
+
+    def test_entrenos_sin_series_usan_el_agregado(self):
+        self._ej(120, 'Press banca con barra', 100, 5, 'Pecho')          # legacy, sin series
+        self._sesion_con_series(10, 'Press banca con barra', 'Pecho', [(110, 5, False)])
+        pecho = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'pecho')
+        self.assertAlmostEqual(pecho['pct'], 10.0, places=1)
+
+    def test_series_de_un_ejercicio_de_recuperacion_no_cuentan(self):
+        self._sesion_con_series(120, 'Hip thrust con barra', 'Glúteos', [(100, 8, False)])
+        self._sesion_con_series(10, 'Hip thrust con barra', 'Glúteos', [(110, 8, False)])
+        self._sesion_con_series(5, 'Hip thrust con barra', 'Glúteos', [(200, 8, False)],
+                                recuperacion=True)
+        gluteos = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'gluteos')
+        self.assertAlmostEqual(gluteos['pct'], 10.0, places=1)
+
+    def test_el_detalle_indica_la_fuente(self):
+        self._ej(120, 'Press banca con barra', 100, 5, 'Pecho')
+        self._sesion_con_series(10, 'Press banca con barra', 'Pecho', [(110, 5, False)])
+        detalle = comparar_ejercicios(self.cliente, hoy=self.HOY)
+        press = next(e for e in detalle if e['ejercicio'] == 'Press banca con barra')
+        self.assertEqual(press['antes']['fuente'], 'media')
+        self.assertEqual(press['ahora']['fuente'], 'serie')
 
 
 class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
