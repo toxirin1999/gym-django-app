@@ -29,3 +29,12 @@ class WeightAccessScopeTests(TestCase):
         response = self.client.get(self.urls[0])
 
         self.assertEqual(response.status_code, 200)
+
+    def test_empty_weight_dashboard_explains_the_first_action(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.urls[0])
+
+        self.assertContains(response, 'Registra tu referencia, no una tendencia todavía')
+        self.assertContains(response, 'Registrar primer peso')
+        self.assertContains(response, 'Añadir objetivo opcional')

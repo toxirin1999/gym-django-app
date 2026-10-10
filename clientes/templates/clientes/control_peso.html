@@ -70,12 +70,24 @@
         </div>
     </div>
 
+    {% if not registros_peso and not objetivos_peso %}
+    <section class="card-halo border-cyan-400/50 text-center md:text-left" aria-labelledby="peso-primer-paso-title">
+        <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-300">Punto de partida</p>
+        <h2 id="peso-primer-paso-title" class="mt-2 text-2xl font-bold text-white">Registra tu referencia, no una tendencia todavía</h2>
+        <p class="mt-2 max-w-2xl text-gray-300">Con tu primer peso el plan podrá empezar a leer el cambio real. El objetivo es opcional y puedes añadirlo después.</p>
+        <div class="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center md:justify-start">
+            <a href="#registro-peso" class="btn-primary text-center focus:outline-none focus:ring-2 focus:ring-cyan-200">Registrar primer peso</a>
+            <a href="#objetivo-peso" class="btn-secondary text-center focus:outline-none focus:ring-2 focus:ring-cyan-200">Añadir objetivo opcional</a>
+        </div>
+    </section>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Columna Izquierda: Registro de Peso y Objetivo -->
         <div class="space-y-6">
             <!-- Métricas Motivacionales -->
             {% if analytics.metricas_motivacionales %}
-            <div class="card-halo">
+            <div id="registro-peso" class="card-halo scroll-mt-6">
                 <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-trophy mr-2 text-cyan-400"></i>Tu Progreso</h3>
                 <div class="grid grid-cols-2 gap-4">
                     <div class="text-center">
@@ -100,7 +112,7 @@
 
             <!-- Tendencias -->
             {% if analytics.tendencia_semanal %}
-            <div class="card-halo">
+            <div id="objetivo-peso" class="card-halo scroll-mt-6">
                 <h3 class="text-xl font-semibold text-white mb-4"><i class="fas fa-chart-line mr-2 text-cyan-400"></i>Tendencias</h3>
                 <div class="space-y-3">
                     <div class="flex justify-between items-center p-3 rounded-lg bg-[#121212]">
