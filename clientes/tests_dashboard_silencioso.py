@@ -205,6 +205,65 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
+    def test_sin_sesion_ejecutable_el_panel_ofrece_rutina_en_vez_de_una_cta_vacia(
+        self, dashboard_contexto, resolver,
+    ):
+        """Una portada degradada sigue teniendo una acción real y no inventa sesión."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+            "sesion_programada": None,
+        }
+        resolver.return_value = {
+            "estado": "OBSERVANDO",
+            "texto": "El plan necesita una lectura más antes de elegir.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["quiet_decision"]["estado"], "AJUSTAR")
+        self.assertEqual(
+            response.context["quiet_decision"]["cta_url"],
+            reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id]),
+        )
+        self.assertEqual(response.context["quiet_decision"]["cta_label"], "Ver rutina")
+        self.assertContains(response, "Ver rutina")
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_recuperar_sin_url_se_degrada_a_movilidad_y_no_a_una_sesion_inventada(
+        self, dashboard_contexto, resolver,
+    ):
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+        }
+        resolver.return_value = {
+            "estado": "PROTEGIENDO",
+            "texto": "Conviene bajar el tono hoy.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["quiet_decision"]["estado"], "RECUPERAR")
+        self.assertEqual(
+            response.context["quiet_decision"]["cta_url"],
+            reverse("estiramientos:panel"),
+        )
+        self.assertEqual(response.context["quiet_decision"]["cta_label"], "Movilidad y estiramientos")
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
     def test_semana_solo_dice_recuperando_bien_con_energia_y_sueno(
         self, dashboard_contexto, resolver,
     ):

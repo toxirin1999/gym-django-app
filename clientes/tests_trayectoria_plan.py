@@ -335,7 +335,7 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         self.assertNotIn('Aún no materializada', html)
         self.assertNotIn('La trayectoria no anticipa ni crea sesiones', html)
         self.assertIn('Sin sesiones concretas aún', html)
-        self.assertIn('La dirección del bloque ya está definida.', html)
+        self.assertIn('La dirección del bloque ya está definida, pero el calendario todavía no ha concretado esta semana.', html)
 
     def test_plantilla_no_incluye_disclaimer_ni_panel_de_limitaciones_crudo(self):
         resultado = self._proyectar()
@@ -346,11 +346,61 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         self.assertNotIn('Qué no puede afirmar esta lectura', html)
 
     def test_ctas_de_plan_vuelven_al_dashboard_silencioso(self):
-        """Plan conserva una única puerta de vuelta al contexto de hoy."""
+        """Los estados disponibles conservan una puerta de vuelta al contexto de hoy."""
         plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
 
-        self.assertEqual(plantilla.count("{% url 'clientes:dashboard_silencioso_preview' %}"), 2)
+        self.assertIn("{% url 'clientes:dashboard_silencioso_preview' %}", plantilla)
+        self.assertIn("{% url 'clientes:plan_decisiones' %}", plantilla)
         self.assertNotIn("{% url 'clientes:mockup_demo' %}", plantilla)
+
+    def test_estados_incompletos_explican_el_limite_y_conservan_una_salida_util(self):
+        """Sin bloque, fase, sesiones o hito el Plan no finge precisión ni deja callejón sin salida."""
+        hoy = date.today()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente,
+            'trayectoria': {
+                'fecha_corte': hoy,
+                'estado': 'unknown',
+                'periodizacion': None,
+                'bloque': None,
+                'macrociclo': None,
+                'proximo_hito': None,
+                'semana': None,
+            },
+        })
+
+        self.assertIn('Plan sin configurar', html)
+        self.assertIn('Revisar configuración del plan', html)
+        self.assertIn(reverse('clientes:plan_decisiones'), html)
+        self.assertIn('Sin hito fechado aún', html)
+        self.assertIn('Calendario pendiente', html)
+        self.assertIn('Sin sesiones concretas aún', html)
+        # Contamos el enlace renderizado, no la regla CSS que comparte el
+        # mismo selector.
+        self.assertEqual(html.count('class="tp-hero-action"'), 1)
+
+    def test_semana_vacia_indica_que_la_rutina_conserva_la_siguiente_accion(self):
+        hoy = date.today()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente,
+            'trayectoria': {
+                'fecha_corte': hoy,
+                'estado': 'available',
+                'periodizacion': {'nombre': 'Base', 'objetivo': 'Construir base', 'semana_actual': 1,
+                                   'semanas': 4, 'inicio': hoy, 'fin': hoy + timedelta(days=27),
+                                   'rpe_inicio': 6, 'rpe_fin': 7, 'reps': '10-12', 'descanso_seg': 90},
+                'bloque': {'objetivo': 'Construir base', 'objetivos_secundarios': []},
+                'macrociclo': None,
+                'proximo_hito': None,
+                'semana': {'inicio': hoy, 'fin': hoy + timedelta(days=6), 'sesiones': [],
+                           'objetivo_sesiones': 0, 'evaluacion': None},
+            },
+        })
+
+        self.assertIn('Esta semana no tiene sesiones registradas en el plan.', html)
+        self.assertIn('La rutina de hoy conserva la siguiente acción disponible.', html)
+        self.assertIn('Ver rutina de hoy', html)
+        self.assertEqual(html.count('class="tp-hero-action"'), 1)
 
     def test_semana_pendiente_no_secuestra_plan_con_el_checkin_diario(self):
         """El check-in es una acción de Ahora; Plan sigue explicando dirección."""

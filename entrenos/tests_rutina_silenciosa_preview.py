@@ -176,6 +176,27 @@ class RutinaSilenciosaPreviewTests(TestCase):
             plantilla,
         )
 
+    def test_dialogo_de_preview_cierra_con_escape_y_devuelve_el_foco_al_dia(self):
+        """Cerrar no deja el teclado perdido detrás del diálogo nativo.
+
+        El mismo cierre centralizado cubre el botón, el fondo y Escape; tras
+        cerrar, el selector que abrió la preview recupera el foco para seguir
+        recorriendo la semana sin empezar desde el principio de la página.
+        """
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("let opener = null;", plantilla)
+        self.assertIn("opener = button;", plantilla)
+        self.assertIn("modal.addEventListener('cancel'", plantilla)
+        self.assertIn("event.preventDefault();", plantilla)
+        self.assertIn("modal.addEventListener('close'", plantilla)
+        self.assertIn("if (trigger && trigger.isConnected) trigger.focus();", plantilla)
+        self.assertIn(".modal-close:focus-visible", plantilla)
+
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(

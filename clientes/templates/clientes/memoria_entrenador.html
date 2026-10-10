@@ -124,6 +124,10 @@
   .mem-ins .d{margin-top:12px;color:var(--ink-muted);font-size:12px;line-height:1.55}
 
   .mem-empty{margin-top:34px;padding:26px;border:1px dashed var(--line);color:var(--ink-faint);text-align:center;font:700 10px/1.6 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+  .mem-empty-title{color:var(--ink);font:700 22px/1.05 var(--font-display);letter-spacing:-.03em;text-transform:none}
+  .mem-empty-copy{max-width:33ch;margin:10px auto 0;color:var(--ink-muted);font:13px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;text-transform:none}
+  .mem-empty-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:18px;padding:0 15px;border:1px solid var(--line-strong);border-radius:10px;color:var(--cyan);font:700 9px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
+  .mem-empty-link:hover,.mem-empty-link:focus-visible{border-color:var(--cyan);background:rgba(114,221,255,.08);outline:none}
 
   .mem-foot{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;display:flex;justify-content:space-between;gap:10px;color:var(--ink-faint);font:9px/1.5 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
 
@@ -558,7 +562,11 @@
     {% endif %}
 
     {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos %}
-    <p class="mem-empty">Aún no hay suficientes datos. El sistema aprende con cada sesión completada.</p>
+    <section class="mem-empty" aria-labelledby="memoria-sin-evidencia-title">
+      <h2 class="mem-empty-title" id="memoria-sin-evidencia-title">Aún no hay evidencia suficiente</h2>
+      <p class="mem-empty-copy">La memoria no inventa conclusiones: se completa al registrar sesiones, esfuerzo y cómo respondió tu cuerpo.</p>
+      <a class="mem-empty-link" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver tu próxima rutina <span aria-hidden="true">→</span></a>
+    </section>
     {% endif %}
 
   </div>

@@ -10,7 +10,7 @@
   </style>
   <style>
     .day.is-selected{border-color:var(--blue);color:var(--paper);background:rgba(101,202,255,.12);box-shadow:0 0 0 2px rgba(101,202,255,.13)}
-    .selector-status{min-height:16px;margin:10px 0 0;color:#b7ddec;font-size:10px;line-height:1.25}
+    .selector-status{min-height:16px;margin:10px 0 0;color:#b7ddec;font-size:10px;line-height:1.25}.modal-close:focus-visible,.modal-actions .close-text:focus-visible,.modal-actions .cta:focus-visible{outline:2px solid var(--blue);outline-offset:3px}
     .modal-sync-status{min-height:15px;margin:12px 0 -4px;color:#a8c9ba;font-size:10px;line-height:1.35}
   </style>
 </head>
@@ -40,7 +40,10 @@
       const selectionStatus = document.querySelector('[data-day-selection]');
       const syncStatus = document.getElementById('routine-day-sync-status');
       let previewSeleccionada = '';
-      const close = () => modal.close();
+      let opener = null;
+      const close = () => {
+        if (modal.open) modal.close();
+      };
 
       function seleccionarDia(button, preview) {
         document.querySelectorAll('[data-day-preview]').forEach(day => {
@@ -131,9 +134,19 @@
 
       document.querySelectorAll('[data-modal-close]').forEach(button => button.addEventListener('click', close));
       modal.addEventListener('click', event => { if (event.target === modal) close(); });
+      modal.addEventListener('cancel', event => {
+        event.preventDefault();
+        close();
+      });
+      modal.addEventListener('close', () => {
+        const trigger = opener;
+        opener = null;
+        if (trigger && trigger.isConnected) trigger.focus();
+      });
       document.querySelectorAll('[data-day-preview]').forEach(button => button.addEventListener('click', () => {
         const preview = previews[Number(button.dataset.dayPreview)];
         if (!preview) return;
+        opener = button;
         seleccionarDia(button, preview);
         previewSeleccionada = preview.fecha_efectiva;
         syncStatus.textContent = 'Actualizando detalles del plan…';

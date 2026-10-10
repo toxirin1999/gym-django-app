@@ -2077,6 +2077,18 @@ def dashboard_silencioso_preview(request):
             )
             accion_label = 'Ver mi sesión'
 
+        # Degradación honesta: si todavía no existe una sesión ejecutable, la
+        # portada conserva una salida concreta. Nunca etiquetamos como "mi
+        # sesión" una ruta sin prescripción; abrimos el lugar donde se puede
+        # revisar la rutina o recuperar con movilidad.
+        if not accion_url:
+            if estado_operativo == 'RECUPERAR':
+                accion_url = movilidad_url
+                accion_label = 'Movilidad y estiramientos'
+            else:
+                accion_url = rutina_url
+                accion_label = 'Ver rutina'
+
     if not tiene_energia_y_sueno:
         titulo_semana = 'DATOS PENDIENTES'
     elif acwr is not None and acwr > 1.3:

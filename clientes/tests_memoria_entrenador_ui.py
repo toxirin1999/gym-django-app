@@ -33,12 +33,30 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertContains(response, 'Expediente completo')
         self.assertContains(response, 'Memoria')
 
+    def test_sin_evidencia_la_memoria_explica_el_limite_y_lleva_a_la_rutina(self):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'Aún no hay evidencia suficiente')
+        self.assertContains(
+            response,
+            'La memoria no inventa conclusiones',
+        )
+        self.assertContains(response, 'Ver tu próxima rutina')
+        self.assertContains(
+            response,
+            reverse('entrenos:rutina_silenciosa_preview', args=[self.cliente.id]),
+        )
+
     def test_plantilla_fija_nav_global_y_secciones_de_profundidad(self):
         plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
 
         self.assertIn("{% include 'includes/bottom_nav.html' with activo='memoria' %}", plantilla)
         self.assertIn('mem-depth', plantilla)
         self.assertIn('<details', plantilla)
+        self.assertIn('memoria-sin-evidencia-title', plantilla)
+        self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", plantilla)
 
     def test_estaciones_solo_compara_evidencia_compatible_y_con_lectura_semantica(self):
         objetivo = HyroxObjective.objects.create(
