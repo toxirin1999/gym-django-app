@@ -74,3 +74,12 @@ class CalendarioSesionProgramadaTests(TestCase):
             "buildBriefingParams(entrenamiento, fechaSeleccionada).toString()",
             template,
         )
+
+    def test_dia_sin_sesion_lleva_a_la_rutina_canonica(self):
+        template = Path(
+            "entrenos/templates/entrenos/vista_plan_calendario.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("No hay entrenamiento programado para este d\\u00eda.", template)
+        self.assertIn("Ver rutina disponible", template)
+        self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", template)
