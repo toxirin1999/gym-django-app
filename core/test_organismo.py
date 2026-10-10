@@ -18,7 +18,18 @@ from django.contrib.auth.models import User
 
 from clientes.models import Cliente
 from hyrox.models import UserInjury
-from core.organismo import resolver_estado_sistema_hoy
+from core.organismo import estado_operativo_visible, resolver_estado_sistema_hoy
+
+
+class TestEstadoOperativoVisible(TestCase):
+    """La traducción de coordinación a lenguaje de pantalla es única."""
+
+    def test_traduce_todos_los_estados_y_degrada_a_ajustar(self):
+        self.assertEqual(estado_operativo_visible('EN_MARGEN'), 'ENTRENAR')
+        self.assertEqual(estado_operativo_visible('PROTEGIENDO'), 'RECUPERAR')
+        self.assertEqual(estado_operativo_visible('OBSERVANDO'), 'AJUSTAR')
+        self.assertEqual(estado_operativo_visible('SILENCIO'), 'DESCANSAR')
+        self.assertEqual(estado_operativo_visible('desconocido'), 'AJUSTAR')
 
 
 class TestOrganismoResolver(TestCase):
