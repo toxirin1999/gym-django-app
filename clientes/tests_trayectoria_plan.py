@@ -458,6 +458,35 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         self.assertIn('tp-session--today', html)
         self.assertIn('Sesión efectiva de hoy: Fuerza reprogramada', html)
         self.assertIn('Hoy</span>', html)
+
+    def test_sesion_pasada_sin_registro_no_se_presenta_como_deuda(self):
+        hoy = date.today()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente,
+            'trayectoria': {
+                'fecha_corte': hoy,
+                'periodizacion': None,
+                'bloque': None,
+                'macrociclo': None,
+                'proximo_hito': None,
+                'semana': {
+                    'inicio': hoy - timedelta(days=hoy.weekday()),
+                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                    'objetivo_sesiones': 1,
+                    'evaluacion': None,
+                    'sesiones': [{
+                        'nombre': 'Fuerza anterior',
+                        'fecha_efectiva': hoy - timedelta(days=1),
+                        'fecha_pospuesta': None,
+                        'fecha_realizada': None,
+                        'realizada': False,
+                    }],
+                },
+            },
+        })
+
+        self.assertIn('No registrada', html)
+        self.assertNotIn('Pendiente desde', html)
         self.assertIn('→', html)
 
     def test_detalle_semanal_traduce_estados_sin_convertir_cada_sesion_en_un_cta(self):
