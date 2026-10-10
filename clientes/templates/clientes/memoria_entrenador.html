@@ -253,8 +253,12 @@
     {# ── §01 CARGA Y BIOMETRÍA · 28/14 DÍAS ── #}
     <article class="mem-node mem-node--state">
       <div class="mem-label">Carga y biometría</div>
-      <h2 class="mem-heading">Carga y señales fisiológicas</h2>
-      <div class="mem-quads">
+      <details class="mem-collapse">
+        <summary>
+          Carga y señales fisiológicas
+          <span class="mem-count">Ver detalle</span>
+        </summary>
+        <div class="mem-quads">
         <div class="mem-quad">
           <div class="v {% if sesiones_semana >= 3 %}ok{% elif sesiones_semana and sesiones_semana < 2 %}warn{% else %}na{% endif %}">{% if sesiones_semana %}{{ sesiones_semana }}{% else %}—{% endif %}</div>
           <div class="k">Sesiones / semana</div>
@@ -297,7 +301,8 @@
           <div class="k">Energía checkin</div>
         </div>
         {% endif %}
-      </div>
+        </div>
+      </details>
     </article>
 
     {# ── §02 CALIBRACIÓN RPE ── #}

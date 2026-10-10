@@ -67,6 +67,21 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertIn('memoria-sin-evidencia-title', plantilla)
         self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", plantilla)
 
+    def test_memoria_no_duplica_metricas_ni_lineas_de_evolucion(self):
+        """Cada señal se presenta una vez para no convertir la memoria en ruido."""
+        plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
+
+        self.assertEqual(plantilla.count('Sesiones / semana'), 1)
+        self.assertEqual(plantilla.count('{{ e.primera_fecha|date:"d/m/Y" }} → {{ e.ultima_fecha|date:"d/m/Y" }}'), 1)
+
+    def test_carga_detallada_se_revela_bajo_demanda_sin_ocultar_senales_esenciales(self):
+        """El resumen superior basta para la primera lectura; el histórico queda disponible."""
+        plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
+
+        self.assertIn('<div class="mem-signal-k">Readiness</div>', plantilla)
+        self.assertIn('<summary>\n          Carga y señales fisiológicas', plantilla)
+        self.assertIn('<span class="mem-count">Ver detalle</span>', plantilla)
+
     def test_estaciones_solo_compara_evidencia_compatible_y_con_lectura_semantica(self):
         objetivo = HyroxObjective.objects.create(
             cliente=self.cliente,
