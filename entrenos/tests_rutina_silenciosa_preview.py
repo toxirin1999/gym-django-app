@@ -176,6 +176,30 @@ class RutinaSilenciosaPreviewTests(TestCase):
 
         self.assertEqual(contexto["fase"]["objetivo"], "Hipertrofia metabólica")
 
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_fase_usa_los_rangos_precisos_del_mismo_plan_anual(
+        self, planificador, educacion,
+    ):
+        hoy = date(2026, 1, 5)
+        cache.delete(f"plan_anual_{self.cliente.id}_{hoy.year}")
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [
+                {"nombre": "Metabólica", "objetivo": "hipertrofia_metabolica", "duracion": 8},
+            ],
+            "metadata": {"periodizacion_completa": [
+                {"nombre": "Metabólica", "rpe_inicio": 7, "rpe_fin": 8, "rep_range": "12-15"},
+            ]},
+        }
+        educacion.side_effect = lambda plan: plan
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+
+        self.assertEqual(contexto["fase"]["rpe"], "7–8")
+        self.assertEqual(contexto["fase"]["reps"], "12-15")
+
     def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
         """Una sesión materializada sin detalle no puede abrir un modal vacío.
 

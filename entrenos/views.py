@@ -5265,6 +5265,20 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         cursor = fin + timedelta(days=1)
     fase_actual = fase_actual or (bloques[0] if bloques else {})
 
+    # ``plan_por_bloques`` nombra y sitúa las fases; los rangos finos viven en
+    # ``periodizacion_completa``. Leer ambos del mismo plan evita que Rutina
+    # presente los fallbacks genéricos (6–10 / 1–20) como si fueran la
+    # prescripción de una fase que Plan ya conoce con más precisión.
+    detalle_fase = next(
+        (
+            detalle for detalle in ((plan or {}).get('metadata') or {}).get(
+                'periodizacion_completa',
+            ) or []
+            if detalle.get('nombre') == fase_actual.get('nombre')
+        ),
+        {},
+    )
+
     # Una sesión aplazada conserva su fecha prescrita para la memoria del plan,
     # pero la Rutina representa cuándo se puede ejecutar realmente. Al usar la
     # fecha efectiva evitamos enseñar descanso el día al que fue trasladada.
@@ -5441,12 +5455,21 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         fase_actual.get('objetivo') or fase_actual.get('descripcion')
     ) or 'Adaptación sostenible'
     nombre_fase = fase_actual.get('nombre') or fase_actual.get('tipo_fase') or 'Plan activo'
+    rpe_inicio = fase_actual.get('rpe_min', detalle_fase.get('rpe_inicio', 6))
+    rpe_fin = fase_actual.get('rpe_max', detalle_fase.get('rpe_fin', 10))
+    reps = (
+        fase_actual.get('rep_range')
+        or detalle_fase.get('rep_range')
+        or '{}–{}'.format(
+            fase_actual.get('reps_min', 1), fase_actual.get('reps_max', 20),
+        )
+    )
     return {
         'fase': {
             'nombre': nombre_fase,
             'objetivo': objetivo,
-            'rpe': '{}–{}'.format(fase_actual.get('rpe_min', 6), fase_actual.get('rpe_max', 10)),
-            'reps': '{}–{}'.format(fase_actual.get('reps_min', 1), fase_actual.get('reps_max', 20)),
+            'rpe': '{}–{}'.format(rpe_inicio, rpe_fin),
+            'reps': reps,
         },
         'semana': semana,
         'semana_inicio': inicio_semana,
