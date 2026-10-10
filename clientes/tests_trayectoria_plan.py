@@ -249,6 +249,14 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         self.assertLess(html.index('Recorrido del plan'), html.index('Objetivo del bloque'))
         self.assertLess(html.index('Objetivo del bloque'), html.index('Esta semana · detalle'))
 
+    def test_detalle_semanal_senala_la_sesion_con_fecha_efectiva_de_hoy(self):
+        """Plan conecta con la decisión diaria incluso cuando una sesión fue aplazada."""
+        plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
+
+        self.assertIn('tp-session--today', plantilla)
+        self.assertIn('{% if sesion.fecha_efectiva == trayectoria.fecha_corte %}', plantilla)
+        self.assertIn('<span class="tp-session-today">Hoy</span>', plantilla)
+
     def test_dashboard_ofrece_dos_accesos_a_trayectoria(self):
         plantilla = Path('clientes/templates/clientes/mockup_demo.html').read_text()
         self.assertEqual(plantilla.count("{% url 'clientes:trayectoria_plan' %}"), 2)
@@ -351,3 +359,37 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
         self.assertNotIn('Abrir check-in de hoy', plantilla)
         self.assertNotIn('?checkin=1', plantilla)
         self.assertNotIn('Registra cómo has dormido', plantilla)
+
+    def test_detalle_semanal_destaca_la_sesion_efectiva_de_hoy_incluso_si_fue_pospuesta(self):
+        """La fecha efectiva, no la prevista, determina qué sesión es la de hoy."""
+        hoy = date.today()
+        html = render_to_string('clientes/trayectoria_plan.html', {
+            'cliente': self.cliente,
+            'trayectoria': {
+                'fecha_corte': hoy,
+                'periodizacion': None,
+                'bloque': None,
+                'macrociclo': None,
+                'proximo_hito': None,
+                'semana': {
+                    'inicio': hoy - timedelta(days=hoy.weekday()),
+                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                    'objetivo_sesiones': 1,
+                    'evaluacion': None,
+                    'sesiones': [{
+                        'nombre': 'Fuerza reprogramada',
+                        'estado': 'pendiente',
+                        'fecha_prevista': hoy - timedelta(days=1),
+                        'fecha_pospuesta': hoy,
+                        'fecha_efectiva': hoy,
+                        'fecha_realizada': None,
+                        'realizada': False,
+                    }],
+                },
+            },
+        })
+
+        self.assertIn('tp-session--today', html)
+        self.assertIn('Sesión efectiva de hoy: Fuerza reprogramada', html)
+        self.assertIn('Hoy</span>', html)
+        self.assertIn('→', html)
