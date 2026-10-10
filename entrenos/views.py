@@ -387,11 +387,14 @@ from analytics.views import CalculadoraEjerciciosTabla
 from analytics.utils import estimar_1rm, estimar_1rm_con_rpe
 
 
+@login_required
 def detalle_ejercicio(request, nombre):
     registros = []
     nombre_normalizado = normalizar_nombre_ejercicio(nombre)
 
     entrenos = EntrenoRealizado.objects.exclude(notas_liftin__isnull=True).exclude(notas_liftin='')
+    if not (request.user.is_staff or request.user.is_superuser):
+        entrenos = entrenos.filter(cliente__user=request.user)
 
     for entreno in entrenos:
         ejercicios = parsear_ejercicios_de_notas(entreno.notas_liftin)
@@ -413,6 +416,7 @@ def detalle_ejercicio(request, nombre):
     })
 
 
+@login_required
 def ejercicios_realizados_view(request):
     filtro = request.GET.get('filtro')
     if filtro:
@@ -421,7 +425,10 @@ def ejercicios_realizados_view(request):
     ejercicios = []
     contador = Counter()
 
-    entrenos = EntrenoRealizado.objects.exclude(notas_liftin__isnull=True).exclude(notas_liftin='').order_by('-fecha')
+    entrenos = EntrenoRealizado.objects.exclude(notas_liftin__isnull=True).exclude(notas_liftin='')
+    if not (request.user.is_staff or request.user.is_superuser):
+        entrenos = entrenos.filter(cliente__user=request.user)
+    entrenos = entrenos.order_by('-fecha')
 
     for entreno in entrenos:
         ejercicios_parsed = parsear_ejercicios_de_notas(entreno.notas_liftin)
