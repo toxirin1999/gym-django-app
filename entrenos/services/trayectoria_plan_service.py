@@ -18,7 +18,7 @@ def _inicio_semana(fecha):
     return fecha - timedelta(days=fecha.weekday())
 
 
-def _etiqueta_objetivo(objetivo):
+def etiqueta_objetivo_plan(objetivo):
     """Hace legible un identificador interno sin alterar su valor canónico."""
     if not objetivo:
         return None
@@ -73,8 +73,8 @@ def _periodizacion_actual(cliente, fecha, limitations):
             'indice': indice,
             'nombre': bloque.get('nombre'),
             'objetivo_raw': bloque.get('objetivo'),
-            'objetivo': _etiqueta_objetivo(bloque.get('objetivo')),
-            'objetivo_display': _etiqueta_objetivo(bloque.get('objetivo')),
+            'objetivo': etiqueta_objetivo_plan(bloque.get('objetivo')),
+            'objetivo_display': etiqueta_objetivo_plan(bloque.get('objetivo')),
             'inicio': cursor,
             'fin': fin,
             'semanas': duracion,
@@ -93,8 +93,8 @@ def _periodizacion_actual(cliente, fecha, limitations):
                 'indice': indice,
                 'nombre': bloque.get('nombre'),
                 'objetivo_raw': bloque.get('objetivo'),
-                'objetivo': _etiqueta_objetivo(bloque.get('objetivo')),
-                'objetivo_display': _etiqueta_objetivo(bloque.get('objetivo')),
+                'objetivo': etiqueta_objetivo_plan(bloque.get('objetivo')),
+                'objetivo_display': etiqueta_objetivo_plan(bloque.get('objetivo')),
                 'inicio': cursor,
                 'fin': fin,
                 'semana_actual': fase_info['semana_actual'],

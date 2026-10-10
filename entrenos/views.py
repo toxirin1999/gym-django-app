@@ -5435,7 +5435,11 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         except (TypeError, ValueError):
             continue
 
-    objetivo = fase_actual.get('objetivo') or fase_actual.get('descripcion') or 'Adaptación sostenible'
+    from entrenos.services.trayectoria_plan_service import etiqueta_objetivo_plan
+
+    objetivo = etiqueta_objetivo_plan(
+        fase_actual.get('objetivo') or fase_actual.get('descripcion')
+    ) or 'Adaptación sostenible'
     nombre_fase = fase_actual.get('nombre') or fase_actual.get('tipo_fase') or 'Plan activo'
     return {
         'fase': {

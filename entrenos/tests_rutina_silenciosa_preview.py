@@ -156,6 +156,26 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertLess(plantilla.index(apertura_local), plantilla.index(hidratacion_remota))
         self.assertIn("if (openModal && !modal.open)", plantilla)
 
+    @patch("entrenos.views.agregar_educacion_a_plan")
+    @patch("entrenos.views.PlanificadorHelms")
+    def test_fase_traduce_el_identificador_interno_antes_de_mostrarlo(
+        self, planificador, educacion,
+    ):
+        hoy = date(2026, 1, 5)
+        cache.delete(f"plan_anual_{self.cliente.id}_{hoy.year}")
+        planificador.return_value.generar_plan_anual.return_value = {
+            "plan_por_bloques": [
+                {"nombre": "Metabólica", "objetivo": "hipertrofia_metabolica", "duracion": 8},
+            ],
+        }
+        educacion.side_effect = lambda plan: plan
+
+        from entrenos.views import _obtener_contexto_rutina_silenciosa
+
+        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+
+        self.assertEqual(contexto["fase"]["objetivo"], "Hipertrofia metabólica")
+
     def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
         """Una sesión materializada sin detalle no puede abrir un modal vacío.
 
