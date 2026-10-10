@@ -144,3 +144,22 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertIsNotNone(response.context['data_updated_at'])
         self.assertContains(response, 'Datos más recientes')
         self.assertNotContains(response, 'Últ. actualización')
+
+    def test_actualizacion_de_fecha_no_inventa_hora_de_fin_de_dia(self):
+        """Las fuentes basadas solo en fecha no pueden parecer datos de las 23:59."""
+        from entrenos.models import EntrenoRealizado
+        from rutinas.models import Rutina
+
+        EntrenoRealizado.objects.create(
+            cliente=self.cliente,
+            rutina=Rutina.objects.create(nombre='Rutina de fecha'),
+            fecha=timezone.localdate(),
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context['data_updated_source'], 'sesión de fuerza')
+        self.assertFalse(response.context['data_updated_has_time'])
+        self.assertContains(response, timezone.localdate().strftime('%d/%m/%Y'))
+        self.assertNotContains(response, '23:59')

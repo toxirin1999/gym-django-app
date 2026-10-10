@@ -188,6 +188,14 @@ def _sesiones_helms_semana(plan, inicio, fin):
     return sorted(sesiones, key=lambda sesion: sesion['fecha_efectiva'])
 
 
+def _contar_sesiones_no_registradas(sesiones, fecha_corte):
+    """Cuenta pendientes ya pasadas para ofrecer una siguiente acción amable."""
+    return sum(
+        1 for sesion in sesiones
+        if not sesion['realizada'] and sesion['fecha_efectiva'] < fecha_corte
+    )
+
+
 def _proximo_hito(fecha, semana, bloque, periodizacion):
     sesiones = semana['sesiones'] if semana else []
     evaluacion = semana['evaluacion'] if semana else None
@@ -290,6 +298,9 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
                 'objetivo_sesiones': len(sesiones_planificadas),
                 'minimo_valido': None,
                 'sesiones': sesiones_planificadas,
+                'sesiones_no_registradas': _contar_sesiones_no_registradas(
+                    sesiones_planificadas, fecha,
+                ),
                 'evaluacion': None,
                 'origen': 'plan_helms',
             }
@@ -306,6 +317,7 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
             'objetivo_sesiones': contrato.objetivo_sesiones,
             'minimo_valido': contrato.minimo_valido,
             'sesiones': sesiones,
+            'sesiones_no_registradas': _contar_sesiones_no_registradas(sesiones, fecha),
             'evaluacion': _serializar_evaluacion_semanal(contrato),
         }
 

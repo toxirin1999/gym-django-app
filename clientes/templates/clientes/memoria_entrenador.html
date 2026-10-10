@@ -225,7 +225,7 @@
   <p class="mem-kicker">Expediente del entrenador · {{ cliente.id }} · desde {{ cliente.user.date_joined|date:"m·Y" }}</p>
   <h1 class="mem-title">Lo que <span>sé</span> de ti.</h1>
   <p class="mem-intro">Todo lo que el sistema ha aprendido de <strong>{{ cliente.nombre }}</strong> a partir de sus sesiones, patrones biométricos y respuestas subjetivas.</p>
-  <p class="mem-meta">Datos más recientes{% if data_updated_source %} · {{ data_updated_source }}{% endif %} · <strong>{% if data_updated_at %}{{ data_updated_at|date:"d/m/Y · H:i" }}{% else %}sin registros todavía{% endif %}</strong></p>
+  <p class="mem-meta">Datos más recientes{% if data_updated_source %} · {{ data_updated_source }}{% endif %} · <strong>{% if data_updated_at %}{{ data_updated_at|date:"d/m/Y" }}{% if data_updated_has_time %} · {{ data_updated_at|date:"H:i" }}{% endif %}{% else %}sin registros todavía{% endif %}</strong></p>
 
   <section class="mem-hero" aria-labelledby="memoria-hoy-title">
     <div class="mem-label">Decisión canónica de hoy</div>

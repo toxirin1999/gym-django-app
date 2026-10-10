@@ -5455,15 +5455,18 @@ def memoria_entrenador(request, cliente_id):
     def _marca_temporal(valor):
         if isinstance(valor, datetime):
             return valor if timezone.is_aware(valor) else timezone.make_aware(valor)
-        return timezone.make_aware(datetime.combine(valor, datetime.max.time()))
+        # Una fecha no contiene hora: esto solo permite ordenarla con datetimes.
+        return timezone.make_aware(datetime.combine(valor, datetime.min.time()))
 
     data_updated_at = None
     data_updated_source = None
+    data_updated_has_time = False
     if fuentes_actualizacion:
         data_updated_source, _valor_actualizado = max(
             fuentes_actualizacion, key=lambda fuente: _marca_temporal(fuente[1]),
         )
         data_updated_at = _marca_temporal(_valor_actualizado)
+        data_updated_has_time = isinstance(_valor_actualizado, datetime)
 
     # ── 10. DECISIÓN CANÓNICA DE HOY + SEMÁFORO LONGITUDINAL ──────────────────
     # El Organismo coordina la acción del día. El semáforo es evidencia útil,
@@ -5522,6 +5525,7 @@ def memoria_entrenador(request, cliente_id):
         'rm_metadatos_descartados': rm_metadatos_descartados,
         'data_updated_at': data_updated_at,
         'data_updated_source': data_updated_source,
+        'data_updated_has_time': data_updated_has_time,
     }
     return render(request, 'clientes/memoria_entrenador.html', context)
 

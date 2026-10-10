@@ -45,7 +45,11 @@ class RutinaSilenciosaPreviewTests(TestCase):
         contexto.return_value = {
             "fase": {"nombre": "DESCARGA ACTIVA", "objetivo": "Recuperación activa"},
             "semana": [{"numero": 26, "fecha": date(2026, 9, 26), "es_hoy": True}],
-            "hoy": {"tipo": "descanso", "titulo": "Día de descanso", "detalle": "El plan no programa entreno hoy."},
+            "hoy": {
+                "tipo": "descanso", "titulo": "Día de descanso",
+                "detalle": "El plan no programa entreno hoy.",
+                "url": reverse("estiramientos:panel"), "cta": "Movilidad y estiramientos",
+            },
             "rms": [{"nombre": "Press banca", "valor": 100}],
             "insight": "La descarga protege tu adaptación.",
         }
@@ -138,6 +142,19 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('aria-label="Semana siguiente"', plantilla)
         self.assertIn('href="{{ semana_anterior_url }}"', plantilla)
         self.assertIn('href="{{ semana_siguiente_url }}"', plantilla)
+
+    def test_selector_de_dias_usa_semantica_de_pestanas_en_lugar_de_botones_toggle(self):
+        """Solo hay una previsualización activa: aria-selected describe ese estado."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('role="tablist"', plantilla)
+        self.assertIn('role="tab"', plantilla)
+        self.assertIn('aria-selected=', plantilla)
+        self.assertNotIn('aria-pressed=', plantilla)
 
     def test_preview_del_dia_abre_primero_con_datos_locales_y_se_hidrata_despues(self):
         """La red legacy no puede retrasar ni reabrir el modal de Rutina."""
@@ -392,10 +409,11 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('aria-pressed="{% if dia.es_hoy %}true{% else %}false{% endif %}"', plantilla)
+        self.assertIn('aria-selected="{% if dia.es_hoy %}true{% else %}false{% endif %}"', plantilla)
         self.assertIn('class="selector-status" data-day-selection aria-live="polite"', plantilla)
         self.assertIn("function seleccionarDia(button, preview)", plantilla)
         self.assertIn("day.classList.toggle('is-selected', selected)", plantilla)
+        self.assertIn("day.setAttribute('aria-selected', String(selected));", plantilla)
         self.assertIn("seleccionarDia(button, preview);", plantilla)
 
     def test_selector_consulta_el_contrato_ajax_del_calendario_para_el_dia_elegido(self):

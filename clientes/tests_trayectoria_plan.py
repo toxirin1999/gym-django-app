@@ -119,6 +119,22 @@ class TrayectoriaPlanTests(TestCase):
         self.assertIsNone(resultado['semana']['evaluacion'])
         self.assertEqual(resultado['proximo_hito']['sesion_id'], pospuesta.id)
 
+    def test_cuenta_sesiones_pasadas_sin_registro_para_reencauzar_sin_penalizar(self):
+        SesionProgramada.objects.create(
+            cliente=self.cliente, contrato_semanal=self.contrato,
+            fecha_prevista=date(2026, 8, 24), estado=SesionProgramada.ESTADO_PENDIENTE,
+            nombre_sesion='Sesión pendiente',
+        )
+        SesionProgramada.objects.create(
+            cliente=self.cliente, contrato_semanal=self.contrato,
+            fecha_prevista=date(2026, 8, 25), fecha_realizada=date(2026, 8, 25),
+            estado=SesionProgramada.ESTADO_COMPLETADA, nombre_sesion='Sesión hecha',
+        )
+
+        resultado = self._proyectar(fecha=date(2026, 8, 26))
+
+        self.assertEqual(resultado['semana']['sesiones_no_registradas'], 1)
+
     def test_solo_expone_evaluacion_persistida(self):
         evaluacion = EvaluacionSemanalGym.objects.create(
             contrato=self.contrato, estado_cumplimiento='minima_valida',
@@ -262,6 +278,13 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         self.assertIn('tp-session--today', plantilla)
         self.assertIn('{% if sesion.fecha_efectiva == trayectoria.fecha_corte %}', plantilla)
         self.assertIn('<span class="tp-session-today">Hoy</span>', plantilla)
+
+    def test_plan_ofrece_siguiente_accion_amable_si_hay_sesiones_sin_registrar(self):
+        plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
+
+        self.assertIn('trayectoria.semana.sesiones_no_registradas', plantilla)
+        self.assertIn('El plan continúa desde tu próxima acción.', plantilla)
+        self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", plantilla)
 
     def test_dashboard_ofrece_dos_accesos_a_trayectoria(self):
         plantilla = Path('clientes/templates/clientes/mockup_demo.html').read_text()
