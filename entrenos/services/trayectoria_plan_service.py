@@ -192,8 +192,12 @@ def _proximo_hito(fecha, semana, bloque, periodizacion):
     sesiones = semana['sesiones'] if semana else []
     evaluacion = semana['evaluacion'] if semana else None
     candidatas = sorted(
-        (s for s in sesiones if s['estado'] == SesionProgramada.ESTADO_PENDIENTE and s['fecha_efectiva'] >= fecha),
-        key=lambda s: (s['fecha_efectiva'], s['id']),
+        (
+            s for s in sesiones
+            if s['estado'] in {SesionProgramada.ESTADO_PENDIENTE, 'prevista'}
+            and s['fecha_efectiva'] >= fecha
+        ),
+        key=lambda s: (s['fecha_efectiva'], s['id'] is None, s['id'] or 0),
     )
     if candidatas:
         sesion = candidatas[0]

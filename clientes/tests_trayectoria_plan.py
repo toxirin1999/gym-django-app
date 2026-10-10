@@ -142,6 +142,12 @@ class TrayectoriaPlanTests(TestCase):
             [sesion['nombre'] for sesion in resultado['semana']['sesiones']],
             ['Día 1 - Fuerza', 'Día 2 - Fuerza'],
         )
+        self.assertEqual(resultado['proximo_hito'], {
+            'tipo': 'sesion',
+            'fecha': date(2026, 8, 26),
+            'etiqueta': 'Día 2 - Fuerza',
+            'sesion_id': None,
+        })
 
     def test_balance_informativo_no_crea_hito_de_revision(self):
         EvaluacionSemanalGym.objects.create(
