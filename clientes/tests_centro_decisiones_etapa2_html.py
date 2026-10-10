@@ -123,6 +123,22 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         self.assertIn("@media (prefers-reduced-motion: reduce)", source)
         self.assertRegex(source, r"--ink-muted:\s*#[0-9a-fA-F]{6}")
 
+    def test_siguiente_paso_conserva_una_salida_util_si_falta_calendario(self):
+        """El resumen no puede anunciar un vacío sin ofrecer la acción correcta."""
+        source = self.source
+        siguiente_inicio = source.index('id="siguiente-paso"')
+        activo_inicio = source.index('id="activo-ahora"')
+        siguiente = source[siguiente_inicio:activo_inicio]
+
+        self.assertIn('href="#preparar-bloque-gym"', siguiente)
+        self.assertIn('aria-label="Preparar bloque Gym"', siguiente)
+        self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", siguiente)
+        self.assertIn(
+            "{% elif bloque_colaborativo.bloque and resumen_operativo.proxima_sesion.estado != 'disponible' %}",
+            siguiente,
+        )
+        self.assertIn('id="preparar-bloque-gym"', source)
+
     def test_layout_cubre_375_y_escritorio_sin_overflow(self):
         source = self.source
         self.assertIn("@media (max-width: 640px)", source)

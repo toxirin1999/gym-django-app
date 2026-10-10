@@ -27,7 +27,7 @@ from django.urls import reverse
 
 from clientes.models import Cliente
 from entrenos.models import (
-    IntervencionPlan, GymDecisionLog, EntrenoRealizado,
+    ContratoBloqueGym, EstrategiaSemanalGym, IntervencionPlan, GymDecisionLog, EntrenoRealizado,
     PreferenciaPlanAprendida, SugerenciaPlan,
 )
 
@@ -75,6 +75,50 @@ class PlanDecisionesBase(TestCase):
             estado_aplicacion=estado_aplicacion,
             motivo_postergacion=motivo_postergacion,
         )
+
+
+class TestSiguientePasoOperable(PlanDecisionesBase):
+    def test_sin_bloque_el_siguiente_paso_ancla_el_formulario_de_preparacion(self):
+        response = self._get()
+
+        self.assertContains(response, 'href="#preparar-bloque-gym"')
+        self.assertContains(response, 'id="preparar-bloque-gym"')
+        self.assertContains(response, 'aria-label="Preparar bloque Gym"')
+
+    def test_bloque_sin_proxima_sesion_lleva_a_la_rutina(self):
+        estrategia = EstrategiaSemanalGym.objects.create(
+            cliente=self.cliente,
+            version=1,
+            objetivo_sesiones=5,
+            minimo_valido=3,
+            vigente_desde=self.hoy,
+            aprobado_por=self.user,
+        )
+        ContratoBloqueGym.objects.create(
+            cliente=self.cliente,
+            estrategia=estrategia,
+            version=1,
+            estado=ContratoBloqueGym.ESTADO_ACTIVO,
+            semana_inicio=self.hoy,
+            semana_fin_prevista=self.hoy + timedelta(days=27),
+            semanas_previstas=4,
+            objetivo_sesiones=5,
+            minimo_valido=3,
+            objetivo_principal='Construir base',
+            objetivos_secundarios=[],
+            limites_snapshot={},
+            motor_nombre='Helms',
+            motor_version='test',
+            fingerprint='siguiente-paso-sin-sesion',
+        )
+
+        response = self._get()
+
+        self.assertContains(
+            response,
+            reverse('entrenos:rutina_silenciosa_preview', args=[self.cliente.id]),
+        )
+        self.assertContains(response, '>Ver rutina<')
 
 
 # ── Case 1-2: access ──────────────────────────────────────────────────────────

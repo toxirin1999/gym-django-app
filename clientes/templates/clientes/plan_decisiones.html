@@ -1332,6 +1332,15 @@
           {% endif %}
         </div>
       </div>
+      {% if not bloque_colaborativo.bloque and not bloque_colaborativo.cierre_pendiente %}
+      <div class="dc-actions">
+        <a class="dc-button is-primary" href="#preparar-bloque-gym" aria-label="Preparar bloque Gym">Preparar bloque Gym</a>
+      </div>
+      {% elif bloque_colaborativo.bloque and resumen_operativo.proxima_sesion.estado != 'disponible' %}
+      <div class="dc-actions">
+        <a class="dc-button is-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver rutina</a>
+      </div>
+      {% endif %}
     </section>
     </article>
 
@@ -1381,7 +1390,7 @@
       <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
         <h3 id="preparar-bloque-titulo" class="dc-card-text">Preparar bloque Gym</h3>
         <p class="dc-card-meta">Define la dirección. El plan mantiene internamente el acuerdo semanal de 5 sesiones y mínimo 3.</p>
-        <form class="dc-form-grid" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
+        <form class="dc-form-grid" id="preparar-bloque-gym" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
           {% csrf_token %}{{ form_bloque_gym.as_p }}
           <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
         </form>
