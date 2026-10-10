@@ -604,6 +604,11 @@
         color: var(--accent);
     }
     .tl-empty-msg::before, .tl-empty-msg::after { content: ' ── '; color: var(--muted); }
+    .tl-empty-copy { margin: 14px auto 0; max-width: 36ch; color: var(--text2); line-height: 1.45; }
+    .tl-empty-actions { display: grid; gap: 10px; max-width: 320px; margin: 22px auto 0; }
+    .tl-empty-actions .tl-cta { margin: 0; min-height: 44px; }
+    .tl-empty-link { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent); font-family: var(--mono); font-weight: 700; text-decoration: underline; }
+    .tl-cta:focus-visible, .tl-empty-link:focus-visible { outline: 3px solid var(--hi); outline-offset: 3px; }
 
     /* Footer */
     .tl-footer {
@@ -796,7 +801,7 @@
             </div>
 
             <div class="tl-list" id="tl-list">
-                {% for dia in dias %}
+                {% if tiene_registros_timeline %}{% for dia in dias %}
 
                     <!-- Day header -->
                     <div class="tl-day-hdr">
@@ -914,12 +919,17 @@
                     </div>
                     {% endif %}
 
-                {% empty %}
+                {% endfor %}{% else %}
                     <div class="tl-empty">
                         <div class="tl-empty-num">00</div>
-                        <div class="tl-empty-msg">NOT FOUND :: SIN ACTIVIDADES EN ESTE PERIODO</div>
+                        <div class="tl-empty-msg">AÚN NO HAY ACTIVIDAD NI BITÁCORA EN ESTE PERIODO</div>
+                        <p class="tl-empty-copy">La cronología se construirá con tu primera sesión o nota diaria. Elige la forma en que quieres empezar.</p>
+                        <div class="tl-empty-actions">
+                            <a href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}" class="tl-cta">VER TU RUTINA /START</a>
+                            <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-empty-link">Registrar actividad libre →</a>
+                        </div>
                     </div>
-                {% endfor %}
+                {% endif %}
             </div>
         </section>
 

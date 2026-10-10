@@ -9049,6 +9049,7 @@ def timeline_atleta(request, cliente_id):
         'tsb_data': tsb_data,
         'acwr': acwr,
         'total_actividades': total_actividades,
+        'tiene_registros_timeline': bool(actividades or bitacoras),
         'dias_activos': dias_activos,
         'carga_total': round(carga_total, 1),
         'desglose': desglose,
