@@ -32,6 +32,13 @@ def _es_gestor_clientes(user):
     return user.is_staff or user.is_superuser
 
 
+def _obtener_cliente_autorizado(request, cliente_id):
+    """Devuelve el cliente propio; el staff conserva acceso de revisión."""
+    if _es_gestor_clientes(request.user):
+        return get_object_or_404(Cliente, id=cliente_id)
+    return get_object_or_404(Cliente, id=cliente_id, user=request.user)
+
+
 def gestor_clientes_required(view_func):
     """Redirige anónimos al login y responde 403 a usuarios sin rol gestor."""
     @login_required
@@ -4877,7 +4884,7 @@ import json
 def control_peso_cliente(request, cliente_id):
     from .peso_analytics import AnalizadorPeso
 
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     # 1. Obtenemos los registros como siempre para usarlos en el HTML (bucles, etc.)
     registros_peso_queryset = PesoDiario.objects.filter(cliente=cliente).order_by("fecha")
@@ -4958,7 +4965,7 @@ from .models import Cliente, PesoDiario, ObjetivoPeso, RevisionProgreso, Medida,
 
 @login_required
 def registrar_peso(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     if request.method == "POST":
         form = PesoDiarioForm(request.POST)
         if form.is_valid():
@@ -4979,7 +4986,7 @@ def registrar_peso(request, cliente_id):
 @login_required
 def mi_cuerpo(request, cliente_id):
     """Phase 63.1 — entrada única de peso/cintura/grasa, enlazada desde el dashboard."""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
 
     if request.method == "POST":
         valores_anteriores = {
@@ -5021,7 +5028,7 @@ def mi_cuerpo(request, cliente_id):
 
 @login_required
 def establecer_objetivo_peso(request, cliente_id):
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _obtener_cliente_autorizado(request, cliente_id)
     if request.method == "POST":
         form = ObjetivoPesoForm(request.POST)
         if form.is_valid():
