@@ -46,3 +46,13 @@ class LegacyLiftinExerciseScopeTests(TestCase):
 
         self.assertContains(response, 'Press Banca')
         self.assertContains(response, 'Remo')
+
+    def test_exercise_detail_hides_other_clients_records(self):
+        url = reverse('entrenos:detalle_ejercicio', args=['Press banca'])
+        self.assertEqual(self.client.get(url).status_code, 302)
+
+        self.client.force_login(self.user)
+        response = self.client.get(url)
+
+        self.assertContains(response, '60')
+        self.assertNotContains(response, 'Remo')
