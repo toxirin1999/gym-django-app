@@ -91,7 +91,7 @@ class DiarioUIEstadoCicloTests(TestCase):
     # Test 3: solo_noche muestra "Cierre registrado"
     @patch('diario.views.timezone.localtime')
     def test_solo_noche_muestra_cierre_registrado(self, mock_localtime):
-        """Sin apertura con cierre, en horario de tarde → dashboard prioriza cerrar y avisa de la apertura pendiente"""
+        """Con cierre ya guardado, la única acción restante es la apertura opcional."""
         mock_localtime.side_effect = _congelar_hora(20)
         # Crear entrada con solo cierre
         ProsocheDiario.objects.create(
@@ -107,8 +107,24 @@ class DiarioUIEstadoCicloTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Cierre registrado')
         self.assertContains(response, 'no hubo apertura')
-        self.assertContains(response, 'Apertura matinal pendiente')
-        self.assertContains(response, 'Cerrar el día')
+        self.assertContains(response, 'Completar apertura')
+        self.assertContains(response, 'Opcional: el cierre ya quedó registrado.')
+        self.assertNotContains(response, 'Apertura matinal pendiente')
+
+    def test_dia_completo_enlaza_a_su_cierre_sin_sugerir_edicion(self):
+        """Al concluir, el acceso de lectura nombra exactamente lo que abre."""
+        ProsocheDiario.objects.create(
+            prosoche_mes=self.mes,
+            fecha=self.hoy,
+            apertura_confirmada_en=timezone.now(),
+            cierre_confirmado_en=timezone.now(),
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('diario:dashboard_diario'))
+
+        self.assertContains(response, 'Ver cierre de hoy')
+        self.assertNotContains(response, '>Ver lectura<')
 
     # Test 4: dia_completo muestra "Día concluido"
     def test_dia_completo_muestra_completo(self):

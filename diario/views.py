@@ -114,11 +114,20 @@ def dashboard_diario(request):
     antes_de_las_14 = timezone.localtime().hour < 14
     if estado_dia['manana_hecha'] and estado_dia['noche_hecha']:
         ritual_accion_principal = 'concluido'
+    elif estado_dia['noche_hecha']:
+        # El cierre ya existe: volver a invitar a cerrarlo no aporta nada y
+        # puede crear dudas sobre si se sobrescribirá. La única acción que
+        # queda disponible es completar la apertura, de forma opcional.
+        ritual_accion_principal = 'apertura_pendiente'
     elif not estado_dia['manana_hecha'] and antes_de_las_14:
         ritual_accion_principal = 'apertura'
     else:
         ritual_accion_principal = 'cierre'
-    aviso_apertura_pendiente = not estado_dia['manana_hecha'] and not antes_de_las_14
+    aviso_apertura_pendiente = (
+        not estado_dia['manana_hecha']
+        and not estado_dia['noche_hecha']
+        and not antes_de_las_14
+    )
 
     # Micro-señal contextual: sesión de fuerza registrada hoy, para que el
     # cierre pueda invitar a reflexionar sobre su impacto. Solo lectura,
