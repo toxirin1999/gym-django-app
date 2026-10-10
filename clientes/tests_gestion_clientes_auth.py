@@ -171,3 +171,15 @@ class DetalleClienteAuthTests(TestCase):
             edit_url = reverse("clientes:editar_cliente", args=[self.cliente.pk])
             assertion = self.assertContains if visible else self.assertNotContains
             assertion(response, edit_url)
+
+    def test_empty_recent_history_offers_a_way_to_register_activity(self):
+        self.client.force_login(self.owner)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, "Sin actividad reciente.")
+        self.assertContains(response, "Registrar actividad")
+        self.assertContains(
+            response,
+            reverse("entrenos:registrar_actividad_libre", args=[self.cliente.pk]),
+        )

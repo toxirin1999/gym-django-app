@@ -689,7 +689,10 @@ a:focus-visible, button:focus-visible {
     </div>
     {% endfor %}
     {% else %}
-    <p style="text-align:center;padding:20px 0;font-size:12px;color:var(--ink-3);">Sin actividad reciente.</p>
+    <div style="text-align:center;padding:20px 0;">
+      <p style="margin:0 0 12px;font-size:12px;color:var(--ink-3);">Sin actividad reciente.</p>
+      <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="cc-btn cc-btn-ghost cc-btn-sm">Registrar actividad</a>
+    </div>
     {% endif %}
   </div>
 </div>
