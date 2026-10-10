@@ -151,10 +151,20 @@ class EvolucionPorGrupoTests(_DatosEntrenoMixin, TestCase):
         self._ej(120, 'Curl en polea', 5, 8, 'Bíceps')
         self._ej(10, 'Curl en polea', 15, 8, 'Bíceps')            # +200 %
         biceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'biceps')
-        # El +200 % se aparta como dato a revisar; la mediana usa los fiables.
+        # El +200 % de un accesorio ligero se aparta; la mediana usa los demás.
         self.assertAlmostEqual(biceps['pct'], 12.5, places=1)
         self.assertEqual(biceps['mejor']['ejercicio'], 'Curl martillo')
-        self.assertEqual([d['ejercicio'] for d in biceps['dudosos']], ['Curl en polea'])
+        self.assertEqual([d['ejercicio'] for d in biceps['ligeros']], ['Curl en polea'])
+        self.assertEqual(biceps['dudosos'], [])
+
+    def test_franja_estable_de_mas_menos_cinco(self):
+        self._ej(120, 'Press militar', 50, 8, 'Hombros')
+        self._ej(10, 'Press militar', 48, 8, 'Hombros')            # -4 %
+        self._ej(120, 'Remo con barra', 100, 8, 'Espalda')
+        self._ej(10, 'Remo con barra', 94, 8, 'Espalda')           # -6 %
+        r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
+        self.assertEqual(self._grupo(r, 'hombros')['estado'], 'estable')
+        self.assertEqual(self._grupo(r, 'espalda')['estado'], 'retrocede')
 
     def test_retroceso_y_estable_no_se_esconden(self):
         self._ej(120, 'Remo con barra', 80, 8, 'Espalda')
@@ -238,20 +248,20 @@ class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):
         self._ej(10, 'Press francés', 22, 10, 'Tríceps')          # +10 %
         self._ej(120, 'Extensión en polea', 30, 10, 'Tríceps')
         self._ej(10, 'Extensión en polea', 33, 10, 'Tríceps')     # +10 %
-        self._ej(120, 'Patada de tríceps', 20, 10, 'Tríceps')
-        self._ej(10, 'Patada de tríceps', 7, 10, 'Tríceps')       # -65 % → dudoso
-        self._ej(120, 'Fondos en banco', 10, 10, 'Tríceps')
-        self._ej(10, 'Fondos en banco', 25, 10, 'Tríceps')        # +150 % → dudoso
+        self._ej(120, 'Press cerrado', 60, 10, 'Tríceps')
+        self._ej(10, 'Press cerrado', 20, 10, 'Tríceps')          # -67 % → dudoso
+        self._ej(120, 'Fondos en banco', 40, 10, 'Tríceps')
+        self._ej(10, 'Fondos en banco', 100, 10, 'Tríceps')       # +150 % → dudoso
         triceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'triceps')
         self.assertAlmostEqual(triceps['pct'], 10.0, places=1)
         self.assertEqual(triceps['n_ejercicios'], 2)
         self.assertEqual(sorted(d['ejercicio'] for d in triceps['dudosos']),
-                         ['Fondos en banco', 'Patada de tríceps'])
+                         ['Fondos en banco', 'Press cerrado'])
         self.assertNotEqual(triceps['mejor']['ejercicio'], 'Fondos en banco')
 
     def test_zona_con_solo_saltos_dudosos_no_se_colorea(self):
-        self._ej(120, 'Hiperextensiones inversas', 5, 10, 'Isquios')
-        self._ej(10, 'Hiperextensiones inversas', 15, 10, 'Isquios')
+        self._ej(120, 'Curl femoral sentado', 40, 10, 'Isquios')
+        self._ej(10, 'Curl femoral sentado', 100, 10, 'Isquios')
         r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
         isquios = self._grupo(r, 'isquios')
         self.assertIsNone(isquios['pct'])
@@ -259,6 +269,29 @@ class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):
         self.assertEqual(len(isquios['dudosos']), 1)
         self.assertIn('revisa cómo se registró', isquios['lectura'])
         self.assertEqual(r['n_dudosos'], 1)
+
+    def test_accesorio_ligero_no_es_error_ni_arrastra_la_mediana(self):
+        self._ej(120, 'Buenos días', 50, 8, 'Isquios')
+        self._ej(10, 'Buenos días', 45, 5, 'Isquios')                 # -17 %
+        self._ej(120, 'Curl femoral tumbado', 70, 3, 'Isquios')
+        self._ej(10, 'Curl femoral tumbado', 55, 5, 'Isquios')        # -18 %
+        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
+        self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')  # +232 %, ligero
+        r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
+        isquios = self._grupo(r, 'isquios')
+        self.assertEqual(isquios['estado'], 'retrocede')
+        self.assertEqual(isquios['n_ejercicios'], 2)
+        self.assertEqual(isquios['dudosos'], [])
+        self.assertEqual([d['ejercicio'] for d in isquios['ligeros']],
+                         ['Hiperextensiones inversas'])
+        self.assertEqual(r['n_dudosos'], 0)
+
+    def test_zona_con_solo_accesorios_ligeros(self):
+        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
+        self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')
+        isquios = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'isquios')
+        self.assertIsNone(isquios['pct'])
+        self.assertIn('accesorios ligeros', isquios['lectura'])
 
 
 class GruposMuscularesCompatTests(TestCase):
@@ -351,8 +384,10 @@ class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
         from io import StringIO
         from django.core.management import call_command
 
-        self._ej(120, 'Curl martillo', 10, 8, 'Bíceps')
-        self._ej(10, 'Curl martillo', 25, 8, 'Bíceps', tipo_carga='total')
+        self._ej(120, 'Curl martillo', 40, 8, 'Bíceps')
+        self._ej(10, 'Curl martillo', 100, 8, 'Bíceps', tipo_carga='total')
+        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
+        self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')
         self._ej(120, 'Press francés', 20, 10, 'Tríceps')
         self._ej(10, 'Press francés', 22, 10, 'Tríceps')
         out = StringIO()
@@ -360,9 +395,10 @@ class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
         texto = out.getvalue()
         self.assertIn('== Bíceps', texto)
         self.assertIn('Curl martillo: +150.0 %  ⚠ DUDOSO', texto)
-        self.assertIn('25 kg × 8 (total)', texto)
+        self.assertIn('100 kg × 8 (total)', texto)
         self.assertIn('Press francés: +10.0 %', texto)
-        self.assertIn('2 ejercicios · 1 dudosos', texto)
+        self.assertIn('Hiperextensiones inversas: +231.6 %  · ACCESORIO LIGERO', texto)
+        self.assertIn('3 ejercicios · 1 dudosos · 1 accesorios ligeros', texto)
 
         out = StringIO()
         call_command('diagnosticar_evolucion_muscular', cliente=self.cliente.pk,

@@ -22,6 +22,8 @@ Método
 3. Un ejercicio cuenta si tiene datos en ambas ventanas. Un cambio de más
    de ±``UMBRAL_DUDOSO`` % en un solo periodo es casi siempre un error de
    registro: se aparta como "dato a revisar" y no entra en la mediana.
+   Si el ejercicio es ligero (e1RM previo < ``UMBRAL_LIGERO_KG``) se
+   muestra como "accesorio ligero" en vez de como error.
 4. La evolución de la zona es la mediana de sus ejercicios fiables.
 """
 import statistics
@@ -43,11 +45,16 @@ NOMBRES_ZONA = {
 }
 
 # Umbrales de estado (en % de cambio del e1RM).
-UMBRAL_RETROCESO = -3.0
+# ±5 %: el e1RM varía ese margen solo por cambiar de rango de repeticiones.
+UMBRAL_RETROCESO = -5.0
 UMBRAL_PROGRESA = 10.0
 UMBRAL_PROGRESA_MUCHO = 30.0
 # Cambio por ejercicio a partir del cual se considera un posible error de registro.
 UMBRAL_DUDOSO = 60.0
+# Por debajo de este e1RM (kg) un ejercicio es un accesorio ligero: cada salto
+# de carga es un porcentaje enorme. Esos saltos no son errores, pero tampoco
+# representan la fuerza del grupo, así que se muestran aparte.
+UMBRAL_LIGERO_KG = 30.0
 
 # Epley pierde fiabilidad con muchas repeticiones: se limita para no inflar
 # el e1RM de series largas en máquina.
@@ -165,9 +172,12 @@ def _estado(pct):
     return 'progresa_mucho'
 
 
-def _lectura(estado, series_semana, n_dudosos=0):
+def _lectura(estado, series_semana, n_dudosos=0, n_ligeros=0):
     """Frase descriptiva y determinista para la fila de cada zona."""
     if estado == 'sin_datos':
+        if n_ligeros and not n_dudosos:
+            return ('Solo hay accesorios ligeros comparables: sus saltos en % no '
+                    'reflejan la fuerza del grupo.')
         if n_dudosos:
             return ('Hay cambios demasiado grandes para ser fiables: '
                     'revisa cómo se registró el peso de estos ejercicios.')
@@ -237,7 +247,7 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
 
     Devuelve una lista de dicts::
 
-        {'zona', 'ejercicio', 'pct' | None, 'dudoso': bool,
+        {'zona', 'ejercicio', 'pct' | None, 'dudoso': bool, 'ligero': bool,
          'antes': {'e1rm', 'peso_kg', 'reps', 'fecha', 'tipo_carga',
                    'multiplicador', 'peso_total_kg',
                    'fuente': 'serie' | 'media'} | None,
@@ -297,7 +307,9 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
             pct = round((info['ahora']['e1rm'] - info['antes']['e1rm'])
                         / info['antes']['e1rm'] * 100, 1)
         info['pct'] = pct
-        info['dudoso'] = pct is not None and abs(pct) > UMBRAL_DUDOSO
+        extremo = pct is not None and abs(pct) > UMBRAL_DUDOSO
+        info['ligero'] = extremo and info['antes']['e1rm'] < UMBRAL_LIGERO_KG
+        info['dudoso'] = extremo and not info['ligero']
         resultado.append(info)
     return sorted(resultado, key=lambda e: (e['zona'], e['ejercicio']))
 
@@ -318,7 +330,8 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
             {'zona', 'nombre', 'pct', 'estado', 'n_ejercicios',
              'series_semana', 'lectura',
              'mejor': {'ejercicio', 'antes', 'ahora', 'pct'} | None,
-             'dudosos': [{'ejercicio', 'antes', 'ahora', 'pct'}]},
+             'dudosos': [{'ejercicio', 'antes', 'ahora', 'pct'}],
+             'ligeros': [{'ejercicio', 'antes', 'ahora', 'pct'}]},
           ],
           'estado_por_zona': {'pecho': 'progresa', ...},  # para colorear el SVG
           'lider': <grupo con más progreso> | None,
@@ -336,12 +349,14 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
 
     fiables = defaultdict(list)
     dudosos = defaultdict(list)
+    ligeros = defaultdict(list)
     for e in comparar_ejercicios(cliente, hoy=hoy, dias=dias):
         if e['pct'] is None:
             continue
         resumen = {'ejercicio': e['ejercicio'], 'antes': round(e['antes']['e1rm'], 1),
                    'ahora': round(e['ahora']['e1rm'], 1), 'pct': e['pct']}
-        (dudosos if e['dudoso'] else fiables)[e['zona']].append(resumen)
+        destino = dudosos if e['dudoso'] else ligeros if e['ligero'] else fiables
+        destino[e['zona']].append(resumen)
 
     grupos = []
     for zona in ZONAS:
@@ -356,9 +371,10 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
             'series_semana': round(series_por_zona.get(zona, 0) / 4.0, 1),
             'mejor': max(cambios, key=lambda c: c['pct']) if cambios else None,
             'dudosos': sorted(dudosos.get(zona, []), key=lambda c: -abs(c['pct'])),
+            'ligeros': sorted(ligeros.get(zona, []), key=lambda c: -abs(c['pct'])),
         }
         grupo['lectura'] = _lectura(grupo['estado'], grupo['series_semana'],
-                                    len(grupo['dudosos']))
+                                    len(grupo['dudosos']), len(grupo['ligeros']))
         grupos.append(grupo)
 
     con_datos = sorted((g for g in grupos if g['pct'] is not None), key=lambda g: -g['pct'])
@@ -375,5 +391,6 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         'estado_por_zona': {g['zona']: g['estado'] for g in grupos},
         'lider': con_datos[0] if con_datos else None,
         'zonas_sin_registros': [g['nombre'] for g in sin_datos
-                                if not g['series_semana'] and not g['dudosos']],
+                                if not g['series_semana'] and not g['dudosos']
+                                and not g['ligeros']],
     }

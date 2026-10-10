@@ -54,10 +54,16 @@ class Command(BaseCommand):
             if e['pct'] is None:
                 marca = 'sin comparar'
             else:
-                marca = f"{e['pct']:+.1f} %" + ('  ⚠ DUDOSO' if e['dudoso'] else '')
+                marca = f"{e['pct']:+.1f} %"
+                if e['dudoso']:
+                    marca += '  ⚠ DUDOSO'
+                elif e['ligero']:
+                    marca += '  · ACCESORIO LIGERO'
             self.stdout.write(f"  {e['ejercicio']}: {marca}")
             self.stdout.write(f"     antes: {_fmt_ventana(e['antes'])}")
             self.stdout.write(f"     ahora: {_fmt_ventana(e['ahora'])}")
 
         n_dudosos = sum(1 for e in ejercicios if e['dudoso'])
-        self.stdout.write(f"\n{len(ejercicios)} ejercicios · {n_dudosos} dudosos")
+        n_ligeros = sum(1 for e in ejercicios if e['ligero'])
+        self.stdout.write(f"\n{len(ejercicios)} ejercicios · {n_dudosos} dudosos · "
+                          f"{n_ligeros} accesorios ligeros")

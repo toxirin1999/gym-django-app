@@ -54,14 +54,23 @@ class MemoriaMapaCorporalTests(TestCase):
         self.assertContains(response, 'Tríceps')
 
     def test_dato_dudoso_se_muestra_aparte_y_no_colorea(self):
-        self._sesion(120, 'Hiperextensiones inversas', 5, 'Isquios')
-        self._sesion(10, 'Hiperextensiones inversas', 15, 'Isquios')
+        self._sesion(120, 'Curl femoral sentado', 40, 'Isquios')
+        self._sesion(10, 'Curl femoral sentado', 100, 'Isquios')
         response = self.client.get(self.url)
         evo = response.context['evolucion_muscular']
         self.assertEqual(evo['estado_por_zona']['isquios'], 'sin_datos')
         self.assertEqual(evo['n_dudosos'], 1)
         self.assertContains(response, 'Dato a revisar')
         self.assertContains(response, '1 a revisar')
+        self.assertContains(response, 'Curl femoral sentado')
+
+    def test_accesorio_ligero_se_muestra_como_tal(self):
+        self._sesion(120, 'Hiperextensiones inversas', 5, 'Isquios')
+        self._sesion(10, 'Hiperextensiones inversas', 15, 'Isquios')
+        response = self.client.get(self.url)
+        self.assertEqual(response.context['evolucion_muscular']['n_dudosos'], 0)
+        self.assertContains(response, 'Accesorio ligero')
+        self.assertNotContains(response, 'Dato a revisar')
         self.assertContains(response, 'Hiperextensiones inversas')
 
     def test_periodo_seleccionable_y_validado(self):

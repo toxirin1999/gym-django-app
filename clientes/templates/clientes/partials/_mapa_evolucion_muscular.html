@@ -97,7 +97,7 @@
   <ul class="mm-legend" aria-label="Leyenda">
     <li><span class="mm-sw mm-sw--progresa_mucho"></span>Progresa mucho · +30 %</li>
     <li><span class="mm-sw mm-sw--progresa"></span>Progresa · +10–30 %</li>
-    <li><span class="mm-sw mm-sw--estable"></span>Estable · −3 a +10 %</li>
+    <li><span class="mm-sw mm-sw--estable"></span>Estable · −5 a +10 %</li>
     <li><span class="mm-sw mm-sw--retrocede"></span>Retrocede</li>
     <li><span class="mm-sw mm-sw--sin_datos"></span>Sin comparar aún</li>
   </ul>
@@ -108,7 +108,7 @@
     <span>Por grupo muscular</span>
     <span>Fuerza estimada · {{ evo.periodo_dias }} días</span>
   </div>
-  {% for g in evo.grupos %}{% if g.pct is not None or g.series_semana or g.dudosos %}
+  {% for g in evo.grupos %}{% if g.pct is not None or g.series_semana or g.dudosos or g.ligeros %}
   <details class="mm-row">
     <summary>
       <span class="mm-row-pct mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:0 }} %{% endif %}</span>
@@ -126,6 +126,15 @@
       <p class="mm-row-copy">{{ g.lectura }}</p>
       {% if g.mejor %}
       <p class="mm-row-best">Mejor: {{ g.mejor.ejercicio }} · {{ g.mejor.antes|floatformat:1 }} → {{ g.mejor.ahora|floatformat:1 }} kg (1RM est.) · {{ g.n_ejercicios }} ejercicio{{ g.n_ejercicios|pluralize }} comparable{{ g.n_ejercicios|pluralize }}</p>
+      {% endif %}
+      {% if g.ligeros %}
+      <div class="mm-light">
+        <span class="mm-light-k">Accesorio ligero · no cuenta en la evolución</span>
+        {% for d in g.ligeros %}
+        <p class="mm-review-item">{{ d.ejercicio }} · {{ d.antes|floatformat:1 }} → {{ d.ahora|floatformat:1 }} kg ({% if d.pct > 0 %}+{% endif %}{{ d.pct|floatformat:0 }} %)</p>
+        {% endfor %}
+        <p class="mm-review-hint">Con poco peso, cada salto de carga es un porcentaje enorme: es progreso, pero no mide la fuerza del grupo.</p>
+      </div>
       {% endif %}
       {% if g.dudosos %}
       <div class="mm-review">
