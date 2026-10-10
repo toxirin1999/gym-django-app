@@ -39,8 +39,8 @@ urlpatterns = [
         name='rutina_silenciosa_preview',
     ),
     path('historial-detallado/', views.historial_entrenos, name='historial_entrenos'),
-    path('ejercicio/<str:nombre>/', views.detalle_ejercicio, name='detalle_ejercicio'),
-    path('tabla-ejercicios/', views.ejercicios_realizados_view, name='tabla_ejercicios'),
+    path('ejercicio/<str:nombre>/', liftin_ui_required(views.detalle_ejercicio), name='detalle_ejercicio'),
+    path('tabla-ejercicios/', liftin_ui_required(views.ejercicios_realizados_view), name='tabla_ejercicios'),
     path('gestionar-base/', views.gestionar_ejercicios_base, name='gestionar_ejercicios_base'),
 
     # ============================================================================
