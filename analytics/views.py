@@ -1370,6 +1370,18 @@ def dashboard_global(request, cliente_id):
     VERSIÓN FINAL CORREGIDA: Maneja correctamente valores None en grupos musculares.
     """
     cliente = get_object_or_404(Cliente, id=cliente_id)
+
+    # Un tablero sin una sola sesión no contiene evidencia: no calculamos ni
+    # mostramos ratios, ceros o gráficos que parezcan una lectura real.
+    tiene_historial_entrenos = EntrenoRealizado.objects.filter(
+        cliente=cliente,
+    ).exists()
+    if not tiene_historial_entrenos:
+        return render(request, 'analytics/dashboard_global.html', {
+            'cliente': cliente,
+            'tiene_historial_entrenos': False,
+        })
+
     calculadora = CalculadoraEjerciciosTabla(cliente)
 
     # --- 1. CÁLCULO DE MÉTRICAS GLOBALES ---
@@ -1399,6 +1411,7 @@ def dashboard_global(request, cliente_id):
 
     context = {
         'cliente': cliente,
+        'tiene_historial_entrenos': True,
         'metricas_principales': metricas_principales,
         'analisis_acwr': analisis_acwr,
         'equilibrio_muscular': equilibrio_muscular,
