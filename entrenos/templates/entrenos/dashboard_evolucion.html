@@ -79,9 +79,10 @@ body {
   letter-spacing: 0.08em; text-transform: uppercase;
   cursor: pointer; text-decoration: none; transition: all .15s;
   border-radius: 2px; white-space: nowrap;
-  min-height: 36px;
+  min-height: 44px;
 }
 .rb-btn:hover { background: var(--ink); color: var(--on-light); text-decoration: none; }
+.rb-btn:focus-visible { outline: 3px solid var(--ok); outline-offset: 3px; }
 .rb-btn-primary { background: var(--accent); border-color: var(--accent); color: var(--on-light); }
 .rb-btn-primary:hover { background: var(--ink); border-color: var(--ink); }
 .rb-btn-ghost { border-color: var(--line-2); color: var(--ink-3); }
@@ -1156,6 +1157,7 @@ body {
           <div class="rb-empty" style="grid-column:1/-1;">
             <i class="fas fa-dumbbell"></i>
             <p>Entrena más en los "3 Grandes" para generar proyecciones</p>
+            <a class="rb-btn rb-btn-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Empezar una rutina <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
           </div>
           {% endif %}
         </div>
@@ -1183,6 +1185,7 @@ body {
           {% empty %}
           <div class="rb-empty" style="grid-column:1/-1;">
             <i class="fas fa-medal"></i><p>No hay récords vigentes aún</p>
+            <a class="rb-btn rb-btn-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Empezar una rutina <i class="fas fa-arrow-right" aria-hidden="true"></i></a>
           </div>
           {% endfor %}
         </div>
@@ -1296,7 +1299,7 @@ body {
           </div>
         </div>
         {% else %}
-        <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>Sin actividad registrada este año</p></div>
+        <div class="rb-empty"><i class="fas fa-calendar-xmark"></i><p>Sin actividad registrada este año</p><a class="rb-btn rb-btn-ghost" href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}">Registrar actividad libre <i class="fas fa-arrow-right" aria-hidden="true"></i></a></div>
         {% endif %}
       </div>
 

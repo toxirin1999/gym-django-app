@@ -73,4 +73,13 @@ class DashboardRendimientoGlobalTest(TestCase):
         self.assertEqual(lectura['sesiones_observadas'], 0)
         self.assertEqual(lectura['progresion']['estado'], 'sin_evidencia')
         self.assertContains(response, 'Aún no hay sesiones suficientes')
-
+        self.assertContains(response, 'Empezar una rutina')
+        self.assertContains(response, 'Registrar actividad libre')
+        self.assertContains(
+            response,
+            reverse('entrenos:rutina_silenciosa_preview', args=[self.cliente.id]),
+        )
+        self.assertContains(
+            response,
+            reverse('entrenos:registrar_actividad_libre', args=[self.cliente.id]),
+        )
