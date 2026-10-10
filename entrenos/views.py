@@ -425,9 +425,11 @@ def ejercicios_realizados_view(request):
     ejercicios = []
     contador = Counter()
 
+    cliente = None
     entrenos = EntrenoRealizado.objects.exclude(notas_liftin__isnull=True).exclude(notas_liftin='')
     if not (request.user.is_staff or request.user.is_superuser):
-        entrenos = entrenos.filter(cliente__user=request.user)
+        cliente = get_object_or_404(Cliente, user=request.user)
+        entrenos = entrenos.filter(cliente=cliente)
     entrenos = entrenos.order_by('-fecha')
 
     for entreno in entrenos:
@@ -481,6 +483,7 @@ def ejercicios_realizados_view(request):
         'ejercicios_mas_realizados': ejercicios_mas_realizados,
         'filtro': filtro,
         'mayores_por_ejercicio': mayores_list,
+        'cliente': cliente,
     })
 
 

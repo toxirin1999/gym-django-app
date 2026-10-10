@@ -56,3 +56,11 @@ class LegacyLiftinExerciseScopeTests(TestCase):
 
         self.assertContains(response, '60')
         self.assertNotContains(response, 'Remo')
+
+    def test_empty_legacy_table_guides_the_user_to_the_routine(self):
+        EntrenoRealizado.objects.all().delete()
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse('entrenos:tabla_ejercicios'))
+
+        self.assertContains(response, 'Ver rutina disponible')
