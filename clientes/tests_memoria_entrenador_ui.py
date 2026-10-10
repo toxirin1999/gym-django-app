@@ -2,6 +2,7 @@
 
 from pathlib import Path
 from datetime import timedelta
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
@@ -22,13 +23,21 @@ class MemoriaEntrenadorUITests(TestCase):
         self.cliente = Cliente.objects.get(user=self.user)
         self.url = reverse('clientes:memoria_entrenador', args=[self.cliente.id])
 
-    def test_memoria_prioriza_lectura_de_hoy_y_profundidad_plegable(self):
+    def test_memoria_muestra_la_decision_canonica_y_la_evidencia_longitudinal(self):
         self.client.force_login(self.user)
-        response = self.client.get(self.url)
+        with patch('core.organismo.resolver_estado_sistema_hoy') as resolver:
+            resolver.return_value = {
+                'estado': 'SILENCIO',
+                'texto': 'Hoy no hace falta forzar una decisión.',
+            }
+            response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, 'clientes/memoria_entrenador.html')
-        self.assertContains(response, 'Lectura de hoy')
+        self.assertContains(response, 'Decisión canónica de hoy')
+        self.assertContains(response, 'DESCANSAR')
+        self.assertContains(response, 'Hoy no hace falta forzar una decisión.')
+        self.assertEqual(response.context['decision_hoy']['estado'], 'DESCANSAR')
         self.assertContains(response, 'Señales esenciales')
         self.assertContains(response, 'Expediente completo')
         self.assertContains(response, 'Memoria')

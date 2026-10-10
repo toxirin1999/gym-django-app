@@ -1984,7 +1984,7 @@ def dashboard_silencioso_preview(request):
     decision_gym = context.get('_decision_gym_raw') or {}
 
     try:
-        from core.organismo import resolver_estado_sistema_hoy
+        from core.organismo import resolver_estado_sistema_hoy, estado_operativo_visible
         estado_sistema = resolver_estado_sistema_hoy(
             request.user, decision_gym=decision_gym,
         )
@@ -2023,19 +2023,7 @@ def dashboard_silencioso_preview(request):
     # Organismo usa estados internos de coordinación. La portada, en cambio,
     # debe responder a una pregunta ejecutable: qué hacer hoy. Nunca exponemos
     # SILENCIO/OBSERVANDO/EN_MARGEN/PROTEGIENDO como si fueran decisiones.
-    estados_operativos = {
-        'EN_MARGEN': 'ENTRENAR',
-        'PROTEGIENDO': 'RECUPERAR',
-        'OBSERVANDO': 'AJUSTAR',
-        'SILENCIO': 'DESCANSAR',
-        'ENTRENAR': 'ENTRENAR',
-        'DESCANSAR': 'DESCANSAR',
-        'RECUPERAR': 'RECUPERAR',
-        'AJUSTAR': 'AJUSTAR',
-    }
-    estado_operativo = estados_operativos.get(
-        str(estado_sistema.get('estado') or '').upper(), 'AJUSTAR',
-    )
+    estado_operativo = estado_operativo_visible(estado_sistema.get('estado'))
 
     tiene_energia_y_sueno = (
         getattr(checkin, 'energia_subjetiva', None) is not None
@@ -5477,7 +5465,26 @@ def memoria_entrenador(request, cliente_id):
         )
         data_updated_at = _marca_temporal(_valor_actualizado)
 
-    # ── 10. SEMÁFORO DE INTENCIÓN ─────────────────────────────────────────────
+    # ── 10. DECISIÓN CANÓNICA DE HOY + SEMÁFORO LONGITUDINAL ──────────────────
+    # El Organismo coordina la acción del día. El semáforo es evidencia útil,
+    # pero no puede competir con esa decisión en el titular de Memoria.
+    try:
+        from core.organismo import resolver_estado_sistema_hoy, estado_operativo_visible
+        estado_sistema_hoy = resolver_estado_sistema_hoy(cliente.user)
+        decision_hoy = {
+            'estado': estado_operativo_visible(estado_sistema_hoy.get('estado')),
+            'texto': (
+                estado_sistema_hoy.get('texto')
+                or 'El sistema reunirá más señales antes de pedir una acción.'
+            ),
+        }
+    except Exception:
+        logger.exception('memoria_entrenador: fallo resolviendo la decisión canónica')
+        decision_hoy = {
+            'estado': 'AJUSTAR',
+            'texto': 'El sistema reunirá más señales antes de pedir una acción.',
+        }
+
     semaforo = None
     try:
         from django.core.cache import cache as _cache
@@ -5510,6 +5517,7 @@ def memoria_entrenador(request, cliente_id):
         'periodos_evolucion': (30, 90, 180),
         'bio_resumen': bio_resumen,
         'manual_patrones': manual_patrones,
+        'decision_hoy': decision_hoy,
         'semaforo': semaforo,
         'rm_metadatos_descartados': rm_metadatos_descartados,
         'data_updated_at': data_updated_at,

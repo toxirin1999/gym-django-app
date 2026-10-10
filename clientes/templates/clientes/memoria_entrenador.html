@@ -228,10 +228,10 @@
   <p class="mem-meta">Datos más recientes{% if data_updated_source %} · {{ data_updated_source }}{% endif %} · <strong>{% if data_updated_at %}{{ data_updated_at|date:"d/m/Y · H:i" }}{% else %}sin registros todavía{% endif %}</strong></p>
 
   <section class="mem-hero" aria-labelledby="memoria-hoy-title">
-    <div class="mem-label">Lectura de hoy</div>
-    <h2 class="mem-hero-title" id="memoria-hoy-title">{% if semaforo %}{{ semaforo.titulo }}{% else %}A la escucha{% endif %}</h2>
-    <p class="mem-hero-copy">{% if semaforo %}{{ semaforo.mensaje }}{% else %}El sistema seguirá afinando su lectura con tus próximas sesiones y check-ins.{% endif %}</p>
-    <div class="mem-hero-state"><span class="mem-dot"></span>{% if semaforo %}{{ semaforo.estado }}{% else %}datos pendientes{% endif %}</div>
+    <div class="mem-label">Decisión canónica de hoy</div>
+    <h2 class="mem-hero-title" id="memoria-hoy-title">{{ decision_hoy.estado }}</h2>
+    <p class="mem-hero-copy">{{ decision_hoy.texto }}</p>
+    <div class="mem-hero-state"><span class="mem-dot"></span>estado coordinado del día</div>
     {% with r=semaforo.datos_raw %}
     <div class="mem-signals" aria-label="Señales esenciales">
       <div class="mem-signal"><div class="mem-signal-k">Readiness</div><div class="mem-signal-v">{% if r.readiness_pct is not None %}{{ r.readiness_pct|floatformat:0 }}<small>%</small>{% else %}—{% endif %}</div></div>

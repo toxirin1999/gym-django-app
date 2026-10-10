@@ -31,6 +31,22 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
+def estado_operativo_visible(estado):
+    """Traduce coordinación interna a una decisión breve para una pantalla."""
+    estados = {
+        'EN_MARGEN': 'ENTRENAR',
+        'PROTEGIENDO': 'RECUPERAR',
+        'OBSERVANDO': 'AJUSTAR',
+        'SILENCIO': 'DESCANSAR',
+        # También admite una decisión ya presentada para degradar con gracia.
+        'ENTRENAR': 'ENTRENAR',
+        'DESCANSAR': 'DESCANSAR',
+        'RECUPERAR': 'RECUPERAR',
+        'AJUSTAR': 'AJUSTAR',
+    }
+    return estados.get(str(estado or '').upper(), 'AJUSTAR')
+
+
 def resolver_estado_sistema_hoy(usuario, decision_gym=None):
     """
     Determina el estado global del sistema para el usuario HOY.
