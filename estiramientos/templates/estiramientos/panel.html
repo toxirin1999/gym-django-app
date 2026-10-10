@@ -148,10 +148,12 @@
     <div class="mv-editorial-close" aria-hidden="true"><span></span></div>
 
     {% else %}
-    <div class="no-plans">
+    <section class="no-plans" aria-labelledby="no-plans-title">
         <i class="fas fa-folder-open"></i>
-        <p>No hay planes de estiramientos disponibles.<br>Contacta al administrador para crearlos.</p>
-    </div>
+        <h1 id="no-plans-title">Aún no hay sesiones de recuperación disponibles</h1>
+        <p>Cuando haya una sesión activa aparecerá aquí. Mientras tanto, puedes volver a tu plan de hoy.</p>
+        <a class="no-plans__action" href="{% url 'clientes:dashboard_silencioso_preview' %}">Volver al panel</a>
+    </section>
     {% endif %}
 </div>
 

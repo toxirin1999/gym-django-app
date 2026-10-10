@@ -91,7 +91,7 @@ class PanelCardioZ2Tests(TestCase):
         self.assertContains(response, 'class="mv-tabs"')
         self.assertContains(response, 'class="plan-chevron"')
         self.assertContains(response, 'class="start-hint start-hint--quiet"')
-        self.assertContains(response, 'class="mv-bottom-nav"')
+        self.assertContains(response, 'class="bottom-nav-std"')
         self.assertContains(response, 'aria-current="page"')
 
 
