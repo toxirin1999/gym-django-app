@@ -2077,6 +2077,15 @@ def dashboard_silencioso_preview(request):
             )
             accion_label = 'Ver mi sesión'
 
+    if not tiene_energia_y_sueno:
+        titulo_semana = 'DATOS PENDIENTES'
+    elif acwr is not None and acwr > 1.3:
+        # Sueño y energía favorables no anulan una carga aguda alta. La portada
+        # debe mostrar primero el factor que conviene vigilar hoy.
+        titulo_semana = 'VIGILAR CARGA'
+    else:
+        titulo_semana = 'RECUPERANDO BIEN'
+
     context.update({
         'quiet_decision': {
             'estado': estado_operativo,
@@ -2086,7 +2095,7 @@ def dashboard_silencioso_preview(request):
             'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
         },
         'quiet_week': {
-            'titulo': 'RECUPERANDO BIEN' if tiene_energia_y_sueno else 'DATOS PENDIENTES',
+            'titulo': titulo_semana,
             'energia': getattr(checkin, 'energia_subjetiva', None),
             'sueno': getattr(checkin, 'horas_sueno', None),
             'carga': carga,

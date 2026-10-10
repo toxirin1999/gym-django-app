@@ -237,6 +237,38 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertEqual(con_checkin.context["quiet_week"]["titulo"], "RECUPERANDO BIEN")
         self.assertContains(con_checkin, "RECUPERANDO BIEN")
 
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_carga_alta_no_queda_oculta_por_un_checkin_favorable(
+        self, dashboard_contexto, resolver,
+    ):
+        """La lectura semanal prioriza la carga cuando supera el margen seguro."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": 1.31,
+        }
+        resolver.return_value = {
+            "estado": "SILENCIO",
+            "texto": "No hay nada que forzar ahora.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        BitacoraDiaria.objects.create(
+            cliente=self.cliente,
+            fecha=timezone.localdate(),
+            energia_subjetiva=8,
+            horas_sueno=8,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["quiet_week"]["titulo"], "VIGILAR CARGA")
+        self.assertContains(response, "VIGILAR CARGA")
+        self.assertNotContains(response, "RECUPERANDO BIEN")
+
     def test_datos_pendientes_ofrece_checkin_minimo_en_la_misma_preview(self):
         """La falta de datos debe poder resolverse desde Ahora, sin salir del flujo."""
         self.client.force_login(self.user)
