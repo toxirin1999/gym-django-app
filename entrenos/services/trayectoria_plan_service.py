@@ -18,6 +18,20 @@ def _inicio_semana(fecha):
     return fecha - timedelta(days=fecha.weekday())
 
 
+def _etiqueta_objetivo(objetivo):
+    """Hace legible un identificador interno sin alterar su valor canónico."""
+    if not objetivo:
+        return None
+    etiquetas = {
+        'hipertrofia_metabolica': 'Hipertrofia metabólica',
+        'hipertrofia': 'Hipertrofia',
+        'fuerza': 'Fuerza',
+        'acondicionamiento': 'Acondicionamiento',
+        'descarga_activa': 'Descarga activa',
+    }
+    return etiquetas.get(str(objetivo), str(objetivo).replace('_', ' ').capitalize())
+
+
 def _generar_plan_helms(cliente, anio):
     """Usa deliberadamente la misma fuente canónica que el calendario anual."""
     perfil = crear_perfil_desde_cliente(cliente)
@@ -58,7 +72,9 @@ def _periodizacion_actual(cliente, fecha, limitations):
         fase_info = {
             'indice': indice,
             'nombre': bloque.get('nombre'),
-            'objetivo': bloque.get('objetivo'),
+            'objetivo_raw': bloque.get('objetivo'),
+            'objetivo': _etiqueta_objetivo(bloque.get('objetivo')),
+            'objetivo_display': _etiqueta_objetivo(bloque.get('objetivo')),
             'inicio': cursor,
             'fin': fin,
             'semanas': duracion,
@@ -76,7 +92,9 @@ def _periodizacion_actual(cliente, fecha, limitations):
                 'fuente': 'PlanificadorHelms.generar_plan_anual',
                 'indice': indice,
                 'nombre': bloque.get('nombre'),
-                'objetivo': bloque.get('objetivo'),
+                'objetivo_raw': bloque.get('objetivo'),
+                'objetivo': _etiqueta_objetivo(bloque.get('objetivo')),
+                'objetivo_display': _etiqueta_objetivo(bloque.get('objetivo')),
                 'inicio': cursor,
                 'fin': fin,
                 'semana_actual': fase_info['semana_actual'],

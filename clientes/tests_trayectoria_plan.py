@@ -312,6 +312,21 @@ class TrayectoriaPlanMacrocicloTests(TestCase):
         self.assertEqual(resultado['periodizacion']['rpe_inicio'], 7)
         self.assertEqual(resultado['periodizacion']['rpe_fin'], 9)
 
+    def test_periodizacion_usa_etiqueta_legible_para_identificadores_internos(self):
+        plan = {
+            'plan_por_bloques': [
+                {'nombre': 'Metabólica', 'objetivo': 'hipertrofia_metabolica', 'duracion': 8},
+            ],
+            'metadata': {'periodizacion_completa': []},
+        }
+        with patch(
+            'entrenos.services.trayectoria_plan_service._generar_plan_helms',
+            return_value=plan,
+        ):
+            resultado = proyectar_trayectoria_plan(self.cliente, fecha=date(2026, 2, 2))
+        self.assertEqual(resultado['periodizacion']['objetivo_raw'], 'hipertrofia_metabolica')
+        self.assertEqual(resultado['periodizacion']['objetivo'], 'Hipertrofia metabólica')
+
     def test_sin_plan_helms_disponible_macrociclo_es_none_sin_romper(self):
         with patch(
             'entrenos.services.trayectoria_plan_service._generar_plan_helms',
