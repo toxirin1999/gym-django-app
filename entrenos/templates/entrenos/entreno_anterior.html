@@ -72,6 +72,9 @@
     {% else %}
     <div class="bloque-panel glass-rojo text-center py-6">
         <p class="text-white">Este cliente aún no ha realizado esta rutina.</p>
+        <a href="{% url 'entrenos:entrenamiento_activo' cliente.id %}" class="inline-flex min-h-11 items-center justify-center rounded-xl bg-lime-400 px-4 py-2 font-semibold text-black focus:outline-none focus:ring-4 focus:ring-lime-300">
+            Empezar esta rutina
+        </a>
     </div>
     {% endif %}
     <!-- 📊 Comparativa de progreso -->
