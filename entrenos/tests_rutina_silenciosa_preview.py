@@ -139,6 +139,23 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('href="{{ semana_anterior_url }}"', plantilla)
         self.assertIn('href="{{ semana_siguiente_url }}"', plantilla)
 
+    def test_preview_del_dia_abre_primero_con_datos_locales_y_se_hidrata_despues(self):
+        """La red legacy no puede retrasar ni reabrir el modal de Rutina."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        apertura_local = "renderPreview(preview, { openModal: true });"
+        hidratacion_remota = "resolverPreviewLegacy(preview).then(previewCanonica =>"
+        self.assertIn('id="routine-day-sync-status"', plantilla)
+        self.assertIn('role="status"', plantilla)
+        self.assertIn(apertura_local, plantilla)
+        self.assertIn(hidratacion_remota, plantilla)
+        self.assertLess(plantilla.index(apertura_local), plantilla.index(hidratacion_remota))
+        self.assertIn("if (openModal && !modal.open)", plantilla)
+
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(

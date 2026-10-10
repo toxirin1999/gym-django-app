@@ -11,6 +11,7 @@
   <style>
     .day.is-selected{border-color:var(--blue);color:var(--paper);background:rgba(101,202,255,.12);box-shadow:0 0 0 2px rgba(101,202,255,.13)}
     .selector-status{min-height:16px;margin:10px 0 0;color:#b7ddec;font-size:10px;line-height:1.25}
+    .modal-sync-status{min-height:15px;margin:12px 0 -4px;color:#a8c9ba;font-size:10px;line-height:1.35}
   </style>
 </head>
 <body>
@@ -22,7 +23,7 @@
     <section class="learn" aria-labelledby="learn-title"><span class="mono label">Lo que el plan sabe</span><p id="learn-title">{{ insight }}</p>{% if rms %}<div class="rms" aria-label="Máximos registrados">{% for rm in rms %}<span class="rm">{{ rm.nombre }} <strong>{{ rm.valor }} kg</strong></span>{% endfor %}</div>{% endif %}</section>
   </main>
   {{ semana|json_script:"routine-day-previews" }}
-  <dialog id="routine-day-modal" role="dialog" aria-modal="true" aria-labelledby="routine-day-title"><div class="modal-inner"><div class="modal-top"><div><span id="routine-day-kind" class="mono label">Sesión</span><h2 id="routine-day-title" class="modal-title"></h2><p id="routine-day-date" class="modal-date"></p></div><button class="modal-close" type="button" aria-label="Cerrar previsualización" data-modal-close>×</button></div><div id="routine-day-exercises" class="exercise-list"></div><p id="routine-day-empty" class="empty-preview" hidden></p><div class="modal-actions"><button class="close-text" type="button" data-modal-close>Cerrar</button><a id="routine-day-cta" class="cta" href=""></a></div></div></dialog>
+  <dialog id="routine-day-modal" role="dialog" aria-modal="true" aria-labelledby="routine-day-title"><div class="modal-inner"><div class="modal-top"><div><span id="routine-day-kind" class="mono label">Sesión</span><h2 id="routine-day-title" class="modal-title"></h2><p id="routine-day-date" class="modal-date"></p></div><button class="modal-close" type="button" aria-label="Cerrar previsualización" data-modal-close>×</button></div><p id="routine-day-sync-status" class="modal-sync-status" role="status" aria-live="polite"></p><div id="routine-day-exercises" class="exercise-list"></div><p id="routine-day-empty" class="empty-preview" hidden></p><div class="modal-actions"><button class="close-text" type="button" data-modal-close>Cerrar</button><a id="routine-day-cta" class="cta" href=""></a></div></div></dialog>
   {% include 'includes/bottom_nav.html' with activo='rutina' %}
   <script>
     (() => {
@@ -37,6 +38,8 @@
       const empty = document.getElementById('routine-day-empty');
       const cta = document.getElementById('routine-day-cta');
       const selectionStatus = document.querySelector('[data-day-selection]');
+      const syncStatus = document.getElementById('routine-day-sync-status');
+      let previewSeleccionada = '';
       const close = () => modal.close();
 
       function seleccionarDia(button, preview) {
@@ -83,11 +86,11 @@
         });
         try {
           const response = await fetch(`${entrenamientosMesUrl}?${query.toString()}`);
-          if (!response.ok) return preview;
+          if (!response.ok) return null;
           const data = await response.json();
           const entrenamientos = data.entrenamientos || {};
           const entrenamiento = entrenamientos[preview.fecha_efectiva];
-          if (!entrenamiento) return preview;
+          if (!entrenamiento) return null;
           return {
             tipo: 'sesion',
             titulo: entrenamiento.nombre_rutina || preview.titulo || 'Sesión programada',
@@ -98,11 +101,11 @@
           };
         } catch (error) {
           console.warn('No se pudo actualizar la preview desde el calendario', error);
-          return preview;
+          return null;
         }
       }
 
-      function renderPreview(preview) {
+      function renderPreview(preview, { openModal = false } = {}) {
         title.textContent = preview.titulo;
         kind.textContent = preview.tipo === 'sesion' ? 'Sesión programada' : 'Recuperación';
         date.textContent = new Intl.DateTimeFormat('es-ES', { weekday: 'long', day: 'numeric', month: 'long' }).format(new Date(`${preview.fecha_efectiva}T12:00:00`));
@@ -116,18 +119,30 @@
         const isRest = preview.tipo === 'descanso';
         empty.hidden = !isRest; empty.textContent = isRest ? preview.detalle : '';
         cta.hidden = isRest; cta.href = preview.url || ''; cta.textContent = preview.cta || 'Revisar sesión';
-        modal.showModal();
-        modal.querySelector('[data-modal-close]').focus();
+        if (openModal && !modal.open) {
+          modal.showModal();
+          modal.querySelector('[data-modal-close]').focus();
+        }
       }
 
       document.querySelectorAll('[data-modal-close]').forEach(button => button.addEventListener('click', close));
       modal.addEventListener('click', event => { if (event.target === modal) close(); });
-      document.querySelectorAll('[data-day-preview]').forEach(button => button.addEventListener('click', async () => {
+      document.querySelectorAll('[data-day-preview]').forEach(button => button.addEventListener('click', () => {
         const preview = previews[Number(button.dataset.dayPreview)];
         if (!preview) return;
         seleccionarDia(button, preview);
-        const previewCanonica = await resolverPreviewLegacy(preview);
-        renderPreview(previewCanonica);
+        previewSeleccionada = preview.fecha_efectiva;
+        syncStatus.textContent = 'Actualizando detalles del plan…';
+        renderPreview(preview, { openModal: true });
+        resolverPreviewLegacy(preview).then(previewCanonica => {
+          if (previewSeleccionada !== preview.fecha_efectiva) return;
+          if (previewCanonica) {
+            renderPreview(previewCanonica);
+            syncStatus.textContent = 'Detalles del plan actualizados.';
+          } else {
+            syncStatus.textContent = 'Mostrando los detalles disponibles del plan.';
+          }
+        });
       }));
     })();
   </script>
