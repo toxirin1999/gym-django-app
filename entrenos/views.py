@@ -863,6 +863,7 @@ def entrenos_filtrados(request, rango):
     })
 
 
+@login_required
 def historial_entrenos(request):
     """
     Muestra un historial de entrenamientos con posibilidad de filtrar por cliente.
@@ -875,14 +876,17 @@ def historial_entrenos(request):
     """
     from django.core.paginator import Paginator
 
-    form = FiltroClienteForm(request.GET or None)
     entrenos = EntrenoRealizado.objects.select_related('cliente', 'rutina').prefetch_related('series__ejercicio')
+    puede_filtrar_clientes = request.user.is_staff or request.user.is_superuser
+    form = FiltroClienteForm(request.GET or None) if puede_filtrar_clientes else None
 
-    if form.is_valid() and form.cleaned_data['cliente']:
+    if puede_filtrar_clientes and form.is_valid() and form.cleaned_data['cliente']:
         cliente = form.cleaned_data['cliente']
         entrenos = entrenos.filter(cliente=cliente)
     else:
-        cliente = None
+        cliente = None if puede_filtrar_clientes else get_object_or_404(Cliente, user=request.user)
+        if cliente:
+            entrenos = entrenos.filter(cliente=cliente)
 
     entrenos = entrenos.order_by('-fecha')
 
@@ -905,6 +909,7 @@ def historial_entrenos(request):
         'form': form,
         'cliente': cliente,
         'page_obj': page_obj,
+        'puede_filtrar_clientes': puede_filtrar_clientes,
     })
 
 

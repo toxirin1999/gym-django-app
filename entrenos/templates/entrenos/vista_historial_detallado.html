@@ -7,6 +7,7 @@
 
     <h1 class="text-3xl font-bold mb-4 text-white">Historial de Entrenamientos</h1>
 
+    {% if puede_filtrar_clientes %}
     <form method="get" class="bg-gray-900 p-6 rounded-2xl shadow-xl max-w-xl mx-auto space-y-4">
         <div class="row g-2 align-items-end">
             <div class="col-md-6">
@@ -22,6 +23,7 @@
             {% endif %}
         </div>
     </form>
+    {% endif %}
 
     {% if cliente %}
     <h5 class="mb-3 text-white">Mostrando entrenos de: {{ cliente.nombre }}</h5>
