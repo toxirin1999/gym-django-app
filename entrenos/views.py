@@ -802,6 +802,7 @@ def api_stats_dashboard(request):
     return JsonResponse(data)
 
 
+@login_required
 def entrenos_filtrados(request, rango):
     """
     Filtra los entrenamientos realizados según diferentes rangos temporales.
@@ -836,7 +837,10 @@ def entrenos_filtrados(request, rango):
         queryset = EntrenoRealizado.objects.all()
         titulo = "Todos los entrenamientos"
 
-    queryset = queryset.select_related('cliente', 'rutina').order_by('-fecha')
+    queryset = queryset.select_related('cliente', 'rutina')
+    if not (request.user.is_staff or request.user.is_superuser):
+        queryset = queryset.filter(cliente__user=request.user)
+    queryset = queryset.order_by('-fecha')
 
     return render(request, 'entrenos/entrenos_filtrados.html', {
         'entrenos': queryset,
