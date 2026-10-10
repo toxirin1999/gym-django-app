@@ -358,6 +358,15 @@
     border-radius: 1rem;
 }
 
+.empty-state-action {
+    min-height: 44px;
+}
+
+.empty-state-action:focus-visible {
+    outline: 3px solid #ffffff;
+    outline-offset: 3px;
+}
+
 /* ==========================================
    RESPONSIVE
    ========================================== */
