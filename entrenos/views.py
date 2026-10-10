@@ -7669,8 +7669,8 @@ from django.db.models import Sum, Avg, Count, Max
 from django.utils import timezone
 
 
+@login_required
 @require_http_methods(["POST"])
-@csrf_exempt  # TODO: Implementar autenticación con token JWT
 def api_registrar_ejercicio(request):
     """
     API Endpoint para registrar un ejercicio completado desde la app móvil.
@@ -7824,21 +7824,22 @@ def api_obtener_estadisticas(request):
         # Calcular volumen semanal (últimos 7 días)
         hace_7_dias = timezone.now().date() - timedelta(days=7)
 
-        volumen_semanal = SerieRealizada.objects.filter(
-            detalle_ejercicio__entreno__cliente=cliente,
-            detalle_ejercicio__entreno__fecha__gte=hace_7_dias,
-            completada=True
-        ).aggregate(
-            total=Sum(F('reps') * F('peso'))
-        )['total'] or 0
+        series_semana = SerieRealizada.objects.filter(
+            entreno__cliente=cliente,
+            entreno__fecha__gte=hace_7_dias,
+            completado=True,
+            es_aproximacion=False,
+        )
+        # ``tonelaje_kg`` conoce el peso total real (por lado/mano incluido),
+        # por lo que no volvemos a inventar volumen desde columnas legacy.
+        volumen_semanal = sum(
+            (serie.tonelaje_kg for serie in series_semana),
+            Decimal('0'),
+        )
 
         # Calcular intensidad promedio (RPE promedio de la semana)
-        rpe_promedio = SerieRealizada.objects.filter(
-            detalle_ejercicio__entreno__cliente=cliente,
-            detalle_ejercicio__entreno__fecha__gte=hace_7_dias,
-            completada=True
-        ).aggregate(
-            promedio=Avg('rpe')
+        rpe_promedio = series_semana.aggregate(
+            promedio=Avg('rpe_real')
         )['promedio'] or 0
 
         # Clasificar intensidad
@@ -7868,17 +7869,46 @@ def api_obtener_estadisticas(request):
         total_entrenamientos = EntrenoRealizado.objects.filter(cliente=cliente).count()
 
         # Total de ejercicios completados
-        ejercicios_completados = DetalleEjercicioRealizado.objects.filter(
-            entreno__cliente=cliente
-        ).count()
+        ejercicios_completados = SerieRealizada.objects.filter(
+            entreno__cliente=cliente,
+            completado=True,
+            es_aproximacion=False,
+        ).values('entreno_id', 'ejercicio_id').distinct().count()
+
+        from entrenos.models import SesionProgramada
+        from entrenos.services.estadisticas_service import EstadisticasService
+
+        acwr = EstadisticasService.analizar_acwr(cliente)
+        hoy = timezone.localdate()
+        sesiones_pendientes = SesionProgramada.objects.filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_PENDIENTE,
+        )
+        proxima_sesion = min(
+            sesiones_pendientes,
+            key=lambda sesion: sesion.pospuesta_hasta or sesion.fecha_prevista,
+            default=None,
+        )
+        fecha_proxima = (
+            (proxima_sesion.pospuesta_hasta or proxima_sesion.fecha_prevista)
+            if proxima_sesion else None
+        )
 
         return JsonResponse({
             'success': True,
             'volumen_semanal': float(volumen_semanal),
             'intensidad': intensidad,
-            'acwr': 1.2,  # TODO: Implementar cálculo real de ACWR
+            'acwr': acwr.get('acwr_actual', 0),
+            'acwr_zona_riesgo': acwr.get('zona_riesgo', 'desconocida'),
             'racha_dias': racha_dias,
-            'proximo_entrenamiento': 'Próximamente',  # TODO: Obtener del plan
+            'proximo_entrenamiento': (
+                {
+                    'nombre': proxima_sesion.nombre_sesion or 'Sesión de entrenamiento',
+                    'fecha': fecha_proxima.isoformat(),
+                    'es_hoy': fecha_proxima == hoy,
+                }
+                if proxima_sesion else None
+            ),
             'total_entrenamientos': total_entrenamientos,
             'ejercicios_completados': ejercicios_completados
         })
