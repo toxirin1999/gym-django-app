@@ -125,6 +125,12 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('al guardar el entrenamiento', self.source)
         self.assertNotIn('Series y esfuerzo guardados para la próxima decisión del plan.', self.source)
 
+    def test_calentamiento_indica_cuantos_pasos_abre_y_su_estado(self):
+        self.assertIn('Calentamiento · 3 pasos', self.source)
+        self.assertIn('aria-controls="aprox-body-{{ ejercicio.form_id }}"', self.source)
+        self.assertIn('aria-expanded="false"', self.source)
+        self.assertIn('function toggleCalentamiento(button, formId)', self.source)
+
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)

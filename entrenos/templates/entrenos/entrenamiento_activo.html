@@ -1516,8 +1516,8 @@ body{background:
         </div>
         <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre }}</h2>
         {% if ejercicio.aproximaciones %}
-        <button type="button" class="ex-aprox-pill" onclick="document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.toggle('open');this.querySelector('span:last-child').textContent=document.getElementById('aprox-body-{{ ejercicio.form_id }}').classList.contains('open')?'▴':'›'">
-          <span>Calentamiento</span><span>›</span>
+        <button type="button" class="ex-aprox-pill" aria-controls="aprox-body-{{ ejercicio.form_id }}" aria-expanded="false" onclick="toggleCalentamiento(this, '{{ ejercicio.form_id }}')">
+          <span>Calentamiento · 3 pasos</span><span aria-hidden="true">›</span>
         </button>
         {% endif %}
       </div>
@@ -2543,6 +2543,15 @@ function navEjercicio(delta, confirmarSalto=false){
     return;
   }
   irEjercicio(destino);
+}
+
+function toggleCalentamiento(button, formId){
+  const cuerpo=document.getElementById('aprox-body-'+formId);
+  if(!cuerpo)return;
+  const abierto=cuerpo.classList.toggle('open');
+  button.setAttribute('aria-expanded',String(abierto));
+  const indicador=button.querySelector('span:last-child');
+  if(indicador)indicador.textContent=abierto?'▴':'›';
 }
 
 function irEjercicio(idx){
