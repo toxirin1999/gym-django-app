@@ -25,6 +25,13 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('<span>Revisar y finalizar</span>', self.source)
         self.assertIn('id="btn-confirmar-guardar">Guardar entrenamiento</button>', self.source)
 
+    def test_revision_final_anticipa_que_se_guardara_y_que_decision_informara(self):
+        """Antes de confirmar, el usuario sabe qué datos entrarán en el plan."""
+        self.assertIn('id="modal-save-status" role="status"', self.source)
+        self.assertIn('function textoResumenPendienteDeGuardar(', self.source)
+        self.assertIn('La próxima decisión del plan usará estos datos.', self.source)
+        self.assertIn("document.getElementById('modal-save-status').textContent=", self.source)
+
     def test_revision_final_es_dialog_accesible_y_devuelve_el_foco(self):
         """El cierre no deja el foco detrás del overlay ni atrapa al usuario."""
         self.assertIn('id="modal-resumen-overlay" aria-hidden="true" inert', self.source)
