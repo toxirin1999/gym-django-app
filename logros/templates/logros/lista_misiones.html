@@ -21,6 +21,7 @@
         <p class="header-subtitle">Completa misiones para ganar puntos y mejorar tu entrenamiento.</p>
     </header>
 
+    {% if categorias %}
     <div class="missions-body">
         <!-- Navegación por Categorías -->
         <nav class="category-nav">
@@ -52,7 +53,6 @@
 
                     <div class="missions-grid">
                         {% for mision in misiones %}
-                        {% get_progreso_mision request.user.perfilgamificacion mision as progreso %}
 
                         <a class="mission-card" href="{% url 'logros:detalle_mision' mision.id %}">
 
@@ -80,16 +80,9 @@
 
                             <!-- SECCIÓN DEL FOOTER (PROGRESO) -->
                             <div class="mission-card__footer">
-                                <div class="progress-bar-wrapper">
-                                    <div class="progress-bar-fill" style="width: {{ progreso.porcentaje }}%;"></div>
-                                </div>
                                 <div class="progress-text">
-                                    <span>{{ progreso.valor_actual|default:0 }}/{{ mision.meta_valor }}</span>
-                                    {% if mision.tipo.periodo != 'permanente' and mision.tipo.periodo != 'progresiva' %}
-                                    <span class="mission-type">
-                    <i class="bi bi-clock"></i> {{ mision.tipo.get_periodo_display }}
-                </span>
-                                    {% endif %}
+                                    <span>Misión activa</span>
+                                    <span class="mission-type"><i class="bi bi-clock"></i> {{ mision.get_periodo_display }}</span>
                                 </div>
                             </div>
                         </a>
@@ -104,9 +97,16 @@
             </div>
         </main>
     </div>
+    {% else %}
+    <section class="missions-empty" aria-labelledby="missions-empty-title">
+        <i class="bi bi-flag" aria-hidden="true"></i>
+        <h2 id="missions-empty-title">No hay misiones activas ahora mismo.</h2>
+        <p>Vuelve más tarde: las próximas misiones aparecerán aquí cuando estén disponibles.</p>
+    </section>
+    {% endif %}
 
     <footer class="missions-footer">
-        <a href="{% url 'logros:dashboard_principal' %}" class="btn-back">
+        <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="btn-back">
             <i class="bi bi-house-door-fill"></i> Volver al Panel Principal
         </a>
     </footer>

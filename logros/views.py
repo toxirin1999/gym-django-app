@@ -424,10 +424,15 @@ def obtener_notificaciones_ajax(request, cliente_id):
 @login_required
 def lista_misiones(request):
     """Lista todas las misiones disponibles"""
-    misiones = Quest.objects.filter(activa=True).order_by('periodo', 'nombre')
+    misiones = Quest.objects.filter(activa=True).select_related('tipo').order_by(
+        'tipo__nombre', 'periodo', 'nombre',
+    )
+    categorias = {}
+    for mision in misiones:
+        categorias.setdefault(mision.tipo.nombre, []).append(mision)
 
     context = {
-        'misiones': misiones,
+        'categorias': categorias,
     }
 
     return render(request, 'logros/lista_misiones.html', context)

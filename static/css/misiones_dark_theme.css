@@ -87,6 +87,20 @@ body {
     gap: 1.5rem;
 }
 
+.missions-empty {
+    display: grid;
+    justify-items: center;
+    gap: .75rem;
+    padding: 3rem 1.5rem;
+    border: 1px dashed var(--border-color);
+    border-radius: 12px;
+    color: var(--secondary-text);
+    text-align: center;
+}
+.missions-empty i { color: var(--accent-color); font-size: 1.8rem; }
+.missions-empty h2 { margin: 0; color: var(--primary-text); font-size: 1.25rem; }
+.missions-empty p { max-width: 38ch; margin: 0; line-height: 1.55; }
+
 /* --- Tarjeta de Misión --- */
 .mission-card {
     display: block;
