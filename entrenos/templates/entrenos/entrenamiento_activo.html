@@ -2025,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
-<dialog id="fallo-dialog" class="fallo-dialog" aria-labelledby="fallo-dialog-title">
+<dialog id="fallo-dialog" class="fallo-dialog" aria-labelledby="fallo-dialog-title" aria-describedby="fallo-dialog-copy">
   <div class="fallo-dialog-inner">
     <div class="fallo-kicker">Señal de esfuerzo</div>
     <div class="fallo-title" id="fallo-dialog-title">¿El fallo estaba previsto?</div>
@@ -4240,8 +4240,10 @@ function confirmarMolestia() {
 }
 
 let falloFormId = null;
+let focoAntesDeFallo=null;
 
 function abrirModalFallo(formId, ejercicioNombre) {
+  focoAntesDeFallo=document.activeElement;
   falloFormId = formId;
   const dialog = document.getElementById('fallo-dialog');
   document.getElementById('fallo-dialog-copy').textContent =
@@ -4261,6 +4263,9 @@ function seleccionarFallo(tipo) {
 
 document.getElementById('fallo-dialog').addEventListener('click', event => {
   if (event.target === event.currentTarget) event.currentTarget.close();
+});
+document.getElementById('fallo-dialog').addEventListener('close',()=>{
+  requestAnimationFrame(()=>focoAntesDeFallo?.focus?.());
 });
 
 // Cerrar al pulsar fuera del sheet

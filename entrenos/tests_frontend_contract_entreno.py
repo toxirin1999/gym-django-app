@@ -48,6 +48,14 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('focoAntesDeMolestia?.focus?.()', self.source)
         self.assertIn("if(event.key==='Escape')cerrarModalMolestia();", self.source)
 
+    def test_fallo_distingue_la_senal_y_restituye_el_foco_de_origen(self):
+        """El diálogo nativo de fallo no debe dejar al teclado sin contexto."""
+        self.assertIn('id="fallo-dialog" class="fallo-dialog" aria-labelledby="fallo-dialog-title" aria-describedby="fallo-dialog-copy"', self.source)
+        self.assertIn('let focoAntesDeFallo=null;', self.source)
+        self.assertIn('focoAntesDeFallo=document.activeElement;', self.source)
+        self.assertIn("document.getElementById('fallo-dialog').addEventListener('close'", self.source)
+        self.assertIn('focoAntesDeFallo?.focus?.()', self.source)
+
     def test_revision_final_es_dialog_accesible_y_devuelve_el_foco(self):
         """El cierre no deja el foco detrás del overlay ni atrapa al usuario."""
         self.assertIn('id="modal-resumen-overlay" aria-hidden="true" inert', self.source)
