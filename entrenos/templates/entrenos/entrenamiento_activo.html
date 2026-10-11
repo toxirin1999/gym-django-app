@@ -3239,11 +3239,11 @@ function saltarDescanso(fid){
     const siguienteNombre=cards[STATE.ejActual+1]?.querySelector('.cyber-ejercicio-nombre')?.textContent?.trim();
     const metricas=seriesTrabajo.reduce((total,serie)=>{
       const m=metricasSerie(serie);
-      total.tonelaje+=m.tonelaje;total.distancia+=m.distancia;total.segundos+=m.segundos;
+      total.tonelaje+=m.tonelaje;total.cargaDistancia+=m.cargaDistancia;total.distancia+=m.distancia;total.segundos+=m.segundos;
       return total;
-    },{tonelaje:0,distancia:0,segundos:0});
+    },{tonelaje:0,cargaDistancia:0,distancia:0,segundos:0});
     const resumenTrabajo=[seriesTrabajo.length+' series de trabajo'];
-    if(metricas.tonelaje)resumenTrabajo.push(Math.round(metricas.tonelaje)+' kg');
+    if(metricas.tonelaje||metricas.cargaDistancia)resumenTrabajo.push(textoMetricas(metricas.tonelaje,metricas.cargaDistancia));
     if(metricas.distancia)resumenTrabajo.push(metricas.distancia+' m');
     if(metricas.segundos)resumenTrabajo.push(metricas.segundos+' s');
     div.innerHTML='<div style="font-size:2rem;color:var(--ok);">'+frase.e+'</div>'

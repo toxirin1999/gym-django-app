@@ -162,6 +162,12 @@ class UiCargaTests(TestCase):
         self.assertIn("s.multiplicador", template)
         self.assertIn("kg·m", template)
 
+    def test_feedback_inmediato_conserva_la_carga_transportada(self):
+        """El cierre de un carry no puede reducirse a metros sin su carga."""
+        template = (Path(__file__).parent / "templates/entrenos/entrenamiento_activo.html").read_text()
+        self.assertIn("total.cargaDistancia+=m.cargaDistancia", template)
+        self.assertIn("textoMetricas(metricas.tonelaje,metricas.cargaDistancia)", template)
+
 
 class ReparacionDeclarativaTests(TestCase):
     def setUp(self):
