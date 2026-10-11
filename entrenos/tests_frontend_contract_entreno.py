@@ -114,6 +114,12 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("Ejercicio registrado", self.source)
         self.assertIn("resultado.clase!=='en-rango'", self.source)
 
+    def test_escritorio_usa_una_superficie_de_registro_legible_y_sticky_alineado(self):
+        self.assertIn('@media (min-width:900px)', self.source)
+        self.assertIn('.wrap{max-width:720px;', self.source)
+        self.assertIn('.sticky{width:min(720px,100%);', self.source)
+        self.assertIn('left:50%;transform:translateX(-50%)', self.source)
+
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)

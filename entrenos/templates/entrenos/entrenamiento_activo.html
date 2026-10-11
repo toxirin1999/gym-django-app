@@ -1283,6 +1283,20 @@ body{background:
   .tb-progress-wrap{padding-left:18px;padding-right:18px;}
   .ex-header-card h2.cyber-ejercicio-nombre{font-size:clamp(23px,7.2vw,27px);}
 }
+
+/* En escritorio el registro deja de parecer una simulación móvil aislada:
+   gana anchura de lectura, mientras el resumen fijo sigue exactamente la misma
+   columna para que tiempo, series, volumen y CTA se perciban como una unidad. */
+@media (min-width:900px){
+  .wrap{max-width:720px;padding-left:0;padding-right:0;}
+  .topbar,.tb-progress-wrap{padding-left:24px;padding-right:24px;}
+  .exname{padding-left:24px;padding-right:24px;}
+  .contingencia-grid,.peso-reps-grid,.sliders-zona,.series-log,.set-pills-row{margin-left:24px;margin-right:24px;}
+  .btn-guardar,.ejercicio-continuar{width:calc(100% - 48px);margin-left:24px;margin-right:24px;}
+  .sticky{width:min(720px,100%);left:50%;transform:translateX(-50%);border-left:1px solid var(--bdm);border-right:1px solid var(--bdm);border-radius:14px 14px 0 0;}
+  .ex-header-combo{min-height:152px;}
+  .ex-header-card h2.cyber-ejercicio-nombre{max-width:370px;font-size:34px;}
+}
 </style>
 </head>
 <body>
