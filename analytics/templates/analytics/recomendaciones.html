@@ -146,6 +146,23 @@
         border: 1px solid var(--border-color);
     }
 
+    .recommendations-empty {
+        display: grid;
+        justify-items: center;
+        gap: .75rem;
+        padding: 2rem 1rem;
+        color: var(--text-secondary);
+        text-align: center;
+    }
+
+    .recommendations-empty p { margin: 0; }
+    .recommendations-empty__action {
+        color: var(--accent-color);
+        font-weight: 700;
+        text-decoration: underline;
+        text-underline-offset: .22em;
+    }
+
     .section-title {
         font-size: 1.25rem;
         font-weight: 600;
@@ -498,12 +515,11 @@
                     </div>
                 </div>
                 {% empty %}
-                <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-                    🎉 ¡Excelente! No hay recomendaciones pendientes.
-
-
-                    <small>Genera un nuevo análisis para obtener insights actualizados.</small>
-                </div>
+                <section class="recommendations-empty" aria-label="Sin recomendaciones pendientes">
+                    <p><strong>Todo está al día por ahora.</strong></p>
+                    <p>No hay recomendaciones pendientes. Puedes actualizar el análisis cuando quieras revisar datos nuevos.</p>
+                    <a class="recommendations-empty__action" href="#generate-form">Actualizar análisis</a>
+                </section>
                 {% endfor %}
             </div>
         </div>
