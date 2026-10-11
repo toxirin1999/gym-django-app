@@ -54,7 +54,7 @@
                         {% for mision in misiones %}
                         {% get_progreso_mision request.user.perfilgamificacion mision as progreso %}
 
-                        <div class="mission-card" onclick="location.href='{% url 'logros:detalle_mision' mision.id %}'">
+                        <a class="mission-card" href="{% url 'logros:detalle_mision' mision.id %}">
 
                             <!-- SECCIÓN DEL HEADER (ICONO, TÍTULO Y RECOMPENSA) -->
                             <div class="mission-card__header">
@@ -92,7 +92,7 @@
                                     {% endif %}
                                 </div>
                             </div>
-                        </div>
+                        </a>
                         {% empty %}
                         <p class="text-muted" style="padding:1rem;">Aún no hay misiones en esta categoría.</p>
                         {% endfor %}
