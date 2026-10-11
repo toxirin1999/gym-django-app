@@ -2944,7 +2944,7 @@ function resumenDeEjercicio(fid){
   if(!resultados.length){
     const lectura=rpeAlto
       ? 'El esfuerzo fue alto; el plan conservará margen antes de progresar.'
-      : 'Series y esfuerzo guardados para la próxima decisión del plan.';
+      : 'Series y esfuerzo registrados en este borrador. Se usarán en la próxima decisión del plan al guardar el entrenamiento.';
     return {e:'✓',t:'Ejercicio registrado',s:lectura};
   }
   if(rpeAlto || fueraDeRango){
@@ -2953,7 +2953,7 @@ function resumenDeEjercicio(fid){
       : `0/${scs.length} series alcanzaron el rango previsto.`;
     return {e:'↗',t:'Ejercicio exigente registrado',s:lectura+' La próxima sesión conservará margen antes de progresar.'};
   }
-  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. Series y esfuerzo guardados para la próxima decisión del plan.`};
+  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. Datos registrados en este borrador; se usarán al guardar el entrenamiento.`};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────

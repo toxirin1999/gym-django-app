@@ -120,6 +120,11 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('.sticky{width:min(720px,100%);', self.source)
         self.assertIn('left:50%;transform:translateX(-50%)', self.source)
 
+    def test_cierre_local_no_promete_decisiones_del_plan_antes_del_guardado_final(self):
+        self.assertIn('registrados en este borrador', self.source)
+        self.assertIn('al guardar el entrenamiento', self.source)
+        self.assertNotIn('Series y esfuerzo guardados para la próxima decisión del plan.', self.source)
+
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
