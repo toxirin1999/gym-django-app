@@ -2060,10 +2060,10 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- ══ MODAL MOLESTIA ══ -->
-<div class="mol-ov" id="mol-overlay">
+<div class="mol-ov" id="mol-overlay" role="dialog" aria-modal="true" aria-labelledby="mol-title" aria-hidden="true">
   <div class="mol-sheet">
     <div class="mol-header">
-      <span class="mol-title">⚠️ Reportar Molestia</span>
+      <span class="mol-title" id="mol-title">⚠️ Reportar Molestia</span>
       <button type="button" class="mol-close" onclick="cerrarModalMolestia()">×</button>
     </div>
     <div style="padding:10px 16px 6px;background:var(--panel);border-bottom:1px solid var(--bd);">
@@ -4037,6 +4037,14 @@ document.addEventListener('DOMContentLoaded',function(){
 
 let MOL = { fid: null, ejNombre: null, zona: null, severidad: null };
 const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+const molestiaOverlay=document.getElementById('mol-overlay');
+const contenidoEntreno=document.querySelector('.wrap');
+let focoAntesDeMolestia=null;
+
+function controlesMolestia(){
+  return Array.from(molestiaOverlay?.querySelectorAll('button:not([disabled]), input:not([disabled]), textarea:not([disabled])')||[])
+    .filter(el=>el.offsetParent!==null);
+}
 
 function toggleTopeMaquina(formId) {
   const input = document.getElementById('tope-' + formId);
@@ -4051,6 +4059,7 @@ function toggleTopeMaquina(formId) {
 }
 
 function abrirModalMolestia(fid, ejNombre) {
+  focoAntesDeMolestia=document.activeElement;
   MOL = { fid, ejNombre, ejOriginal: ejNombre, zona: null, severidad: null };
   document.getElementById('mol-ej-nombre').textContent = ejNombre;
   document.getElementById('mol-desc-input').value = '';
@@ -4059,7 +4068,9 @@ function abrirModalMolestia(fid, ejNombre) {
   document.getElementById('mol-btn-confirmar').textContent = 'Anotar y continuar';
   document.querySelectorAll('.mol-zona-chip').forEach(c => c.classList.remove('sel'));
   document.querySelectorAll('.mol-sev-btn').forEach(b => b.classList.remove('sel'));
-  document.getElementById('mol-overlay').classList.add('active');
+  molestiaOverlay.classList.add('active');
+  molestiaOverlay.setAttribute('aria-hidden','false');
+  contenidoEntreno?.setAttribute('inert','');
   document.body.style.overflow = 'hidden';
   // Pre-seleccionar zona si ya hay una registrada
   const zonaGuardada = document.getElementById('mol-zona-' + fid)?.value;
@@ -4067,12 +4078,27 @@ function abrirModalMolestia(fid, ejNombre) {
     const chip = document.querySelector(`.mol-zona-chip[data-zona="${zonaGuardada}"]`);
     if (chip) { chip.classList.add('sel'); MOL.zona = zonaGuardada; }
   }
+  requestAnimationFrame(()=>molestiaOverlay.querySelector('.mol-close')?.focus());
 }
 
 function cerrarModalMolestia() {
-  document.getElementById('mol-overlay').classList.remove('active');
+  molestiaOverlay.classList.remove('active');
+  molestiaOverlay.setAttribute('aria-hidden','true');
+  contenidoEntreno?.removeAttribute('inert');
   document.body.style.overflow = '';
+  requestAnimationFrame(()=>focoAntesDeMolestia?.focus?.());
 }
+
+document.addEventListener('keydown',event=>{
+  if(!molestiaOverlay?.classList.contains('active'))return;
+  if(event.key==='Escape')cerrarModalMolestia();
+  if(event.key!=='Tab')return;
+  const controles=controlesMolestia();
+  if(!controles.length)return;
+  const primero=controles[0],ultimo=controles[controles.length-1];
+  if(event.shiftKey&&document.activeElement===primero){event.preventDefault();ultimo.focus();}
+  if(!event.shiftKey&&document.activeElement===ultimo){event.preventDefault();primero.focus();}
+});
 
 function selSeveridad(sev) {
   MOL.severidad = sev;

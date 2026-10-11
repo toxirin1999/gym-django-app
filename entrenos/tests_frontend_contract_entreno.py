@@ -39,6 +39,15 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("Técnica comprometida: la carga no progresará hasta recuperar control.", self.source)
         self.assertIn("impacto.textContent=textoImpactoTecnica(val);", self.source)
 
+    def test_molestia_devuelve_el_foco_y_no_deja_activo_el_fondo(self):
+        """El reporte de dolor debe comportarse como diálogo accesible real."""
+        self.assertIn('id="mol-overlay" role="dialog" aria-modal="true"', self.source)
+        self.assertIn('aria-labelledby="mol-title"', self.source)
+        self.assertIn('let focoAntesDeMolestia=null;', self.source)
+        self.assertIn('focoAntesDeMolestia=document.activeElement;', self.source)
+        self.assertIn('focoAntesDeMolestia?.focus?.()', self.source)
+        self.assertIn("if(event.key==='Escape')cerrarModalMolestia();", self.source)
+
     def test_revision_final_es_dialog_accesible_y_devuelve_el_foco(self):
         """El cierre no deja el foco detrás del overlay ni atrapa al usuario."""
         self.assertIn('id="modal-resumen-overlay" aria-hidden="true" inert', self.source)
