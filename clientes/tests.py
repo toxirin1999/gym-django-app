@@ -12,3 +12,10 @@ class TarjetaProximoEntrenamientoTemplateTests(SimpleTestCase):
         self.assertIn('type="button"', template)
         self.assertIn('aria-haspopup="dialog"', template)
         self.assertNotIn('<button href=', template)
+
+    def test_recovery_action_links_to_the_recovery_catalog(self):
+        template = Path(
+            "clientes/templates/clientes/includes/tarjeta_proximo_entrenamiento.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("{% url 'estiramientos:panel' %}", template)
