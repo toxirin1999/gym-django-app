@@ -242,8 +242,9 @@
         </a>
 
         <!-- Botón Detalles -->
-        <button href="{% url 'clientes:vista_educacion_helms' cliente.id %}" class="btn-accion btn-detalles"
-                onclick="mostrarDetallesEntrenamiento()">
+        <button type="button" class="btn-accion btn-detalles"
+                aria-haspopup="dialog" aria-controls="modalDetallesEntrenamiento" aria-expanded="false"
+                onclick="mostrarDetallesEntrenamiento(this)">
             <i class="fas fa-info-circle mr-2"></i>
             Detalles
         </button>
@@ -258,12 +259,14 @@
 </div>
 
 <!-- Modal de detalles (opcional) -->
-<div id="modalDetallesEntrenamiento" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden">
+<div id="modalDetallesEntrenamiento" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 hidden"
+     role="dialog" aria-modal="true" aria-labelledby="modalDetallesEntrenamientoTitulo" aria-hidden="true">
     <div class="flex items-center justify-center min-h-screen p-4">
         <div class="bg-gray-900 border border-cyan-500/30 rounded-lg p-6 max-w-md w-full">
             <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xl font-bold text-white">Detalles del Entrenamiento</h3>
-                <button onclick="cerrarDetallesEntrenamiento()" class="text-gray-400 hover:text-white">
+                <h3 id="modalDetallesEntrenamientoTitulo" class="text-xl font-bold text-white">Detalles del Entrenamiento</h3>
+                <button type="button" onclick="cerrarDetallesEntrenamiento()" class="text-gray-400 hover:text-white"
+                        aria-label="Cerrar detalles del entrenamiento">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
@@ -292,7 +295,7 @@
                    class="flex-1 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-center transition-colors">
                     Iniciar Ahora
                 </a>
-                <button onclick="cerrarDetallesEntrenamiento()"
+                <button type="button" onclick="cerrarDetallesEntrenamiento()"
                         class="flex-1 bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded transition-colors">
                     Cerrar
                 </button>
@@ -302,12 +305,24 @@
 </div>
 
 <script>
-    function mostrarDetallesEntrenamiento() {
-        document.getElementById('modalDetallesEntrenamiento').classList.remove('hidden');
+    let botonDetallesEntrenamiento = null;
+
+    function mostrarDetallesEntrenamiento(boton) {
+        const modal = document.getElementById('modalDetallesEntrenamiento');
+        botonDetallesEntrenamiento = boton;
+        modal.classList.remove('hidden');
+        modal.setAttribute('aria-hidden', 'false');
+        boton.setAttribute('aria-expanded', 'true');
     }
 
     function cerrarDetallesEntrenamiento() {
-        document.getElementById('modalDetallesEntrenamiento').classList.add('hidden');
+        const modal = document.getElementById('modalDetallesEntrenamiento');
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+        if (botonDetallesEntrenamiento) {
+            botonDetallesEntrenamiento.setAttribute('aria-expanded', 'false');
+            botonDetallesEntrenamiento.focus();
+        }
     }
 
     // Cerrar modal al hacer clic fuera
