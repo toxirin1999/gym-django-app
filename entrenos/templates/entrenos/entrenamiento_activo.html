@@ -1799,13 +1799,13 @@ body{background:
         <div class="slider-row rpe-row">
           <span class="sl-label" style="padding-top:8px;">Esfuerzo (RPE)</span>
           <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
-            <div class="rpe-picker-grid" id="rpe-grid-{{ ejercicio.form_id }}-{{ sn }}">
-              <button type="button" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">5</button>
-              <button type="button" class="rpe-pick-btn" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">6</button>
-              <button type="button" class="rpe-pick-btn" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">7</button>
-              <button type="button" class="rpe-pick-btn" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">8</button>
-              <button type="button" class="rpe-pick-btn" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">9</button>
-              <button type="button" class="rpe-pick-btn" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-pressed="false">10</button>
+            <div class="rpe-picker-grid" id="rpe-grid-{{ ejercicio.form_id }}-{{ sn }}" role="radiogroup" aria-label="Esfuerzo percibido de la serie {{ sn }}">
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">5</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">6</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">7</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">8</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">9</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">10</button>
             </div>
             <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}">Selecciona el RPE real</div>
           </div>
@@ -3002,13 +3002,22 @@ function seleccionarRPE(fidSn,valor){
   if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>{
     const seleccionado=parseInt(b.dataset.val)===valor;
     b.classList.toggle('sel',seleccionado);
-    b.setAttribute('aria-pressed',String(seleccionado));
+    b.setAttribute('aria-checked',String(seleccionado));
   });
   if(desc){desc.textContent=descripcionRPE(fidSn,valor);desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
   if(navigator.vibrate)navigator.vibrate(8);
 }
 document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
   btn.addEventListener('click',()=>seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val)));
+  btn.addEventListener('keydown',event=>{
+    if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
+    event.preventDefault();
+    const botones=Array.from(document.getElementById('rpe-grid-'+btn.dataset.fidSn).querySelectorAll('.rpe-pick-btn'));
+    const desplazamiento=(event.key==='ArrowRight'||event.key==='ArrowDown')?1:-1;
+    const siguiente=botones[(botones.indexOf(btn)+desplazamiento+botones.length)%botones.length];
+    siguiente.focus();
+    seleccionarRPE(siguiente.dataset.fidSn,parseInt(siguiente.dataset.val));
+  });
 });
 
 function actualizarControlAproximacion(button,activa){

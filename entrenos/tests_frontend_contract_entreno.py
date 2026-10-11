@@ -70,8 +70,11 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("control técnico sostenible", self.source)
 
     def test_registro_distingue_rpe_aproximacion_y_resultado_del_plan(self):
-        self.assertIn("aria-pressed=\"false\"", self.source)
-        self.assertIn("b.setAttribute('aria-pressed'", self.source)
+        self.assertIn('role="radiogroup"', self.source)
+        self.assertIn('role="radio"', self.source)
+        self.assertIn("aria-checked=\"false\"", self.source)
+        self.assertIn("b.setAttribute('aria-checked'", self.source)
+        self.assertIn("event.key==='ArrowRight'", self.source)
         self.assertIn('name="{{ ejercicio.form_id }}_aproximacion_{{ sn }}"', self.source)
         self.assertIn("serie.esAproximacion", self.source)
         self.assertIn("resultadoPlanSerie", self.source)
