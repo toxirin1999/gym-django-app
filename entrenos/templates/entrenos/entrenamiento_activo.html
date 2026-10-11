@@ -2924,14 +2924,15 @@ function mostrarMensajeEjercicio(card,fid){
 function resumenDeEjercicio(fid){
   const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
   const rpeAlto=scs.some(s=>(s.rpe||0)>=9);
-  const fueraDeRango=scs.some((s,index)=>{
-    const resultado=resultadoPlanSerie(fid,index+1,s.reps,false);
-    return resultado && resultado.clase==='por-debajo';
-  });
-  const enRango=scs.filter((s,index)=>{
-    const resultado=resultadoPlanSerie(fid,index+1,s.reps,false);
-    return resultado && resultado.clase==='en-rango';
-  }).length;
+  const resultados=scs.map((s,index)=>resultadoPlanSerie(fid,index+1,s.reps,false)).filter(Boolean);
+  const fueraDeRango=resultados.some(resultado=>resultado.clase!=='en-rango');
+  const enRango=resultados.filter(resultado=>resultado.clase==='en-rango').length;
+  if(!resultados.length){
+    const lectura=rpeAlto
+      ? 'El esfuerzo fue alto; el plan conservará margen antes de progresar.'
+      : 'Series y esfuerzo guardados para la próxima decisión del plan.';
+    return {e:'✓',t:'Ejercicio registrado',s:lectura};
+  }
   if(rpeAlto || fueraDeRango){
     const lectura=enRango
       ? `${enRango}/${scs.length} series recuperaron el rango tras el ajuste.`

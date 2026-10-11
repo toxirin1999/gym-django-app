@@ -105,6 +105,12 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("Continuar con ", self.source)
         self.assertNotIn("setTimeout(()=>{if(STATE.ejActual===ejIdxAtCompletion)navEjercicio(1);},2000);", self.source)
 
+    def test_cierre_no_llama_en_objetivo_a_series_no_evaluables_o_fuera_de_rango(self):
+        self.assertIn("const resultados=scs.map", self.source)
+        self.assertIn("if(!resultados.length)", self.source)
+        self.assertIn("Ejercicio registrado", self.source)
+        self.assertIn("resultado.clase!=='en-rango'", self.source)
+
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
