@@ -356,5 +356,5 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
 
     def test_modal_distingue_cierre_parcial_de_entrenamiento_completo(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
-        self.assertIn("esCierreParcial ? 'Sesión parcial guardada' : '¡Buen trabajo!'", source)
-        self.assertIn("esCierreParcial ? 'La sesión se cerrará con el motivo que indiques.' : 'Entrenamiento completado'", source)
+        self.assertIn("esCierreParcial ? 'Revisar sesión parcial' : 'Revisar entrenamiento'", source)
+        self.assertIn("esCierreParcial ? 'Aún no se ha guardado. Indica el motivo para registrarla.' : 'Comprueba el resumen antes de guardar.'", source)

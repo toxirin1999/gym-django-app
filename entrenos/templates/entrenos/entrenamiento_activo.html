@@ -2116,6 +2116,19 @@ document.addEventListener('DOMContentLoaded', () => {
   </div>
 </div>
 
+<!-- AVISO: SERIES PENDIENTES -->
+<dialog id="modal-series-pendientes" aria-labelledby="series-pendientes-title" style="max-width:430px;width:calc(100% - 32px);border:1px solid var(--bd);border-radius:18px;background:var(--panel);color:var(--tx);padding:0;box-shadow:0 24px 70px rgba(0,0,0,.55);">
+  <div style="padding:24px;">
+    <p style="margin:0 0 8px;font:700 11px var(--fm);letter-spacing:1.5px;color:var(--amber);text-transform:uppercase;">Series pendientes</p>
+    <h2 id="series-pendientes-title" style="margin:0;font:700 22px var(--fd);">Aún queda trabajo aquí</h2>
+    <p id="series-pendientes-copy" style="margin:10px 0 20px;color:var(--td);line-height:1.5;">Puedes continuar registrando o avanzar sin cerrar este ejercicio.</p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button type="button" class="mbtn mbtn-back" id="btn-seguir-registrando">Seguir registrando</button>
+      <button type="button" class="mbtn mbtn-ok" id="btn-ir-al-siguiente">Ir al siguiente</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- MODAL RESUMEN -->
 <div class="modal-ov" id="modal-resumen-overlay" aria-hidden="true" inert>
   <div class="modal-resumen-full" role="dialog" aria-modal="true" aria-labelledby="modal-resumen-title" aria-describedby="modal-resumen-subtitle" tabindex="-1">
@@ -2280,6 +2293,7 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="mr-actions">
       <button type="button" class="mbtn mbtn-ok" id="btn-confirmar-guardar">Guardar entrenamiento</button>
       <button type="button" class="mbtn mbtn-back" id="btn-volver-editar">Volver a editar</button>
+      <button type="button" class="mbtn mbtn-back" id="btn-descartar-borrador">Descartar borrador</button>
     </div>
 
   </div>
@@ -2491,9 +2505,30 @@ function incrementoPeso(fid){
   return parseFloat(card?.dataset.incKg||'2.5')||2.5;
 }
 
-// Navegación ejercicios
-function navEjercicio(delta){
-  irEjercicio(Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta)));
+// Navegación ejercicios. Avanzar no debe ocultar accidentalmente series
+// pendientes: el usuario decide explícitamente si prefiere dejarlas para después.
+let saltoPendiente=null;
+function tieneSeriesPendientes(card){
+  if(!card)return false;
+  const fid=card.dataset.formId;
+  const total=parseInt(card.dataset.totalSets||'0');
+  return total>0&&seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]).length<total;
+}
+
+function navEjercicio(delta, confirmarSalto=false){
+  const destino=Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta));
+  const cardActual=cards[STATE.ejActual];
+  if(delta>0&&!confirmarSalto&&destino!==STATE.ejActual&&tieneSeriesPendientes(cardActual)){
+    saltoPendiente=delta;
+    const fid=cardActual.dataset.formId;
+    const total=parseInt(cardActual.dataset.totalSets||'0');
+    const hechas=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]).length;
+    document.getElementById('series-pendientes-copy').textContent=
+      'Llevas '+hechas+' de '+total+' series. Puedes volver a ellas después, pero no se guardarán hasta que cierres el entrenamiento.';
+    document.getElementById('modal-series-pendientes').showModal();
+    return;
+  }
+  irEjercicio(destino);
 }
 
 function irEjercicio(idx){
@@ -3028,6 +3063,17 @@ function guardarCheckpoint(){
 // ── LIMPIAR localStorage al guardar ──────────────────────────────
 function limpiarCheckpoint(){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}
 
+function descartarBorrador(){
+  const confirmar=window.confirm(
+    '¿Descartar el borrador local? Se eliminarán las series anotadas en este dispositivo y no se guardará ningún entrenamiento.'
+  );
+  if(!confirmar)return;
+  limpiarCheckpoint();
+  try{localStorage.removeItem(_WK_KEY);}catch(e){}
+  _sessionGuardada=true;
+  window.location.href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ fecha|date:'Y-m-d' }}";
+}
+
 // ── SOUND ALERT (Web Audio API — no deps) ───────────────────────
 function playRestEndAlert(){
   try{
@@ -3406,9 +3452,9 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   }
   const esCierreParcial=comp<total;
   document.getElementById('modal-resumen-title').textContent=
-    esCierreParcial ? 'Sesión parcial guardada' : '¡Buen trabajo!';
+    esCierreParcial ? 'Revisar sesión parcial' : 'Revisar entrenamiento';
   document.getElementById('modal-resumen-subtitle').textContent=
-    esCierreParcial ? 'La sesión se cerrará con el motivo que indiques.' : 'Entrenamiento completado';
+    esCierreParcial ? 'Aún no se ha guardado. Indica el motivo para registrarla.' : 'Comprueba el resumen antes de guardar.';
   const motivoWrap=document.getElementById('motivo-cierre-wrap');
   if(motivoWrap)motivoWrap.style.display=comp<total?'block':'none';
   document.getElementById('hid-series-comp').value=comp;
@@ -3482,6 +3528,22 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
 });
 
 document.getElementById('btn-volver-editar').addEventListener('click',cerrarResumen);
+document.getElementById('btn-descartar-borrador').addEventListener('click',descartarBorrador);
+
+const modalSeriesPendientes=document.getElementById('modal-series-pendientes');
+document.getElementById('btn-seguir-registrando').addEventListener('click',()=>{
+  saltoPendiente=null;
+  modalSeriesPendientes.close();
+});
+document.getElementById('btn-ir-al-siguiente').addEventListener('click',()=>{
+  const delta=saltoPendiente;
+  saltoPendiente=null;
+  modalSeriesPendientes.close();
+  if(delta)navEjercicio(delta,true);
+});
+modalSeriesPendientes.addEventListener('click',event=>{
+  if(event.target===modalSeriesPendientes)modalSeriesPendientes.close();
+});
 
 // ── SWAP MÁQUINA OCUPADA ─────────────────────────────────────────
 let _swapFormId = null, _swapNombreOriginal = null;
