@@ -2306,6 +2306,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </select>
       <div id="motivo-cierre-error" role="alert" style="display:none;color:#ff8b8b;font-size:11px;margin-top:7px;"></div>
     </div>
+    <div id="save-error" role="alert" aria-live="assertive" style="display:none;margin-top:12px;padding:11px 13px;border-radius:10px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.45);color:#fecaca;font-size:12px;line-height:1.4;"></div>
 
     <!-- Botones -->
     <div class="mr-actions">
@@ -3502,6 +3503,8 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     esCierreParcial ? 'Aún no se ha guardado. Indica el motivo para registrarla.' : 'Comprueba el resumen antes de guardar.';
   document.getElementById('modal-save-status').textContent=
     textoResumenPendienteDeGuardar(comp,total,esCierreParcial);
+  const saveError=document.getElementById('save-error');
+  if(saveError)saveError.style.display='none';
   const motivoWrap=document.getElementById('motivo-cierre-wrap');
   if(motivoWrap)motivoWrap.style.display=comp<total?'block':'none';
   document.getElementById('hid-series-comp').value=comp;
@@ -3891,6 +3894,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   const totalPlanificadas=cards.reduce((n,card)=>n+(parseInt(card.dataset.totalSets)||0),0);
   const motivo=document.getElementById('motivo-cierre');
   const errorMotivo=document.getElementById('motivo-cierre-error');
+  const saveError=document.getElementById('save-error');
   if(completadas<1){
     alert('No puedes cerrar una sesión sin completar al menos una serie');
     return;
@@ -3900,6 +3904,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     return;
   }
   if(errorMotivo)errorMotivo.style.display='none';
+  if(saveError)saveError.style.display='none';
   const confirmarBtn=document.getElementById('btn-confirmar-guardar');
   _envioCierreEnCurso = true;
   confirmarBtn.disabled = true;
@@ -3956,6 +3961,10 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     confirmarBtn.removeAttribute('aria-busy');
     confirmarBtn.textContent='Reintentar guardado';
     if (ov) ov.style.display = 'none';
+    if(saveError){
+      saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.';
+      saveError.style.display='block';
+    }
     window.alert(error.message || 'No se pudo guardar el entrenamiento. Tus datos siguen aquí; inténtalo de nuevo.');
   });
 });

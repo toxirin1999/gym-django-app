@@ -76,6 +76,13 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("confirmarBtn.textContent='Reintentar guardado';", self.source)
         self.assertIn('id="saving-overlay" role="status" aria-live="assertive"', self.source)
 
+    def test_error_de_guardado_permanece_visible_y_conserva_el_borrador(self):
+        """Un corte de red debe explicar el reintento sin depender solo de alert()."""
+        self.assertIn('id="save-error" role="alert"', self.source)
+        self.assertIn("saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.'", self.source)
+        self.assertIn("saveError.style.display='block';", self.source)
+        self.assertIn("saveError.style.display='none';", self.source)
+
     def test_calculadora_unica_no_afirma_igualdad_si_hay_resto(self):
         self.assertEqual(self.source.count("function calcularDesgloseDiscos("), 1)
         self.assertIn("0.5,0.25", self.source)
