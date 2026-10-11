@@ -32,6 +32,13 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('La próxima decisión del plan usará estos datos.', self.source)
         self.assertIn("document.getElementById('modal-save-status').textContent=", self.source)
 
+    def test_tecnica_explica_su_impacto_sin_convertirla_en_un_dato_opaco(self):
+        """La elección técnica debe explicar al momento cómo condiciona el plan."""
+        self.assertIn('id="tecnica-impacto-{{ ejercicio.form_id }}" role="status"', self.source)
+        self.assertIn("function textoImpactoTecnica(tecnica)", self.source)
+        self.assertIn("Técnica comprometida: la carga no progresará hasta recuperar control.", self.source)
+        self.assertIn("impacto.textContent=textoImpactoTecnica(val);", self.source)
+
     def test_revision_final_es_dialog_accesible_y_devuelve_el_foco(self):
         """El cierre no deja el foco detrás del overlay ni atrapa al usuario."""
         self.assertIn('id="modal-resumen-overlay" aria-hidden="true" inert', self.source)

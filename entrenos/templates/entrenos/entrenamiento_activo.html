@@ -1954,18 +1954,19 @@ body{background:
       <div class="pd-tecnica-lbl">¿Cómo fue la técnica?</div>
       <div class="pd-tecnica-btns">
         <button type="button" class="btn-tecnica tec-buena" id="tec-buena-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','buena')">
+                aria-pressed="false" onclick="selTecnica('{{ ejercicio.form_id }}','buena')">
           <span class="tec-icon">✅</span>Buena
         </button>
         <button type="button" class="btn-tecnica tec-aceptable" id="tec-aceptable-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','aceptable')">
+                aria-pressed="false" onclick="selTecnica('{{ ejercicio.form_id }}','aceptable')">
           <span class="tec-icon">🟡</span>Aceptable
         </button>
         <button type="button" class="btn-tecnica tec-comprometida" id="tec-comprometida-{{ ejercicio.form_id }}"
-                onclick="selTecnica('{{ ejercicio.form_id }}','comprometida')">
+                aria-pressed="false" onclick="selTecnica('{{ ejercicio.form_id }}','comprometida')">
           <span class="tec-icon">⚠️</span>Comprometida
         </button>
       </div>
+      <p id="tecnica-impacto-{{ ejercicio.form_id }}" role="status" aria-live="polite" style="min-height:18px;margin:8px 2px 0;color:var(--td);font-size:11px;line-height:1.35;">Elige la calidad técnica de la serie.</p>
     </div>
 
     <!-- Banner autoregulación (se muestra si procede) -->
@@ -3731,6 +3732,13 @@ function cerrarAltLesion() {
 // Almacena la técnica seleccionada mientras el usuario está en la pantalla de descanso
 const _tecnicaActual = {};  // { fid: 'buena'|'aceptable'|'comprometida'|null }
 
+function textoImpactoTecnica(tecnica){
+  if(tecnica==='buena')return 'Técnica buena: esta serie puede apoyar una progresión si el resto de datos acompaña.';
+  if(tecnica==='aceptable')return 'Técnica aceptable: se registra y el plan tendrá en cuenta el control antes de progresar.';
+  if(tecnica==='comprometida')return 'Técnica comprometida: la carga no progresará hasta recuperar control.';
+  return 'Elige la calidad técnica de la serie.';
+}
+
 function selTecnica(fid, val){
   _tecnicaActual[fid] = val;
   ['buena','aceptable','comprometida'].forEach(v=>{
@@ -3738,7 +3746,10 @@ function selTecnica(fid, val){
     if(!btn) return;
     btn.classList.remove('sel-buena','sel-aceptable','sel-comprometida');
     if(v === val) btn.classList.add('sel-'+val);
+    btn.setAttribute('aria-pressed',v===val?'true':'false');
   });
+  const impacto=document.getElementById('tecnica-impacto-'+fid);
+  if(impacto)impacto.textContent=textoImpactoTecnica(val);
 
   // La técnica describe la serie que acaba de terminar — la que está en
   // descanso ahora mismo (STATE.timers[fid].snActual), no la próxima que
@@ -3775,8 +3786,13 @@ function _resetTecnica(fid){
   _tecnicaActual[fid] = null;
   ['buena','aceptable','comprometida'].forEach(v=>{
     const btn = document.getElementById('tec-'+v+'-'+fid);
-    if(btn) btn.classList.remove('sel-buena','sel-aceptable','sel-comprometida');
+    if(btn){
+      btn.classList.remove('sel-buena','sel-aceptable','sel-comprometida');
+      btn.setAttribute('aria-pressed','false');
+    }
   });
+  const impacto=document.getElementById('tecnica-impacto-'+fid);
+  if(impacto)impacto.textContent=textoImpactoTecnica(null);
 }
 
 // ── Energía pre-sesión ──────────────────────────────────────────
