@@ -67,3 +67,18 @@ class WidgetAcwrCoherenciaTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Carga Baja')
         self.assertNotContains(response, 'Ya estás en zona verde')
+
+    @patch('entrenos.services.services.EstadisticasService.analizar_acwr_unificado')
+    def test_widget_incluye_explicacion_accesible_de_acwr(self, analizar):
+        analizar.return_value = {
+            'acwr_actual': 1.05,
+            'zona_riesgo': 'optima',
+            'dias_descanso': 0,
+            'dataframe': [],
+        }
+
+        response = self.client.get(reverse('clientes:widget_acwr', args=[self.cliente.id]))
+
+        self.assertContains(response, 'id="acwr-info-modal"')
+        self.assertContains(response, 'aria-haspopup="dialog"')
+        self.assertContains(response, 'Qué significa este indicador')
