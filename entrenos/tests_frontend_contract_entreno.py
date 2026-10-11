@@ -131,6 +131,13 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('aria-expanded="false"', self.source)
         self.assertIn('function toggleCalentamiento(button, formId)', self.source)
 
+    def test_salida_visible_conserva_la_proteccion_del_borrador(self):
+        self.assertIn('class="workout-exit"', self.source)
+        self.assertIn('aria-label="Salir del entrenamiento"', self.source)
+        self.assertIn('.topbar .workout-exit{display:flex!important;', self.source)
+        self.assertIn("window.addEventListener('beforeunload'", self.source)
+        self.assertIn('Los datos quedan en borrador local.', self.source)
+
     def test_distancia_con_carga_mantiene_el_peso_en_la_ejecucion(self):
         self.assertIn("{% if ejercicio.usa_peso or ejercicio.usa_distancia %}", self.source)
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)

@@ -1170,6 +1170,8 @@ body{background:
 .topbar{padding:9px 18px 5px;background:rgba(5,7,8,.96);}
 .topbar .tb-left{gap:8px!important;}
 .topbar a{display:none!important;}
+.topbar .workout-exit{display:flex!important;align-items:center;justify-content:center;width:32px;height:32px;border:1px solid #263842!important;border-radius:8px!important;background:#0d1418!important;color:#d5dce0!important;}
+.topbar .workout-exit:hover{border-color:rgba(16,185,129,.6)!important;color:var(--green)!important;}
 .tb-dia{font-size:10px;color:#e5e7eb;font-weight:800;letter-spacing:.075em;}
 .tb-tipo{font-size:10px;color:#aeb7c3;font-weight:700;letter-spacing:.02em;text-transform:uppercase;}
 .tb-progress-wrap{top:0;padding:2px 18px 8px;background:rgba(5,7,8,.96);gap:10px;}
@@ -1326,7 +1328,7 @@ body{background:
 <!-- ══ TOPBAR ══ -->
 <div class="topbar">
   <div class="tb-left" style="flex-direction:row;align-items:center;gap:10px;">
-    <a href="{% url 'home' %}" style="display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:10px;background:var(--surf2);flex-shrink:0;color:var(--td);text-decoration:none;" title="Inicio">
+    <a class="workout-exit" href="{% url 'home' %}" aria-label="Salir del entrenamiento" title="Salir del entrenamiento">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
         <polyline points="9 22 9 12 15 12 15 22"/>
