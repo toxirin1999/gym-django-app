@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from clientes.models import Cliente
 from clientes.views import _progreso_estaciones_comparables
-from entrenos.models import GymDecisionLog
+from entrenos.models import ActividadRealizada, GymDecisionLog
 from hyrox.models import HyroxActivity, HyroxObjective, HyroxSession
 
 
@@ -179,3 +179,37 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertFalse(response.context['data_updated_has_time'])
         self.assertContains(response, timezone.localdate().strftime('%d/%m/%Y'))
         self.assertNotContains(response, '23:59')
+
+    def test_memoria_es_duena_del_resumen_cronologico_de_actividad(self):
+        """La cronología se consulta desde Memoria y conserva Timeline como detalle."""
+        hoy = timezone.localdate()
+        ActividadRealizada.objects.create(
+            cliente=self.cliente, tipo='carrera', titulo='Rodaje Z2',
+            fecha=hoy - timedelta(days=3), fecha_realizado=hoy - timedelta(days=1),
+            duracion_minutos=42,
+        )
+        ActividadRealizada.objects.create(
+            cliente=self.cliente, tipo='gym', titulo='Fuerza A',
+            fecha=hoy - timedelta(days=2), duracion_minutos=55,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context['actividad_reciente'][0]['titulo'], 'Rodaje Z2')
+        self.assertEqual(response.context['actividad_reciente'][0]['fecha'], hoy - timedelta(days=1))
+        self.assertEqual(response.context['actividad_reciente'][1]['titulo'], 'Fuerza A')
+        self.assertContains(response, 'Actividad reciente')
+        self.assertContains(response, 'Rodaje Z2')
+        self.assertContains(
+            response,
+            reverse('entrenos:timeline_atleta', args=[self.cliente.id]),
+        )
+
+    def test_plantilla_nombra_memoria_como_lugar_de_la_cronologia(self):
+        plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
+
+        self.assertIn('Actividad reciente', plantilla)
+        self.assertIn('La actividad queda aquí como parte de lo que el plan aprende.', plantilla)
+        self.assertIn("{% url 'entrenos:timeline_atleta' cliente.id %}", plantilla)

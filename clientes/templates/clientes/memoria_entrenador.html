@@ -241,6 +241,28 @@
     {% endwith %}
   </section>
 
+  <section class="mem-node mem-node--state" aria-labelledby="memoria-actividad-title">
+    <div class="mem-label">Cronología que alimenta el plan</div>
+    <h2 class="mem-heading" id="memoria-actividad-title">Actividad reciente</h2>
+    <p class="mem-desc">La actividad queda aquí como parte de lo que el plan aprende.</p>
+    {% if actividad_reciente %}
+    <div class="mem-list">
+      {% for actividad in actividad_reciente %}
+      <div class="mem-row">
+        <div class="idx">{{ actividad.fecha|date:"d/m" }}</div>
+        <div>
+          <div class="name">{{ actividad.titulo }}</div>
+          <div class="meta">{{ actividad.tipo }}{% if actividad.duracion_minutos %} · {{ actividad.duracion_minutos }} min{% endif %}</div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="mem-desc" style="margin-top:12px;">Todavía no hay sesiones registradas para situar una secuencia.</p>
+    {% endif %}
+    <a class="mem-empty-link" href="{% url 'entrenos:timeline_atleta' cliente.id %}">Ver historial cronológico <span aria-hidden="true">→</span></a>
+  </section>
+
   {# ── MAPA CORPORAL · evolución por grupo muscular ── #}
   {% if evolucion_muscular %}
   {% include 'clientes/partials/_mapa_evolucion_muscular.html' %}
@@ -590,7 +612,7 @@
     </article>
     {% endif %}
 
-    {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos %}
+    {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos and not actividad_reciente %}
     <section class="mem-empty" aria-labelledby="memoria-sin-evidencia-title">
       <h2 class="mem-empty-title" id="memoria-sin-evidencia-title">Aún no hay evidencia suficiente</h2>
       <p class="mem-empty-copy">La memoria no inventa conclusiones: se completa al registrar sesiones, esfuerzo y cómo respondió tu cuerpo.</p>

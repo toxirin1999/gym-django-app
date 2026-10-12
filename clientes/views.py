@@ -5442,6 +5442,26 @@ def memoria_entrenador(request, cliente_id):
     )
     energia_media = round(sum(energias) / len(energias), 1) if energias else None
 
+    # ── 5b. ACTIVIDAD RECIENTE · entrada cronológica de Memoria ──────────────
+    # ActividadRealizada ya es el hub del Timeline. Memoria lo resume para que
+    # la cronología tenga una única puerta de entrada en la experiencia diaria;
+    # la vista Timeline conserva el detalle navegable de todo el historial.
+    from entrenos.models import ActividadRealizada
+    actividades_recientes = list(
+        ActividadRealizada.objects.filter(cliente=cliente)
+        .annotate(fecha_efectiva=Coalesce('fecha_realizado', 'fecha'))
+        .order_by('-fecha_efectiva', '-id')[:4]
+    )
+    actividad_reciente = [
+        {
+            'fecha': actividad.fecha_efectiva,
+            'titulo': actividad.titulo or actividad.get_tipo_display(),
+            'tipo': actividad.get_tipo_display(),
+            'duracion_minutos': actividad.duracion_minutos,
+        }
+        for actividad in actividades_recientes
+    ]
+
     # ── 6. ZONAS DE ATENCIÓN (molestias + lesiones) ───────────────────────────
     zonas_atencion = list(
         GymDecisionLog.objects
@@ -5601,6 +5621,7 @@ def memoria_entrenador(request, cliente_id):
         'decisiones_recientes': decisiones_recientes,
         'records': records,
         'sesiones_semana': sesiones_semana,
+        'actividad_reciente': actividad_reciente,
         'rpe_medio_gym': rpe_medio_gym,
         'energia_media': energia_media,
         'zonas_atencion': zonas_atencion,
