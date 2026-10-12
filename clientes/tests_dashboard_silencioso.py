@@ -66,6 +66,18 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Otras opciones")
         self.assertContains(response, reverse("estiramientos:panel"))
 
+    def test_cabecera_ofrece_acceso_strava_reconocible_y_accesible(self):
+        """Strava vive junto al estado de hoy, no como otra tarjeta del panel."""
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, reverse("hyrox:strava_reconciliacion"))
+        self.assertContains(response, 'class="strava-link"')
+        self.assertContains(response, 'aria-label="Abrir Strava"')
+        self.assertContains(response, 'class="strava-mark"')
+        self.assertContains(response, '#fc4c02')
+
     def test_aprendizaje_no_repite_la_decision_del_dia_sin_evidencia_nueva(self):
         """La tarjeta de aprendizaje debe aportar una conclusión, no eco.
 
