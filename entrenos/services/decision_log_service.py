@@ -723,6 +723,39 @@ def _persistir_evaluacion_final(log, resultado, notas):
     return log
 
 
+def _reps_minimas_tras_subida(log, nueva_sesion):
+    """Repeticiones mínimas para dar por buena una subida de peso, o None.
+
+    Mover más peso no basta: 45 kg × 6 en una fase de 12-15 no es una subida
+    que haya funcionado. Manda el objetivo de reps de la sesión que evalúa
+    (snapshot inmutable); sin él, se tolera perder hasta 2 reps respecto a las
+    de antes de subir. Sin ninguno de los dos datos no se puede juzgar.
+    """
+    objetivo = _objetivo_repeticiones_snapshot(
+        nueva_sesion.entreno, normalizar_ejercicio(nueva_sesion.nombre_ejercicio),
+    )
+    if objetivo is not None:
+        return float(objetivo)
+    if log.reps_anteriores:
+        return max(1.0, float(log.reps_anteriores) - 2)
+    return None
+
+
+def _subida_sin_reps(log, nueva_sesion, reps_nuevas):
+    """Nota si la subida se movió con menos reps de las mínimas; None si cumple."""
+    minimo = _reps_minimas_tras_subida(log, nueva_sesion)
+    try:
+        reps = float(reps_nuevas)
+    except (TypeError, ValueError):
+        return None
+    if minimo is not None and reps + 0.5 < minimo:
+        return (
+            f'Peso alcanzado, pero con {_formatear_reps(Decimal(str(round(reps, 1))))} reps frente a '
+            f'{_formatear_reps(Decimal(str(round(minimo, 1))))} de objetivo'
+        )
+    return None
+
+
 def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
@@ -788,8 +821,12 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
                 resultado = 'neutra'
                 notas = 'La decisión no conserva un objetivo de peso evaluable'
             elif float(peso_nuevo) >= float(objetivo) - 0.5:
-                resultado = 'validada'
-                notas = 'Objetivo de peso alcanzado con una ejecución sostenible'
+                corta = _subida_sin_reps(log, nueva_sesion, reps_nuevas)
+                if corta:
+                    resultado, notas = 'neutra', corta
+                else:
+                    resultado = 'validada'
+                    notas = 'Objetivo de peso alcanzado con una ejecución sostenible'
             else:
                 resultado = 'neutra'
                 notas = 'Hubo ejecución, pero todavía no se alcanzó el objetivo de peso'
@@ -895,7 +932,10 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         resultado = 'fallida'
         notas = 'Carga excesiva: fallo o RPE extremo en la sesión posterior'
     elif log.accion == 'subir_peso' and peso_nuevo > peso_anterior:
-        if rpe_nuevo is not None and rpe_nuevo <= 8.5 and not fallo_nuevo:
+        corta = _subida_sin_reps(log, nueva_sesion, reps_nuevas)
+        if corta:
+            resultado, notas = 'neutra', corta
+        elif rpe_nuevo is not None and rpe_nuevo <= 8.5 and not fallo_nuevo:
             resultado = 'validada'
             notas = 'Subida de peso completada con RPE aceptable'
         else:
