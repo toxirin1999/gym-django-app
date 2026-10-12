@@ -546,6 +546,11 @@
         margin-bottom: 0.5rem;
     }
 
+    .calendar-page-title {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
     .header-title h1 i {
         color: #C8AA6E;
         text-shadow: 0 0 20px var(--color-cyan-glow);
@@ -554,6 +559,30 @@
     .header-title p {
         color: var(--text-fog);
         font-size: 1rem;
+    }
+
+    @media (max-width: 640px) {
+        .page-header {
+            padding: 1.25rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .header-content {
+            align-items: flex-start;
+            text-align: left;
+            gap: 1rem;
+        }
+
+        .header-title {
+            min-width: 0;
+            width: 100%;
+        }
+
+        .calendar-page-title {
+            align-items: flex-start;
+            font-size: clamp(1.35rem, 8vw, 1.75rem);
+            line-height: 1.15;
+        }
     }
 
     .header-stats {
@@ -4764,7 +4793,7 @@
     <header class="page-header">
         <div class="header-content">
             <div class="header-title">
-                <h1><i class="fas fa-calendar-alt"></i> Planificación de Entrenamiento</h1>
+                <h1 class="calendar-page-title"><i class="fas fa-calendar-alt" aria-hidden="true"></i> Planificación de Entrenamiento</h1>
                 <p>Visualiza y gestiona tus sesiones programadas</p>
             </div>
             <div class="header-actions">

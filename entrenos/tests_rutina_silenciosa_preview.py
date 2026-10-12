@@ -217,6 +217,56 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertEqual(contexto["fase"]["rpe"], "7–8")
         self.assertEqual(contexto["fase"]["reps"], "12-15")
 
+    def test_parametros_de_calendario_usan_el_detalle_preciso_del_mismo_plan(self):
+        """El calendario no debe degradar una prescripción conocida a 6–10/1–20.
+
+        ``plan_por_bloques`` sitúa la fase en el tiempo, mientras que el
+        detalle fino vive en ``metadata.periodizacion_completa``. Rutina y
+        calendario comparten ambas fuentes, así que ambos deben presentar los
+        mismos rangos cuando el bloque aún no los trae explícitamente.
+        """
+        from entrenos.views import _parametros_fase_plan
+
+        parametros = _parametros_fase_plan(
+            {
+                "nombre": "Metabólica",
+                "objetivo": "hipertrofia_metabolica",
+            },
+            {
+                "metadata": {"periodizacion_completa": [
+                    {
+                        "nombre": "Metabólica",
+                        "rpe_inicio": 7,
+                        "rpe_fin": 8,
+                        "rep_range": "12-15",
+                    },
+                ]},
+            },
+        )
+
+        self.assertEqual(parametros["rpe_min"], 7)
+        self.assertEqual(parametros["rpe_max"], 8)
+        self.assertEqual(parametros["reps_min"], 12)
+        self.assertEqual(parametros["reps_max"], 15)
+        self.assertEqual(parametros["rep_range"], "12-15")
+
+    def test_calendario_tiene_un_encabezado_legible_en_movil(self):
+        """El título del calendario no puede salir recortado en 390 px.
+
+        El contrato es deliberadamente pequeño: el encabezado se identifica
+        como tal y su regla móvil permite partir el texto largo en líneas, sin
+        depender de que un navegador concreto oculte el desbordamiento.
+        """
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/vista_plan_calendario.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('class="calendar-page-title"', plantilla)
+        self.assertIn('.calendar-page-title {', plantilla)
+        self.assertIn('overflow-wrap: anywhere;', plantilla)
+
     def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
         """Una sesión materializada sin detalle no puede abrir un modal vacío.
 

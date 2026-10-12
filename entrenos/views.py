@@ -5224,6 +5224,53 @@ def _inicio_semana_rutina(valor, referencia):
     return fecha - timedelta(days=fecha.weekday())
 
 
+def _parametros_fase_plan(fase, plan):
+    """Devuelve los rangos que ya prescribe el plan para una fase.
+
+    Los bloques contienen la posición temporal y pueden no incluir los rangos
+    finos. Esos valores viven en ``metadata.periodizacion_completa``. Mantener
+    esta normalización compartida evita que Calendario y Rutina hablen de dos
+    prescripciones distintas para la misma fase.
+    """
+    fase = fase or {}
+    plan = plan or {}
+    detalle = next(
+        (
+            item for item in ((plan.get('metadata') or {}).get(
+                'periodizacion_completa',
+            ) or [])
+            if item.get('nombre') == fase.get('nombre')
+        ),
+        {},
+    )
+
+    def _entero(valor, defecto):
+        try:
+            return int(valor)
+        except (TypeError, ValueError):
+            return defecto
+
+    rango_reps = fase.get('rep_range') or detalle.get('rep_range')
+    reps_min = fase.get('reps_min')
+    reps_max = fase.get('reps_max')
+    if rango_reps and (reps_min is None or reps_max is None):
+        partes = str(rango_reps).replace('–', '-').split('-', 1)
+        if len(partes) == 2:
+            reps_min = _entero(partes[0].strip(), 1)
+            reps_max = _entero(partes[1].strip(), 20)
+
+    reps_min = _entero(reps_min, 1)
+    reps_max = _entero(reps_max, 20)
+    return {
+        'rpe_min': _entero(fase.get('rpe_min', detalle.get('rpe_inicio')), 6),
+        'rpe_max': _entero(fase.get('rpe_max', detalle.get('rpe_fin')), 10),
+        'reps_min': reps_min,
+        'reps_max': reps_max,
+        'rep_range': rango_reps or '{}-{}'.format(reps_min, reps_max),
+        'series': fase.get('series', detalle.get('series', '3-5')),
+    }
+
+
 def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
     """Contexto móvil de Rutina apoyado en el mismo plan Helms anual.
 
@@ -5269,15 +5316,7 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
     # ``periodizacion_completa``. Leer ambos del mismo plan evita que Rutina
     # presente los fallbacks genéricos (6–10 / 1–20) como si fueran la
     # prescripción de una fase que Plan ya conoce con más precisión.
-    detalle_fase = next(
-        (
-            detalle for detalle in ((plan or {}).get('metadata') or {}).get(
-                'periodizacion_completa',
-            ) or []
-            if detalle.get('nombre') == fase_actual.get('nombre')
-        ),
-        {},
-    )
+    parametros_fase = _parametros_fase_plan(fase_actual, plan)
 
     # Una sesión aplazada conserva su fecha prescrita para la memoria del plan,
     # pero la Rutina representa cuándo se puede ejecutar realmente. Al usar la
@@ -5455,21 +5494,14 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         fase_actual.get('objetivo') or fase_actual.get('descripcion')
     ) or 'Adaptación sostenible'
     nombre_fase = fase_actual.get('nombre') or fase_actual.get('tipo_fase') or 'Plan activo'
-    rpe_inicio = fase_actual.get('rpe_min', detalle_fase.get('rpe_inicio', 6))
-    rpe_fin = fase_actual.get('rpe_max', detalle_fase.get('rpe_fin', 10))
-    reps = (
-        fase_actual.get('rep_range')
-        or detalle_fase.get('rep_range')
-        or '{}–{}'.format(
-            fase_actual.get('reps_min', 1), fase_actual.get('reps_max', 20),
-        )
-    )
     return {
         'fase': {
             'nombre': nombre_fase,
             'objetivo': objetivo,
-            'rpe': '{}–{}'.format(rpe_inicio, rpe_fin),
-            'reps': reps,
+            'rpe': '{}–{}'.format(
+                parametros_fase['rpe_min'], parametros_fase['rpe_max'],
+            ),
+            'reps': parametros_fase['rep_range'],
         },
         'semana': semana,
         'semana_inicio': inicio_semana,
@@ -5894,23 +5926,9 @@ def vista_plan_anual(request, cliente_id):
                 }
                 objetivo_fase = "Recuperación activa y regeneración"
 
-        # Extraer parámetros de la fase
-        parametros_fase = {
-            'rpe_min': 6,
-            'rpe_max': 10,
-            'reps_min': 1,
-            'reps_max': 20,
-            'series': '3-5'
-        }
-
-        if fase_actual:
-            parametros_fase = {
-                'rpe_min': fase_actual.get('rpe_min', 6),
-                'rpe_max': fase_actual.get('rpe_max', 10),
-                'reps_min': fase_actual.get('reps_min', 1),
-                'reps_max': fase_actual.get('reps_max', 20),
-                'series': fase_actual.get('series', '3-5')
-            }
+        # La misma normalización alimenta Rutina y Calendario: un bloque puede
+        # situar la fase, pero el rango fino vive en metadata del plan.
+        parametros_fase = _parametros_fase_plan(fase_actual, plan)
 
         # --- PASO 6: Preparar el contexto SOLO con datos del calendario ---
         matriz_mes = calendar.monthcalendar(año_actual, mes_actual)
@@ -5966,10 +5984,7 @@ def vista_plan_anual(request, cliente_id):
             'fecha_inicio': b.get('fecha_inicio').isoformat() if b.get('fecha_inicio') else None,
             'fecha_fin': b.get('fecha_fin').isoformat() if b.get('fecha_fin') else None,
             'duracion': b.get('duracion'),
-            'rpe_min': b.get('rpe_min', 6),
-            'rpe_max': b.get('rpe_max', 10),
-            'reps_min': b.get('reps_min', 1),
-            'reps_max': b.get('reps_max', 20),
+            **_parametros_fase_plan(b, plan),
             'descripcion': b.get('descripcion', ''),
         } for b in bloques]
 
@@ -5978,7 +5993,11 @@ def vista_plan_anual(request, cliente_id):
             'plan': plan,  # Añadir el plan completo para acceder a bloques
             'calendario': {
                 'semanas': semanas_calendario,
-                'nombre_mes': calendar.month_name[mes_actual],
+                'nombre_mes': (
+                    'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+                    'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre',
+                    'Diciembre',
+                )[mes_actual - 1],
                 'año': año_actual,
                 'mes_num': mes_actual
             },
