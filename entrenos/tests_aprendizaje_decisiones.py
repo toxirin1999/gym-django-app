@@ -92,3 +92,11 @@ class AprendizajeDecisionesTests(TestCase):
         self.assertEqual(resumen['con_conclusion'], 2)
         self.assertEqual(len(resumen['items']), 1)
         self.assertNotIn('mantuve', resumen['items'][0]['texto'])
+
+    def test_peso_corporal_no_dice_cero_kg(self):
+        origen = self._entreno(10, 0, 6, 6)
+        self._entreno(5, 0, 7, 6)
+        log = self._log(origen, 'validada', accion='subir_reps', valor=1)
+        texto = frase_decision(log)
+        self.assertIn('Después: 7 reps con RPE 6.', texto)
+        self.assertNotIn('0 kg', texto)

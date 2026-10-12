@@ -91,7 +91,10 @@ def frase_decision(log):
     partes = [f'{_capitalizar(log.ejercicio)}: {describir_accion(log)}.']
     despues = _sesion_evaluadora(log)
     if despues and despues['peso'] is not None and despues['reps']:
-        dato = f"Después: {_kg(despues['peso'])} kg × {despues['reps']}"
+        if float(despues['peso'] or 0) > 0:
+            dato = f"Después: {_kg(despues['peso'])} kg × {despues['reps']}"
+        else:  # peso corporal: "0 kg × 7" no dice nada
+            dato = f"Después: {despues['reps']} reps"
         if despues['rpe'] is not None:
             dato += f" con RPE {_rpe(despues['rpe'])}"
         partes.append(dato + '.')
