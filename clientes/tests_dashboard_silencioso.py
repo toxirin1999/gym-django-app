@@ -78,6 +78,108 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, 'class="strava-mark"')
         self.assertContains(response, '#fc4c02')
 
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_cabecera_resume_carga_fisica_solo_con_un_valor_calculado(
+        self, dashboard_contexto, resolver,
+    ):
+        """La cifra visible es el ACWR real, nunca un estado inventado."""
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": 0.93,
+        }
+        resolver.return_value = {
+            "estado": "EN_MARGEN",
+            "texto": "Hay margen para seguir el plan.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.context["quiet_load"], {
+            "valor": "0,93", "estado": "Estable",
+        })
+        self.assertContains(response, 'class="load-chip"')
+        self.assertContains(response, "Carga física")
+        self.assertContains(response, "0,93")
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_no_muestra_indicador_numerico_de_carga_sin_historial(
+        self, dashboard_contexto, resolver,
+    ):
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": None,
+        }
+        resolver.return_value = {
+            "estado": "EN_MARGEN",
+            "texto": "Hay margen para seguir el plan.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertIsNone(response.context["quiet_load"])
+        self.assertNotContains(response, 'class="load-chip"')
+
+    def test_propuesta_de_zona_se_presenta_con_datos_estructurados_y_no_un_parrafo(self):
+        """La iniciativa explica qué cae y qué cambia sin reanalizar su texto."""
+        from entrenos.models import PropuestaZonaGym
+
+        PropuestaZonaGym.objects.create(
+            cliente=self.cliente,
+            zona="isquios",
+            series_extra=1,
+            semanas=4,
+            ejercicios=["Curl femoral tumbado", "Buenos días"],
+            deteccion={"pct": -17.1},
+            texto="Texto legado que no debe ser la interfaz.",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'class="propuesta-resumen"')
+        self.assertContains(response, "Isquios")
+        self.assertContains(response, "-17,1 %")
+        self.assertContains(response, "1 serie extra")
+        self.assertContains(response, "4 semanas")
+        self.assertNotContains(response, "Texto legado que no debe ser la interfaz.")
+
+    @patch("core.organismo.resolver_estado_sistema_hoy")
+    @patch("clientes.views._get_dashboard_context_data")
+    def test_detalle_de_decision_presenta_acwr_como_senal_separada(
+        self, dashboard_contexto, resolver,
+    ):
+        dashboard_contexto.return_value = {
+            "_decision_gym_raw": {"contexto_fisico": {}},
+            "proximo_entrenamiento": {},
+            "explicacion_decision": {},
+            "acwr_actual": 0.93,
+        }
+        resolver.return_value = {
+            "estado": "EN_MARGEN",
+            "texto": "Hay margen para seguir el plan.",
+            "accion_label": None,
+            "accion_url": None,
+        }
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, 'class="decision-signal"')
+        self.assertContains(response, "Señal de carga")
+        self.assertContains(response, "ACWR 0,93")
+
     @patch('clientes.views._aviso_decision_pendiente')
     def test_muestra_unico_aviso_del_centro_solo_cuando_hay_accion_pendiente(self, aviso):
         """La portada anuncia una revisión, sin duplicar sus controles."""

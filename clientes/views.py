@@ -1972,7 +1972,30 @@ def mockup_demo(request):
 def _propuesta_zona_visible(cliente, hoy):
     try:
         from entrenos.services.propuesta_zona_service import propuesta_visible
-        return propuesta_visible(cliente, hoy)
+        visible = propuesta_visible(cliente, hoy)
+        if not visible:
+            return None
+
+        # La propuesta ya guarda la evidencia que la originó. La portada la
+        # consume como datos, no descompone la frase narrativa guardada en
+        # ``texto``: así puede jerarquizar el motivo y el cambio real sin
+        # depender de la redacción.
+        propuesta = visible['propuesta']
+        deteccion = getattr(propuesta, 'deteccion', None) or {}
+        variacion_pct = deteccion.get('pct')
+        try:
+            variacion_texto = f'{float(variacion_pct):.1f}'.replace('.', ',')
+        except (TypeError, ValueError):
+            variacion_texto = None
+        visible['presentacion'] = {
+            'zona': getattr(propuesta, 'nombre_zona', None),
+            'variacion_pct': variacion_pct,
+            'variacion_texto': variacion_texto,
+            'ejercicios': list(getattr(propuesta, 'ejercicios', None) or []),
+            'series_extra': getattr(propuesta, 'series_extra', None),
+            'semanas': getattr(propuesta, 'semanas', None),
+        }
+        return visible
     except Exception:
         logger.exception('dashboard_silencioso_preview: no se pudo leer la propuesta de zona')
         return None
@@ -2135,6 +2158,16 @@ def dashboard_silencioso_preview(request):
         carga = 'Alta'
         carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
 
+    # Es una lectura de carga, no un marcador de salud. Solo se enseña una
+    # cifra cuando el sistema ha podido calcularla; la ausencia de historial
+    # nunca se disfraza de una puntuación.
+    quiet_load = None
+    if acwr is not None:
+        quiet_load = {
+            'valor': f'{acwr:.2f}'.replace('.', ','),
+            'estado': carga,
+        }
+
     # Organismo usa estados internos de coordinación. La portada, en cambio,
     # debe responder a una pregunta ejecutable: qué hacer hoy. Nunca exponemos
     # SILENCIO/OBSERVANDO/EN_MARGEN/PROTEGIENDO como si fueran decisiones.
@@ -2246,6 +2279,7 @@ def dashboard_silencioso_preview(request):
             'carga': carga,
             'carga_detalle': carga_detalle,
         },
+        'quiet_load': quiet_load,
         'quiet_insight': insight,
         # Iniciativa del entrenador: propuesta por responder o en curso.
         'quiet_propuesta': _propuesta_zona_visible(cliente, hoy),
