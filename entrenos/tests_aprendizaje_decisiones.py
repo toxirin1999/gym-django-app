@@ -72,7 +72,7 @@ class AprendizajeDecisionesTests(TestCase):
         GymDecisionLog.objects.filter(pk=viejo.pk).update(fecha_evaluacion=timezone.now() - timedelta(days=60))
         resumen = decisiones_evaluadas(self.cliente)
         self.assertEqual((resumen['total'], resumen['funcionaron'], resumen['no_funcionaron']), (2, 1, 1))
-        self.assertEqual(len(resumen['items']), 2)
+        self.assertEqual(len(resumen['items']), 1)  # mismo ejercicio: una línea
 
     def test_memoria_muestra_el_bloque(self):
         origen = self._entreno(10, 60, 10, 7)
@@ -83,3 +83,12 @@ class AprendizajeDecisionesTests(TestCase):
         self.assertContains(response, 'Lo que decidí y si funcionó')
         self.assertContains(response, '1 de 1 funcionaron')
         self.assertContains(response, 'Después: 62,5 kg × 10 con RPE 7.')
+
+    def test_la_lista_omite_consolidaciones_y_repite_un_ejercicio_una_vez(self):
+        self._log(self._entreno(12, 60, 10, 7), 'neutra', 'Sin cambio claro', accion='mantener')
+        self._log(self._entreno(11, 60, 10, 7), 'validada')
+        self._log(self._entreno(10, 60, 10, 7), 'fallida', 'x')
+        resumen = decisiones_evaluadas(self.cliente)
+        self.assertEqual(resumen['con_conclusion'], 2)
+        self.assertEqual(len(resumen['items']), 1)
+        self.assertNotIn('mantuve', resumen['items'][0]['texto'])

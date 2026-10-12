@@ -117,16 +117,25 @@ def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
         ).order_by('-fecha_evaluacion')
     )
     conteo = {clave: sum(1 for l in logs if l.resultado == clave) for clave in VEREDICTO}
+    # Solo se cuentan en la lista las decisiones que cambiaron algo y tienen
+    # veredicto: "mantuve la carga · sin cambio claro" no enseña nada y
+    # tapaba lo importante. Una línea por ejercicio (la más reciente).
+    relevantes, vistos = [], set()
+    for l in logs:
+        if l.resultado not in ('validada', 'fallida') or l.accion == 'mantener':
+            continue
+        clave = (l.ejercicio or '').strip().casefold()
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        relevantes.append(l)
     items = [
-        {
-            'fecha': l.fecha_evaluacion,
-            'resultado': l.resultado,
-            'texto': frase_decision(l),
-        }
-        for l in logs[:limite]
+        {'fecha': l.fecha_evaluacion, 'resultado': l.resultado, 'texto': frase_decision(l)}
+        for l in relevantes[:limite]
     ]
     return {
         'total': len(logs),
+        'con_conclusion': conteo['validada'] + conteo['fallida'],
         'funcionaron': conteo['validada'],
         'no_funcionaron': conteo['fallida'],
         'sin_conclusion': conteo['neutra'],

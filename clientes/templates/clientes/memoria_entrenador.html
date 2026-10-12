@@ -275,14 +275,14 @@
   {% if decisiones_evaluadas %}
   <section class="mem-node mem-node--plan" aria-labelledby="memoria-acierto-title">
     <div class="mem-label">Lo que decidí y si funcionó · {{ decisiones_evaluadas.dias }} días</div>
-    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.total %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.total }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
-    {% if decisiones_evaluadas.total %}
-    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.no_funcionaron %} {{ decisiones_evaluadas.no_funcionaron }} no funcionaron{% endif %}{% if decisiones_evaluadas.sin_conclusion %}{% if decisiones_evaluadas.no_funcionaron %} y{% endif %} {{ decisiones_evaluadas.sin_conclusion }} siguen sin conclusión{% endif %}{% if decisiones_evaluadas.no_funcionaron or decisiones_evaluadas.sin_conclusion %}.{% endif %}</p>
+    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.con_conclusion %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.con_conclusion }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
+    {% if decisiones_evaluadas.con_conclusion %}
+    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.sin_conclusion %} Otras {{ decisiones_evaluadas.sin_conclusion }} aún no dan para concluir (sobre todo consolidaciones de carga).{% endif %}</p>
     <div class="mem-list">
       {% for d in decisiones_evaluadas.items %}
       <div class="mem-row" data-resultado="{{ d.resultado }}">
         <div class="idx">{{ d.fecha|date:"d/m" }}</div>
-        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-size:12px;line-height:1.45">{{ d.texto }}</div></div>
+        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal">{{ d.texto }}</div></div>
       </div>
       {% endfor %}
     </div>
