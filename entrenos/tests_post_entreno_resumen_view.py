@@ -7,6 +7,7 @@ cambios relevantes, próxima vez, récords, JOI) y dos CTAs de salida.
 """
 
 from datetime import date
+from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -65,6 +66,13 @@ class PostEntrenoResumenViewBase(TestCase):
 
 
 class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
+    def test_cierre_tiene_hito_principal_y_estructura_semantica_valida(self):
+        """El cierre debe poder orientarse como una página, no solo como cards."""
+        template = Path('entrenos/templates/entrenos/post_entreno_resumen.html').read_text()
+        self.assertIn('<main class="wrap">', template)
+        self.assertIn('<h1 class="bib-title">{{ resumen.titulo|default:"Sesión" }}</h1>', template)
+        self.assertNotIn('<span class="cambio-nombre">\n        {{ decision.ejercicio }}', template)
+
     def test_cierre_muestra_carga_y_distancia_sin_convertirlas_en_tonelaje(self):
         """Farmer Walk se comunica en kg·m y metros, nunca como 0 kg."""
         contexto = {

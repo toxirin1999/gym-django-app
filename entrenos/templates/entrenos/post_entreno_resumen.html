@@ -252,7 +252,7 @@
 </style>
 </head>
 <body>
-<div class="wrap">
+<main class="wrap">
 
   <!-- TOPBAR -->
   <div class="topbar">
@@ -275,7 +275,7 @@
     <div class="bib-body">
       <div class="bib-num">✓</div>
       <div class="bib-info">
-        <div class="bib-title">{{ resumen.titulo|default:"Sesión" }}</div>
+        <h1 class="bib-title">{{ resumen.titulo|default:"Sesión" }}</h1>
         <div class="bib-sub">
           {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio|floatformat:1 }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
         </div>
@@ -408,7 +408,7 @@
   <div class="card">
     {% for decision in decisiones_entrenador %}
     <div class="cambio-row">
-      <span class="cambio-nombre">
+      <div class="cambio-nombre">
         {{ decision.ejercicio }}<br>
         <span style="color:var(--td);font-size:12px;">{% if decision.accion_semantica %}{{ decision.accion_semantica }}{% else %}{{ decision.accion }}{% endif %} · {{ decision.motivo }}</span>
         {% if decision.evidencia %}
@@ -417,7 +417,7 @@
         {% if decision.agrupada %}
         <div class="decision-exercise-list" style="margin-top:6px;">{{ decision.ejercicios|join:", " }}</div>
         {% endif %}
-      </span>
+      </div>
       {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% elif decision.efecto_semantico %}<span class="cambio-detalle subida">{{ decision.efecto_semantico }}</span>{% endif %}
     </div>
     {% endfor %}
@@ -440,7 +440,7 @@
   </div>
   {% endif %}
 
-</div>
+</main>
 
 <!-- CTA -->
 <div class="cta-wrap">
