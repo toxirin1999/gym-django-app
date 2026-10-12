@@ -546,3 +546,14 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('role="dialog"', plantilla)
         self.assertIn('aria-modal="true"', plantilla)
         self.assertIn("document.addEventListener('keydown', handleEscape)", plantilla)
+
+    def test_preview_nombra_el_destino_real_del_enlace_secundario(self):
+        """El acceso lleva al calendario; no debe prometer un selector de rutinas inexistente."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('href="{{ calendario_url }}">Ver el calendario completo</a>', plantilla)
+        self.assertNotIn('href="{{ calendario_url }}">Elegir otra rutina</a>', plantilla)
