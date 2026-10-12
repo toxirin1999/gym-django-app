@@ -81,3 +81,12 @@ class TestTemplatePregunta(TestCase):
         self.assertIn('pausa_pregunta', tpl)
         self.assertIn("guardar_motivo_pausa", tpl)
         self.assertIn('No es obligatorio', tpl)
+
+    def test_motivo_de_pausa_conserva_el_reintento_si_falla_el_guardado(self):
+        with open('entrenos/templates/entrenos/briefing_entrenamiento.html', encoding='utf-8') as f:
+            tpl = f.read()
+        self.assertIn('id="pausa-guardado-status" role="status" aria-live="polite"', tpl)
+        self.assertIn("if (!response.ok) throw new Error('No se pudo guardar el motivo.');", tpl)
+        self.assertIn("No se pudo guardar tu respuesta. Puedes intentarlo de nuevo.", tpl)
+        self.assertIn('botones.forEach(b => { b.disabled = false;', tpl)
+        self.assertNotIn('// si falla, quitar el panel igualmente', tpl)

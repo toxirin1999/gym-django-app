@@ -347,17 +347,20 @@
                      border:1px solid rgba(56,189,248,0.3);transition:background .15s,opacity .15s;">{{ label }}</button>
       {% endfor %}
     </div>
+    <p id="pausa-guardado-status" role="status" aria-live="polite" style="min-height:18px;margin-top:9px;font-family:var(--fm);font-size:10px;color:var(--td);"></p>
     <div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:9px;">Solo ajusta cómo interpreta el plan la vuelta. No es obligatorio.</div>
   </div>
   <script>
   function registrarMotivoPausa(btn) {
     const panel = document.getElementById('pausa-panel');
     const botones = document.querySelectorAll('#pausa-botones button');
+    const estado = document.getElementById('pausa-guardado-status');
     // feedback visual inmediato
     botones.forEach(b => { b.disabled = true; b.style.opacity = '0.4'; });
     btn.style.opacity = '1';
     btn.style.background = 'rgba(56,189,248,0.35)';
     btn.style.borderColor = 'rgba(56,189,248,0.7)';
+    if (estado) estado.textContent = 'Guardando tu respuesta…';
 
     fetch("{% url 'entrenos:guardar_motivo_pausa' pausa_pregunta.id %}", {
       method: 'POST',
@@ -366,12 +369,15 @@
         'Content-Type': 'application/x-www-form-urlencoded',
       },
       body: 'motivo=' + encodeURIComponent(btn.dataset.motivo),
-    }).then(() => {
+    }).then(response => {
+      if (!response.ok) throw new Error('No se pudo guardar el motivo.');
       panel.style.opacity = '0';
       setTimeout(() => { panel.remove(); }, 260);
     }).catch(() => {
-      // si falla, quitar el panel igualmente (no bloquear el entreno)
-      panel.remove();
+      botones.forEach(b => { b.disabled = false; b.style.opacity = '1'; });
+      btn.style.background = '';
+      btn.style.borderColor = '';
+      if (estado) estado.textContent = 'No se pudo guardar tu respuesta. Puedes intentarlo de nuevo.';
     });
   }
   </script>
