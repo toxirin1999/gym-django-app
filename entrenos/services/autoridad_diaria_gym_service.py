@@ -126,6 +126,7 @@ def _causas_secundarias(decision: dict) -> list[str]:
         ('energia_baja', 'energia_baja'),
         ('futbol_reciente', 'futbol_reciente'),
         ('hyrox_reciente', 'hyrox_reciente'),
+        ('acwr_alto', 'carga_alta'),
     )
     principal = decision.get('causa_principal')
     return [causa for campo, causa in mapa if contexto.get(campo) and causa != principal]

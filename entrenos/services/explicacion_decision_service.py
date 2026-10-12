@@ -20,6 +20,7 @@ _CAUSAS = {
     'energia_baja':         '🔋 Energía baja hoy',
     'futbol_reciente':      '⚽ Fútbol reciente',
     'hyrox_reciente':       '🏋️ Hyrox intenso reciente (RPE ≥ 7)',
+    'carga_alta':           '📈 Carga semanal alta (ACWR ≥ 1,5)',
     'pendiente_prioritaria':'📌 Sesión estructural pendiente',
     'pendiente_normal':     '📋 Sesión accesoria pendiente',
     'sesion_hoy':           '✓ Sesión del plan de hoy',

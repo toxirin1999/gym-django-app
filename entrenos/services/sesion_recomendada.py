@@ -353,6 +353,7 @@ _MENSAJES_POR_CAUSA = {
     'energia_baja':       'Hoy hay margen para hacer la versión mínima. No hace falta completar todo.',
     'futbol_reciente':    'Tus piernas ya recibieron carga del fútbol. Hoy conviene no confundir esfuerzo con progreso.',
     'hyrox_reciente':     'El Hyrox reciente dejó carga real — hoy conviene priorizar los principales y dejar los accesorios como opcionales.',
+    'carga_alta':         'Esta semana llevas bastante más carga de la habitual. Hoy, los principales y sin forzar: los accesorios quedan como opcionales.',
     'pendiente_prioritaria': 'Esta sesión sostiene el bloque. Sigue siendo la siguiente pieza útil.',
     'pendiente_normal':   'Esta sesión quedó pendiente. El plan conserva el hilo.',
     'sesion_hoy':         'Esta es la sesión prevista para hoy.',
@@ -391,6 +392,9 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
         'evidencia_presente': False,
         'readiness_bajo': False,
         'readiness_valor': None,
+        'acwr_valor': None,
+        'acwr_alto': False,
+        'acwr_dudoso': False,
         'preferencias_activas': [],
     }
     if snapshot_inyectado:
@@ -558,6 +562,14 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
     except Exception:
         pass
 
+    # 5. Carga aguda frente a la habitual (ACWR unificado). Un pico que viene
+    #    de un dato imposible se marca como dudoso y no frena la sesión.
+    try:
+        from entrenos.services.acwr_decision_service import contexto_acwr
+        ctx.update(contexto_acwr(cliente, fecha_hoy))
+    except Exception:
+        pass
+
     return ctx
 
 
@@ -606,6 +618,9 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     elif contexto['readiness_bajo']:
         causa = 'fatiga_alta'
         estado = 'recuperar'
+    elif contexto.get('acwr_alto'):
+        causa = 'carga_alta'
+        estado = 'version_reducida'
     elif contexto['energia_baja']:
         causa = 'energia_baja'
         estado = 'version_reducida'

@@ -2120,12 +2120,19 @@ def dashboard_silencioso_preview(request):
                 accion_url = rutina_url
                 accion_label = 'Ver rutina'
 
-    if not tiene_energia_y_sueno:
-        titulo_semana = 'DATOS PENDIENTES'
+    acwr_dudoso = bool((decision_gym.get('contexto_fisico') or {}).get('acwr_dudoso'))
+    if acwr_dudoso:
+        # El pico viene de una actividad que parece un error (duración o carga
+        # imposibles): no frena la sesión, pero hay que revisarla.
+        titulo_semana = 'REVISAR CARGA'
+        carga_detalle = f'{carga_detalle} · una actividad reciente parece un error'
     elif acwr is not None and acwr > 1.3:
-        # Sueño y energía favorables no anulan una carga aguda alta. La portada
-        # debe mostrar primero el factor que conviene vigilar hoy.
+        # Ni un check-in favorable ni uno pendiente anulan una carga aguda
+        # alta: la portada muestra primero el factor que conviene vigilar.
+        # El botón de check-in sigue disponible (checkin_pendiente).
         titulo_semana = 'VIGILAR CARGA'
+    elif not tiene_energia_y_sueno:
+        titulo_semana = 'DATOS PENDIENTES'
     else:
         titulo_semana = 'RECUPERANDO BIEN'
 
@@ -2139,6 +2146,7 @@ def dashboard_silencioso_preview(request):
         },
         'quiet_week': {
             'titulo': titulo_semana,
+            'checkin_pendiente': not tiene_energia_y_sueno,
             'energia': getattr(checkin, 'energia_subjetiva', None),
             'sueno': getattr(checkin, 'horas_sueno', None),
             'carga': carga,
