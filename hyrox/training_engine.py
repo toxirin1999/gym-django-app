@@ -144,13 +144,16 @@ class HyroxLoadManager:
             hasta_fecha = timezone.now().date()
 
         # ── Fuente primaria: hub unificado ──────────────────────────────────
+        # Fecha efectiva = día real de ejecución; igual que el ACWR unificado.
+        from django.db.models.functions import Coalesce
         actividades = list(
-            ActividadRealizada.objects.filter(
-                cliente=objetivo.cliente,
-                carga_ua__isnull=False,
-                fecha__lte=hasta_fecha,
-            ).order_by('fecha').values('fecha', 'carga_ua')
+            ActividadRealizada.objects.filter(cliente=objetivo.cliente, carga_ua__isnull=False)
+            .annotate(fecha_carga=Coalesce('fecha_realizado', 'fecha'))
+            .filter(fecha_carga__lte=hasta_fecha)
+            .order_by('fecha_carga')
+            .values('carga_ua', 'fecha_carga')
         )
+        actividades = [{**a, 'fecha': a['fecha_carga']} for a in actividades]
 
         if actividades:
             carga_por_dia = {}

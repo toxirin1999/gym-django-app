@@ -4625,12 +4625,43 @@ def guardar_entrenamiento_activo(request, cliente_id):
         rutina_nombre = request.POST.get('rutina_nombre')
         rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
-        _duracion_raw = request.POST.get('duracion_minutos_real')
+        # Un reintento tras una respuesta perdida no debe crear otra sesión:
+        # misma rutina, mismo día del plan y guardada hoy → ya está guardada.
+        _ya_guardado = EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha=fecha, rutina__nombre=rutina_nombre,
+            fuente_datos='manual', fecha_ejecucion=timezone.localdate(),
+        ).order_by('-id').first()
+        if _ya_guardado is not None:
+            if _es_ajax:
+                return JsonResponse({
+                    'success': True,
+                    'entreno_id': _ya_guardado.id,
+                    'ya_guardado': True,
+                    'volumen': float(_ya_guardado.volumen_total_kg or 0),
+                })
+            return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=_ya_guardado.id)
+
+        # El cronómetro puede llevar días abierto: una duración imposible se
+        # sustituye por una estimación según las series para no inflar la carga.
+        from entrenos.services.duracion_sesion_service import sanear_duracion_minutos
+        _series_hechas = sum(
+            1 for fid in _ids_planificados for i in range(1, 11)
+            if request.POST.get(f'{fid}_completado_{i}')
+            and request.POST.get(f'{fid}_aproximacion_{i}', '').lower() not in ('1', 'true', 'on')
+        )
+        _duracion_min, _duracion_corregida = sanear_duracion_minutos(
+            request.POST.get('duracion_minutos_real'), _series_hechas,
+        )
+        if _duracion_corregida:
+            logger.warning(
+                "Duración imposible en entreno de cliente %s (%s min); se estima %s min.",
+                cliente.id, request.POST.get('duracion_minutos_real'), _duracion_min,
+            )
         _calorias_raw = request.POST.get('calorias_quemadas')
 
         entreno = EntrenoRealizado(
             cliente=cliente, fecha=fecha, fecha_ejecucion=timezone.localdate(), rutina=rutina_obj, fuente_datos='manual',
-            duracion_minutos=int(_duracion_raw) if _duracion_raw and _duracion_raw.isdigit() else None,
+            duracion_minutos=_duracion_min,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip(),
             estado_cierre=_estado_cierre,
@@ -4957,7 +4988,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # ============================================================================
         try:
             # Capturar métricas de la sesión (vienen de inputs hidden inyectados por JS)
-            duracion_real = request.POST.get('duracion_minutos_real')
+            duracion_real = _duracion_min
             series_comp = request.POST.get('series_completadas')
             series_tot = request.POST.get('series_totales')
             ejs_comp = request.POST.get('ejercicios_completados')

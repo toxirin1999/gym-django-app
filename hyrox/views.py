@@ -3379,9 +3379,12 @@ def strava_reconciliacion(request):
         gym_matches = list(
             _ER.objects.filter(cliente=cliente)
             .filter(
+                # Cualquiera de las tres fechas: un entreno hecho el viernes,
+                # planificado el jueves y guardado el domingo sigue siendo
+                # candidato para la actividad de Strava del viernes.
                 Q(hub_actividad__fecha_realizado__range=(fecha_min, fecha_max)) |
-                Q(hub_actividad__fecha_realizado__isnull=True, fecha__range=(fecha_min, fecha_max)) |
-                Q(hub_actividad__isnull=True, fecha__range=(fecha_min, fecha_max))
+                Q(fecha_ejecucion__range=(fecha_min, fecha_max)) |
+                Q(fecha__range=(fecha_min, fecha_max))
             )
             .exclude(id__in=gym_ids_sync)
             .distinct().order_by('id')

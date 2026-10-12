@@ -468,13 +468,17 @@ class EstadisticasService:
 
         # Sin límite inferior: el EWMA necesita toda la historia para que CTL
         # converja al mismo valor que HyroxLoadManager (que tampoco acota por abajo).
+        # La carga cuenta el día en que se hizo (fecha_realizado), no el del
+        # plan: una sesión adelantada no puede quedar fuera hasta su fecha.
+        from django.db.models.functions import Coalesce
         actividades = list(
-            ActividadRealizada.objects.filter(
-                cliente=cliente,
-                fecha__lte=fecha_fin,
-                carga_ua__isnull=False,
-            ).order_by('fecha').values('fecha', 'carga_ua', 'tipo')
+            ActividadRealizada.objects.filter(cliente=cliente, carga_ua__isnull=False)
+            .annotate(fecha_carga=Coalesce('fecha_realizado', 'fecha'))
+            .filter(fecha_carga__lte=fecha_fin)
+            .order_by('fecha_carga')
+            .values('carga_ua', 'tipo', 'fecha_carga')
         )
+        actividades = [{**a, 'fecha': a['fecha_carga']} for a in actividades]
 
         if not actividades:
             return EstadisticasService.analizar_acwr(cliente, periodo_dias)
@@ -496,8 +500,8 @@ class EstadisticasService:
             }
 
         # Mapa fecha → carga diaria total.
-        # Usar 'fecha' (no fecha_realizado) para coincidir exactamente con
-        # HyroxLoadManager y producir el mismo ACWR en ambos sitios.
+        # Misma fecha efectiva que HyroxLoadManager para producir el mismo
+        # ACWR en ambos sitios.
         carga_por_dia = {}
         desglose_tipos_7d = {}
         corte_7d = fecha_fin - timedelta(days=7)

@@ -128,6 +128,17 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
         except Exception:
             pass
 
+    # Una duración imposible (cronómetro olvidado) no debe convertirse en carga.
+    from entrenos.services.duracion_sesion_service import (
+        DURACION_MAX_MIN, estimar_duracion_por_series,
+    )
+    if duracion and duracion > DURACION_MAX_MIN:
+        try:
+            _n_series = instance.series.filter(completado=True, es_aproximacion=False).count()
+        except Exception:
+            _n_series = 0
+        duracion = estimar_duracion_por_series(_n_series)
+
     # Carga UA: sRPE × minutos. Si no hay RPE manual, estimar desde FC.
     hr_media = instance.frecuencia_cardiaca_promedio
     hr_maxima = instance.frecuencia_cardiaca_maxima
@@ -173,9 +184,11 @@ def sincronizar_hub_actividad(sender, instance, created, raw=False, **kwargs):
             entreno_gym=instance,
             defaults=defaults,
         )
-        # Fijar fecha_realizado solo al crear (preservar si ya existía)
-        if created and not obj.fecha_realizado:
-            obj.fecha_realizado = hoy
+        # fecha_realizado = día real de ejecución. Es la fecha con la que el
+        # ACWR reparte la carga; la planificada sigue en `fecha`.
+        _fecha_real = instance.fecha_ejecucion or (hoy if created else None)
+        if _fecha_real and obj.fecha_realizado != _fecha_real and (created or instance.fecha_ejecucion):
+            obj.fecha_realizado = _fecha_real
             obj.save(update_fields=['fecha_realizado'])
 
         # Invalidar caché ACWR para que el dashboard refleje el nuevo entreno

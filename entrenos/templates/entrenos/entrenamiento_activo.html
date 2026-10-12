@@ -2257,6 +2257,15 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
     <p id="modal-save-status" role="status" aria-live="polite" style="margin:0 0 16px;padding:11px 13px;border-left:3px solid var(--green);background:var(--surf2);color:var(--td);font-size:12px;line-height:1.45;"></p>
+    <!-- Cronómetro olvidado: pedir la duración real antes de guardar -->
+    <div id="duracion-revisar-wrap" hidden style="margin:0 0 16px;padding:14px 16px;border-left:3px solid #f59e0b;background:var(--surf2,rgba(255,255,255,0.05));border-radius:0 12px 12px 0;">
+      <p id="duracion-revisar-texto" style="margin:0 0 10px;font-size:12px;line-height:1.45;color:var(--td);"></p>
+      <label for="duracion-real-input" style="display:block;font-size:12px;color:var(--td);margin-bottom:6px;">¿Cuántos minutos duró de verdad?</label>
+      <input type="number" id="duracion-real-input" inputmode="numeric" min="1" max="240" step="1"
+             aria-describedby="duracion-revisar-texto duracion-real-error"
+             style="width:100%;padding:10px;border-radius:8px;background:var(--panel);color:var(--td);border:1px solid var(--bd);font-size:16px;">
+      <div id="duracion-real-error" role="alert" style="display:none;color:#ff8b8b;font-size:11px;margin-top:7px;"></div>
+    </div>
     <!-- Volumen oculto (usado internamente) -->
     <span id="modal-volumen" style="display:none">0</span>
     <div class="modal-desglose">
@@ -3405,6 +3414,54 @@ function actualizarSticky(){
   }
 }
 
+// ── DURACIÓN PLAUSIBLE ───────────────────────────────────────────────────
+// Si la sesión se dejó abierta (p. ej. desde el viernes y se guarda el
+// domingo), el cronómetro miente. Más de 3 h: se pide la duración real.
+// El servidor descarta igualmente cualquier valor por encima de 240 min.
+const DURACION_REVISAR_MIN = 180;
+const DURACION_MAX_MIN = 240;
+function _duracionCruda(){ return Math.floor((Date.now()-t0)/1000/60); }
+function _revisandoDuracion(){
+  const wrap=document.getElementById('duracion-revisar-wrap');
+  return !!wrap && !wrap.hidden;
+}
+function prepararRevisionDuracion(mins, seriesHechas){
+  const wrap=document.getElementById('duracion-revisar-wrap');
+  if(!wrap) return;
+  const revisar = mins > DURACION_REVISAR_MIN;
+  wrap.hidden = !revisar;
+  if(!revisar) return;
+  const h=Math.floor(mins/60), m=mins%60;
+  const abierto = h>=24 ? `${Math.floor(h/24)} d ${h%24} h` : `${h} h ${m} min`;
+  document.getElementById('duracion-revisar-texto').textContent =
+    `La sesión lleva ${abierto} abierta. Si no entrenaste todo ese tiempo, indica la duración real: con ella se calcula la carga.`;
+  const input=document.getElementById('duracion-real-input');
+  if(input && !input.value){
+    input.value = Math.max(20, Math.min(180, (seriesHechas||0)*3)) || 60;
+  }
+  document.getElementById('modal-tiempo').textContent = (input?.value || '—') + 'm';
+}
+function duracionRevisadaValida(){
+  if(!_revisandoDuracion()) return true;
+  const input=document.getElementById('duracion-real-input');
+  const err=document.getElementById('duracion-real-error');
+  const v=parseInt(input?.value,10);
+  if(!(v>=1 && v<=DURACION_MAX_MIN)){
+    if(err){err.textContent=`Indica entre 1 y ${DURACION_MAX_MIN} minutos.`;err.style.display='block';}
+    input?.focus();
+    return false;
+  }
+  if(err)err.style.display='none';
+  return true;
+}
+document.getElementById('duracion-real-input')?.addEventListener('input', e=>{
+  document.getElementById('modal-tiempo').textContent=(e.target.value||'—')+'m';
+});
+function duracionParaGuardar(){
+  if(_revisandoDuracion()) return parseInt(document.getElementById('duracion-real-input').value,10);
+  return _duracionCruda();
+}
+
 // ── TIMER TOTAL (sobrevive recargas de Safari via localStorage) ──────────
 const _WK_KEY = 'workout_t0_{{ cliente.id }}_{{ fecha }}';
 const _stored = localStorage.getItem(_WK_KEY);
@@ -3549,6 +3606,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   const mins=Math.floor(seg/60);
   document.getElementById('modal-tiempo').textContent=mins+'m';
   document.getElementById('hid-duracion').value=mins;
+  prepararRevisionDuracion(mins, comp);
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
   const trabajo=[];
@@ -3937,6 +3995,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     return;
   }
   if(errorMotivo)errorMotivo.style.display='none';
+  if(!duracionRevisadaValida())return;
   if(saveError)saveError.style.display='none';
   const confirmarBtn=document.getElementById('btn-confirmar-guardar');
   _envioCierreEnCurso = true;
@@ -3944,7 +4003,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   confirmarBtn.setAttribute('aria-busy','true');
   confirmarBtn.textContent='Guardando…';
   _sessionGuardada = true;
-  document.getElementById('hid-duracion').value=Math.floor((Date.now()-t0)/1000/60);
+  document.getElementById('hid-duracion').value=duracionParaGuardar();
   const ov = document.getElementById('saving-overlay');
   if (ov) ov.style.display = 'flex';
 
