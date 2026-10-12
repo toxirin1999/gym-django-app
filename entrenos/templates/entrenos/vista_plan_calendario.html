@@ -2001,6 +2001,9 @@
         flex: 1;
         max-width: 70px;
         min-width: 50px;
+        font: inherit;
+        color: inherit;
+        text-align: inherit;
         padding: 0.8rem 0.5rem;
         border-radius: var(--border-radius-md);
         background: rgba(10,22,40,0.7);
@@ -4814,23 +4817,23 @@
 
     <!-- SELECTOR DE MES -->
     <div class="month-selector">
-        <a href="?año={{ nav.anterior.año }}&mes={{ nav.anterior.mes }}" class="month-nav-btn">
-            <i class="fas fa-chevron-left"></i>
+        <a href="?año={{ nav.anterior.año }}&mes={{ nav.anterior.mes }}" class="month-nav-btn" aria-label="Mes anterior">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
         </a>
         <span class="current-month">{{ calendario.nombre_mes }} {{ calendario.año }}</span>
-        <a href="?año={{ nav.siguiente.año }}&mes={{ nav.siguiente.mes }}" class="month-nav-btn">
-            <i class="fas fa-chevron-right"></i>
+        <a href="?año={{ nav.siguiente.año }}&mes={{ nav.siguiente.mes }}" class="month-nav-btn" aria-label="Mes siguiente">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </a>
     </div>
 
     <!-- SELECTOR DE SEMANA -->
     <div class="week-selector">
-        <button class="week-nav-btn" id="prevWeekBtn" title="Semana anterior" onclick="goToPrevWeek()">
-            <i class="fas fa-chevron-left"></i>
+        <button class="week-nav-btn" id="prevWeekBtn" type="button" aria-label="Semana anterior" title="Semana anterior" onclick="goToPrevWeek()">
+            <i class="fas fa-chevron-left" aria-hidden="true"></i>
         </button>
         <span class="week-label" id="weekLabel">Semana {{ calendario.semana_inicial|add:1 }} de {{ calendario.semanas_total }}</span>
-        <button class="week-nav-btn" id="nextWeekBtn" title="Semana siguiente" onclick="goToNextWeek()">
-            <i class="fas fa-chevron-right"></i>
+        <button class="week-nav-btn" id="nextWeekBtn" type="button" aria-label="Semana siguiente" title="Semana siguiente" onclick="goToNextWeek()">
+            <i class="fas fa-chevron-right" aria-hidden="true"></i>
         </button>
     </div>
 
@@ -5143,7 +5146,7 @@
         </main>
 
         <!-- Modal de Entrenamiento Clásico -->
-        <div class="cyber-modal" id="detalleEntrenamientoModal">
+        <div class="cyber-modal" id="detalleEntrenamientoModal" role="dialog" aria-modal="true" aria-labelledby="modal-rutina-titulo" aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div id="modal-contenido-ejercicios"></div>
@@ -5299,12 +5302,12 @@
                 const faseClass = fase ? `fase-${fase}` : '';
 
                 return `
-                <div class="week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${faseClass}"
-                     data-date="${dateStr}">
+                <button type="button" class="week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${faseClass}"
+                     data-date="${dateStr}" aria-label="Ver entrenamiento del ${getDayName(date)} ${date.getDate()}" aria-pressed="${isSelected}">
                     <div class="day-name">${getDayName(date)}</div>
                     <div class="day-number">${date.getDate()}</div>
                     <div class="day-dot"></div>
-                </div>
+                </button>
             `;
             }).join('');
 
@@ -5463,6 +5466,7 @@
 
             document.querySelectorAll('.week-day').forEach(el => {
                 el.classList.toggle('selected', el.dataset.date === dateStr);
+                el.setAttribute('aria-pressed', String(el.dataset.date === dateStr));
             });
 
             hideError();
@@ -5901,6 +5905,7 @@
     const urlModal = "{% url 'entrenos:briefing_entrenamiento' cliente.id %}";
 
     let _modalCloseTimer = null;
+    let _lastModalTrigger = null;
 
     function openWorkoutModal(entrenamiento, fechaSeleccionada) {
         // Cancel any pending close animation
@@ -5910,6 +5915,7 @@
         }
         const modalElement = document.getElementById('detalleEntrenamientoModal');
         if (!modalElement) return;
+        _lastModalTrigger = document.activeElement;
         // Move modal to body to avoid CSS transform containment (position:fixed breaks inside transform parents)
         if (modalElement.parentElement !== document.body) {
             document.body.appendChild(modalElement);
@@ -5995,8 +6001,8 @@
             modalBody.innerHTML = `
             <div class="modal-header-cyber">
                 <div class="modal-header-top">
-                    <div class="modal-rutina-name">${nombreRutina}</div>
-                    <div class="modal-close-x" id="modalCloseX">\u2715</div>
+                    <div class="modal-rutina-name" id="modal-rutina-titulo">${nombreRutina}</div>
+                    <button type="button" class="modal-close-x" id="modalCloseX" aria-label="Cerrar detalle de entrenamiento">\u2715</button>
                 </div>
                 <div class="modal-header-meta">
                     <span class="modal-date-badge">\u{1F4C5} ${dateDisplay}</span>
@@ -6027,8 +6033,8 @@
             modalBody.innerHTML = `
             <div class="modal-header-cyber">
                 <div class="modal-header-top">
-                    <div class="modal-rutina-name">D\u00eda de Descanso</div>
-                    <div class="modal-close-x" id="modalCloseX">\u2715</div>
+                    <div class="modal-rutina-name" id="modal-rutina-titulo">D\u00eda de Descanso</div>
+                    <button type="button" class="modal-close-x" id="modalCloseX" aria-label="Cerrar detalle de entrenamiento">\u2715</button>
                 </div>
             </div>
             <div style="padding:40px 28px;text-align:center;">
@@ -6045,6 +6051,7 @@
         modalElement.style.display = 'flex';
         modalElement.style.opacity = '0';
         modalElement.style.transition = 'opacity 0.3s ease';
+        modalElement.setAttribute('aria-hidden', 'false');
         document.body.classList.add('modal-open');
         // Force reflow then animate opacity
         modalElement.offsetHeight;
@@ -6058,13 +6065,24 @@
         function closeModal() {
             modalElement.style.opacity = '0';
             document.body.classList.remove('modal-open');
-            _modalCloseTimer = setTimeout(() => { modalElement.style.display = 'none'; _modalCloseTimer = null; }, 300);
+            document.removeEventListener('keydown', handleEscape);
+            _modalCloseTimer = setTimeout(() => {
+                modalElement.style.display = 'none';
+                modalElement.setAttribute('aria-hidden', 'true');
+                _modalCloseTimer = null;
+                _lastModalTrigger?.focus();
+            }, 300);
+        }
+        function handleEscape(event) {
+            if (event.key === 'Escape') closeModal();
         }
         const closeX = document.getElementById('modalCloseX');
         if (closeX) closeX.onclick = closeModal;
         const closeBtn = document.getElementById('modalBtnCerrar');
         if (closeBtn) closeBtn.onclick = closeModal;
         modalElement.onclick = function(e) { if (e.target === modalElement) closeModal(); };
+        document.addEventListener('keydown', handleEscape);
+        closeX?.focus();
     }
     </script>
     {% endblock %}

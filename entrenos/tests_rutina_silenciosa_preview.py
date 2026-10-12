@@ -531,3 +531,18 @@ class RutinaSilenciosaPreviewTests(TestCase):
         ).read_text()
 
         self.assertIn("{% include 'includes/bottom_nav.html' with activo='rutina' %}", plantilla)
+
+    def test_calendario_tiene_navegacion_y_modal_accesibles(self):
+        """Los controles solo con icono y el detalle semanal deben ser usables con teclado."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/vista_plan_calendario.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('aria-label="Mes anterior"', plantilla)
+        self.assertIn('aria-label="Semana anterior"', plantilla)
+        self.assertIn('aria-label="Ver entrenamiento del ${getDayName(date)} ${date.getDate()}"', plantilla)
+        self.assertIn('role="dialog"', plantilla)
+        self.assertIn('aria-modal="true"', plantilla)
+        self.assertIn("document.addEventListener('keydown', handleEscape)", plantilla)
