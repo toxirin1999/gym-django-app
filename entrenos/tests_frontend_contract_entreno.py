@@ -83,6 +83,15 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("saveError.style.display='block';", self.source)
         self.assertIn("saveError.style.display='none';", self.source)
 
+    def test_validaciones_de_accion_se_muestran_dentro_de_la_sesion(self):
+        """RPE y cierre vacío no deben interrumpir con alerts nativos."""
+        self.assertIn('id="session-feedback" role="alert" aria-live="assertive"', self.source)
+        self.assertIn('function mostrarErrorSesion(', self.source)
+        self.assertIn("mostrarErrorSesion('Selecciona el RPE real antes de guardar la serie.'", self.source)
+        self.assertIn("mostrarErrorSesion('Completa al menos una serie antes de revisar el cierre.'", self.source)
+        self.assertNotIn("window.alert('Selecciona el RPE real antes de guardar la serie.')", self.source)
+        self.assertNotIn("alert('No puedes cerrar una sesión sin completar al menos una serie')", self.source)
+
     def test_calculadora_unica_no_afirma_igualdad_si_hay_resto(self):
         self.assertEqual(self.source.count("function calcularDesgloseDiscos("), 1)
         self.assertIn("0.5,0.25", self.source)

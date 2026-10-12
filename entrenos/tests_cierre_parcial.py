@@ -157,7 +157,7 @@ class ContratoTemplateCierreParcialTests(TestCase):
         for value in ('fatiga', 'tiempo', 'molestia', 'equipo', 'otro'):
             self.assertIn(f'value="{value}"', source)
         self.assertIn('motivo_cierre', source)
-        self.assertIn('No puedes cerrar una sesión sin completar al menos una serie', source)
+        self.assertIn('Completa al menos una serie antes de revisar el cierre.', source)
 
     def test_campos_del_resumen_externo_se_asocian_al_formulario_de_entreno(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()

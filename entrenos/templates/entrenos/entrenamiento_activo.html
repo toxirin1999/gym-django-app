@@ -410,6 +410,14 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── LAYOUT ── */
 .wrap{max-width:480px;margin:0 auto;padding-bottom:calc(128px + env(safe-area-inset-bottom) + 32px);}
+.session-feedback{
+  position:fixed;top:78px;left:50%;z-index:120;
+  width:min(calc(100% - 32px),448px);transform:translateX(-50%);
+  padding:11px 14px;border:1px solid rgba(239,68,68,.5);border-radius:12px;
+  background:rgba(69,10,10,.96);box-shadow:0 14px 34px rgba(0,0,0,.38);
+  color:#fecaca;font-size:13px;font-weight:600;line-height:1.4;
+}
+.session-feedback[hidden]{display:none;}
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
@@ -1345,6 +1353,7 @@ body{background:
   <div class="tb-track"><div class="tb-fill" id="tb-fill" style="width:0%"></div></div>
   <span class="tb-pct" id="tb-pct">0%</span>
 </div>
+<div id="session-feedback" role="alert" aria-live="assertive" hidden></div>
 
 <!-- ══ BANNER VERSIÓN ESENCIAL ══ -->
 {% if modo_reducido %}
@@ -2385,6 +2394,23 @@ document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
 });
 const cards=Array.from(document.querySelectorAll('.cyber-ejercicio-card'));
 
+function mostrarErrorSesion(mensaje, foco){
+  const feedback=document.getElementById('session-feedback');
+  if(feedback){
+    feedback.textContent=mensaje;
+    feedback.hidden=false;
+  }
+  requestAnimationFrame(()=>foco?.focus?.());
+}
+
+function limpiarErrorSesion(){
+  const feedback=document.getElementById('session-feedback');
+  if(feedback){
+    feedback.textContent='';
+    feedback.hidden=true;
+  }
+}
+
 function seriesDeTrabajo(series){
   return (series||[]).filter(serie=>serie && !serie.esAproximacion);
 }
@@ -2759,7 +2785,9 @@ function guardarSeriePanel(fid,sn,total){
   const rpe=parseFloat(rpeRaw);
   const esAproximacion=Boolean(document.getElementById('aproximacion-'+fid+'-'+sn)?.checked);
   if(!rpeRaw || !Number.isFinite(rpe)){
-    window.alert('Selecciona el RPE real antes de guardar la serie.');
+    const grid=document.getElementById('rpe-grid-'+fid+'-'+sn);
+    if(grid)grid.setAttribute('aria-invalid','true');
+    mostrarErrorSesion('Selecciona el RPE real antes de guardar la serie.', grid?.querySelector('.rpe-pick-btn'));
     return;
   }
   const esEdicion = _serieEnEdicion[fid] === sn;
@@ -3027,11 +3055,15 @@ function seleccionarRPE(fidSn,valor){
   const grid=document.getElementById('rpe-grid-'+fidSn);
   if(disp)disp.textContent=valor;
   if(hid)hid.value=valor;
-  if(grid)grid.querySelectorAll('.rpe-pick-btn').forEach(b=>{
-    const seleccionado=parseInt(b.dataset.val)===valor;
-    b.classList.toggle('sel',seleccionado);
-    b.setAttribute('aria-checked',String(seleccionado));
-  });
+  if(grid){
+    grid.removeAttribute('aria-invalid');
+    grid.querySelectorAll('.rpe-pick-btn').forEach(b=>{
+      const seleccionado=parseInt(b.dataset.val)===valor;
+      b.classList.toggle('sel',seleccionado);
+      b.setAttribute('aria-checked',String(seleccionado));
+    });
+  }
+  limpiarErrorSesion();
   if(desc){desc.textContent=descripcionRPE(fidSn,valor);desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
   if(navigator.vibrate)navigator.vibrate(8);
 }
@@ -3493,7 +3525,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   });
   const rpeAvg=rpes.length?(rpes.reduce((a,b)=>a+b,0)/rpes.length):0;
   if(comp<1){
-    alert('No puedes cerrar una sesión sin completar al menos una serie');
+    mostrarErrorSesion('Completa al menos una serie antes de revisar el cierre.', document.getElementById('btn-mostrar-resumen'));
     return;
   }
   const esCierreParcial=comp<total;
@@ -3896,7 +3928,8 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   const errorMotivo=document.getElementById('motivo-cierre-error');
   const saveError=document.getElementById('save-error');
   if(completadas<1){
-    alert('No puedes cerrar una sesión sin completar al menos una serie');
+    cerrarResumen();
+    mostrarErrorSesion('Completa al menos una serie antes de revisar el cierre.', document.getElementById('btn-mostrar-resumen'));
     return;
   }
   if(completadas<totalPlanificadas && (!motivo || !motivo.value)){
