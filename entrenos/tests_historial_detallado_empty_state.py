@@ -87,3 +87,10 @@ class HistorialDetalladoContenidoTests(TestCase):
         response = self.client.get(reverse('entrenos:historial_entrenos'))
         self.assertContains(response, 'Página 1 de 2')
         self.assertContains(response, '?page=2')
+
+    def test_ordena_por_el_dia_en_que_se_hizo(self):
+        from datetime import date
+        tarde = self._entreno(fecha=date(2026, 10, 8), fecha_ejecucion=date(2026, 10, 11))
+        normal = self._entreno(fecha=date(2026, 10, 10), fecha_ejecucion=date(2026, 10, 10))
+        response = self.client.get(reverse('entrenos:historial_entrenos'))
+        self.assertEqual([e.id for e in response.context['entrenos']], [tarde.id, normal.id])

@@ -50,7 +50,7 @@ class AhoraDescansoTests(TestCase):
     def test_el_aprendizaje_usa_la_ultima_decision_del_plan(self):
         from entrenos.models import GymDecisionLog
         GymDecisionLog.objects.create(
-            cliente=self.cliente, ejercicio='Press banca', accion='subir_peso',
+            cliente=self.cliente, ejercicio='press banca', accion='subir_peso',
             valor_cambio=2.5, motivo='x', motivo_codigo='progresion_peso',
         )
         response = self._get('descanso_planificado')

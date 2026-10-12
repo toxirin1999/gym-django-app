@@ -1986,7 +1986,8 @@ def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     if dec.accion == 'subir_peso' and dec.valor_cambio:
         accion = f'{accion} (+{dec.valor_cambio:g} kg)'.replace('.', ',')
     causa = dec.get_motivo_codigo_display() if dec.motivo_codigo else ''
-    texto = f'{dec.ejercicio}: {accion}'
+    ejercicio = (dec.ejercicio or '').strip()
+    texto = f'{ejercicio[:1].upper()}{ejercicio[1:]}: {accion}'
     if causa:
         texto += f' · {causa.lower()}'
     return texto + '.'

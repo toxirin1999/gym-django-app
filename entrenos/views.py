@@ -888,7 +888,11 @@ def historial_entrenos(request):
         if cliente:
             entrenos = entrenos.filter(cliente=cliente)
 
-    entrenos = entrenos.order_by('-fecha', '-id')
+    # Orden por el día en que se hizo (la fecha que se muestra), no el del plan.
+    from django.db.models.functions import Coalesce
+    entrenos = entrenos.annotate(
+        fecha_real=Coalesce('fecha_ejecucion', 'fecha'),
+    ).order_by('-fecha_real', '-id')
 
     # Paginación primero: solo se calcula la página que se muestra.
     paginator = Paginator(entrenos, 10)
