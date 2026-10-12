@@ -78,6 +78,27 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, 'class="strava-mark"')
         self.assertContains(response, '#fc4c02')
 
+    @patch('clientes.views._aviso_decision_pendiente')
+    def test_muestra_unico_aviso_del_centro_solo_cuando_hay_accion_pendiente(self, aviso):
+        """La portada anuncia una revisión, sin duplicar sus controles."""
+        aviso.return_value = {'cantidad': 1, 'etiqueta': 'decisión pendiente'}
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertContains(response, '1 decisión pendiente')
+        self.assertContains(response, 'Revisar plan')
+        self.assertContains(response, reverse('clientes:plan_decisiones'))
+        self.assertNotContains(response, 'Aceptar propuesta')
+
+    @patch('clientes.views._aviso_decision_pendiente', return_value=None)
+    def test_no_muestra_aviso_del_centro_sin_accion_real(self, aviso):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertNotContains(response, 'decisión pendiente')
+
     def test_aprendizaje_no_repite_la_decision_del_dia_sin_evidencia_nueva(self):
         """La tarjeta de aprendizaje debe aportar una conclusión, no eco.
 

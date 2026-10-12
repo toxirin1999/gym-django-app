@@ -63,3 +63,31 @@ class TrayectoriaPlanPorQueTests(TestCase):
         self.assertFalse(explicacion['disponible'])
         self.assertContains(response, 'Todavía no hay datos suficientes para explicar este bloque.')
         self.assertNotContains(response, reverse('analytics:explicacion_plan_helms'))
+
+    def test_situa_el_progreso_temporal_con_fechas_reales_del_plan(self):
+        hoy = date(2026, 10, 12)
+        trayectoria = self._trayectoria()
+        trayectoria['fecha_corte'] = hoy
+        trayectoria['periodizacion']['inicio'] = date(2026, 10, 5)
+        trayectoria['periodizacion']['fin'] = date(2026, 11, 1)
+        trayectoria['periodizacion']['semana_actual'] = 2
+        trayectoria['periodizacion']['semanas'] = 4
+
+        response = self._get(trayectoria)
+
+        progreso = response.context['progreso_temporal_plan']
+        self.assertTrue(progreso['disponible'])
+        self.assertEqual(progreso['porcentaje'], 29)
+        self.assertEqual(progreso['semana_iso'], 42)
+        self.assertEqual(progreso['semanas_restantes'], 3)
+        self.assertContains(response, 'Progreso temporal')
+        self.assertContains(response, '29%')
+        self.assertContains(response, 'Semana 42')
+
+    def test_no_finge_un_progreso_anual_sin_rango_fechado(self):
+        trayectoria = self._trayectoria(periodizacion=False)
+
+        response = self._get(trayectoria)
+
+        self.assertFalse(response.context['progreso_temporal_plan']['disponible'])
+        self.assertNotContains(response, 'Progreso temporal')
