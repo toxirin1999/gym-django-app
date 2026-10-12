@@ -128,6 +128,14 @@
   .mem-empty-copy{max-width:33ch;margin:10px auto 0;color:var(--ink-muted);font:13px/1.55 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:0;text-transform:none}
   .mem-empty-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:18px;padding:0 15px;border:1px solid var(--line-strong);border-radius:10px;color:var(--cyan);font:700 9px/1 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
   .mem-empty-link:hover,.mem-empty-link:focus-visible{border-color:var(--cyan);background:rgba(114,221,255,.08);outline:none}
+  .mem-body-snapshot{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .mem-body-copy{min-width:0;display:flex;flex-direction:column;gap:5px}
+  .mem-body-k{color:var(--purple);font:700 8px/1.3 var(--font-mono);letter-spacing:.14em;text-transform:uppercase}
+  .mem-body-line{margin:0;color:var(--ink-muted);font:12px/1.45 var(--font-mono)}
+  .mem-body-line strong{color:var(--ink);font-weight:700}
+  .mem-body-line .warn{color:var(--gold)}
+  .mem-body-action{flex:none;color:var(--purple);border-bottom:1px solid rgba(186,140,255,.55);padding-bottom:3px;font:700 9px/1.2 var(--font-mono);letter-spacing:.1em;text-transform:uppercase}
+  .mem-body-action:hover,.mem-body-action:focus-visible{color:var(--ink);border-color:var(--ink);outline:none}
 
   .mem-foot{margin-top:40px;border-top:1px solid var(--line);padding-top:14px;display:flex;justify-content:space-between;gap:10px;color:var(--ink-faint);font:9px/1.5 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
 
@@ -325,6 +333,14 @@
         {% endif %}
         </div>
       </details>
+      <div class="mem-body-snapshot" aria-label="Resumen corporal">
+        <div class="mem-body-copy">
+          <div class="mem-body-k">Mi cuerpo</div>
+          <p class="mem-body-line"><strong>Peso diario</strong>{% if cuerpo_resumen.peso %} · {{ cuerpo_resumen.peso.peso_kg|floatformat:1 }} kg · {{ cuerpo_resumen.peso.fecha|date:"d/m" }}{% else %} · aún sin registros{% endif %}</p>
+          <p class="mem-body-line"><strong>Medidas periódicas</strong>{% if cuerpo_resumen.revision %}{% if cuerpo_resumen.revision.cintura %} · cintura {{ cuerpo_resumen.revision.cintura|floatformat:1 }} cm{% endif %}{% if cuerpo_resumen.revision.grasa_corporal %} · grasa {{ cuerpo_resumen.revision.grasa_corporal|floatformat:1 }}%{% endif %} · {{ cuerpo_resumen.revision.fecha|date:"d/m" }}{% if cuerpo_resumen.revision_pendiente %} <span class="warn">· revisión pendiente</span>{% endif %}{% else %} <span class="warn">· primera revisión pendiente</span>{% endif %}</p>
+        </div>
+        <a class="mem-body-action" href="{% url 'clientes:mi_cuerpo' cliente.id %}?next={% url 'clientes:memoria_entrenador' cliente.id %}">Actualizar</a>
+      </div>
     </article>
 
     {# ── §02 CALIBRACIÓN RPE ── #}

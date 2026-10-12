@@ -9,9 +9,10 @@ from django.db.models.functions import Coalesce
 from django.http import HttpResponse, HttpResponseForbidden, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.utils import timezone
 from django.utils.timezone import now
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_http_methods
 from analytics.views import AnalizadorCargaYFatiga, CalculadoraEjerciciosTabla
 from django.shortcuts import render, get_object_or_404
 from logros.models import PerfilGamificacion, PruebaLegendaria, PruebaUsuario
@@ -5102,9 +5103,20 @@ def registrar_peso(request, cliente_id):
 
 
 @login_required
+@require_http_methods(["GET", "POST"])
 def mi_cuerpo(request, cliente_id):
     """Phase 63.1 — entrada única de peso/cintura/grasa, enlazada desde el dashboard."""
     cliente = _obtener_cliente_autorizado(request, cliente_id)
+
+    memoria_url = reverse('clientes:memoria_entrenador', args=[cliente.id])
+    candidato_next = request.POST.get('next') if request.method == 'POST' else request.GET.get('next')
+    back_url = memoria_url
+    if candidato_next and url_has_allowed_host_and_scheme(
+        candidato_next,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        back_url = candidato_next
 
     if request.method == "POST":
         valores_anteriores = {
@@ -5128,7 +5140,7 @@ def mi_cuerpo(request, cliente_id):
                     defaults={'peso_kg': valores_nuevos['peso_corporal']},
                 )
             messages.success(request, "Medidas guardadas.")
-            return redirect("clientes:mi_cuerpo", cliente_id=cliente.id)
+            return redirect(back_url)
         else:
             messages.error(request, "Revisa los datos introducidos.")
     else:
@@ -5140,6 +5152,7 @@ def mi_cuerpo(request, cliente_id):
         'form': form,
         'cliente': cliente,
         'ultima_revision': ultima_revision,
+        'back_url': back_url,
     }
     return render(request, 'clientes/mi_cuerpo.html', context)
 
@@ -5553,6 +5566,20 @@ def memoria_entrenador(request, cliente_id):
     except Exception:
         bio_resumen = None
 
+    # ── 8b. CUERPO · peso diario y revisión periódica ────────────────────────
+    # El peso es una serie diaria. Cintura y grasa son una revisión más lenta;
+    # se muestran juntos solo para explicar esa diferencia, no para convertir
+    # Memoria en otro panel de seguimiento corporal.
+    peso_reciente = PesoDiario.objects.filter(cliente=cliente).order_by('-fecha', '-id').first()
+    revision_corporal = RevisionProgreso.objects.filter(cliente=cliente).order_by('-fecha', '-id').first()
+    dias_desde_revision = (hoy - revision_corporal.fecha).days if revision_corporal else None
+    cuerpo_resumen = {
+        'peso': peso_reciente,
+        'revision': revision_corporal,
+        'dias_desde_revision': dias_desde_revision,
+        'revision_pendiente': revision_corporal is None or dias_desde_revision >= 28,
+    }
+
     # ── 9. MANUAL DE DAVID ────────────────────────────────────────────────────
     manual_patrones = []
     try:
@@ -5660,6 +5687,7 @@ def memoria_entrenador(request, cliente_id):
         'evolucion_muscular': evolucion_muscular,
         'periodos_evolucion': (30, 90, 180),
         'bio_resumen': bio_resumen,
+        'cuerpo_resumen': cuerpo_resumen,
         'manual_patrones': manual_patrones,
         'decision_hoy': decision_hoy,
         'semaforo': semaforo,

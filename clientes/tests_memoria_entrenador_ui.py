@@ -9,7 +9,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
-from clientes.models import Cliente
+from clientes.models import Cliente, PesoDiario, RevisionProgreso
 from clientes.views import _progreso_estaciones_comparables
 from entrenos.models import ActividadRealizada, GymDecisionLog
 from hyrox.models import HyroxActivity, HyroxObjective, HyroxSession
@@ -213,3 +213,25 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertIn('Actividad reciente', plantilla)
         self.assertIn('La actividad queda aquí como parte de lo que el plan aprende.', plantilla)
         self.assertIn("{% url 'entrenos:timeline_atleta' cliente.id %}", plantilla)
+
+    def test_memoria_ofrece_un_resumen_corporal_sin_confundir_peso_y_medidas(self):
+        hoy = timezone.localdate()
+        PesoDiario.objects.create(cliente=self.cliente, peso_kg='79.40')
+        revision = RevisionProgreso.objects.create(
+            cliente=self.cliente, cintura='83.00', grasa_corporal='16.50',
+        )
+        RevisionProgreso.objects.filter(pk=revision.pk).update(fecha=hoy - timedelta(days=31))
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        resumen = response.context['cuerpo_resumen']
+        self.assertEqual(str(resumen['peso'].peso_kg), '79.40')
+        self.assertEqual(str(resumen['revision'].cintura), '83.00')
+        self.assertTrue(resumen['revision_pendiente'])
+        self.assertContains(response, 'Peso diario')
+        self.assertContains(response, 'Medidas periódicas')
+        self.assertContains(
+            response,
+            reverse('clientes:mi_cuerpo', args=[self.cliente.id]),
+        )

@@ -126,7 +126,7 @@
 </head>
 <body>
 <div class="mc-container">
-  <a class="mc-back" href="{% url 'clientes:mockup_demo' %}">← Volver al panel</a>
+  <a class="mc-back" href="{{ back_url }}">← Volver a Memoria</a>
 
   <div class="mc-title">Mi cuerpo</div>
   <div class="mc-subtitle">
@@ -144,6 +144,7 @@
 
   <form method="post">
     {% csrf_token %}
+    <input type="hidden" name="next" value="{{ back_url }}">
     <div class="mc-card">
       <div class="mc-field">
         <label for="{{ form.peso_corporal.id_for_label }}">Peso corporal (kg)</label>

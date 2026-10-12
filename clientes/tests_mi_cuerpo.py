@@ -27,6 +27,45 @@ class MiCuerpoViewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'Mi cuerpo')
 
+    def test_solo_acepta_get_y_post_para_no_tratar_put_como_formulario(self):
+        response = self.client.put(self.url, content_type='application/json')
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response['Allow'], 'GET, POST')
+
+    def test_volver_sin_next_regresa_a_la_memoria_canonica(self):
+        response = self.client.get(self.url)
+
+        self.assertContains(
+            response,
+            reverse('clientes:memoria_entrenador', args=[self.cliente.id]),
+        )
+
+    def test_conserva_next_seguro_para_volver_a_su_origen(self):
+        memoria = reverse('clientes:memoria_entrenador', args=[self.cliente.id])
+
+        response = self.client.get(f'{self.url}?next={memoria}')
+
+        self.assertContains(response, f'href="{memoria}"')
+        self.assertContains(response, f'name="next" value="{memoria}"')
+
+    def test_descarta_next_externo_para_no_abrir_un_redirect(self):
+        response = self.client.get(f'{self.url}?next=https://externo.example/robo')
+
+        memoria = reverse('clientes:memoria_entrenador', args=[self.cliente.id])
+        self.assertContains(response, f'href="{memoria}"')
+        self.assertNotContains(response, 'externo.example')
+
+    def test_guardar_con_next_seguro_regresa_a_memoria(self):
+        memoria = reverse('clientes:memoria_entrenador', args=[self.cliente.id])
+
+        response = self.client.post(self.url, {
+            'peso_corporal': '81.5', 'cintura': '', 'grasa_corporal': '',
+            'next': memoria,
+        })
+
+        self.assertRedirects(response, memoria, fetch_redirect_response=False)
+
     def test_guardar_cintura_actualiza_cliente_y_crea_revision(self):
         response = self.client.post(self.url, {
             'peso_corporal': '', 'cintura': '84.0', 'grasa_corporal': '',
