@@ -2191,7 +2191,45 @@ def trayectoria_plan(request):
     return render(request, 'clientes/trayectoria_plan.html', {
         'cliente': cliente,
         'trayectoria': proyectar_trayectoria_plan(cliente),
+        'resumen_decisiones_plan': _resumen_decisiones_para_trayectoria(cliente),
     })
+
+
+def _resumen_decisiones_para_trayectoria(cliente):
+    """Extracto read-only de la lectura canónica del Centro de decisiones.
+
+    La trayectoria no recalcula ni aplica decisiones: únicamente reutiliza la
+    narrativa que emplea el Centro y deja allí el detalle y la evidencia.
+    """
+    from entrenos.models import IntervencionPlan, PreferenciaPlanAprendida
+    from entrenos.services.centro_decisiones_service import construir_estado_plan
+
+    hoy = timezone.localdate()
+    preferencias = list(PreferenciaPlanAprendida.objects.filter(
+        cliente=cliente,
+        estado=PreferenciaPlanAprendida.ESTADO_ACTIVA,
+    ).order_by('-ultima_confirmacion'))
+    intervenciones = list(IntervencionPlan.objects.filter(
+        cliente=cliente,
+        estado=IntervencionPlan.ESTADO_ACTIVA,
+        fecha_inicio__lte=hoy,
+        fecha_fin__gte=hoy,
+    ).order_by('-creada_en'))
+
+    try:
+        from entrenos.services.hipotesis_service import detectar_hipotesis_abiertas
+        hipotesis = detectar_hipotesis_abiertas(cliente, fecha_ref=hoy)
+    except Exception:
+        logger.exception('No se pudo cargar el extracto de hipótesis del plan')
+        hipotesis = []
+
+    estado = construir_estado_plan(preferencias, intervenciones, hipotesis)
+    return {
+        **estado,
+        'total_senales_activas': (
+            len(preferencias) + len(intervenciones) + len(hipotesis)
+        ),
+    }
 
 
 _GRUPOS_MUSCULARES = {
