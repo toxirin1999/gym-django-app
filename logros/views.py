@@ -2,6 +2,7 @@
 
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import PermissionDenied
 from django.http import JsonResponse, HttpResponse, Http404
 from django.db.models import Count, Sum, Q
 from django.utils import timezone
@@ -22,18 +23,39 @@ from .models import (
 from .services import CodiceService, AnalisisGamificacionService
 
 
+def _es_staff(user):
+    return bool(user.is_staff or user.is_superuser)
+
+
+def _cliente_autorizado(request, cliente_id=None):
+    """
+    Cliente que el usuario puede ver: el suyo, o cualquiera si es staff.
+
+    Sin ``cliente_id`` devuelve el cliente del usuario conectado (el staff sin
+    cliente propio cae al primero, como antes). Un id ajeno da 404 para no
+    revelar qué clientes existen.
+    """
+    if cliente_id is not None:
+        qs = Cliente.objects.all()
+        if not _es_staff(request.user):
+            qs = qs.filter(user=request.user)
+        return get_object_or_404(qs, id=cliente_id)
+    propio = Cliente.objects.filter(user=request.user).first()
+    if propio is not None:
+        return propio
+    if _es_staff(request.user):
+        return Cliente.objects.first()
+    raise Http404('El usuario no tiene un perfil de cliente.')
+
+
 @login_required
 def perfil_gamificacion(request, cliente_id=None):
     """Vista principal del Códice de las Leyendas"""
 
-    if cliente_id:
-        cliente = get_object_or_404(Cliente, id=cliente_id)
-    else:
-        # Si no se especifica cliente, mostrar el primero disponible o redirigir
-        cliente = Cliente.objects.first()
-        if not cliente:
-            messages.error(request, "No hay clientes registrados.")
-            return redirect('clientes:lista_clientes')
+    cliente = _cliente_autorizado(request, cliente_id)
+    if not cliente:
+        messages.error(request, "No hay clientes registrados.")
+        return redirect('clientes:lista_clientes')
 
     # Obtener o crear el perfil de gamificación
     perfil, created = PerfilGamificacion.objects.get_or_create(
@@ -167,7 +189,7 @@ def detalle_arquetipo(request, cliente_id, arquetipo_nivel):
 
     # SIN try...except para poder ver los errores reales
 
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _cliente_autorizado(request, cliente_id)
     arquetipo = get_object_or_404(Arquetipo, nivel=arquetipo_nivel)
     perfil = PerfilGamificacion.objects.filter(cliente=cliente).first()
 
@@ -283,7 +305,7 @@ def procesar_entreno(request, entreno_id):
 @login_required
 def analisis_cliente(request, cliente_id):
     """Análisis de gamificación para un cliente específico"""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _cliente_autorizado(request, cliente_id)
 
     # Obtener período de análisis
     dias = int(request.GET.get('dias', 30))
@@ -302,7 +324,9 @@ def analisis_cliente(request, cliente_id):
 
 @login_required
 def analisis_global(request):
-    """Análisis global de gamificación"""
+    """Análisis global de gamificación (solo staff: muestra a todos los clientes)."""
+    if not _es_staff(request.user):
+        raise PermissionDenied
     dias = int(request.GET.get('dias', 30))
     fecha_inicio = timezone.now() - timedelta(days=dias)
 
@@ -457,7 +481,7 @@ def detalle_mision(request, mision_id):
 @login_required
 def exportar_analisis_cliente_pdf(request, cliente_id):
     """Exporta el análisis de un cliente a PDF"""
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _cliente_autorizado(request, cliente_id)
     dias = int(request.GET.get('dias', 30))
 
     # Generar análisis
@@ -783,7 +807,7 @@ def ver_codice_completo(request, cliente_id):
     """
     # try:  # <--- LÍNEA COMENTADA
     # Obtener cliente
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    cliente = _cliente_autorizado(request, cliente_id)
 
     # Obtener o crear perfil de gamificación
     perfil, created = PerfilGamificacion.objects.get_or_create(
@@ -976,8 +1000,8 @@ def gamificacion_resumen_json(request, cliente_id):
     """
     Endpoint JSON para actualizar datos del Códice en tiempo real
     """
+    cliente = _cliente_autorizado(request, cliente_id)
     try:
-        cliente = get_object_or_404(Cliente, id=cliente_id)
         perfil = PerfilGamificacion.objects.filter(cliente=cliente).first()
 
         if not perfil:
@@ -1038,7 +1062,7 @@ def arquetipo_detalle(request, cliente_id, arquetipo_id):
     """
     try:
         # Obtener cliente y arquetipo
-        cliente = get_object_or_404(Cliente, id=cliente_id)
+        cliente = _cliente_autorizado(request, cliente_id)
         arquetipo = get_object_or_404(Arquetipo, id=arquetipo_id)
 
         # Obtener perfil de gamificación

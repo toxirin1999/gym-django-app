@@ -7595,62 +7595,20 @@ def dashboard_ejercicios(request, cliente_id):
     return render(request, 'entrenos/dashboard_ejercicios.html', context)
 
 
+@login_required
 def detalle_ejercicio_especifico(request, cliente_id, nombre_ejercicio):
     """
-    Vista detallada de un ejercicio específico con gráficos de progresión
+    Ruta legacy: su plantilla nunca existió y nada enlaza aquí. Se conserva
+    con control de acceso (dueño o staff) y lleva a Evolución, donde vive
+    la progresión por ejercicio.
     """
-    cliente = get_object_or_404(Cliente, id=cliente_id)
-
-    # Obtener todos los registros de este ejercicio
-    ejercicios = EjercicioRealizado.objects.filter(
-        entreno__cliente=cliente,
-        nombre_ejercicio__iexact=nombre_ejercicio
-    ).select_related('entreno').order_by('entreno__fecha')
-
-    if not ejercicios.exists():
-        return render(request, 'entrenos/detalle_ejercicio_especifico.html', {
-            'cliente': cliente,
-            'nombre_ejercicio': nombre_ejercicio,
-            'sin_datos': True
-        })
-
-    # Preparar datos para gráficos
-    historial_completo = []
-    for ejercicio in ejercicios:
-        if ejercicio.completado and ejercicio.peso_kg > 0:
-            historial_completo.append({
-                'fecha': ejercicio.entreno.fecha.strftime('%Y-%m-%d'),
-                'peso': float(ejercicio.peso_kg),
-                'series': ejercicio.series,
-                'repeticiones': ejercicio.repeticiones,
-                'volumen': ejercicio.volumen(),
-                'rpe': ejercicio.rpe,
-                '1rm_estimado': calcular_1rm_epley(ejercicio.peso_kg, ejercicio.repeticiones)
-            })
-
-    # Calcular estadísticas
-    pesos = [h['peso'] for h in historial_completo]
-    volumenes = [h['volumen'] for h in historial_completo]
-
-    estadisticas = {
-        'nombre': nombre_ejercicio,
-        'total_registros': len(historial_completo),
-        'peso_maximo': max(pesos) if pesos else 0,
-        'peso_minimo': min(pesos) if pesos else 0,
-        'peso_promedio': sum(pesos) / len(pesos) if pesos else 0,
-        'volumen_total': sum(volumenes),
-        'primera_fecha': historial_completo[0]['fecha'] if historial_completo else None,
-        'ultima_fecha': historial_completo[-1]['fecha'] if historial_completo else None,
-    }
-
-    context = {
-        'cliente': cliente,
-        'nombre_ejercicio': nombre_ejercicio,
-        'historial_completo': json.dumps(historial_completo),
-        'estadisticas': estadisticas,
-    }
-
-    return render(request, 'entrenos/detalle_ejercicio_especifico.html', context)
+    clientes = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        clientes = clientes.filter(user=request.user)
+    cliente = get_object_or_404(clientes, id=cliente_id)
+    # Ruta de consulta, no el cierre de un entreno: el contrato post-entreno
+    # (tests_post_entreno_redirect_contract) sigue prohibiendo ese salto allí.
+    return redirect(reverse('entrenos:dashboard_evolucion', args=[cliente.id]))
 
 
 # Archivo: entrenos/views.py
