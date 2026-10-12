@@ -214,7 +214,8 @@ class ContratoTemplateCierreParcialTests(TestCase):
 
     def test_js_muestra_error_real_y_solo_conserva_checkpoint_en_fallo(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
-        self.assertIn("window.alert(error.message || 'No se pudo guardar", source)
+        self.assertIn("saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.'", source)
+        self.assertNotIn('window.alert(', source)
         catch_branch = source.split('.catch(error => {', 1)[1].split('});', 1)[0]
         self.assertNotIn('limpiarCheckpoint()', catch_branch)
         self.assertNotIn('localStorage.removeItem(_WK_KEY)', catch_branch)
