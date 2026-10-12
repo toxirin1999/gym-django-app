@@ -1,111 +1,116 @@
-{% extends 'base.html' %}
+{% load i18n %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030604">
+  <title>Historial · {{ cliente.nombre|default:request.user.username }}</title>
+  <style>
+    :root{--ink:#030604;--line:#21332b;--paper:#f4f0e9;--muted:#98a19d;--green:#42e4a0;--amber:#f7bf54}
+    *{box-sizing:border-box}html{background:var(--ink)}
+    body{margin:0;background:radial-gradient(110% 30% at 54% -5%,#11271c 0%,transparent 58%),var(--ink);color:var(--paper);font-family:ui-rounded,"Avenir Next",Avenir,"Segoe UI",sans-serif}
+    main{width:min(100%,430px);min-height:100vh;margin:0 auto;padding:calc(20px + env(safe-area-inset-top)) 17px calc(96px + env(safe-area-inset-bottom))}
+    .mono{font-family:"SF Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-weight:700;letter-spacing:.18em;text-transform:uppercase}
+    .back{display:inline-flex;min-height:44px;align-items:center;color:var(--muted);font-size:10px;text-decoration:none}
+    .back:hover,.back:focus-visible{color:var(--green);outline:none}
+    h1{margin:4px 0 4px;font-size:34px;font-weight:900;letter-spacing:-.06em;line-height:.95;text-transform:uppercase}
+    .sub{margin:0 0 18px;color:var(--muted);font-size:12px}
+    .filtro{display:flex;flex-wrap:wrap;gap:8px;align-items:end;margin:0 0 16px;padding:12px;border:1px solid var(--line);border-radius:12px}
+    .filtro label{display:block;width:100%;color:var(--muted);font-size:11px}
+    .filtro select{flex:1;min-height:40px;padding:0 10px;border:1px solid var(--line);border-radius:8px;background:#09100d;color:var(--paper)}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border:1.5px solid var(--green);border-radius:999px;background:none;color:var(--green);font:800 10px/1 "SF Mono",SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase;text-decoration:none;cursor:pointer}
+    .btn:hover,.btn:focus-visible{color:#041009;background:var(--green);outline:none}
+    .sesion{margin:0 0 12px;padding:16px;border:1px solid #2c3e35;border-radius:14px;background:#09100d}
+    .sesion-cab{display:flex;justify-content:space-between;gap:10px;align-items:start}
+    .sesion h2{margin:0;font-size:17px;line-height:1.2}
+    .fecha{display:block;margin-top:5px;color:var(--muted);font-size:11px}
+    .estado{flex:none;padding:4px 8px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:8px;white-space:nowrap}
+    .estado--parcial{color:var(--amber)}
+    .metricas{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 4px}
+    .metrica{padding:9px;border:1px solid var(--line);border-radius:10px}
+    .metrica span{display:block;color:var(--muted);font-size:8px}
+    .metrica strong{display:block;margin-top:5px;font-size:15px}
+    details{margin-top:10px;border-top:1px solid var(--line)}
+    summary{min-height:44px;display:flex;align-items:center;color:var(--muted);font-size:10px;cursor:pointer}
+    summary:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+    .ejercicio{margin:0 0 10px}
+    .ejercicio p{margin:0 0 6px;font-size:13px;font-weight:700}
+    .series{display:flex;flex-wrap:wrap;gap:6px}
+    .serie{padding:4px 8px;border:1px solid var(--line);border-radius:8px;color:#c9cfcb;font-size:11px}
+    .acciones{display:flex;justify-content:flex-end;margin-top:12px}
+    .paginacion{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:18px 0 0}
+    .paginacion span{color:var(--muted);font-size:11px}
+    .vacio{padding:24px 18px;border:1px solid #2c3e35;border-radius:14px;background:#09100d;text-align:center}
+    .vacio p{color:#c9cfcb;font-size:13px}
+  </style>
+</head>
+<body>
+<main>
+  <a class="back mono" href="{% if cliente %}{% url 'clientes:memoria_entrenador' cliente.id %}{% else %}{% url 'clientes:dashboard_silencioso_preview' %}{% endif %}">← Memoria</a>
+  <span class="mono" style="display:block;color:var(--green);font-size:9px">Historial</span>
+  <h1>Tus sesiones</h1>
+  <p class="sub">{% if cliente %}{{ cliente.nombre }} · {% endif %}{{ page_obj.paginator.count }} sesi{{ page_obj.paginator.count|pluralize:"ón registrada,ones registradas" }}</p>
 
-{% block title %}Historial de Entrenos{% endblock %}
+  {% if puede_filtrar_clientes %}
+  <form method="get" class="filtro">
+    {{ form.cliente.label_tag }} {{ form.cliente }}
+    <button type="submit" class="btn">Filtrar</button>
+    {% if cliente %}<a href="{% url 'entrenos:historial_entrenos' %}" class="btn">Limpiar</a>{% endif %}
+  </form>
+  {% endif %}
 
-{% block content %}
-<div class="max-w-5xl mx-auto p-4">
-
-    <h1 class="text-3xl font-bold mb-4 text-white">Historial de Entrenamientos</h1>
-
-    {% if puede_filtrar_clientes %}
-    <form method="get" class="bg-gray-900 p-6 rounded-2xl shadow-xl max-w-xl mx-auto space-y-4">
-        <div class="row g-2 align-items-end">
-            <div class="col-md-6">
-                {{ form.cliente.label_tag }} {{ form.cliente }}
-            </div>
-            <div class="col-md-2">
-                <button type="submit" class="btn btn-primary">Filtrar</button>
-            </div>
-            {% if cliente %}
-            <div class="col-md-2">
-                <a href="{% url 'historial_entrenos' %}" class="btn btn-outline-secondary">Limpiar</a>
-            </div>
-            {% endif %}
-        </div>
-    </form>
-    {% endif %}
-
-    {% if cliente %}
-    <h5 class="mb-3 text-white">Mostrando entrenos de: {{ cliente.nombre }}</h5>
-    {% endif %}
-
-    {% for entreno in entrenos %}
-    <div class="bg-[#1a1a1a] text-white rounded-2xl p-6 mb-6 shadow-lg space-y-4">
-        <div class="flex justify-between items-start">
-            <div class="space-y-1">
-                <h2 class="text-xl font-bold">{{ entreno.cliente.nombre }} – {{ entreno.rutina.nombre }}</h2>
-                <p class="text-sm text-gray-400">📅 {{ entreno.fecha_formateada }}</p>
-
-
-                {% if entreno.perfecto %}
-                <span class="inline-flex items-center bg-[#32FF00] text-black font-semibold px-3 py-1 rounded-full text-sm">
-                🎯 Entreno perfecto
-               </span>
-                {% endif %}
-            </div>
-
-        </div>
-
-        {% regroup entreno.series.all by ejercicio as series_por_ejercicio %}
-        <ul class="space-y-2">
-            {% with volumen_total_entreno=0 %}
-            {% for grupo in series_por_ejercicio %}
-            <li>
-                <p class="text-[#FF00F7] font-medium">{{ grupo.grouper.nombre }}</p>
-                {% with total_volumen=0 %}
-                <div class="flex flex-wrap gap-2">
-                    {% for serie in grupo.list %}
-                    <span class="bg-[#2a2a2a] px-3 py-1 rounded text-sm">
-          Serie {{ serie.serie_numero }} — {{ serie.repeticiones }} reps @ {{ serie.peso_kg }} kg
-        </span>
-                    {% with volumen_total_entreno=volumen_total_entreno|add:serie.repeticiones %}
-                    {% endwith %}
-                    {% endfor %}
-                </div>
-                {% endwith %}
-            </li>
-            {% empty %}
-            <li class="text-gray-500">No hay series.</li>
-            {% endfor %}
-
-            <li class="mt-2 text-sm font-medium">
-                {% if volumen_total_entreno > 15000 %}
-                <span class="text-red-400">🔴 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
-                {% elif volumen_total_entreno > 8000 %}
-                <span class="text-yellow-400">🟡 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
-                {% else %}
-                <span class="text-[#32FF00]">🟢 Volumen total del entreno: {{ volumen_total_entreno }} reps</span>
-                {% endif %}
-            </li>
-
-            <div class="w-full bg-gray-800 rounded h-4 mt-1 overflow-hidden">
-                <div class="h-4 bg-[#32FF00] text-black text-xs font-semibold flex items-center justify-center"
-                     style="width: {{ volumen_total_entreno|floatformat:0|divisibleby:200 }}%">
-                    {{ volumen_total_entreno }} reps
-                </div>
-            </div>
-            {% endwith %}
-        </ul>
-
-        <div class="text-right">
-            <a href="{% url 'entrenos:resumen_entreno' pk=entreno.id %}"
-               class="bg-[#32FF00] hover:bg-lime-400 text-black font-bold px-4 py-2 rounded-lg text-sm">
-                Ver resumen
-            </a>
-        </div>
+  {% for entreno in entrenos %}
+  <article class="sesion" aria-labelledby="sesion-{{ entreno.id }}">
+    <div class="sesion-cab">
+      <div>
+        <h2 id="sesion-{{ entreno.id }}">{{ entreno.rutina.nombre }}</h2>
+        <span class="fecha">{{ entreno.fecha_formateada|capfirst }}{% if puede_filtrar_clientes %} · {{ entreno.cliente.nombre }}{% endif %}</span>
+      </div>
+      {% if entreno.es_parcial %}
+      <span class="estado estado--parcial mono">Parcial{% if entreno.motivo_cierre %} · {{ entreno.get_motivo_cierre_display|lower }}{% endif %}</span>
+      {% else %}
+      <span class="estado mono">Completa</span>
+      {% endif %}
     </div>
-    {% empty %}
-    <section class="bg-[#1a1a1a] text-white rounded-2xl p-6 mb-6 shadow-lg text-center" aria-labelledby="historial-vacio-title">
-        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-gray-400 mb-2">Historial</p>
-        <h2 id="historial-vacio-title" class="text-xl font-bold">Todavía no hay entrenamientos registrados</h2>
-        <p class="mt-2 text-gray-300">Cuando completes una sesión aparecerá aquí con sus series y esfuerzo.</p>
-        <a href="{% url 'clientes:dashboard_silencioso_preview' %}"
-           class="inline-flex mt-5 bg-[#32FF00] hover:bg-lime-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1a1a1a] focus:ring-[#32FF00] text-black font-bold px-4 py-2 rounded-lg">
-            Ver rutina de hoy <span class="ml-2" aria-hidden="true">→</span>
-        </a>
-    </section>
-    {% endfor %}
+    <div class="metricas">
+      <div class="metrica"><span class="mono">Volumen</span><strong>{% language "es" %}{{ entreno.volumen_kg|floatformat:"0g" }}{% endlanguage %} kg</strong></div>
+      <div class="metrica"><span class="mono">Series</span><strong>{{ entreno.n_series }}</strong></div>
+      <div class="metrica"><span class="mono">Duración</span><strong>{% if entreno.duracion_minutos %}{{ entreno.duracion_minutos }} min{% else %}—{% endif %}</strong></div>
+    </div>
+    {% if entreno.series_por_ejercicio %}
+    <details>
+      <summary class="mono">Ver series</summary>
+      {% for nombre, series in entreno.series_por_ejercicio %}
+      <div class="ejercicio">
+        <p>{{ nombre }}</p>
+        <div class="series">
+          {% for serie in series %}<span class="serie">{{ serie.repeticiones }} × {{ serie.peso_kg|floatformat:"-1" }} kg</span>{% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </details>
+    {% endif %}
+    <div class="acciones">
+      <a href="{% url 'entrenos:post_entreno_resumen' entreno.cliente_id entreno.id %}" class="btn">Ver resumen</a>
+    </div>
+  </article>
+  {% empty %}
+  <section class="vacio" aria-labelledby="historial-vacio-title">
+    <span class="mono" style="color:var(--muted);font-size:9px">Historial</span>
+    <h2 id="historial-vacio-title">Todavía no hay entrenamientos registrados</h2>
+    <p>Cuando completes una sesión aparecerá aquí con sus series y esfuerzo.</p>
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="btn">Ver rutina de hoy →</a>
+  </section>
+  {% endfor %}
 
-
-</div>
-{% endblock %}
+  {% if page_obj.paginator.num_pages > 1 %}
+  <nav class="paginacion" aria-label="Páginas del historial">
+    {% if page_obj.has_previous %}<a class="btn" href="?page={{ page_obj.previous_page_number }}{% if cliente and puede_filtrar_clientes %}&amp;cliente={{ cliente.id }}{% endif %}">← Más recientes</a>{% else %}<span></span>{% endif %}
+    <span>Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+    {% if page_obj.has_next %}<a class="btn" href="?page={{ page_obj.next_page_number }}{% if cliente and puede_filtrar_clientes %}&amp;cliente={{ cliente.id }}{% endif %}">Anteriores →</a>{% else %}<span></span>{% endif %}
+  </nav>
+  {% endif %}
+</main>
+{% include 'includes/bottom_nav.html' with activo='memoria' %}
+</body>
+</html>

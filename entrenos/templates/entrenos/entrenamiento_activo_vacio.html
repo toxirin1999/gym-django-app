@@ -1,0 +1,41 @@
+{% load i18n %}<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030604">
+  <title>Sin sesión hoy · {{ cliente.nombre|default:request.user.username }}</title>
+  <style>
+    :root{--ink:#030604;--line:#21332b;--paper:#f4f0e9;--muted:#98a19d;--green:#42e4a0}
+    *{box-sizing:border-box}html{background:var(--ink)}
+    body{margin:0;background:radial-gradient(110% 34% at 54% -5%,#11271c 0%,transparent 58%),var(--ink);color:var(--paper);font-family:ui-rounded,"Avenir Next",Avenir,"Segoe UI",sans-serif}
+    main{width:min(100%,430px);min-height:100vh;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 17px calc(96px + env(safe-area-inset-bottom))}
+    .mono{font-family:"SF Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-weight:700;letter-spacing:.2em;text-transform:uppercase}
+    .card{padding:26px 19px 20px;border:1px solid #2c3e35;border-radius:14px;background:#09100d}
+    .eyebrow{color:var(--green);font-size:9px}
+    h1{margin:14px 0 8px;font-size:34px;font-weight:900;letter-spacing:-.06em;line-height:.95;text-transform:uppercase}
+    p{margin:0;color:#c9cfcb;font-size:14px;line-height:1.45}
+    .fecha{display:block;margin-top:10px;color:var(--muted);font-size:11px}
+    .acciones{display:grid;gap:10px;margin-top:20px}
+    .accion{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 16px;border:1.5px solid var(--line);border-radius:999px;color:var(--paper);font:800 10px/1 "SF Mono",SFMono-Regular,monospace;letter-spacing:.12em;text-transform:uppercase;text-decoration:none}
+    .accion--principal{border-color:var(--green);color:var(--green)}
+    .accion:hover,.accion:focus-visible{border-color:var(--green);color:#041009;background:var(--green);outline:none}
+  </style>
+</head>
+<body>
+<main>
+  <section class="card" aria-labelledby="vacio-titulo">
+    <span class="mono eyebrow">Entrenamiento</span>
+    <h1 id="vacio-titulo">Hoy no hay sesión</h1>
+    <p>El plan no tiene ejercicios para este día, así que no hay nada que registrar aquí. Puedes elegir una rutina o dedicar el rato a movilidad.</p>
+    <span class="fecha mono">{% language "es" %}{{ fecha|date:"l j \d\e F"|lower }}{% endlanguage %}</span>
+    <div class="acciones">
+      <a class="accion accion--principal" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Elegir una rutina</a>
+      <a class="accion" href="{% url 'estiramientos:panel' %}">Movilidad y estiramientos</a>
+      <a class="accion" href="{% url 'clientes:dashboard_silencioso_preview' %}">Volver a Ahora</a>
+    </div>
+  </section>
+</main>
+{% include 'includes/bottom_nav.html' with activo='rutina' %}
+</body>
+</html>

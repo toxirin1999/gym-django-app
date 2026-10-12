@@ -153,6 +153,15 @@ def _ejercicios_recientes(cliente, dias=21):
         return set()
 
 
+def _tope_rango_reps(rango):
+    """Extremo superior de un rango "12-15" (o el número si es fijo); None si no se entiende."""
+    try:
+        partes = [int(p.strip()) for p in str(rango).replace('–', '-').split('-') if p.strip()]
+    except (TypeError, ValueError):
+        return None
+    return max(partes) if partes else None
+
+
 def _bump_rango_reps(rango, nuevo_min: int) -> str:
     """Sube el mínimo de un rango 'X-Y' (o número simple) a nuevo_min,
     conservando el máximo (o subiéndolo también si el mínimo ya lo supera)."""
@@ -387,6 +396,40 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 'razon': log.motivo,
             })
             _persistir_estado_aplicacion(log, 'aplicada', None)
+            continue
+
+        # Doble progresión: con el mismo peso hay que llegar primero al tope
+        # del rango de HOY. Subir carga con 11 reps cuando el rango es 15-20
+        # adelanta un salto que las repeticiones todavía no justifican.
+        tope_hoy = _tope_rango_reps(rep_range_hoy)
+        if (
+            ej.get('tipo_progresion', 'peso_reps') in ('peso_reps', 'peso_corporal_lastre')
+            and log.reps_anteriores is not None
+            and tope_hoy is not None
+            and log.reps_anteriores < tope_hoy
+        ):
+            peso_actual = ej.get('peso_kg')
+            if log.peso_anterior:
+                ej['peso_kg'] = log.peso_anterior
+            motivo_texto = (
+                f'Doble progresión: primero llega a {tope_hoy} reps con este peso '
+                f'(la última vez {log.reps_anteriores}); después sube la carga.'
+            )
+            ej['peso_kg_anterior'] = peso_actual
+            ej['progresion_pospuesta'] = True
+            ej['progresion_accion'] = 'subir_peso'
+            ej['progresion_motivo'] = motivo_texto
+            ej['progresion_motivo_local'] = 'doble_progresion'
+            ej.pop('motivo_peso', None)
+            cambios.append({
+                'tipo': 'progresion_pospuesta',
+                'ejercicio_original': nombre,
+                'ejercicio_nuevo': None,
+                'accion': 'subir_peso',
+                'peso_sugerido': peso_sugerido,
+                'razon': motivo_texto,
+            })
+            _persistir_estado_aplicacion(log, 'pospuesta', motivo_texto)
             continue
 
         # subir_peso → respeta freno contextual semanal + freno local por ejercicio

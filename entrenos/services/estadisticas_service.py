@@ -100,6 +100,22 @@ def _get_dynamic_muscle_mapping():
 MAPEO_MUSCULAR_DYNAMIC = _get_dynamic_muscle_mapping()
 
 
+def _grupo_canonico(grupo, nombre_ejercicio=''):
+    """Nombre de grupo único para Evolución ("Cuadriceps", "Cúadriceps" → "Cuádriceps").
+
+    Usa la misma normalización que el mapa de evolución muscular; si no reconoce
+    el grupo ni el ejercicio, conserva el texto original o "Otros".
+    """
+    try:
+        from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA, normalizar_zona
+        zona = normalizar_zona(grupo, nombre_ejercicio)
+    except Exception:
+        zona = None
+    if zona:
+        return NOMBRES_ZONA[zona]
+    return grupo or 'Otros'
+
+
 class EstadisticasService:
     """
     Servicio para cálculos estadísticos y análisis de progreso
@@ -428,13 +444,14 @@ class EstadisticasService:
         def _obtener_grupo_robusto(nombre_crudo, grupo_db=None):
             nombre = normalizar_nombre_ejercicio(nombre_crudo).lower()
             if grupo_db:
-                return grupo_db
+                return _grupo_canonico(grupo_db, nombre_crudo)
             grupo = MAPEO_MUSCULAR_DYNAMIC.get(nombre)
             if not grupo:
                 for ej_db, gr_db in MAPEO_MUSCULAR_DYNAMIC.items():
                     if ej_db in nombre or nombre in ej_db:
-                        return gr_db
-            return grupo or 'Otros'
+                        grupo = gr_db
+                        break
+            return _grupo_canonico(grupo, nombre_crudo)
 
         # Procesar Manuales
         for ej in ejs_manuales:
@@ -800,7 +817,7 @@ class EstadisticasService:
                         grupo = gr_db
                         break
             
-            grupo = grupo or 'Otros'
+            grupo = _grupo_canonico(grupo, nombre_crudo)
             
             if grupo == 'Otros':
                 ejercicios_no_mapeados.append(nombre)

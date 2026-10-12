@@ -166,37 +166,53 @@ def _describir_umbral(nombre, pct_rm, serie_critica):
 
 def _get_serie_critica_global(cliente, hoy):
     """
-    Serie número más común en la que aparece técnica comprometida (global, todos los ejercicios).
+    Posición de serie en la que la técnica cede con más frecuencia (90 días).
+
+    Se compara la TASA de series comprometidas en cada posición (comprometidas
+    en la serie N / series hechas en la posición N), no el recuento bruto: casi
+    todos los ejercicios tienen serie 1, así que contar apariciones señalaba
+    siempre la S1. Las aproximaciones no son series de trabajo y se excluyen.
     """
     try:
-        from entrenos.models import SerieRealizada
         from collections import Counter
+        from entrenos.models import SerieRealizada
         hace_90 = hoy - timedelta(days=90)
 
-        series_nums = list(
+        filas = list(
             SerieRealizada.objects
-            .filter(entreno__cliente=cliente, tecnica_calidad='comprometida',
-                    entreno__fecha__gte=hace_90)
-            .values_list('serie_numero', flat=True)
+            .filter(entreno__cliente=cliente, entreno__fecha__gte=hace_90, es_aproximacion=False)
+            .exclude(tecnica_calidad__isnull=True).exclude(tecnica_calidad='')
+            .values_list('serie_numero', 'tecnica_calidad')
         )
-
-        if len(series_nums) < 6:
+        total = Counter(n for n, _ in filas)
+        malas = Counter(n for n, calidad in filas if calidad == 'comprometida')
+        n_malas = sum(malas.values())
+        if n_malas < 6:
             return None
 
-        counter = Counter(series_nums)
-        serie_mas_comun, frecuencia = counter.most_common(1)[0]
-        pct = round(frecuencia / len(series_nums) * 100)
-
-        if pct < 30:
+        tasa_global = n_malas / len(filas)
+        candidatas = {
+            n: malas[n] / total[n]
+            for n in malas
+            if malas[n] >= 3 and total[n] >= 5
+        }
+        if not candidatas:
+            return None
+        serie, tasa = max(candidatas.items(), key=lambda kv: (kv[1], kv[0]))
+        # Solo es "crítica" si destaca sobre el resto de posiciones.
+        if tasa < tasa_global * 1.3:
             return None
 
+        pct = round(tasa * 100)
+        pct_global = round(tasa_global * 100)
         return {
-            'serie': serie_mas_comun,
+            'serie': serie,
             'pct': pct,
-            'n_datos': len(series_nums),
+            'pct_global': pct_global,
+            'n_datos': n_malas,
             'descripcion': (
-                f"La técnica falla más frecuentemente en la serie {serie_mas_comun} "
-                f"({pct}% de los casos). El plan lo usa para limitar el volumen."
+                f"La técnica cede en el {pct} % de tus series {serie}, "
+                f"frente al {pct_global} % de media. El plan lo usa para limitar el volumen."
             ),
         }
     except Exception:
@@ -361,41 +377,27 @@ def _get_grupos_musculares(cliente, hoy):
 
 def _get_ejercicios_emblema(cliente, hoy):
     """
-    Top 3 ejercicios donde el usuario ha progresado más en los últimos 90 días.
+    Top 3 ejercicios con más progreso en 90 días frente a los 90 anteriores.
+
+    Usa la misma comparación que el mapa de evolución muscular: e1RM de la
+    mejor serie de trabajo real, sin aproximaciones, y fuera los datos dudosos
+    (> ±60 %) y los accesorios ligeros, que daban "+200 %" sin sentido.
     """
     try:
-        from entrenos.models import EjercicioRealizado
-        from django.db.models import Max
-        hace_90 = hoy - timedelta(days=90)
-        hace_180 = hoy - timedelta(days=180)
-
-        def _max_por_ejercicio(fecha_ini, fecha_fin):
-            return dict(
-                EjercicioRealizado.objects
-                .filter(entreno__cliente=cliente, peso_kg__gt=0,
-                        entreno__fecha__range=(fecha_ini, fecha_fin))
-                .values('nombre_ejercicio')
-                .annotate(mx=Max('peso_kg'))
-                .values_list('nombre_ejercicio', 'mx')
-            )
-
-        ahora_map = _max_por_ejercicio(hace_90, hoy)
-        antes_map = _max_por_ejercicio(hace_180, hace_90)
+        from entrenos.services.evolucion_muscular_service import comparar_ejercicios
 
         mejoras = []
-        for nombre in list(ahora_map.keys())[:20]:
-            ahora = ahora_map.get(nombre)
-            antes  = antes_map.get(nombre)
-            if ahora and antes and float(antes) > 0:
-                pct = (float(ahora) - float(antes)) / float(antes) * 100
-                if pct >= 3:
-                    mejoras.append({
-                        'ejercicio': nombre,
-                        'peso_antes': float(antes),
-                        'peso_ahora': float(ahora),
-                        'pct': round(pct, 1),
-                    })
-
+        for e in comparar_ejercicios(cliente, hoy, dias=90):
+            if e['pct'] is None or e['dudoso'] or e['ligero'] or e['pct'] < 3:
+                continue
+            mejoras.append({
+                'ejercicio': e['ejercicio'],
+                'peso_antes': e['antes']['peso_kg'],
+                'reps_antes': e['antes']['reps'],
+                'peso_ahora': e['ahora']['peso_kg'],
+                'reps_ahora': e['ahora']['reps'],
+                'pct': round(e['pct'], 1),
+            })
         mejoras.sort(key=lambda x: -x['pct'])
         return mejoras[:3]
     except Exception:

@@ -43,3 +43,47 @@ class HistorialDetalladoEmptyStateTests(TestCase):
         self.assertContains(response, owner.cliente_perfil.nombre)
         self.assertNotContains(response, other.cliente_perfil.nombre)
         self.assertNotContains(response, 'Filtrar')
+
+
+class HistorialDetalladoContenidoTests(TestCase):
+    def setUp(self):
+        from rutinas.models import EjercicioBase
+        self.user = User.objects.create_user('historial_contenido', password='x')
+        self.cliente = self.user.cliente_perfil
+        self.base = EjercicioBase.objects.create(nombre='Press historial')
+        self.client.force_login(self.user)
+
+    def _entreno(self, **kwargs):
+        from entrenos.models import SerieRealizada
+        entreno = EntrenoRealizado.objects.create(
+            cliente=self.cliente, rutina=Rutina.objects.create(nombre='Día 2'), **kwargs,
+        )
+        for n in (1, 2):
+            SerieRealizada.objects.create(
+                entreno=entreno, ejercicio=self.base, serie_numero=n,
+                repeticiones=10, peso_kg=50, completado=True,
+            )
+        SerieRealizada.objects.create(
+            entreno=entreno, ejercicio=self.base, serie_numero=3,
+            repeticiones=10, peso_kg=20, completado=True, es_aproximacion=True,
+        )
+        return entreno
+
+    def test_volumen_en_kg_sin_aproximaciones_y_estado_real(self):
+        self._entreno(volumen_total_kg=0, estado_cierre=EntrenoRealizado.ESTADO_PARCIAL, motivo_cierre='tiempo')
+        response = self.client.get(reverse('entrenos:historial_entrenos'))
+        entreno = response.context['entrenos'][0]
+        self.assertEqual(entreno.volumen_kg, 1000)
+        self.assertEqual(entreno.n_series, 2)
+        self.assertRegex(response.content.decode(), r'1[.,\s\u00a0]?000 kg')
+        self.assertContains(response, 'Parcial')
+        self.assertNotContains(response, 'Entreno perfecto')
+        self.assertNotContains(response, ' reps</')
+        self.assertContains(response, 'bottom-nav-std')
+
+    def test_paginacion_visible(self):
+        for _ in range(11):
+            self._entreno()
+        response = self.client.get(reverse('entrenos:historial_entrenos'))
+        self.assertContains(response, 'Página 1 de 2')
+        self.assertContains(response, '?page=2')

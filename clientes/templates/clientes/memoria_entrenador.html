@@ -558,9 +558,9 @@
         {% endif %}
         {% for e in modelo.ejercicios_emblema|slice:":4" %}
         <div>
-          <div class="k"><b>PR</b><span>{{ e.ejercicio|upper|truncatechars:16 }}</span></div>
-          <div class="v">+{{ e.pct }}%</div>
-          <div class="d">{{ e.peso_antes|floatformat:1 }} kg → {{ e.peso_ahora|floatformat:1 }} kg en 90 días</div>
+          <div class="k"><b>Progreso</b><span style="white-space:normal;overflow-wrap:anywhere">{{ e.ejercicio|upper }}</span></div>
+          <div class="v">+{{ e.pct|floatformat:"0" }} %</div>
+          <div class="d">{{ e.peso_antes|floatformat:"-1" }} kg × {{ e.reps_antes }} → {{ e.peso_ahora|floatformat:"-1" }} kg × {{ e.reps_ahora }} · fuerza estimada, 90 días</div>
         </div>
         {% endfor %}
       </div>

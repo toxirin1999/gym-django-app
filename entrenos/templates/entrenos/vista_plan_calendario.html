@@ -4969,7 +4969,7 @@
             <div class="np-info-box">
                 <div class="np-next-name">{{ proxima_fase.nombre }}</div>
                 <div class="np-next-date">Comienza el {{ proxima_fase.fecha_inicio|date:"d/m/Y" }}</div>
-                <div class="np-next-desc">Desarrollo de fuerza máxima con cargas pesadas</div>
+                {% if proxima_fase_descripcion %}<div class="np-next-desc">{{ proxima_fase_descripcion }}</div>{% endif %}
             </div>
 
             <div class="np-arrow">↓</div>
@@ -5121,7 +5121,7 @@
             <div class="weekly-summary" id="weeklySummary">
                 <div class="summary-header">
                     <span class="summary-title">Resumen Semanal</span>
-                    <span class="summary-week" id="summaryWeekLabel">Semana 1</span>
+                    <span class="summary-week" id="summaryWeekLabel">Semana {{ calendario.semana_inicial|add:1 }} del mes</span>
                 </div>
                 <div class="summary-stats">
                     <div class="summary-stat">
@@ -5159,7 +5159,9 @@
 
 
 
-    {% endblock %}
+    <div aria-hidden="true" style="height:calc(84px + env(safe-area-inset-bottom))"></div>
+{% include 'includes/bottom_nav.html' with activo='rutina' %}
+{% endblock %}
 
     {% block extra_js %}
     <script>
@@ -5457,7 +5459,7 @@
             if (elWorkouts) elWorkouts.textContent = totalWorkouts;
             if (elSeries) elSeries.textContent = totalSeries;
             if (elMinutes) elMinutes.textContent = totalMinutes;
-            if (elWeekLabel) elWeekLabel.textContent = `Semana ${currentWeekIndex + 1}`;
+            if (elWeekLabel) elWeekLabel.textContent = `Semana ${currentWeekIndex + 1} del mes`;
         }
 
         // ========== SELECT DATE ==========

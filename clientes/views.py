@@ -1969,7 +1969,30 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
-def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None):
+def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
+    """La última decisión de progresión del plan, como frase corta, o None."""
+    from datetime import timedelta
+    from entrenos.models import GymDecisionLog
+
+    dec = (
+        GymDecisionLog.objects
+        .filter(cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=dias))
+        .order_by('-fecha_creacion')
+        .first()
+    )
+    if dec is None:
+        return None
+    accion = dec.get_accion_display().lower()
+    if dec.accion == 'subir_peso' and dec.valor_cambio:
+        accion = f'{accion} (+{dec.valor_cambio:g} kg)'.replace('.', ',')
+    causa = dec.get_motivo_codigo_display() if dec.motivo_codigo else ''
+    texto = f'{dec.ejercicio}: {accion}'
+    if causa:
+        texto += f' · {causa.lower()}'
+    return texto + '.'
+
+
+def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None, aprendizaje=None):
     """Elige una lectura longitudinal que no repita el titular operativo.
 
     La decisión responde qué hacer hoy. La tarjeta de aprendizaje solo tiene
@@ -1985,8 +2008,9 @@ def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None):
     mensajes_solo_contexto = {
         'esta es la sesión prevista para hoy.',
         'esta es la sesion prevista para hoy.',
+        'hoy el plan marca descanso.',
     }
-    for candidata in list(senales or []) + [fallback]:
+    for candidata in list(senales or []) + [aprendizaje, fallback]:
         candidata_normalizada = _normalizar(candidata)
         if (
             candidata
@@ -2040,10 +2064,16 @@ def dashboard_silencioso_preview(request):
         or decision_gym.get('mensaje')
         or 'Escucha el ritmo que trae el día.'
     )
+    try:
+        ultimo_aprendizaje = _ultimo_aprendizaje_plan(cliente, hoy)
+    except Exception:
+        logger.exception('dashboard_silencioso_preview: no se pudo leer el último aprendizaje')
+        ultimo_aprendizaje = None
     insight = _resumen_aprendizaje_plan(
         senales,
         texto_decision,
         decision_gym.get('mensaje'),
+        aprendizaje=ultimo_aprendizaje,
     )
 
     acwr = context.get('acwr_actual')
@@ -2052,13 +2082,13 @@ def dashboard_silencioso_preview(request):
         carga_detalle = 'Aún no hay suficiente carga para leer una tendencia.'
     elif acwr < 0.8:
         carga = 'Baja'
-        carga_detalle = f'ACWR {acwr:.2f}'
+        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
     elif acwr <= 1.3:
         carga = 'Estable'
-        carga_detalle = f'ACWR {acwr:.2f}'
+        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
     else:
         carga = 'Alta'
-        carga_detalle = f'ACWR {acwr:.2f}'
+        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
 
     # Organismo usa estados internos de coordinación. La portada, en cambio,
     # debe responder a una pregunta ejecutable: qué hacer hoy. Nunca exponemos
@@ -2166,6 +2196,8 @@ def dashboard_silencioso_preview(request):
         'quiet_postpone_url': (
             reverse('clientes:posponer_sesion', args=[sesion_pendiente_id])
             if sesion_pendiente_id
+            # En un descanso o con la sesión ya hecha no hay nada que aplazar.
+            else None if estado_operativo in ('DESCANSAR', 'HECHO')
             # Aunque el planificador aún no haya materializado la sesión de
             # hoy, la portada debe conservar la opción de aplazarla. El
             # endpoint crea esa identidad canónica antes de mover la cola.

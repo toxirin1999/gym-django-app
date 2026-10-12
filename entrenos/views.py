@@ -888,21 +888,29 @@ def historial_entrenos(request):
         if cliente:
             entrenos = entrenos.filter(cliente=cliente)
 
-    entrenos = entrenos.order_by('-fecha')
+    entrenos = entrenos.order_by('-fecha', '-id')
 
-    # Agregar atributo .perfecto a cada entreno
-    for entreno in entrenos:
-        total = entreno.series.count()
-        completadas = entreno.series.filter(completado=True).count()
-        entreno.perfecto = total > 0 and completadas == total
-
-        # Formatear fecha como "26 de mayo de 2025"
-        df = DateFormat(entreno.fecha)
-        entreno.fecha_formateada = df.format("j \\d\\e F \\d\\e Y")
-    # Paginación
+    # Paginación primero: solo se calcula la página que se muestra.
     paginator = Paginator(entrenos, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
+
+    for entreno in page_obj:
+        # Series de trabajo: confirmadas y sin aproximaciones.
+        series = [s for s in entreno.series.all() if s.completado and not s.es_aproximacion]
+        volumen_kg = sum(float(s.peso_kg or 0) * int(s.repeticiones or 0) for s in series)
+        entreno.volumen_kg = float(entreno.volumen_total_kg or 0) or volumen_kg
+        entreno.n_series = len(series)
+        grupos = {}
+        for s in sorted(series, key=lambda s: (s.ejercicio_id, s.serie_numero)):
+            nombre = s.ejercicio.nombre if s.ejercicio_id else 'Ejercicio'
+            grupos.setdefault(nombre, []).append(s)
+        entreno.series_por_ejercicio = list(grupos.items())
+        entreno.es_parcial = entreno.estado_cierre == EntrenoRealizado.ESTADO_PARCIAL
+        from django.utils import translation
+        with translation.override('es'):
+            df = DateFormat(entreno.fecha_ejecucion or entreno.fecha)
+            entreno.fecha_formateada = df.format("l j \\d\\e F \\d\\e Y")
 
     return render(request, 'entrenos/vista_historial_detallado.html', {
         'entrenos': page_obj,
@@ -2730,117 +2738,20 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+@login_required
 def resumen_entreno(request, pk):
+    """Ruta legacy del resumen de una sesión.
+
+    Antes no exigía login ni comprobaba el dueño, y mostraba solo cuatro
+    cifras. El cierre de entreno (post_entreno_resumen) ya cuenta qué se hizo,
+    cómo lo leyó el plan, los récords y qué espera la próxima vez: esta ruta
+    comprueba el acceso y lleva allí.
     """
-    VISTA FINAL Y ROBUSTA: Muestra un resumen detallado y motivador
-    del entrenamiento realizado.
-    """
-    try:
-        # --- 1. OBTENER DATOS BÁSICOS ---
-        entreno_actual = get_object_or_404(
-            EntrenoRealizado.objects.select_related('cliente', 'rutina'),
-            pk=pk
-        )
-        cliente = entreno_actual.cliente
-
-        # --- 2. DETALLES DEL ENTRENAMIENTO ACTUAL ---
-        series_actuales = SerieRealizada.objects.filter(entreno=entreno_actual).select_related('ejercicio')
-
-        # Si no hay series, preparamos un contexto básico y evitamos cálculos
-        if not series_actuales.exists():
-            messages.warning(request,
-                             "El entrenamiento guardado no contiene series. No se pueden mostrar estadísticas detalladas.")
-            context = {
-                'entreno': entreno_actual, 'cliente': cliente, 'stats': {}, 'comparativa': {'disponible': False},
-                'medallas': [], 'ejercicios_realizados': {}, 'progreso_chart_data_json': json.dumps({})
-            }
-            # return render(request, 'entrenos/resumen_entreno.html', context)
-
-            return redirect('entrenos:dashboard_liftin')
-
-        ejercicios_realizados = defaultdict(list)
-        for serie in series_actuales:
-            ejercicios_realizados[serie.ejercicio.nombre].append({
-                'reps': serie.repeticiones,
-                'peso': round(serie.peso_kg, 1)
-            })
-
-        stats_actual = series_actuales.aggregate(
-            total_series=Count('id'),
-            series_completadas=Count('id', filter=F('completado')),
-            volumen_total=Sum(ExpressionWrapper(F('repeticiones') * F('peso_kg'), output_field=fields.DecimalField())),
-            peso_maximo=Max('peso_kg')
-        )
-
-        entreno_perfecto = (stats_actual.get('total_series', 0) > 0 and
-                            stats_actual['total_series'] == stats_actual['series_completadas'])
-
-        # --- 3. COMPARATIVA CON EL ENTRENAMIENTO ANTERIOR ---
-        entreno_anterior = EntrenoRealizado.objects.filter(
-            cliente=cliente, rutina=entreno_actual.rutina, pk__lt=entreno_actual.pk
-        ).order_by('-fecha', '-id').first()
-
-        comparativa = {'disponible': False}
-        if entreno_anterior:
-            stats_anterior = SerieRealizada.objects.filter(entreno=entreno_anterior).aggregate(
-                volumen_total=Sum(
-                    ExpressionWrapper(F('repeticiones') * F('peso_kg'), output_field=fields.DecimalField()))
-            )
-            vol_actual = stats_actual.get('volumen_total') or Decimal('0')
-            vol_anterior = stats_anterior.get('volumen_total') or Decimal('0')
-
-            if vol_anterior > 0:
-                diferencia_vol = vol_actual - vol_anterior
-                porcentaje_vol = round(float((diferencia_vol / vol_anterior) * 100), 1)
-                comparativa = {
-                    'disponible': True,
-                    'volumen_actual': round(float(vol_actual), 1),
-                    'volumen_anterior': round(float(vol_anterior), 1),
-                    'diferencia_porcentual': porcentaje_vol
-                }
-
-        # --- 4. LOGROS Y MEDALLAS ---
-        medallas = []
-        if entreno_perfecto:
-            medallas.append(
-                {'icono': '🎯', 'nombre': 'Precisión Absoluta', 'desc': 'Completaste todas las series al 100%.'})
-        if (stats_actual.get('peso_maximo') or 0) > 100:
-            medallas.append({'icono': '🏋️', 'nombre': 'Club de los 100kg', 'desc': 'Levantaste más de 100kg.'})
-        if comparativa.get('diferencia_porcentual', 0) > 10:
-            medallas.append({'icono': '🚀', 'nombre': 'Salto Cuántico', 'desc': 'Aumentaste tu volumen más de un 10%.'})
-
-        # --- 5. GRÁFICO DE PROGRESO DE VOLUMEN ---
-        ultimos_entrenos = EntrenoRealizado.objects.filter(
-            cliente=cliente, rutina=entreno_actual.rutina
-        ).order_by('fecha', 'id').values('fecha').annotate(
-            volumen=Sum(
-                ExpressionWrapper(F('series__repeticiones') * F('series__peso_kg'), output_field=fields.DecimalField()))
-        )
-        progreso_chart_data = {
-            "labels": [DateFormat(e['fecha']).format("d M") for e in ultimos_entrenos],
-            "data": [float(e['volumen'] or 0) for e in ultimos_entrenos]
-        }
-
-        # --- 6. CONTEXTO PARA LA PLANTILLA ---
-        context = {
-            'entreno': entreno_actual, 'cliente': cliente, 'ejercicios_realizados': dict(ejercicios_realizados),
-            'stats': {
-                'volumen_total': round(float(stats_actual.get('volumen_total') or 0), 1),
-                'peso_maximo': round(float(stats_actual.get('peso_maximo') or 0), 1),
-                'total_series': stats_actual.get('total_series', 0),
-                'series_completadas': stats_actual.get('series_completadas', 0),
-                'duracion': entreno_actual.duracion_minutos,
-            },
-            'entreno_perfecto': entreno_perfecto, 'comparativa': comparativa, 'medallas': medallas,
-            'progreso_chart_data_json': json.dumps(progreso_chart_data, cls=CustomJSONEncoder)
-        }
-        return render(request, 'entrenos/resumen_entreno.html', context)
-
-    except Exception as e:
-        logger.error(f"Error al generar el resumen del entreno {pk}: {e}", exc_info=True)
-        messages.error(request,
-                       f"Ocurrió un error crítico al generar el resumen: {e}. Por favor, contacta al administrador.")
-        return redirect('home')  # Redirige a la página de inicio como último recurso
+    entrenos = EntrenoRealizado.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        entrenos = entrenos.filter(cliente__user=request.user)
+    entreno = get_object_or_404(entrenos, pk=pk)
+    return redirect(reverse('entrenos:post_entreno_resumen', args=[entreno.cliente_id, entreno.id]))
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -3765,6 +3676,14 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio for ejercicio in (ejercicios_planificados or [])
             if _tiene_series_planificadas(ejercicio)
         ]
+        if not ejercicios_planificados:
+            # Sin ejercicios no hay sesión que ejecutar: en vez de una pantalla
+            # negra con el cronómetro corriendo y "0/0 series", se explica y se
+            # ofrecen salidas útiles. No se crea ni se guarda nada.
+            return render(request, 'entrenos/entrenamiento_activo_vacio.html', {
+                'cliente': cliente,
+                'fecha': fecha_obj,
+            })
         # Configuración de ejecución de Farmer Walk. Aunque un snapshot viejo
         # no contuviera la carga, la identidad del ejercicio se resuelve en el
         # servidor antes de renderizar y queda fijada en el plan de esta sesión.
@@ -4131,6 +4050,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             # Máquinas con discos laterales (sin barra — base 0 kg)
             _KEYWORDS_MAQUINA_DISCOS = [
                 'prensa', 'leg press', 'hack squat', 'hack-squat',
+                'sentadilla hack', 'hack', 'péndulo', 'pendulo', 'belt squat',
             ]
             # Barras olímpicas (base 20 kg)
             _KEYWORDS_BARRA = [
@@ -4457,6 +4377,18 @@ def vista_entrenamiento_activo(request, cliente_id):
             }
 
     vol_mod_pct = int(vol_mod * 100)
+
+    # "+X kg hoy" compara lo que el selector propone de verdad (peso_inicial_kg,
+    # ya con tope, fase y carry-forward) con la última vez. Usar el peso
+    # recomendado bruto anunciaba "+5,5 kg hoy" con el mismo peso en pantalla.
+    for _ej in ejercicios_planificados:
+        try:
+            _anterior = float(_ej.get('peso_anterior_kg') or 0)
+            _propuesto = float(_ej.get('peso_inicial_kg') or _ej.get('peso_recomendado_kg') or 0)
+        except (TypeError, ValueError):
+            continue
+        if _anterior > 0:
+            _ej['diferencia_peso'] = round(_propuesto - _anterior, 2)
 
     # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
     _sep = ' - ' if ' - ' in rutina_nombre else (' · ' if ' · ' in rutina_nombre else None)
@@ -5614,11 +5546,17 @@ def rutina_silenciosa_preview(request, cliente_id):
     })
 
 
+@login_required
 def vista_plan_anual(request, cliente_id):
     """
     Vista para generar y mostrar el plan anual de Helms.
     VERSIÓN OPTIMIZADA CON SERIALIZACIÓN CORRECTA.
     """
+    # El plan expone máximos y cargas: solo para su dueño o el staff.
+    _clientes = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        _clientes = _clientes.filter(user=request.user)
+    get_object_or_404(_clientes, id=cliente_id)
     try:
         # --- PASO 1: Obtener cliente y datos de navegación del calendario ---
         cliente_obj = get_object_or_404(Cliente, id=cliente_id)
@@ -5740,6 +5678,21 @@ def vista_plan_anual(request, cliente_id):
                 proxima_fase = bloque
                 dias_hasta_proxima_fase = (fecha_inicio - hoy).days
                 break
+
+        # La descripción de la próxima fase sale de su propio detalle en el
+        # plan; antes la plantilla tenía fijo el texto de la fase de fuerza.
+        proxima_fase_descripcion = ''
+        if proxima_fase:
+            _detalle_proxima = next(
+                (
+                    item for item in ((plan or {}).get('metadata') or {}).get('periodizacion_completa') or []
+                    if item.get('nombre') == proxima_fase.get('nombre')
+                ),
+                {},
+            )
+            proxima_fase_descripcion = (
+                _detalle_proxima.get('descripcion') or proxima_fase.get('descripcion') or ''
+            )
 
         # === CALCULAR PROYECCIONES DE EJERCICIOS (PARA TODAS LAS FASES) ===
         proyecciones_totales = {}
@@ -6079,6 +6032,7 @@ def vista_plan_anual(request, cliente_id):
             # Próxima fase
             'proxima_fase': proxima_fase,
             'dias_hasta_proxima_fase': dias_hasta_proxima_fase,
+            'proxima_fase_descripcion': proxima_fase_descripcion,
             # Proyecciones de ejercicios
             'proyecciones_fase': proyecciones_fase,
             'proyecciones_json': json.dumps(proyecciones_totales),
@@ -6718,10 +6672,19 @@ from django.http import JsonResponse
 from analytics.planificador_integrado import PlanificadorIntegrado
 
 
+@login_required
 def vista_plan_calendario(request, cliente_id):
+    """Ruta legacy del calendario: lleva al calendario anual vigente.
+
+    Esta versión antigua calculaba otra prescripción (RPE 6–10, 1–20 reps,
+    "Entrenamiento general") y ya no se enlaza desde ninguna pantalla.
     """
-    Vista principal del plan - ahora con integración Helms
-    """
+    cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
+    return redirect('entrenos:vista_plan_anual', cliente_id=cliente.id)
+
+
+def _vista_plan_calendario_legacy(request, cliente_id):
+    """Implementación anterior, conservada solo como referencia."""
     cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
 
     try:
@@ -8027,7 +7990,10 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
     """
     from .services.cierre_entrenamiento_service import construir_contexto_cierre
 
-    cliente = get_object_or_404(Cliente, id=cliente_id)
+    clientes = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        clientes = clientes.filter(user=request.user)
+    cliente = get_object_or_404(clientes, id=cliente_id)
     entreno = get_object_or_404(EntrenoRealizado, id=entreno_id, cliente=cliente)
 
     contexto = construir_contexto_cierre(cliente, entreno)

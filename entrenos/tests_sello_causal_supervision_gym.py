@@ -1,5 +1,7 @@
 """Fase 6.4A: la ejecución conserva la autoridad supervisada que la inició."""
 
+import json
+
 from datetime import date
 from unittest.mock import patch
 
@@ -93,11 +95,12 @@ class SelloCausalSupervisionGymTests(TestCase):
     @patch("entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym")
     def test_get_validado_emite_sello_y_lo_transporta_en_formulario(self, resolver):
         version = self._version()
+        ejercicio = {"nombre": "Press banca", "series": 3, "repeticiones": "8-10", "peso_kg": 60}
         resolver.return_value = {
             "decision_id": version.decision_id,
             "estado": "version_reducida",
             "postura": "sostener",
-            "entrenamiento": {"ejercicios": []},
+            "entrenamiento": {"ejercicios": [ejercicio]},
         }
         response = self.client.get(
             reverse("entrenos:entrenamiento_activo", args=[self.cliente.pk]),
@@ -105,7 +108,9 @@ class SelloCausalSupervisionGymTests(TestCase):
                 "fecha": self.fecha.isoformat(),
                 "rutina_nombre": self.rutina.nombre,
                 "decision_id": version.decision_id,
-                "ejercicios": "[]",
+                # Sin ejercicios la pantalla muestra el estado vacío y no hay
+                # formulario que transporte el sello.
+                "ejercicios": json.dumps([ejercicio]),
             },
         )
 
