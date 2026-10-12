@@ -326,15 +326,23 @@ class TestX14VariacionToque2David(TestCase):
         Bloque 0 rpe_objetivo=6; max(6, 6-1)=6. RPE no sube nunca.
         Verificamos con espalda (gran grupo, sin ajuste de músculo pequeño).
         """
+        # Desde el 12-oct-2026 el RPE depende también del tipo de ejercicio
+        # (multiarticular 7–8, aislamiento 8–9): el contraste se compara dentro
+        # del mismo tipo, no entre un compuesto y un aislamiento.
         semana = self._semana
-        rpe_dia2_espalda = [ej['rpe_objetivo'] for ej in semana.get('dia_2', [])
-                             if ej['grupo_muscular'] == 'espalda']
-        rpe_dia5_espalda = [ej['rpe_objetivo'] for ej in semana.get('dia_5', [])
-                             if ej['grupo_muscular'] == 'espalda']
-        for rpe_t1, rpe_t2 in zip(rpe_dia2_espalda, rpe_dia5_espalda):
+
+        def _rpe_por_tipo(dia):
+            out = {}
+            for ej in semana.get(dia, []):
+                if ej['grupo_muscular'] == 'espalda':
+                    out.setdefault(ej.get('tipo_ejercicio'), []).append(ej['rpe_objetivo'])
+            return out
+
+        t1, t2 = _rpe_por_tipo('dia_2'), _rpe_por_tipo('dia_5')
+        for tipo in set(t1) & set(t2):
             self.assertLessEqual(
-                rpe_t2, rpe_t1,
-                f"RPE toque-2 ({rpe_t2}) > RPE toque-1 ({rpe_t1}) — contraste roto",
+                max(t2[tipo]), max(t1[tipo]),
+                f"RPE toque-2 ({t2[tipo]}) > RPE toque-1 ({t1[tipo]}) en {tipo} — contraste roto",
             )
 
     def test_grupos_freq1_sin_variacion(self):

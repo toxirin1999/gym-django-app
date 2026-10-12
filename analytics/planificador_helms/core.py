@@ -19,6 +19,7 @@ from .periodizacion.generador import GeneradorPeriodizacion
 from .calculo.peso import CalculadorPeso
 from .calculo.compatibilidad_fase import resolver_peso_objetivo, resolver_ancla_historica, _bucket_desde_reps
 from .calculo.fatiga import GestorFatiga
+from .calculo.prescripcion_tipo import rpe_por_tipo, rango_por_tipo, unidad_por_tipo, carga_por_tipo
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
 from .ejercicios.variacion import derivar_rep_rpe_toque, construir_variantes_por_toque
@@ -371,6 +372,13 @@ class PlanificadorHelms:
                     rep_range_ej, rpe_objetivo_toque = derivar_rep_rpe_toque(rep_range_ej, rpe_objetivo, toque)
 
                     es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo_toque >= 9)
+                    # Decisión 12-oct-2026: RPE por tipo (multiarticular 7–8,
+                    # aislamiento 8–9) y unidad real en tiempo/distancia. Se
+                    # aplica después de es_pesado para no cambiar el reparto de
+                    # fatiga: un aislamiento a RPE 9 no es una serie "pesada".
+                    tipo_progresion_ej = ej.get('tipo_progresion', 'peso_reps')
+                    rpe_objetivo_toque = rpe_por_tipo(rpe_objetivo_toque, tipo_ej, es_descarga_bloque)
+                    rango_salida = rango_por_tipo(tipo_progresion_ej, rep_range_ej, es_descarga_bloque)
                     series_objetivo = max(2, min(tope_por_ejercicio, math.ceil(vol_dia / len(candidatos[:n_ejercicios_grupo]))))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
@@ -428,6 +436,11 @@ class PlanificadorHelms:
                         peso = CalculadorPeso.calcular_peso_trabajo(nombre, rep_range_ej, rpe_objetivo,
                                                                     self.maximos_actuales, rpe_real_anterior)
 
+                    peso_por_tipo = carga_por_tipo(tipo_progresion_ej, nombre, peso, peso_real_bruto_anterior)
+                    if peso_por_tipo != peso:
+                        peso = peso_por_tipo
+                        motivo_peso_tipo = 'carga_por_tipo'
+
                     tempo = TEMPOS.get(fase, TEMPOS['hipertrofia'])
                     descanso = self._calcular_descanso_pormenorizado(nombre, rpe_objetivo, tipo_ej)
 
@@ -437,13 +450,14 @@ class PlanificadorHelms:
                         'nombre': nombre,
                         'grupo_muscular': grupo,
                         'series': series_ajustadas,
-                        'repeticiones': rep_range_ej,
+                        'repeticiones': rango_salida,
+                        'unidad': unidad_por_tipo(tipo_progresion_ej),
                         'peso_kg': peso,
                         'rpe_objetivo': rpe_objetivo_toque,
                         'tempo': tempo,
                         'descanso_minutos': descanso,
                         'patron': patron,
-                        'tipo_progresion': ej.get('tipo_progresion', 'peso_reps'),
+                        'tipo_progresion': tipo_progresion_ej,
                         'tipo_ejercicio': tipo_ej,
                         'motivo_peso': {
                             'tipo': motivo_peso_tipo,
@@ -585,6 +599,7 @@ class PlanificadorHelms:
             'sin_datos': f'Sin historial: el plan calibra desde capacidad actual.',
             'recalculado_fase': 'Recalculado: el rango de hoy cambia de fase — se recalibra desde tu capacidad estimada.',
             'recalculado_descarga': 'Descarga: peso reducido a propósito para esta fase de recuperación activa.',
+            'carga_por_tipo': 'Carga según el tipo de ejercicio: se mide en tiempo, distancia o repeticiones.',
         }
         return textos.get(motivo_tipo, 'Peso determinado por el plan.')
 

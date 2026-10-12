@@ -5364,9 +5364,18 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
                 peso = float(peso) if peso not in (None, '') else None
             except (TypeError, ValueError):
                 peso = None
+            if peso is not None and peso <= 0:
+                peso = None  # "0 kg" no dice nada: tiempo, reps o peso corporal
+            tipo_progresion = ejercicio.get('tipo_progresion') or 'peso_reps'
+            unidad = ejercicio.get('unidad') or (
+                's' if tipo_progresion == 'progresion_tiempo'
+                else 'm' if tipo_progresion == 'progresion_distancia'
+                else 'reps'
+            )
             ejercicios.append({
                 'nombre': str(ejercicio.get('nombre') or 'Ejercicio'),
                 'series': series,
+                'unidad': unidad,
                 'reps': str(
                     ejercicio.get('reps_objetivo')
                     or ejercicio.get('repeticiones')

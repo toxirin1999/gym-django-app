@@ -78,7 +78,8 @@
             nombre: ejercicio.nombre || 'Ejercicio',
             series: Number(ejercicio.series) || 0,
             reps: ejercicio.reps_objetivo || ejercicio.repeticiones || ejercicio.reps || '—',
-            peso: Number.isFinite(peso) ? peso : null,
+            unidad: ejercicio.unidad || (ejercicio.usa_tiempo ? 's' : ejercicio.usa_distancia ? 'm' : 'reps'),
+            peso: Number.isFinite(peso) && peso > 0 ? peso : null,
           };
         }).filter(ejercicio => ejercicio.series > 0);
       }
@@ -118,7 +119,7 @@
         (preview.ejercicios || []).forEach(exercise => {
           const row = document.createElement('div'); row.className = 'exercise-row';
           const info = document.createElement('div'); const name = document.createElement('strong'); name.textContent = exercise.nombre;
-          const detail = document.createElement('span'); detail.textContent = `${exercise.series} series · ${exercise.reps} reps${exercise.peso === null ? '' : ` · ${exercise.peso} kg`}`;
+          const detail = document.createElement('span'); detail.textContent = `${exercise.series} series · ${exercise.reps} ${exercise.unidad || 'reps'}${exercise.peso === null || exercise.peso === undefined ? '' : ` · ${exercise.peso} kg`}`;
           info.append(name, detail); row.append(info); rows.append(row);
         });
         const isRest = preview.tipo === 'descanso';
