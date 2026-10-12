@@ -397,6 +397,7 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertEqual(sabado["preview"]["sesion_programada_id"], sesion.pk)
         self.assertEqual(sabado["preview"]["fecha_efectiva"], "2026-09-26")
         self.assertIn("sesion_programada_id={}".format(sesion.pk), sabado["preview"]["url"])
+        self.assertIn("rutina_nombre=Torso+pospuesto", sabado["preview"]["url"])
         self.assertEqual(sabado["preview"]["ejercicios"][0]["nombre"], "Press inclinado")
         calcular_ejercicios.assert_called_once_with(
             self.cliente.id, date(2026, 9, 25),
@@ -434,6 +435,7 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertEqual(viernes["preview"]["fecha_efectiva"], "2026-09-25")
         self.assertIn("?fecha=2026-09-25", viernes["preview"]["url"])
         self.assertNotIn("sesion_programada_id", viernes["preview"]["url"])
+        self.assertIn("rutina_nombre=D%C3%ADa+5+-+Descarga+activa", viernes["preview"]["url"])
         self.assertEqual(contexto["hoy"]["tipo"], "sesion")
 
     @patch("entrenos.views.agregar_educacion_a_plan")

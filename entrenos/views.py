@@ -5373,6 +5373,8 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
             continue
         entrenos_plan_por_fecha[fecha_normalizada] = entreno_plan
 
+    from urllib.parse import urlencode
+
     def _normalizar_ejercicios_preview(ejercicios_origen):
         ejercicios = []
         for ejercicio in ejercicios_origen or []:
@@ -5417,13 +5419,18 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
             )
             ejercicios_origen = []
 
-        briefing_url = '{}?fecha={}&sesion_programada_id={}'.format(
+        nombre_sesion = sesion.nombre_sesion or 'Sesión programada'
+        briefing_url = '{}?{}'.format(
             reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
-            fecha_efectiva.isoformat(), sesion.pk,
+            urlencode({
+                'fecha': fecha_efectiva.isoformat(),
+                'sesion_programada_id': sesion.pk,
+                'rutina_nombre': nombre_sesion,
+            }),
         )
         return {
             'tipo': 'sesion',
-            'titulo': sesion.nombre_sesion or 'Sesión programada',
+            'titulo': nombre_sesion,
             'fecha_efectiva': fecha_efectiva.isoformat(),
             'sesion_programada_id': sesion.pk,
             'ejercicios': _normalizar_ejercicios_preview(ejercicios_origen),
@@ -5433,16 +5440,20 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
 
     def _preview_plan(fecha_dia, entreno_plan):
         """Preview de la prescripción Helms si aún no se creó su sesión materializada."""
+        nombre_rutina = entreno_plan.get('nombre_rutina') or 'Sesión programada'
         return {
             'tipo': 'sesion',
-            'titulo': entreno_plan.get('nombre_rutina') or 'Sesión programada',
+            'titulo': nombre_rutina,
             'fecha_efectiva': fecha_dia.isoformat(),
             'ejercicios': _normalizar_ejercicios_preview(
                 entreno_plan.get('ejercicios') or [],
             ),
-            'url': '{}?fecha={}'.format(
+            'url': '{}?{}'.format(
                 reverse('entrenos:briefing_entrenamiento', args=[cliente.id]),
-                fecha_dia.isoformat(),
+                urlencode({
+                    'fecha': fecha_dia.isoformat(),
+                    'rutina_nombre': nombre_rutina,
+                }),
             ),
             'cta': 'Revisar sesión',
         }
