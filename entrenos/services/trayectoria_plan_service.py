@@ -188,6 +188,60 @@ def _sesiones_helms_semana(plan, inicio, fin):
     return sorted(sesiones, key=lambda sesion: sesion['fecha_efectiva'])
 
 
+def _normalizar_nombre(nombre):
+    return ' '.join(str(nombre or '').casefold().split())
+
+
+def _marcar_sesiones_helms_realizadas(cliente, sesiones, inicio, fin):
+    """Cruza la prescripción Helms de una semana sin contrato con lo entrenado.
+
+    Sin contrato no hay SesionProgramada que el cierre pueda marcar, así que la
+    evidencia es el EntrenoRealizado de esa rutina: primero el guardado para la
+    misma fecha del plan; si no, cualquiera de la semana (hecho otro día). Cada
+    entreno cubre una sola sesión. Solo lectura: no materializa nada.
+    """
+    from django.db.models import Q
+    from entrenos.models import EntrenoRealizado
+
+    if not sesiones:
+        return sesiones
+    entrenos = list(
+        EntrenoRealizado.objects.filter(cliente=cliente)
+        .filter(Q(fecha__range=(inicio, fin)) | Q(fecha_ejecucion__range=(inicio, fin)))
+        .select_related('rutina')
+        .order_by('fecha', 'pk')
+    )
+    usados = set()
+
+    def _asignar(sesion, entreno):
+        usados.add(entreno.pk)
+        completa = entreno.estado_cierre != EntrenoRealizado.ESTADO_PARCIAL
+        sesion.update({
+            'estado': SesionProgramada.ESTADO_COMPLETADA if completa else SesionProgramada.ESTADO_PARCIAL,
+            'fecha_realizada': entreno.fecha_ejecucion or entreno.fecha,
+            'realizada': True,
+            'completa': completa,
+            'parcial': not completa,
+        })
+
+    def _mismo_nombre(sesion, entreno):
+        nombre = entreno.nombre_rutina_liftin or (entreno.rutina.nombre if entreno.rutina else '')
+        return _normalizar_nombre(nombre) == _normalizar_nombre(sesion['nombre'])
+
+    for exacta in (True, False):
+        for sesion in sesiones:
+            if sesion['realizada']:
+                continue
+            for entreno in entrenos:
+                if entreno.pk in usados or not _mismo_nombre(sesion, entreno):
+                    continue
+                if exacta and entreno.fecha != sesion['fecha_prevista']:
+                    continue
+                _asignar(sesion, entreno)
+                break
+    return sesiones
+
+
 def _contar_sesiones_no_registradas(sesiones, fecha_corte):
     """Cuenta pendientes ya pasadas para ofrecer una siguiente acción amable."""
     return sum(
@@ -286,8 +340,10 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
     if contrato is None:
         limitations.append('semana_no_materializada')
         inicio_semana = _inicio_semana(fecha)
-        sesiones_planificadas = _sesiones_helms_semana(
-            plan, inicio_semana, inicio_semana + timedelta(days=6),
+        sesiones_planificadas = _marcar_sesiones_helms_realizadas(
+            cliente,
+            _sesiones_helms_semana(plan, inicio_semana, inicio_semana + timedelta(days=6)),
+            inicio_semana, inicio_semana + timedelta(days=6),
         )
         if sesiones_planificadas:
             semana = {
