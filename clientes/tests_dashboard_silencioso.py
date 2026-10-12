@@ -66,6 +66,25 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Otras opciones")
         self.assertContains(response, reverse("estiramientos:panel"))
 
+    def test_aprendizaje_no_repite_la_decision_del_dia_sin_evidencia_nueva(self):
+        """La tarjeta de aprendizaje debe aportar una conclusión, no eco.
+
+        Si el motor todavía no entrega señales longitudinales, reutilizar el
+        mismo mensaje de la decisión principal crea la impresión falsa de que
+        se aprendió algo nuevo. La portada debe declarar ese límite con una
+        frase distinta y honesta.
+        """
+        from clientes.views import _resumen_aprendizaje_plan
+
+        self.assertEqual(
+            _resumen_aprendizaje_plan(
+                [],
+                "Esta es la sesión prevista para hoy.",
+                "Esta es la sesión prevista para hoy.",
+            ),
+            "Aún no hay una adaptación nueva que comunicar. El plan seguirá observando tus próximas sesiones.",
+        )
+
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
     def test_normaliza_estados_del_organismo_a_decisiones_operativas(

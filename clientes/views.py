@@ -1968,6 +1968,26 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
+def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None):
+    """Elige una lectura longitudinal que no repita el titular operativo.
+
+    La decisión responde qué hacer hoy. La tarjeta de aprendizaje solo tiene
+    sentido si añade una señal distinta; cuando aún no hay una, explicita el
+    límite en vez de presentar la misma orden como un descubrimiento nuevo.
+    """
+    def _normalizar(texto):
+        return ' '.join(str(texto or '').casefold().split())
+
+    decision_normalizada = _normalizar(decision_del_dia)
+    for candidata in list(senales or []) + [fallback]:
+        if candidata and _normalizar(candidata) != decision_normalizada:
+            return str(candidata)
+    return (
+        'Aún no hay una adaptación nueva que comunicar. '
+        'El plan seguirá observando tus próximas sesiones.'
+    )
+
+
 @login_required
 @require_GET
 def dashboard_silencioso_preview(request):
@@ -2000,11 +2020,16 @@ def dashboard_silencioso_preview(request):
 
     explicacion = context.get('explicacion_decision') or {}
     senales = explicacion.get('senales_activas') or []
-    insight = next((str(s) for s in senales if s), None)
-    if not insight:
-        insight = decision_gym.get('mensaje') or (
-            'El plan seguirá aprendiendo con tus próximas sesiones.'
-        )
+    texto_decision = (
+        estado_sistema.get('texto')
+        or decision_gym.get('mensaje')
+        or 'Escucha el ritmo que trae el día.'
+    )
+    insight = _resumen_aprendizaje_plan(
+        senales,
+        texto_decision,
+        decision_gym.get('mensaje'),
+    )
 
     acwr = context.get('acwr_actual')
     if acwr is None:
@@ -2096,7 +2121,7 @@ def dashboard_silencioso_preview(request):
     context.update({
         'quiet_decision': {
             'estado': estado_operativo,
-            'frase': estado_sistema.get('texto') or decision_gym.get('mensaje') or 'Escucha el ritmo que trae el día.',
+            'frase': texto_decision,
             'cta_label': accion_label,
             'cta_url': accion_url,
             'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
