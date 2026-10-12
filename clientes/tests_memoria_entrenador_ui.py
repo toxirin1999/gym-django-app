@@ -214,6 +214,24 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertIn('La actividad queda aquí como parte de lo que el plan aprende.', plantilla)
         self.assertIn("{% url 'entrenos:timeline_atleta' cliente.id %}", plantilla)
 
+    def test_profundidad_alinea_las_tarjetas_con_el_expediente(self):
+        """La lectura profunda no debe ganar una sangría en escritorio."""
+        plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
+
+        self.assertIn(
+            '.mem-depth .mem-timeline{margin:0;padding:0;gap:10px}',
+            plantilla,
+        )
+        self.assertNotIn('.mem-timeline{padding-left:38px}', plantilla)
+
+    def test_serie_critica_usa_un_nombre_humano_y_no_el_codigo_s1(self):
+        """El modelo explica la señal sin obligar a descifrar jerga interna."""
+        plantilla = Path('clientes/templates/clientes/memoria_entrenador.html').read_text()
+
+        self.assertIn('Serie donde más cae la técnica', plantilla)
+        self.assertIn('Primera serie', plantilla)
+        self.assertNotIn('<div class="v">S{{ modelo.serie_critica_global.serie }}</div>', plantilla)
+
     def test_memoria_ofrece_un_resumen_corporal_sin_confundir_peso_y_medidas(self):
         hoy = timezone.localdate()
         PesoDiario.objects.create(cliente=self.cliente, peso_kg='79.40')

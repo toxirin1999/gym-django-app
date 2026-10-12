@@ -148,7 +148,7 @@
   .mem-kicker{margin:4px 4px 9px;color:var(--blue);font-size:9px}.mem-title{margin:0 4px;font-family:var(--font-display);font-size:clamp(38px,11vw,58px);letter-spacing:-.06em;text-transform:none}.mem-title span{color:var(--mint)}.mem-intro{margin:12px 4px;color:var(--ink-muted);font-size:14px;line-height:1.52}.mem-meta{margin:0 4px}
   .mem-hero{position:relative;margin:25px 0 18px;padding:23px 19px 19px;border:1px solid var(--line);border-radius:20px;background:linear-gradient(135deg,rgba(11,37,27,.96),rgba(3,13,9,.97));overflow:hidden}.mem-hero::after{content:"";position:absolute;width:190px;height:190px;border:1px solid rgba(66,223,171,.2);border-radius:50%;right:-72px;bottom:-100px;box-shadow:0 0 0 22px rgba(66,223,171,.035),0 0 0 44px rgba(66,223,171,.02)}.mem-hero>*{position:relative;z-index:1}.mem-hero-title{margin:7px 0 6px;font:700 37px/.92 var(--font-display);letter-spacing:-.045em}.mem-hero-copy{max-width:32ch;color:var(--ink-muted);font-size:14px;line-height:1.5}.mem-hero-state{display:inline-flex;gap:8px;align-items:center;margin:12px 0;color:var(--mint);font:700 9px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase}.mem-hero-state .mem-dot{background:var(--mint)}
   .mem-signals{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:18px;border-top:1px solid var(--line);border-left:1px solid var(--line)}.mem-signal{padding:12px 9px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}.mem-signal-k{color:var(--ink-faint);font:700 8px/1.4 var(--font-mono);letter-spacing:.1em;text-transform:uppercase}.mem-signal-v{margin-top:8px;color:var(--mint);font:700 21px/1 var(--font-mono);letter-spacing:-.06em}.mem-signal-v small{font-size:9px;color:var(--ink-faint);margin-left:2px;letter-spacing:0}
-  .mem-depth-heading{margin:28px 4px 11px;color:var(--blue);font:700 9px/1 var(--font-mono);letter-spacing:.17em;text-transform:uppercase}.mem-depth{margin:0;display:flex;flex-direction:column;gap:10px}.mem-timeline{margin:0;padding:0;gap:10px}.mem-timeline::before,.mem-node::before{display:none}.mem-node{border-color:var(--line);border-radius:16px;background:linear-gradient(135deg,rgba(8,24,17,.97),rgba(5,15,10,.97));padding:17px 16px}.mem-node--risk{border-color:#65352f}.mem-label{font-size:8px;color:var(--blue)}.mem-node--good .mem-label{color:var(--mint)}.mem-node--plan .mem-label{color:#e9c975}.mem-heading{margin:7px 0 4px;font-family:var(--font-display);font-size:25px;text-transform:none;letter-spacing:-.035em}.mem-desc{font-size:13px}.mem-chips{margin-top:11px}.mem-chip{border-color:var(--line);font-size:8px}.mem-quads,.mem-stats{margin-top:13px}.mem-quad,.mem-stat{padding:12px}.mem-quad .v,.mem-stat .v{font-size:25px}.mem-list{margin-top:10px}.mem-row{padding:11px 0}.mem-collapse{margin-top:8px}.mem-collapse summary{font-family:var(--font-display);font-size:21px;text-transform:none}.mem-big{margin-top:10px}.mem-ins{margin-top:10px}.mem-foot{display:none}
+  .mem-depth-heading{margin:28px 4px 11px;color:var(--blue);font:700 9px/1 var(--font-mono);letter-spacing:.17em;text-transform:uppercase}.mem-depth{margin:0;display:flex;flex-direction:column;gap:10px}.mem-depth .mem-timeline{margin:0;padding:0;gap:10px}.mem-timeline::before,.mem-node::before{display:none}.mem-node{border-color:var(--line);border-radius:16px;background:linear-gradient(135deg,rgba(8,24,17,.97),rgba(5,15,10,.97));padding:17px 16px}.mem-node--risk{border-color:#65352f}.mem-label{font-size:8px;color:var(--blue)}.mem-node--good .mem-label{color:var(--mint)}.mem-node--plan .mem-label{color:#e9c975}.mem-heading{margin:7px 0 4px;font-family:var(--font-display);font-size:25px;text-transform:none;letter-spacing:-.035em}.mem-desc{font-size:13px}.mem-chips{margin-top:11px}.mem-chip{border-color:var(--line);font-size:8px}.mem-quads,.mem-stats{margin-top:13px}.mem-quad,.mem-stat{padding:12px}.mem-quad .v,.mem-stat .v{font-size:25px}.mem-list{margin-top:10px}.mem-row{padding:11px 0}.mem-collapse{margin-top:8px}.mem-collapse summary{font-family:var(--font-display);font-size:21px;text-transform:none}.mem-big{margin-top:10px}.mem-ins{margin-top:10px}.mem-foot{display:none}
   .mem-nav{position:fixed;z-index:4;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:rgba(2,8,6,.96);backdrop-filter:blur(16px);padding:9px max(12px,env(safe-area-inset-left)) calc(9px + env(safe-area-inset-bottom));}.mem-nav a{display:grid;justify-items:center;gap:4px;color:#92a29a;font:700 7px/1 var(--font-mono);letter-spacing:.08em;text-transform:uppercase}.mem-nav .mem-nav-icon{font-size:17px;line-height:1;color:inherit}.mem-nav a[aria-current="page"]{color:var(--mint)}.mem-nav a[aria-current="page"]::after{content:"";width:17px;height:2px;border-radius:99px;background:var(--mint);margin-top:2px}
 
   /* Mapa corporal de evolución */
@@ -205,8 +205,6 @@
   @media (min-width:640px){
     .mem-shell{padding-top:28px}
     .mem-node{padding:22px 24px}
-    .mem-timeline{padding-left:38px}
-    .mem-node::before{left:-38px}
   }
   @media (max-width:640px){
     .mem-stats,.mem-ins{grid-template-columns:1fr}
@@ -565,8 +563,8 @@
         {% endif %}
         {% if modelo.serie_critica_global %}
         <div>
-          <div class="k"><b>N°03</b><span>Serie crítica</span></div>
-          <div class="v">S{{ modelo.serie_critica_global.serie }}</div>
+          <div class="k"><b>N°03</b><span>Serie donde más cae la técnica</span></div>
+          <div class="v">{% if modelo.serie_critica_global.serie == 1 %}Primera serie{% else %}Serie {{ modelo.serie_critica_global.serie }}{% endif %}</div>
           <div class="d">{{ modelo.serie_critica_global.descripcion }}</div>
         </div>
         {% endif %}
