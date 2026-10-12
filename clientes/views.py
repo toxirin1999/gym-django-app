@@ -2188,11 +2188,41 @@ def trayectoria_plan(request):
     from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan
 
     cliente = get_object_or_404(Cliente, user=request.user)
+    trayectoria = proyectar_trayectoria_plan(cliente)
     return render(request, 'clientes/trayectoria_plan.html', {
         'cliente': cliente,
-        'trayectoria': proyectar_trayectoria_plan(cliente),
+        'trayectoria': trayectoria,
+        'explicacion_bloque_plan': _explicacion_bloque_para_trayectoria(trayectoria),
         'resumen_decisiones_plan': _resumen_decisiones_para_trayectoria(cliente),
     })
+
+
+def _explicacion_bloque_para_trayectoria(trayectoria):
+    """Expone únicamente los datos reales que sitúan el bloque actual."""
+    bloque = trayectoria.get('bloque') or {}
+    fase = trayectoria.get('periodizacion') or {}
+    objetivo = bloque.get('objetivo')
+
+    if not objetivo or not fase:
+        return {
+            'disponible': False,
+            'resumen': None,
+            'detalles': None,
+        }
+
+    detalles = []
+    if fase.get('reps'):
+        detalles.append('Rango de reps: {}'.format(fase['reps']))
+    if fase.get('rpe_inicio') is not None and fase.get('rpe_fin') is not None:
+        detalles.append('RPE {}–{}'.format(
+            fase['rpe_inicio'], fase['rpe_fin'],
+        ))
+
+    return {
+        'disponible': True,
+        'resumen': objetivo,
+        'detalles': ' · '.join(detalles),
+    }
 
 
 def _resumen_decisiones_para_trayectoria(cliente):
