@@ -285,6 +285,17 @@ class RutinaSilenciosaPreviewTests(TestCase):
             0,
         )
 
+    def test_tabla_del_calendario_oculta_las_columnas_secundarias_en_movil(self):
+        """La tabla de ocho columnas no puede desbordar una pantalla de 390 px."""
+        from pathlib import Path
+
+        plantilla = Path(
+            "entrenos/templates/entrenos/vista_plan_calendario.html"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn('.exercise-row .exercise-number { display: none; }', plantilla)
+        self.assertIn('.exercise-tempo,\n        .exercise-rest { display: none; }', plantilla)
+
     def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
         """Una sesión materializada sin detalle no puede abrir un modal vacío.
 

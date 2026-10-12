@@ -2691,9 +2691,15 @@
 
         .exercise-table-header,
         .exercise-row {
-            grid-template-columns: 1.8fr 0.7fr 0.7fr 0.8fr 0.9fr;
+            grid-template-columns: minmax(0, 1.8fr) repeat(4, minmax(0, 0.8fr));
             padding: 0.75rem 0.6rem;
         }
+
+        .exercise-table-header .table-header-number,
+        .exercise-row .exercise-number { display: none; }
+
+        .exercise-tempo,
+        .exercise-rest { display: none; }
 
         .group-icon {
             width: 34px;
