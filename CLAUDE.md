@@ -89,6 +89,21 @@ El trigger es un acontecimiento dentro de una historia. No al revés.
 
 **Esta es la directriz más importante de toda la app.** Tiene dos dimensiones inseparables:
 
+### Rumbo vigente (12-oct-2026): un entrenador que actúa y explica
+
+Decisión de David: la app parece viva porque **actúa y explica**, no porque tenga un personaje que habla. Detalle completo en `docs/rumbo_entrenador_vivo.md`. Toda funcionalidad nueva se mide contra estas cuatro reglas:
+
+1. **Se da cuenta de cosas que no le has dicho.** "Llevas tres sesiones sin subir en sentadilla."
+2. **Cambia lo que hace por ellas.** "Hoy cambio la variante."
+3. **Te dice por qué en una frase y con el dato.** "Llevas un 60 % más de carga que tu media de cuatro semanas; hoy, versión reducida."
+4. **Vuelve después a comprobar si acertó.** "Hace dos semanas te bajé el volumen por fatiga. Tu RPE pasó de 8,6 a 7,4: funcionó."
+
+Consecuencias prácticas:
+- La voz va pegada a la decisión (Ahora, briefing, cierre del entreno), no en una pantalla aparte.
+- **Si no puede citar el dato, no lo dice.** Ningún texto (plantilla o IA) afirma algo que no salga de un dato registrado; la IA, si se usa, solo redacta una lista cerrada de hechos.
+- Iniciativa, pero poca: hablar por cuenta propia solo ante algo realmente nuevo, nunca un mensaje diario que no cambia nada.
+- Donde este rumbo choque con secciones antiguas de este archivo sobre JOI (habitación, apertura diaria, narrativa), **manda este rumbo**.
+
 ### 1. Entrenador que aprende (backend invisible)
 
 Antes de implementar cualquier feature, hacerse esta pregunta:

@@ -9671,7 +9671,19 @@ def briefing_entrenamiento(request, cliente_id):
         'pausa_pregunta': pausa_pregunta,
         'motivo_choices': motivo_choices,
         'estado_sistema': estado_sistema,
+        # Regla 3 del rumbo: por qué esta sesión es así, con el dato.
+        'porque_decision': _porque_briefing(autoridad_vigente),
     })
+
+
+def _porque_briefing(autoridad):
+    if not autoridad:
+        return None
+    try:
+        from entrenos.services.porque_decision_service import construir_porque
+        return construir_porque(autoridad)
+    except Exception:
+        return None
 
 
 @login_required

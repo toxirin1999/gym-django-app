@@ -328,6 +328,7 @@
   <div class="head-sub">
     {% if briefing.rpe_medio %}RPE medio 2 sem: {{ briefing.rpe_medio }}{% else %}Sin datos previos{% endif %}
   </div>
+  {% if porque_decision %}<p class="head-sub" data-porque-decision style="color:var(--td);margin-top:6px;">{{ porque_decision }}</p>{% endif %}
 
   {% if pausa_pregunta %}
   <!-- Phase Continuidad 1.3b — pregunta única del motivo de pausa (opcional) -->

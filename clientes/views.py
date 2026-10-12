@@ -2025,6 +2025,31 @@ def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None, aprendiz
     )
 
 
+def _aviso_decision_pendiente(cliente, fecha_ref=None):
+    """Cuenta solo propuestas o cierres que el Centro permite resolver."""
+    from entrenos.models import EvaluacionBloqueGym, EvaluacionSemanalGym
+    from entrenos.services.sugerencias_service import consultar_sugerencia_activa
+
+    hoy = fecha_ref or timezone.localdate()
+    cantidad = int(bool(consultar_sugerencia_activa(cliente, fecha_ref=hoy)))
+    try:
+        from entrenos.services.hipotesis_service import get_sugerencia_hipotesis_activa
+        cantidad += int(bool(get_sugerencia_hipotesis_activa(cliente)))
+    except Exception:
+        logger.exception('No se pudo leer una propuesta de hipótesis pendiente')
+    cantidad += EvaluacionSemanalGym.objects.filter(
+        contrato__cliente=cliente, contrato__semana__lte=hoy - timedelta(days=6),
+        estado_revision=EvaluacionSemanalGym.ESTADO_PENDIENTE,
+    ).count()
+    cantidad += EvaluacionBloqueGym.objects.filter(
+        bloque__cliente=cliente,
+        estado_revision=EvaluacionBloqueGym.REVISION_PENDIENTE,
+    ).count()
+    if not cantidad:
+        return None
+    return {'cantidad': cantidad, 'etiqueta': 'decisión pendiente' if cantidad == 1 else 'decisiones pendientes'}
+
+
 @login_required
 @require_GET
 def dashboard_silencioso_preview(request):
@@ -2158,6 +2183,16 @@ def dashboard_silencioso_preview(request):
                 accion_url = rutina_url
                 accion_label = 'Ver rutina'
 
+    porque_decision = None
+    if estado_operativo not in ('DESCANSAR', 'HECHO'):
+        try:
+            from entrenos.services.porque_decision_service import construir_porque
+            porque_decision = construir_porque(decision_gym)
+        except Exception:
+            logger.exception('dashboard_silencioso_preview: no se pudo construir el porqué')
+        if porque_decision and porque_decision.strip() == (texto_decision or '').strip():
+            porque_decision = None
+
     acwr_dudoso = bool((decision_gym.get('contexto_fisico') or {}).get('acwr_dudoso'))
     if acwr_dudoso:
         # El pico viene de una actividad que parece un error (duración o carga
@@ -2181,6 +2216,8 @@ def dashboard_silencioso_preview(request):
             'cta_label': accion_label,
             'cta_url': accion_url,
             'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
+            # Regla 3 del rumbo: por qué, en una frase y con el dato.
+            'porque': porque_decision,
         },
         'quiet_week': {
             'titulo': titulo_semana,
@@ -2191,6 +2228,7 @@ def dashboard_silencioso_preview(request):
             'carga_detalle': carga_detalle,
         },
         'quiet_insight': insight,
+        'quiet_decision_alert': _aviso_decision_pendiente(cliente, hoy),
         # La sesión pendiente es una identidad canónica aunque la portada
         # haya resuelto otra prioridad visual. Permitir aplazarla de nuevo
         # evita que una reubicación que vuelve a tocar hoy quede atrapada.
@@ -2228,6 +2266,7 @@ def trayectoria_plan(request):
         'trayectoria': trayectoria,
         'explicacion_bloque_plan': _explicacion_bloque_para_trayectoria(trayectoria),
         'resumen_decisiones_plan': _resumen_decisiones_para_trayectoria(cliente),
+        'progreso_temporal_plan': _progreso_temporal_para_trayectoria(trayectoria),
     })
 
 
@@ -2256,6 +2295,25 @@ def _explicacion_bloque_para_trayectoria(trayectoria):
         'disponible': True,
         'resumen': objetivo,
         'detalles': ' · '.join(detalles),
+    }
+
+
+def _progreso_temporal_para_trayectoria(trayectoria):
+    """Sitúa una fase fechada sin extrapolar un año inexistente."""
+    fase = trayectoria.get('periodizacion') or {}
+    inicio, fin, fecha = fase.get('inicio'), fase.get('fin'), trayectoria.get('fecha_corte')
+    if not inicio or not fin or not fecha or fin < inicio:
+        return {'disponible': False}
+    total_dias = (fin - inicio).days + 1
+    transcurridos = min(max((fecha - inicio).days + 1, 0), total_dias)
+    restantes_dias = max((fin - fecha).days, 0)
+    return {
+        'disponible': True,
+        'porcentaje': round((transcurridos / total_dias) * 100),
+        'semana_iso': fecha.isocalendar().week,
+        'semanas_restantes': (restantes_dias + 6) // 7,
+        'inicio': inicio,
+        'fin': fin,
     }
 
 
