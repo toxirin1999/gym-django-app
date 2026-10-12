@@ -85,6 +85,19 @@ class DashboardSilenciosoPreviewTests(TestCase):
             "Aún no hay una adaptación nueva que comunicar. El plan seguirá observando tus próximas sesiones.",
         )
 
+    def test_aprendizaje_no_presenta_la_sesion_prevista_como_conclusion(self):
+        """Una sesión calendarizada describe el plan, pero no es aprendizaje nuevo."""
+        from clientes.views import _resumen_aprendizaje_plan
+
+        self.assertEqual(
+            _resumen_aprendizaje_plan(
+                [],
+                "Hay margen para seguir el plan.",
+                "Esta es la sesión prevista para hoy.",
+            ),
+            "Aún no hay una adaptación nueva que comunicar. El plan seguirá observando tus próximas sesiones.",
+        )
+
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
     def test_normaliza_estados_del_organismo_a_decisiones_operativas(

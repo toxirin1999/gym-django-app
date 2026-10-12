@@ -1979,8 +1979,19 @@ def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None):
         return ' '.join(str(texto or '').casefold().split())
 
     decision_normalizada = _normalizar(decision_del_dia)
+    # Una etiqueta de calendario no expresa una adaptación: evita que la
+    # portada venda "hay una sesión hoy" como una conclusión del entrenador.
+    mensajes_solo_contexto = {
+        'esta es la sesión prevista para hoy.',
+        'esta es la sesion prevista para hoy.',
+    }
     for candidata in list(senales or []) + [fallback]:
-        if candidata and _normalizar(candidata) != decision_normalizada:
+        candidata_normalizada = _normalizar(candidata)
+        if (
+            candidata
+            and candidata_normalizada != decision_normalizada
+            and candidata_normalizada not in mensajes_solo_contexto
+        ):
             return str(candidata)
     return (
         'Aún no hay una adaptación nueva que comunicar. '
