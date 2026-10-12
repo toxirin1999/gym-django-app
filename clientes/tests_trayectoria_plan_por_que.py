@@ -9,7 +9,7 @@ from clientes.models import Cliente
 
 
 class TrayectoriaPlanPorQueTests(TestCase):
-    """La explicación vive junto al bloque y solo afirma datos disponibles."""
+    """La trayectoria prioriza acciones y no repite la ficha del bloque."""
 
     def setUp(self):
         self.user = User.objects.create_user('trayectoria_por_que', password='x')
@@ -43,25 +43,22 @@ class TrayectoriaPlanPorQueTests(TestCase):
         ):
             return self.client.get(reverse('clientes:trayectoria_plan'))
 
-    def test_explicacion_del_bloque_usa_solo_objetivo_y_parametros_reales(self):
+    def test_no_muestra_el_panel_generico_por_que_este_bloque(self):
         response = self._get(self._trayectoria())
 
         self.assertEqual(response.status_code, 200)
         explicacion = response.context['explicacion_bloque_plan']
         self.assertTrue(explicacion['disponible'])
-        self.assertIn('Construir fuerza útil', explicacion['resumen'])
-        self.assertIn('4-6', explicacion['detalles'])
-        self.assertIn('RPE 7–8', explicacion['detalles'])
-        self.assertContains(response, 'Por qué este bloque')
-        self.assertContains(response, explicacion['resumen'])
-        self.assertContains(response, explicacion['detalles'])
+        self.assertNotContains(response, 'Por qué este bloque')
+        self.assertNotContains(response, 'Lectura del bloque')
+        self.assertNotContains(response, 'RPE 7–8')
 
-    def test_sin_datos_del_bloque_muestra_un_limite_honesto_sin_enlace_duplicado(self):
+    def test_sin_datos_del_bloque_tampoco_muestra_un_panel_vacio(self):
         response = self._get(self._trayectoria(bloque=False, periodizacion=False))
 
         explicacion = response.context['explicacion_bloque_plan']
         self.assertFalse(explicacion['disponible'])
-        self.assertContains(response, 'Todavía no hay datos suficientes para explicar este bloque.')
+        self.assertNotContains(response, 'Todavía no hay datos suficientes para explicar este bloque.')
         self.assertNotContains(response, reverse('analytics:explicacion_plan_helms'))
 
     def test_situa_el_progreso_temporal_con_fechas_reales_del_plan(self):
