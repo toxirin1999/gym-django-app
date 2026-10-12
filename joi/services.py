@@ -56,6 +56,18 @@ Frases de referencia para calibrar el tono:
 """
 
 
+# Rumbo 12-oct-2026 (docs/rumbo_entrenador_vivo.md): la voz de JOI queda
+# congelada. El entrenador habla con frases con dato pegadas a cada decisión;
+# JOI no genera mensajes propios mientras JOI_VOZ_ACTIVA sea False. Nada se
+# borra: activar el ajuste devuelve el comportamiento anterior.
+# El diario (Vida) sigue usando sus funciones y su lectura semanal.
+TRIGGERS_PERMITIDOS_CON_VOZ_CONGELADA = frozenset({'resumen_semanal'})
+
+
+def voz_joi_activa() -> bool:
+    return bool(getattr(settings, 'JOI_VOZ_ACTIVA', False))
+
+
 def _cliente_anthropic():
     import anthropic
     return anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
@@ -1686,6 +1698,9 @@ def generar_mensaje_joi(cliente, trigger: str, datos_extra: dict | None = None) 
     Genera y persiste un MensajeJOI para el trigger dado.
     Devuelve el objeto creado o None si algo falla.
     """
+    if not voz_joi_activa() and trigger not in TRIGGERS_PERMITIDOS_CON_VOZ_CONGELADA:
+        return None
+
     if trigger in TRIGGERS_HYROX_CAMPANA:
         from hyrox.campaign_authority import objetivo_autorizado_campana
         if objetivo_autorizado_campana(cliente, accion='joi_hyrox') is None:
@@ -3939,6 +3954,8 @@ def generar_narrativa_bloque(cliente, fase_cliente) -> "MensajeJOI | None":
     2. Qué aprendió el sistema que no sabía antes
     3. Qué pregunta abre el siguiente bloque
     """
+    if not voz_joi_activa():
+        return None
     from joi.models import MensajeJOI, NarrativaActiva, JoiSintesisLog
     from entrenos.models import EntrenoRealizado, GymDecisionLog
     from datetime import timedelta

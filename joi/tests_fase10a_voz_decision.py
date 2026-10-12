@@ -1,13 +1,14 @@
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from clientes.models import Cliente
 from entrenos.models import GymDecisionLog
 from joi.models import EventoEntrenadorJOI, MensajeJOI
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class VozDecisionPlan10ATests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("joi-fase10a")

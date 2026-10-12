@@ -96,6 +96,9 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'Europe/Madrid'  # Alineado con TIME_ZONE — antes desalineado (America/Mexico_City)
 
+# Voz de JOI congelada (rumbo 12-oct-2026). Para reactivarla: JOI_VOZ_ACTIVA=True.
+JOI_VOZ_ACTIVA = os.environ.get('JOI_VOZ_ACTIVA', 'False') == 'True'
+
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {
     'cerrar-experimentos-hipotesis': {

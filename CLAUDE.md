@@ -103,6 +103,7 @@ Consecuencias prácticas:
 - **Si no puede citar el dato, no lo dice.** Ningún texto (plantilla o IA) afirma algo que no salga de un dato registrado; la IA, si se usa, solo redacta una lista cerrada de hechos.
 - Iniciativa, pero poca: hablar por cuenta propia solo ante algo realmente nuevo, nunca un mensaje diario que no cambia nada.
 - Donde este rumbo choque con secciones antiguas de este archivo sobre JOI (habitación, apertura diaria, narrativa), **manda este rumbo**.
+- **La voz propia de JOI está congelada** (`JOI_VOZ_ACTIVA=False` en `settings.py`): `generar_mensaje_joi` no genera nada salvo `resumen_semanal` (lo usa el diario), y la síntesis autónoma y la narrativa de bloque no corren. No se ha borrado nada; los tests de JOI usan `@override_settings(JOI_VOZ_ACTIVA=True)`. No reactivar ni añadir mensajes nuevos de JOI sin pasar por las cuatro reglas.
 
 ### 1. Entrenador que aprende (backend invisible)
 

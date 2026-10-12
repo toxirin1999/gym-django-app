@@ -2,7 +2,7 @@ from datetime import date
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from clientes.models import Cliente
 from entrenos.models import GymDecisionVersion
@@ -229,6 +229,7 @@ class PhysicalEvidenceContextTests(EvidenciaFisicaFixture):
         self.assertEqual(self.build(), {})
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class PhysicalEvidenceJoiIntegrationTests(EvidenciaFisicaFixture):
     def _generate_capture(self, trigger, ctx):
         captured = {}

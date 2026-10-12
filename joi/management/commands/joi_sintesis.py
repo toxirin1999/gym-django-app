@@ -42,6 +42,10 @@ class Command(BaseCommand):
                                  'Uso puntual de migración, no operación normal.')
 
     def handle(self, *args, **options):
+        from joi.services import voz_joi_activa
+        if not voz_joi_activa():
+            self.stdout.write('Voz de JOI congelada (JOI_VOZ_ACTIVA=False): no se genera nada.')
+            return
         from entrenos.models import ActividadRealizada
 
         ahora = datetime.datetime.now()

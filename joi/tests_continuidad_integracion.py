@@ -12,7 +12,7 @@ from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from clientes.models import Cliente
 from rutinas.models import Rutina
@@ -79,6 +79,7 @@ class IntegracionBloquePromptBase(TestCase):
         return captured.get('prompt', '')
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class IntegracionBloqueModoReducida(IntegracionBloquePromptBase):
 
     def test_modo_reducida_prompt_contiene_bajar_intensidad(self):
@@ -117,6 +118,7 @@ class IntegracionBloqueModoReducida(IntegracionBloquePromptBase):
                       "Expected 'misma dirección' in prompt for modo=reducida")
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class IntegracionBloqueModSilencio(IntegracionBloquePromptBase):
 
     def test_modo_silencio_prompt_permite_frase_minima_o_silencio(self):
@@ -140,6 +142,7 @@ class IntegracionBloqueModSilencio(IntegracionBloquePromptBase):
         )
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class IntegracionBloqueReferencias(IntegracionBloquePromptBase):
 
     def test_referencia_bloqueada_prompt_prohibe_mencionarla(self):

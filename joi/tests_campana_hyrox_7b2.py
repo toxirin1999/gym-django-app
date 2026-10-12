@@ -2,7 +2,7 @@ import datetime
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from entrenos.models import ContratoBloqueGym, EstrategiaSemanalGym
@@ -10,6 +10,7 @@ from hyrox.models import ContratoCampanaHyrox, HyroxObjective
 from joi.models import MensajeJOI
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class JoiCampanaHyrox7B2Tests(TestCase):
     def setUp(self):
         self.hoy = timezone.localdate()

@@ -255,6 +255,9 @@ def ciclo_sintesis_joi(self):
 
     Programar via Celery Beat cada 4 horas.
     """
+    from joi.services import voz_joi_activa
+    if not voz_joi_activa():
+        return {'congelada': True}
     from clientes.models import Cliente
     from joi.models import MensajeJOI, NarrativaActiva
     from joi.services import (generar_sintesis_joi, revisar_manual_david,

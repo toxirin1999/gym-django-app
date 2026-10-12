@@ -3,7 +3,7 @@ import uuid
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from core.services.epistemic_review_queue import fingerprint_manual
@@ -15,6 +15,7 @@ from joi.services_revision_memoria import (
 )
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class ParadojaBAuthorityTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('paradoja-b')

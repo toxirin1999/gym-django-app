@@ -17,7 +17,7 @@ Casos cubiertos:
 from unittest.mock import patch, MagicMock
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from joi.services import _bloque_marco_narrativo
 from joi.models import NarrativaActiva
@@ -165,6 +165,7 @@ class TestReglaDePresicion(TestCase):
         self.assertIn('narrativa viva', resultado)
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class TestOrdenPromptConMarco(TestCase):
     """Verifica que el marco aparece ANTES del builder en el prompt ensamblado."""
 

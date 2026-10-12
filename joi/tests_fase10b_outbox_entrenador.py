@@ -3,7 +3,7 @@ from datetime import timedelta
 
 from django.contrib.auth.models import User
 from django.db import IntegrityError, transaction
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from clientes.models import Cliente
@@ -11,6 +11,7 @@ from entrenos.models import GymDecisionLog
 from joi.models import MensajeJOI
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class OutboxEntrenador10BTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user("joi-fase10b")

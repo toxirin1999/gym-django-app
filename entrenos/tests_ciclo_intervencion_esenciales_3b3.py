@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.management import call_command
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from clientes.models import Cliente
@@ -204,6 +204,7 @@ class CommandTests(CicloBase):
         self.assertIn('mode=apply candidates=1 evaluated=1', out.getvalue())
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class JoiResultadoTests(CicloBase):
     def test_prompt_es_descriptivo_y_prohibe_causalidad(self):
         from joi.services import _prompt_resultado_intervencion

@@ -3,13 +3,14 @@ from unittest.mock import patch
 
 from django.contrib.auth.models import User
 from django.core.cache import cache
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from clientes.models import Cliente
 from joi.models import EventoEntrenadorJOI, MensajeJOI
 
 
+@override_settings(JOI_VOZ_ACTIVA=True)  # prueba la voz de JOI (congelada por defecto)
 class ReconciliacionApertura10DTests(TestCase):
     def setUp(self):
         cache.clear()
