@@ -2020,9 +2020,12 @@ def dashboard_silencioso_preview(request):
             request.user, decision_gym=decision_gym,
         )
     except Exception:
+        logger.exception('dashboard_silencioso_preview: fallo resolviendo la decisión de hoy')
+        # Sin lectura: nunca se presenta como descanso (ver estado_operativo_visible).
         estado_sistema = {
             'estado': 'SILENCIO',
-            'texto': 'Hoy no hace falta forzar una decisión.',
+            'motivo': 'sin_lectura',
+            'texto': 'El sistema reunirá más señales antes de pedir una acción.',
             'accion_label': None,
             'accion_url': None,
         }
@@ -2059,7 +2062,10 @@ def dashboard_silencioso_preview(request):
     # Organismo usa estados internos de coordinación. La portada, en cambio,
     # debe responder a una pregunta ejecutable: qué hacer hoy. Nunca exponemos
     # SILENCIO/OBSERVANDO/EN_MARGEN/PROTEGIENDO como si fueran decisiones.
-    estado_operativo = estado_operativo_visible(estado_sistema.get('estado'))
+    from core.organismo import estado_operativo_visible
+    estado_operativo = estado_operativo_visible(
+        estado_sistema.get('estado'), estado_sistema.get('motivo'),
+    )
 
     tiene_energia_y_sueno = (
         getattr(checkin, 'energia_subjetiva', None) is not None
@@ -2084,7 +2090,7 @@ def dashboard_silencioso_preview(request):
     # seguro como último recurso si transporta ejercicios reales.
     accion_url = estado_sistema.get('accion_url')
     accion_label = estado_sistema.get('accion_label')
-    if estado_operativo == 'DESCANSAR':
+    if estado_operativo in ('DESCANSAR', 'HECHO'):
         accion_url = movilidad_url
         accion_label = 'Movilidad y estiramientos'
     elif not accion_url:
@@ -5519,7 +5525,9 @@ def memoria_entrenador(request, cliente_id):
         from core.organismo import resolver_estado_sistema_hoy, estado_operativo_visible
         estado_sistema_hoy = resolver_estado_sistema_hoy(cliente.user)
         decision_hoy = {
-            'estado': estado_operativo_visible(estado_sistema_hoy.get('estado')),
+            'estado': estado_operativo_visible(
+                estado_sistema_hoy.get('estado'), estado_sistema_hoy.get('motivo'),
+            ),
             'texto': (
                 estado_sistema_hoy.get('texto')
                 or 'El sistema reunirá más señales antes de pedir una acción.'

@@ -112,6 +112,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         }
         resolver.return_value = {
             "estado": "SILENCIO",
+            "motivo": "descanso_planificado",
             "estado_label": "Silencio",
             "texto": "No hay nada que forzar ahora.",
             "accion_label": None,
@@ -145,6 +146,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         }
         resolver.return_value = {
             "estado": "SILENCIO",
+            "motivo": "descanso_planificado",
             "texto": "No hay nada que forzar ahora.",
             "accion_label": None,
             "accion_url": None,

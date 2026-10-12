@@ -31,20 +31,32 @@ from django.utils import timezone
 logger = logging.getLogger(__name__)
 
 
-def estado_operativo_visible(estado):
+# SILENCIO solo dice que no hay acción que pedir. Qué se muestra depende de
+# por qué: un descanso del plan, una sesión ya hecha, o falta de lectura (sin
+# datos o un fallo). Un fallo nunca debe presentarse como orden de descanso.
+_SILENCIO_VISIBLE = {
+    'descanso_planificado': 'DESCANSAR',
+    'sesion_completada': 'HECHO',
+}
+
+
+def estado_operativo_visible(estado, motivo=None):
     """Traduce coordinación interna a una decisión breve para una pantalla."""
+    estado = str(estado or '').upper()
+    if estado == 'SILENCIO':
+        return _SILENCIO_VISIBLE.get(motivo, 'AJUSTAR')
     estados = {
         'EN_MARGEN': 'ENTRENAR',
         'PROTEGIENDO': 'RECUPERAR',
         'OBSERVANDO': 'AJUSTAR',
-        'SILENCIO': 'DESCANSAR',
         # También admite una decisión ya presentada para degradar con gracia.
         'ENTRENAR': 'ENTRENAR',
         'DESCANSAR': 'DESCANSAR',
         'RECUPERAR': 'RECUPERAR',
         'AJUSTAR': 'AJUSTAR',
+        'HECHO': 'HECHO',
     }
-    return estados.get(str(estado or '').upper(), 'AJUSTAR')
+    return estados.get(estado, 'AJUSTAR')
 
 
 def resolver_estado_sistema_hoy(usuario, decision_gym=None):
@@ -94,13 +106,13 @@ def resolver_estado_sistema_hoy(usuario, decision_gym=None):
         if observando:
             return observando
 
-        # 4. SILENCIO — reposo
-        return _estado_silencio()
+        # 4. SILENCIO — reposo (con su porqué: descanso, sesión hecha o sin lectura)
+        return _estado_silencio(usuario, decision_gym)
 
     except Exception as e:
         logger.exception(f"resolver_estado_sistema_hoy: error para usuario {usuario.id}: {e}")
-        # Degradación: SILENCIO seguro
-        return _estado_silencio()
+        # Degradación: SILENCIO sin lectura. Nunca se presenta como descanso.
+        return _estado_silencio_sin_lectura()
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -455,16 +467,63 @@ def _check_observando(usuario):
 # 4. SILENCIO — Reposo (estado por defecto)
 # ────────────────────────────────────────────────────────────────────
 
-def _estado_silencio():
-    """Estado SILENCIO: no hay señales relevantes."""
+def _sesion_gym_hecha_hoy(usuario):
+    from django.db.models import Q
+    from entrenos.models import ActividadRealizada, EntrenoRealizado
+
+    hoy = timezone.localdate()
+    if EntrenoRealizado.objects.filter(cliente__user=usuario).filter(
+        Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+    ).exists():
+        return True
+    return ActividadRealizada.objects.filter(
+        cliente__user=usuario, tipo='gym',
+    ).filter(Q(fecha_realizado=hoy) | Q(fecha_realizado__isnull=True, fecha=hoy)).exists()
+
+
+def _estado_silencio_sin_lectura():
     return _estado_dict(
         'SILENCIO',
-        'sin_senales',
-        'No hay nada que forzar ahora.',
+        'sin_lectura',
+        'El sistema reunirá más señales antes de pedir una acción.',
         None,
         None,
         None
     )
+
+
+def _estado_silencio(usuario=None, decision_gym=None):
+    """Estado SILENCIO con su motivo: descanso del plan, sesión hecha o sin lectura."""
+    if usuario is None:
+        return _estado_silencio_sin_lectura()
+    try:
+        if _sesion_gym_hecha_hoy(usuario):
+            return _estado_dict(
+                'SILENCIO',
+                'sesion_completada',
+                'La sesión de hoy ya está hecha. Ahora toca recuperar.',
+                None,
+                None,
+                None
+            )
+        decision = decision_gym
+        if decision is None:
+            cliente = getattr(usuario, 'cliente_perfil', None)
+            if cliente is not None:
+                from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
+                decision = obtener_sesion_recomendada_hoy(cliente)
+        if decision and decision.get('estado') == 'descanso':
+            return _estado_dict(
+                'SILENCIO',
+                'descanso_planificado',
+                'Hoy el plan marca descanso.',
+                None,
+                None,
+                None
+            )
+    except Exception as e:
+        logger.exception(f"_estado_silencio: {e}")
+    return _estado_silencio_sin_lectura()
 
 
 # ────────────────────────────────────────────────────────────────────

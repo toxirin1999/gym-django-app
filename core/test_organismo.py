@@ -28,7 +28,8 @@ class TestEstadoOperativoVisible(TestCase):
         self.assertEqual(estado_operativo_visible('EN_MARGEN'), 'ENTRENAR')
         self.assertEqual(estado_operativo_visible('PROTEGIENDO'), 'RECUPERAR')
         self.assertEqual(estado_operativo_visible('OBSERVANDO'), 'AJUSTAR')
-        self.assertEqual(estado_operativo_visible('SILENCIO'), 'DESCANSAR')
+        self.assertEqual(estado_operativo_visible('SILENCIO', 'descanso_planificado'), 'DESCANSAR')
+        self.assertEqual(estado_operativo_visible('SILENCIO'), 'AJUSTAR')
         self.assertEqual(estado_operativo_visible('desconocido'), 'AJUSTAR')
 
 
@@ -51,8 +52,8 @@ class TestOrganismoResolver(TestCase):
             resultado = resolver_estado_sistema_hoy(self.user)
 
         self.assertEqual(resultado['estado'], 'SILENCIO')
-        self.assertEqual(resultado['motivo'], 'sin_senales')
-        self.assertIn('nada que forzar', resultado['texto'].lower())
+        self.assertEqual(resultado['motivo'], 'descanso_planificado')
+        self.assertIn('descanso', resultado['texto'].lower())
         self.assertIsNone(resultado['accion_label'])
 
     def test_resolver_retorna_estructura_valida(self):

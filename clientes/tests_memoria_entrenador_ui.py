@@ -28,6 +28,7 @@ class MemoriaEntrenadorUITests(TestCase):
         with patch('core.organismo.resolver_estado_sistema_hoy') as resolver:
             resolver.return_value = {
                 'estado': 'SILENCIO',
+                'motivo': 'descanso_planificado',
                 'texto': 'Hoy no hace falta forzar una decisión.',
             }
             response = self.client.get(self.url)
