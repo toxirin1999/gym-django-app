@@ -267,6 +267,24 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('.calendar-page-title {', plantilla)
         self.assertIn('overflow-wrap: anywhere;', plantilla)
 
+    def test_calendario_calcula_la_semana_inicial_sin_mostrar_una_falsa_semana_uno(self):
+        """La etiqueta inicial debe coincidir con el día actual del mes.
+
+        En octubre de 2026 el día 12 cae en la tercera fila del calendario
+        semanal. Renderizar «Semana 1» hasta que termine el JavaScript produce
+        una lectura contradictoria y un salto visual evitable.
+        """
+        from entrenos.views import _indice_semana_calendario
+
+        self.assertEqual(
+            _indice_semana_calendario(2026, 10, date(2026, 10, 12)),
+            2,
+        )
+        self.assertEqual(
+            _indice_semana_calendario(2026, 10, date(2026, 11, 1)),
+            0,
+        )
+
     def test_preview_de_sesion_sin_ejercicios_explica_el_siguiente_paso(self):
         """Una sesión materializada sin detalle no puede abrir un modal vacío.
 

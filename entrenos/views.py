@@ -5271,6 +5271,21 @@ def _parametros_fase_plan(fase, plan):
     }
 
 
+def _indice_semana_calendario(año, mes, referencia):
+    """Índice cero-basado de la semana visible que contiene la referencia.
+
+    El calendario se construye con lunes como primer día, igual que el
+    selector JavaScript. Si se navega a otro mes no se inventa una semana
+    actual: se abre desde la primera fila.
+    """
+    if referencia.year != año or referencia.month != mes:
+        return 0
+    for indice, semana in enumerate(calendar.monthcalendar(año, mes)):
+        if referencia.day in semana:
+            return indice
+    return 0
+
+
 def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
     """Contexto móvil de Rutina apoyado en el mismo plan Helms anual.
 
@@ -5950,6 +5965,9 @@ def vista_plan_anual(request, cliente_id):
                         "fecha_iso": fecha_actual.isoformat()
                     })
             semanas_calendario.append(dias_semana)
+        semana_inicial_calendario = _indice_semana_calendario(
+            año_actual, mes_actual, hoy,
+        )
 
         # --- PASO 7: Contexto LIGERO para la plantilla ---
         import json
@@ -5999,7 +6017,9 @@ def vista_plan_anual(request, cliente_id):
                     'Diciembre',
                 )[mes_actual - 1],
                 'año': año_actual,
-                'mes_num': mes_actual
+                'mes_num': mes_actual,
+                'semana_inicial': semana_inicial_calendario,
+                'semanas_total': len(semanas_calendario),
             },
             'nav': {
                 'anterior': {'año': mes_anterior.year, 'mes': mes_anterior.month},

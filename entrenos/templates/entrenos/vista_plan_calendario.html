@@ -4786,7 +4786,7 @@
 
 {% block content %}
 <div class="app-container" data-cliente-id="{{ cliente.id }}" data-año="{{ calendario.año }}"
-    data-mes="{{ calendario.mes_num }}">
+    data-mes="{{ calendario.mes_num }}" data-semana-inicial="{{ calendario.semana_inicial }}">
     {% if not validacion_fallida %}
 
     <!-- HEADER PRINCIPAL -->
@@ -4822,7 +4822,7 @@
         <button class="week-nav-btn" id="prevWeekBtn" title="Semana anterior" onclick="goToPrevWeek()">
             <i class="fas fa-chevron-left"></i>
         </button>
-        <span class="week-label" id="weekLabel">Semana 1 de 5</span>
+        <span class="week-label" id="weekLabel">Semana {{ calendario.semana_inicial|add:1 }} de {{ calendario.semanas_total }}</span>
         <button class="week-nav-btn" id="nextWeekBtn" title="Semana siguiente" onclick="goToNextWeek()">
             <i class="fas fa-chevron-right"></i>
         </button>
@@ -5159,6 +5159,7 @@
         const clienteId = appContainer.dataset.clienteId;
         const año = parseInt(appContainer.dataset.año) || new Date().getFullYear();
         const mes = parseInt(appContainer.dataset.mes) || (new Date().getMonth() + 1);
+        const semanaInicial = parseInt(appContainer.dataset.semanaInicial) || 0;
 
         let entrenamientosCache = {};
         let selectedDate = null;
@@ -5537,7 +5538,7 @@
 
             await loadMonthData();
 
-            currentWeekIndex = findCurrentWeekIndex();
+            currentWeekIndex = semanaInicial;
 
             renderWeekView();
 
