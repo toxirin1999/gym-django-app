@@ -304,13 +304,14 @@ def _get_ventana_recuperacion(cliente, hoy):
             return None
 
         dias_optimo = min(medias, key=medias.get)
+        etiqueta_dia = 'día' if dias_optimo == 1 else 'días'
 
         return {
             'dias_optimos': dias_optimo,
             'rpe_con_optimo': round(medias[dias_optimo], 1),
             'n_datos': sum(len(v) for v in intervalos_rpe.values()),
             'descripcion': (
-                f"Rindes mejor con {dias_optimo} días de descanso entre sesiones "
+                f"Rindes mejor con {dias_optimo} {etiqueta_dia} de descanso entre sesiones "
                 f"(RPE medio {round(medias[dias_optimo], 1)} vs días adyacentes). "
                 f"El plan respeta esta ventana cuando puede."
             ),

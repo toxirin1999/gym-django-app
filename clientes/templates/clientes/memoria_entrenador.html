@@ -500,7 +500,7 @@
         {% if modelo.ventana_recuperacion %}
         <div>
           <div class="k"><b>N°02</b><span>Recuperación</span></div>
-          <div class="v">{{ modelo.ventana_recuperacion.dias_optimos }}<small> días</small></div>
+          <div class="v">{{ modelo.ventana_recuperacion.dias_optimos }}<small> día{{ modelo.ventana_recuperacion.dias_optimos|pluralize }}</small></div>
           <div class="d">{{ modelo.ventana_recuperacion.descripcion }}</div>
         </div>
         {% endif %}
