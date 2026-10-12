@@ -271,6 +271,27 @@
     <a class="mem-empty-link" href="{% url 'entrenos:timeline_atleta' cliente.id %}">Ver historial cronológico <span aria-hidden="true">→</span></a>
   </section>
 
+  {# ── REGLA 4 · el entrenador comprueba si acertó ── #}
+  {% if decisiones_evaluadas %}
+  <section class="mem-node mem-node--plan" aria-labelledby="memoria-acierto-title">
+    <div class="mem-label">Lo que decidí y si funcionó · {{ decisiones_evaluadas.dias }} días</div>
+    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.total %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.total }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
+    {% if decisiones_evaluadas.total %}
+    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.no_funcionaron %} {{ decisiones_evaluadas.no_funcionaron }} no funcionaron{% endif %}{% if decisiones_evaluadas.sin_conclusion %}{% if decisiones_evaluadas.no_funcionaron %} y{% endif %} {{ decisiones_evaluadas.sin_conclusion }} siguen sin conclusión{% endif %}{% if decisiones_evaluadas.no_funcionaron or decisiones_evaluadas.sin_conclusion %}.{% endif %}</p>
+    <div class="mem-list">
+      {% for d in decisiones_evaluadas.items %}
+      <div class="mem-row" data-resultado="{{ d.resultado }}">
+        <div class="idx">{{ d.fecha|date:"d/m" }}</div>
+        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-size:12px;line-height:1.45">{{ d.texto }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="mem-desc">Cuando entrenes un ejercicio después de una decisión del plan, aquí verás si funcionó, con el dato de esa sesión.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
   {# ── MAPA CORPORAL · evolución por grupo muscular ── #}
   {% if evolucion_muscular %}
   {% include 'clientes/partials/_mapa_evolucion_muscular.html' %}

@@ -51,12 +51,13 @@ class AhoraDescansoTests(TestCase):
         from entrenos.models import GymDecisionLog
         GymDecisionLog.objects.create(
             cliente=self.cliente, ejercicio='press banca', accion='subir_peso',
-            valor_cambio=2.5, motivo='x', motivo_codigo='progresion_peso',
+            valor_cambio=2.5, peso_anterior=60, motivo='x', motivo_codigo='progresion_peso',
         )
         response = self._get('descanso_planificado')
-        self.assertEqual(
+        # valor_cambio es un % interno: se cita el peso objetivo, nunca "+2,5 kg".
+        self.assertRegex(
             response.context['quiet_insight'],
-            'Press banca: subir peso (+2,5 kg) · progresión de peso.',
+            r'^Press banca: subí el peso a [\d,]+ kg · progresión de peso\.$',
         )
 
 

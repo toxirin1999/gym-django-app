@@ -1969,6 +1969,15 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
+def _decisiones_evaluadas_memoria(cliente):
+    try:
+        from entrenos.services.aprendizaje_decisiones_service import decisiones_evaluadas
+        return decisiones_evaluadas(cliente)
+    except Exception:
+        logger.exception('memoria_entrenador: no se pudieron leer las decisiones evaluadas')
+        return None
+
+
 def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     """La última decisión de progresión del plan, como frase corta, o None."""
     from datetime import timedelta
@@ -1982,9 +1991,10 @@ def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     )
     if dec is None:
         return None
-    accion = dec.get_accion_display().lower()
-    if dec.accion == 'subir_peso' and dec.valor_cambio:
-        accion = f'{accion} (+{dec.valor_cambio:g} kg)'.replace('.', ',')
+    # valor_cambio de una subida es un porcentaje interno, no kg: se cita el
+    # peso objetivo real (regla "si no puede citar el dato, no lo dice").
+    from entrenos.services.aprendizaje_decisiones_service import describir_accion
+    accion = describir_accion(dec)
     causa = dec.get_motivo_codigo_display() if dec.motivo_codigo else ''
     ejercicio = (dec.ejercicio or '').strip()
     texto = f'{ejercicio[:1].upper()}{ejercicio[1:]}: {accion}'
@@ -5766,6 +5776,8 @@ def memoria_entrenador(request, cliente_id):
         'estaciones_progreso': estaciones_progreso,
         'decisiones_agrupadas': decisiones_agrupadas,
         'decisiones_total': decisiones_total,
+        # Regla 4 del rumbo: qué decidió el plan y si funcionó.
+        'decisiones_evaluadas': _decisiones_evaluadas_memoria(cliente),
         'decisiones_recientes': decisiones_recientes,
         'records': records,
         'sesiones_semana': sesiones_semana,
