@@ -5132,6 +5132,14 @@ def guardar_entrenamiento_activo(request, cliente_id):
         from entrenos.services.ciclo_intervencion_esenciales_service import programar_produccion_tras_finalizacion
         programar_produccion_tras_finalizacion(entreno)
 
+        # Iniciativa del entrenador: evaluar propuestas vencidas y, si una zona
+        # retrocede, proponer más volumen (solo se aplica si el usuario acepta).
+        try:
+            from entrenos.services.propuesta_zona_service import tras_guardar_sesion
+            tras_guardar_sesion(cliente, timezone.localdate())
+        except Exception:
+            logger.exception('guardar_entrenamiento_activo: fallo en la propuesta de zona')
+
         # AJAX detection: if X-Requested-With header is present, return JSON instead of redirect
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({

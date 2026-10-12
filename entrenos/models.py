@@ -2570,3 +2570,52 @@ class CicloDeload(models.Model):
 
     def __str__(self):
         return f"Deload {self.cliente_id} ({self.estado})"
+
+
+class PropuestaZonaGym(models.Model):
+    """Propuesta con iniciativa del entrenador para una zona que retrocede.
+
+    Regla 1-4 del rumbo (docs/rumbo_entrenador_vivo.md): el sistema detecta que
+    una zona pierde fuerza, propone un cambio acotado (+series en sus
+    ejercicios durante unas semanas), solo lo aplica si el usuario acepta y al
+    terminar comprueba si funcionó.
+    """
+    ESTADO_PENDIENTE = 'pendiente'
+    ESTADO_ACEPTADA = 'aceptada'
+    ESTADO_RECHAZADA = 'rechazada'
+    ESTADO_EVALUADA = 'evaluada'
+    ESTADOS = [
+        (ESTADO_PENDIENTE, 'Pendiente'),
+        (ESTADO_ACEPTADA, 'Aceptada'),
+        (ESTADO_RECHAZADA, 'Rechazada'),
+        (ESTADO_EVALUADA, 'Evaluada'),
+    ]
+    RESULTADOS = [('validada', 'Funcionó'), ('fallida', 'No funcionó'), ('neutra', 'Sin conclusión')]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='propuestas_zona_gym')
+    zona = models.CharField(max_length=40, db_index=True)
+    ejercicios = models.JSONField(default=list, help_text='Nombres de los ejercicios a los que se añade volumen.')
+    series_extra = models.PositiveSmallIntegerField(default=1)
+    semanas = models.PositiveSmallIntegerField(default=4)
+    deteccion = models.JSONField(default=dict, help_text='Datos que justificaron la propuesta (pct, ejemplos).')
+    texto = models.TextField()
+    estado = models.CharField(max_length=12, choices=ESTADOS, default=ESTADO_PENDIENTE, db_index=True)
+    inicio = models.DateField(null=True, blank=True)
+    fin = models.DateField(null=True, blank=True)
+    resultado = models.CharField(max_length=10, choices=RESULTADOS, null=True, blank=True)
+    notas_resultado = models.TextField(blank=True, default='')
+    creada_en = models.DateTimeField(auto_now_add=True)
+    respondida_en = models.DateTimeField(null=True, blank=True)
+    evaluada_en = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-creada_en', '-id']
+        indexes = [models.Index(fields=['cliente', 'estado'], name='propzona_cliente_estado_idx')]
+
+    @property
+    def nombre_zona(self):
+        from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA
+        return NOMBRES_ZONA.get(self.zona, self.zona.title())
+
+    def __str__(self):
+        return f'{self.cliente_id} · {self.zona} · {self.estado}'

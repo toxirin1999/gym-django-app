@@ -1969,6 +1969,15 @@ def mockup_demo(request):
     return render(request, 'clientes/mockup_demo.html', context)
 
 
+def _propuesta_zona_visible(cliente, hoy):
+    try:
+        from entrenos.services.propuesta_zona_service import propuesta_visible
+        return propuesta_visible(cliente, hoy)
+    except Exception:
+        logger.exception('dashboard_silencioso_preview: no se pudo leer la propuesta de zona')
+        return None
+
+
 def _decisiones_evaluadas_memoria(cliente):
     try:
         from entrenos.services.aprendizaje_decisiones_service import decisiones_evaluadas
@@ -2238,6 +2247,8 @@ def dashboard_silencioso_preview(request):
             'carga_detalle': carga_detalle,
         },
         'quiet_insight': insight,
+        # Iniciativa del entrenador: propuesta por responder o en curso.
+        'quiet_propuesta': _propuesta_zona_visible(cliente, hoy),
         'quiet_decision_alert': _aviso_decision_pendiente(cliente, hoy),
         # La sesión pendiente es una identidad canónica aunque la portada
         # haya resuelto otra prioridad visual. Permitir aplazarla de nuevo

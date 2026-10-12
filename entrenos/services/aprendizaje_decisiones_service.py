@@ -136,8 +136,22 @@ def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
         {'fecha': l.fecha_evaluacion, 'resultado': l.resultado, 'texto': frase_decision(l)}
         for l in relevantes[:limite]
     ]
+    # Las propuestas por iniciativa también se comprueban: van primero.
+    from entrenos.models import PropuestaZonaGym
+    from entrenos.services.propuesta_zona_service import frase_evaluacion
+    propuestas = list(PropuestaZonaGym.objects.filter(
+        cliente=cliente, estado=PropuestaZonaGym.ESTADO_EVALUADA,
+        evaluada_en__gte=ahora - timedelta(days=dias),
+    ).order_by('-evaluada_en'))
+    for p in propuestas:
+        if p.resultado in conteo:
+            conteo[p.resultado] += 1
+    items = [
+        {'fecha': p.evaluada_en, 'resultado': p.resultado, 'texto': frase_evaluacion(p)}
+        for p in propuestas
+    ] + items
     return {
-        'total': len(logs),
+        'total': len(logs) + len(propuestas),
         'con_conclusion': conteo['validada'] + conteo['fallida'],
         'funcionaron': conteo['validada'],
         'no_funcionaron': conteo['fallida'],

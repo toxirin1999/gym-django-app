@@ -522,6 +522,10 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=deload)
         _aplicar_overlay_molestia_reciente(cliente, ejercicios_mod, hoy, cambios)
 
+        # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
+        from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios
+        aplicar_a_ejercicios(cliente, ejercicios_mod, hoy, cambios, es_descarga=deload)
+
         if deload:
             from entrenos.services.deload_cycle_service import (
                 aplicar_overlay_gym, abrir_ciclo_deload, obtener_ciclo_activo,

@@ -7,6 +7,7 @@ from django.http import Http404
 from django.urls import path
 from . import views
 from . import views_liftin
+from . import views_propuesta_zona
 from .views import ejercicios_realizados_view
 from clientes import views as vistas_clientes
 from .views import evaluacion_profesional_view
@@ -169,4 +170,10 @@ urlpatterns = [
 
     # ── Apple Health / Shortcuts API ──────────────────────────────────────────
     path('api/apple-health/', views.api_apple_health, name='api_apple_health'),
+
+    # ── Propuestas del entrenador (iniciativa) ────────────────────────────────
+    path('propuesta-zona/<int:propuesta_id>/aceptar/', views_propuesta_zona.aceptar,
+         name='aceptar_propuesta_zona'),
+    path('propuesta-zona/<int:propuesta_id>/rechazar/', views_propuesta_zona.rechazar,
+         name='rechazar_propuesta_zona'),
 ]
