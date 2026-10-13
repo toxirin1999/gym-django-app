@@ -25,6 +25,24 @@ def _frase_acwr(acwr):
     return f'ACWR {_num(acwr)}: esta semana llevas la misma carga que tu media.'
 
 
+# Paso 4: decisiones de la periodización que cambian la semana y se explican.
+_ORIGENES_CON_PORQUE = {
+    'repeticion', 'descarga_programada', 'descarga_saltada', 'descarga_senal', 'descarga_obligatoria',
+}
+
+_DIAS_SEMANA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+
+
+def _frase_cola(cola):
+    """'El Día 2 era del martes: no se pierde, lo haces hoy.'"""
+    from datetime import date
+    try:
+        dia_semana = _DIAS_SEMANA[date.fromisoformat(cola['fecha_prevista']).weekday()]
+    except (TypeError, ValueError):
+        return None
+    return f"El {cola['dia']} era del {dia_semana}: no se pierde, lo haces hoy."
+
+
 def construir_porque(decision_gym):
     """Frase con el dato que justifica la decisión de Gym, o None si no hay dato."""
     decision_gym = decision_gym or {}
@@ -45,6 +63,14 @@ def construir_porque(decision_gym):
     if causa == 'lesion' and contexto.get('lesion_fase'):
         fase = str(contexto['lesion_fase']).replace('_', '-').lower()
         return f'Lesión en fase {fase} que afecta a ejercicios de hoy.'
+    cola = decision_gym.get('cola') or {}
+    if decision_gym.get('tipo') == 'pendiente' and cola.get('dia') and cola.get('fecha_prevista'):
+        return _frase_cola(cola)
+    if decision_gym.get('nota_semana'):
+        return decision_gym['nota_semana']
+    periodizacion = (decision_gym.get('entrenamiento') or {}).get('periodizacion') or {}
+    if periodizacion.get('origen') in _ORIGENES_CON_PORQUE and periodizacion.get('motivo'):
+        return periodizacion['motivo']
     if contexto.get('acwr_dudoso') and acwr:
         return (
             f'El ACWR marca {_num(acwr)}, pero una actividad reciente parece un error: '

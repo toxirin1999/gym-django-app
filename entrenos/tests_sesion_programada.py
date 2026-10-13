@@ -27,6 +27,7 @@ from clientes.models import Cliente
 from entrenos.models import EntrenoRealizado, SesionProgramada
 from entrenos.services.analisis_semanal_service import bloque_semanal_para_joi
 from entrenos.services.sesion_recomendada import (
+    MOTIVO_OMISION_SEMANA_CERRADA,
     calcular_bloque_esencial,
     cerrar_sesion_programada,
     inferir_prioridad_sesion,
@@ -457,8 +458,9 @@ class TestCase8_ReconciliacionSemanal(SesionProgramadaBase):
         self.semana_anterior.refresh_from_db()
         self.semana_actual.refresh_from_db()
 
-        # Both are alta — the previous-week alta survives (Phase 2B rule)
-        self.assertEqual(self.semana_anterior.estado, SesionProgramada.ESTADO_PENDIENTE)
+        # 13-oct-2026: la semana se cierra el domingo; nada se arrastra.
+        self.assertEqual(self.semana_anterior.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
+        self.assertEqual(self.semana_anterior.motivo_estado, MOTIVO_OMISION_SEMANA_CERRADA)
         self.assertEqual(self.semana_actual.estado, SesionProgramada.ESTADO_PENDIENTE)
 
     def test_semana_anterior_normal_omitida_si_hay_actual(self):
@@ -486,8 +488,8 @@ class TestCase8_ReconciliacionSemanal(SesionProgramadaBase):
         self.semana_anterior.refresh_from_db()
         antigua.refresh_from_db()
 
-        # Only the most recent old session survives
-        self.assertEqual(self.semana_anterior.estado, SesionProgramada.ESTADO_PENDIENTE)
+        # 13-oct-2026: semana cerrada, ninguna sobrevive.
+        self.assertEqual(self.semana_anterior.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
         self.assertEqual(antigua.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
 
     def test_sesion_normal_futura_no_se_omite_aunque_haya_sesion_actual(self):
@@ -740,7 +742,8 @@ class TestPhase2B_ReconciliacionConPrioridad(SesionProgramadaBase):
 
         sesion_alta_ant.refresh_from_db()
         sesion_actual.refresh_from_db()
-        self.assertEqual(sesion_alta_ant.estado, SesionProgramada.ESTADO_PENDIENTE)
+        # 13-oct-2026: tampoco una "alta" se arrastra a la semana siguiente.
+        self.assertEqual(sesion_alta_ant.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
         self.assertEqual(sesion_actual.estado, SesionProgramada.ESTADO_PENDIENTE)
 
     def test_solo_una_alta_anterior_se_conserva(self):
@@ -753,7 +756,7 @@ class TestPhase2B_ReconciliacionConPrioridad(SesionProgramadaBase):
         alta_vieja.refresh_from_db()
         alta_reciente.refresh_from_db()
         self.assertEqual(alta_vieja.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
-        self.assertEqual(alta_reciente.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(alta_reciente.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)  # 13-oct-2026
 
     def test_solo_normales_anteriores_conserva_mas_reciente(self):
         normal_vieja = self._make_sp(date(2026, 5, 8), SesionProgramada.PRIORIDAD_NORMAL)
@@ -764,7 +767,7 @@ class TestPhase2B_ReconciliacionConPrioridad(SesionProgramadaBase):
         normal_vieja.refresh_from_db()
         normal_reciente.refresh_from_db()
         self.assertEqual(normal_vieja.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)
-        self.assertEqual(normal_reciente.estado, SesionProgramada.ESTADO_PENDIENTE)
+        self.assertEqual(normal_reciente.estado, SesionProgramada.ESTADO_OMITIDA_SISTEMA)  # 13-oct-2026
 
     def test_motivo_estado_de_sesion_omitida(self):
         # Omitted sessions must have a non-empty motivo_estado.

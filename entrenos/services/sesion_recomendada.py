@@ -13,6 +13,9 @@ _SYNC_CACHE_TTL = 3600  # 1 hour — throttle the expensive planificador loop
 MOTIVO_OMISION_RECONCILIACION = (
     'Sesión omitida por reconciliación semanal para evitar acumulación de deuda.'
 )
+MOTIVO_OMISION_SEMANA_CERRADA = (
+    'Semana cerrada: lo que no se hizo no se arrastra a la semana siguiente.'
+)
 
 
 def _build_planificador(cliente):
@@ -235,19 +238,11 @@ def _marcar_completadas(cliente, fecha_hoy):
 
 def _reconciliar_pendientes_semana(cliente, fecha_hoy):
     """
-    Weekly reconciliation with priority-aware rules (Phase 2B):
-
-    If pendientes from current week AND previous weeks exist:
-        - Omit ALL normal-priority previous-week pendientes.
-        - Keep AT MOST 1 alta-priority previous-week pendiente (the most recent).
-          Omit the rest.
-
-    If ONLY previous-week pendientes exist:
-        - Keep the most recent alta (if any), omit the rest.
-        - If no altas, keep the most recent normal, omit the rest.
-
-    Rationale: structural sessions (alta) are worth carrying forward once;
-    accessory sessions (normal) are expendable when the week has closed.
+    Cierre semanal (13-oct-2026, sustituye a la regla de Phase 2B que
+    arrastraba una sesión "alta" a la semana siguiente): toda sesión pendiente
+    de una semana ya cerrada se marca omitida por el sistema con
+    MOTIVO_OMISION_SEMANA_CERRADA. La semana nueva empieza por su Día 1 y
+    `_nota_semana_cerrada` explica qué se quedó fuera.
     """
     semana_actual = fecha_hoy.isocalendar()[:2]
 
@@ -266,38 +261,20 @@ def _reconciliar_pendientes_semana(cliente, fecha_hoy):
 
     # Una semana distinta no es necesariamente anterior: puede ser futura.
     # La reconciliación solo puede generar deuda sobre semanas ya cerradas.
-    semana_actual_list = [sp for sp in pendientes if semana_efectiva(sp) == semana_actual]
     anteriores_list = [sp for sp in pendientes if semana_efectiva(sp) < semana_actual]
 
     if not anteriores_list:
         return
 
-    altas_ant = [sp for sp in anteriores_list if sp.prioridad == SesionProgramada.PRIORIDAD_ALTA]
-    normales_ant = [sp for sp in anteriores_list if sp.prioridad == SesionProgramada.PRIORIDAD_NORMAL]
-
-    to_omit = []
-
-    if semana_actual_list:
-        # Current week sessions exist: only keep 1 alta from previous weeks
-        to_omit.extend(normales_ant)
-        if len(altas_ant) > 1:
-            to_omit.extend(altas_ant[:-1])  # keep most recent alta, drop older ones
-    else:
-        # Only previous weeks: keep most recent alta (or most recent normal if no altas)
-        if altas_ant:
-            to_omit.extend(normales_ant)
-            if len(altas_ant) > 1:
-                to_omit.extend(altas_ant[:-1])
-        elif len(normales_ant) > 1:
-            to_omit.extend(normales_ant[:-1])
-
-    if to_omit:
-        SesionProgramada.objects.filter(
-            id__in=[sp.id for sp in to_omit]
-        ).update(
-            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
-            motivo_estado=MOTIVO_OMISION_RECONCILIACION,
-        )
+    # Paso 3 (13-oct-2026): la semana se cierra el domingo. Lo que no se hizo
+    # no se arrastra (arrastrarlo desplazaba la semana nueva entera y se
+    # perdían sesiones en cascada); se marca y el lunes se dice qué quedó fuera.
+    SesionProgramada.objects.filter(
+        id__in=[sp.id for sp in anteriores_list]
+    ).update(
+        estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+        motivo_estado=MOTIVO_OMISION_SEMANA_CERRADA,
+    )
 
 
 # ── Phase 4D — Bloque esencial analytics ─────────────────────────────────────
@@ -1344,6 +1321,237 @@ def _devolver_con_traza(cliente, decision, fecha):
     return decision
 
 
+# ── Paso 3 (13-oct-2026): la semana como cola de sesiones ────────────────────
+#
+# El plan de la semana es una lista ordenada (Día 1, Día 2, ...). El día que
+# entrenas toca la siguiente sesión de la semana que aún no has hecho, aunque su
+# fecha prevista ya haya pasado; lo que no hiciste entre semana pasa al fin de
+# semana. Antes, recuperar una sesión atrasada consumía el hueco del día y la
+# sesión de ese día desaparecía sin aviso (saltarse el martes hacía perder el
+# Día 3, no el Día 2). La semana se cierra el domingo: lo que quede sin hacer
+# no se arrastra a la siguiente, y el lunes se dice qué se quedó fuera.
+
+def _estados_resueltos():
+    return {
+        SesionProgramada.ESTADO_COMPLETADA, SesionProgramada.ESTADO_PARCIAL,
+        SesionProgramada.ESTADO_SALTADA_USUARIO, SesionProgramada.ESTADO_OMITIDA_USUARIO,
+        SesionProgramada.ESTADO_CANCELADA_LESION, SesionProgramada.ESTADO_SUSTITUIDA_RECUPERACION,
+    }
+
+
+def _grupos_de(entrenamiento):
+    return {
+        ej.get('grupo_muscular') for ej in (entrenamiento or {}).get('ejercicios') or []
+        if ej.get('grupo_muscular')
+    }
+
+
+def cola_semana(cliente, fecha_hoy, planificador=None):
+    """Sesiones de la semana de ``fecha_hoy`` hasta hoy, con su estado en la cola.
+
+    Devuelve una lista ordenada de dicts: fecha, nombre, entrenamiento, hecha
+    (bool), entreno (EntrenoRealizado que la cubrió o None) y resuelta_por
+    ('entreno' | estado de SesionProgramada | None).
+    """
+    from datetime import timedelta as _td
+
+    planificador = planificador or _build_planificador(cliente)
+    lunes = fecha_hoy - _td(days=fecha_hoy.weekday())
+    sesiones = []
+    f = lunes
+    while f <= fecha_hoy:
+        ent = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(f))
+        if not _es_descanso(ent):
+            sesiones.append({
+                'fecha': f,
+                'nombre': (ent.get('rutina_nombre') or '').strip(),
+                'entrenamiento': ent,
+                'hecha': False,
+                'entreno': None,
+                'resuelta_por': None,
+            })
+        f += _td(days=1)
+    if not sesiones:
+        return sesiones
+
+    # 1) Estados explícitos de SesionProgramada (completada, saltada a mano...).
+    resueltos = _estados_resueltos()
+    sp_por_fecha = {
+        sp.fecha_prevista: sp for sp in SesionProgramada.objects.filter(
+            cliente=cliente, fecha_prevista__gte=lunes, fecha_prevista__lte=fecha_hoy,
+        )
+    }
+    ids_entrenos_vinculados = set()
+    for s in sesiones:
+        sp = sp_por_fecha.get(s['fecha'])
+        if sp and sp.estado in resueltos:
+            s['hecha'] = True
+            s['resuelta_por'] = sp.estado
+            if sp.entreno_realizado_id:
+                ids_entrenos_vinculados.add(sp.entreno_realizado_id)
+
+    # 2) Entrenos de la semana: cada uno cubre UNA sesión con su mismo nombre,
+    #    la primera aún sin cubrir (así recuperar el Día 2 el miércoles no
+    #    borra el Día 3).
+    from django.db.models import Q
+    entrenos = (
+        EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False)
+        .filter(
+            Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=fecha_hoy)
+            | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=fecha_hoy)
+        )
+        .exclude(pk__in=ids_entrenos_vinculados)
+        .select_related('rutina').order_by('fecha_ejecucion', 'fecha', 'id')
+    )
+    for e in entrenos:
+        nombre = (e.rutina.nombre or '').strip().casefold()
+        for s in sesiones:
+            if not s['hecha'] and s['nombre'].casefold() == nombre:
+                s['hecha'] = True
+                s['entreno'] = e
+                s['resuelta_por'] = 'entreno'
+                break
+    return sesiones
+
+
+def _siguiente_de_cola(cliente, fecha_hoy):
+    """La sesión atrasada que toca hoy, o None.
+
+    Devuelve un dict con 'fecha', 'nombre', 'entrenamiento' (puede ser None) y
+    'sp' (SesionProgramada existente o None). None significa: no hay nada
+    atrasado, sigue el flujo de siempre (la sesión de hoy si hoy se entrena,
+    descanso si no). Si ya entrenaste hoy no se propone otra: una al día.
+
+    Fuentes, en orden de fecha prevista:
+    - la cola de la semana (sesiones del plan aún sin hacer), desde la fecha
+      de alta del cliente: nadie "debe" sesiones de antes de empezar;
+    - las SesionProgramada pendientes que ya tocan (incluidas las aplazadas a
+      hoy o antes), aunque su fecha no figure hoy en el plan.
+    """
+    from datetime import timedelta as _td
+    from django.db.models import Q
+
+    entreno_hoy = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion=fecha_hoy) | Q(fecha_ejecucion__isnull=True, fecha=fecha_hoy)
+    ).exists()
+    if entreno_hoy:
+        return None
+
+    alta = getattr(cliente, 'fecha_registro', None)
+    cola = cola_semana(cliente, fecha_hoy)
+    sp_pendientes = list(
+        SesionProgramada.objects.filter(
+            cliente=cliente, estado=SesionProgramada.ESTADO_PENDIENTE,
+            fecha_prevista__lte=fecha_hoy,
+        ).order_by('fecha_prevista', 'id')
+    )
+    sp_por_fecha = {sp.fecha_prevista: sp for sp in sp_pendientes}
+    aplazadas_futuro = {
+        sp.fecha_prevista for sp in sp_pendientes
+        if sp.pospuesta_hasta and sp.pospuesta_hasta > fecha_hoy
+    }
+
+    candidatas = []
+    fechas_cola = set()
+    for s in cola:
+        fechas_cola.add(s['fecha'])
+        if s['hecha'] or s['fecha'] in aplazadas_futuro:
+            continue
+        if alta and s['fecha'] < alta and s['fecha'] not in sp_por_fecha:
+            continue
+        candidatas.append({**s, 'sp': sp_por_fecha.get(s['fecha'])})
+    for sp in sp_pendientes:
+        if sp.fecha_prevista in fechas_cola or sp.fecha_prevista in aplazadas_futuro:
+            continue
+        candidatas.append({
+            'fecha': sp.fecha_prevista, 'nombre': sp.nombre_sesion,
+            'entrenamiento': None, 'sp': sp,
+        })
+    if not candidatas:
+        return None
+    candidatas.sort(key=lambda c: (c['fecha'], c['sp'].id if c['sp'] else 0))
+
+    # No repetir músculo dos días seguidos: si la primera comparte grupos con
+    # lo que hiciste ayer, se adelanta la siguiente que no los toque.
+    ayer = fecha_hoy - _td(days=1)
+    grupos_ayer = set()
+    for s in cola:
+        e = s.get('entreno')
+        if e and (e.fecha_ejecucion or e.fecha) == ayer:
+            grupos_ayer |= _grupos_de(s['entrenamiento'])
+    elegida = candidatas[0]
+    if grupos_ayer and _grupos_de(elegida['entrenamiento']) & grupos_ayer:
+        for c in candidatas[1:]:
+            if not (_grupos_de(c['entrenamiento']) & grupos_ayer):
+                elegida = c
+                break
+    if elegida['fecha'] == fecha_hoy and elegida['sp'] is None:
+        return None  # lo que toca es la sesión de hoy: flujo normal
+    return elegida
+
+
+def resumen_semana_cerrada(cliente, fecha_hoy):
+    """Sesiones de la semana anterior que se quedaron sin hacer (para decirlo)."""
+    from datetime import timedelta as _td
+    lunes = fecha_hoy - _td(days=fecha_hoy.weekday())
+    return list(
+        SesionProgramada.objects.filter(
+            cliente=cliente,
+            estado=SesionProgramada.ESTADO_OMITIDA_SISTEMA,
+            motivo_estado=MOTIVO_OMISION_SEMANA_CERRADA,
+            fecha_prevista__gte=lunes - _td(days=7),
+            fecha_prevista__lt=lunes,
+        ).order_by('fecha_prevista')
+    )
+
+
+def _nota_semana_cerrada(cliente, fecha_hoy):
+    """'La semana pasada se quedaron sin hacer el Día 3 y el Día 5.' o None.
+
+    Solo mientras no hayas entrenado aún esta semana: es la explicación del
+    arranque limpio, no un recordatorio diario.
+    """
+    from datetime import timedelta as _td
+    from django.db.models import Q
+    lunes = fecha_hoy - _td(days=fecha_hoy.weekday())
+    if EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=fecha_hoy)
+        | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=fecha_hoy)
+    ).exists():
+        return None
+    perdidas = resumen_semana_cerrada(cliente, fecha_hoy)
+    if not perdidas:
+        return None
+    nombres = []
+    for sp in perdidas:
+        nombres.append(_etiqueta_dia(sp.nombre_sesion) or sp.fecha_prevista.strftime('%d/%m'))
+    if len(nombres) == 1:
+        lista = f'el {nombres[0]}'
+    else:
+        lista = 'el ' + ', el '.join(nombres[:-1]) + f' y el {nombres[-1]}'
+    verbo = 'se quedó' if len(nombres) == 1 else 'se quedaron'
+    return f'La semana pasada {verbo} sin hacer {lista}. No lo arrastro: la semana empieza limpia.'
+
+
+def _etiqueta_dia(nombre_sesion):
+    """'Dia 2 - Hipertrofia' → 'Día 2' (o '' si no sigue ese formato)."""
+    corto = (nombre_sesion or '').split(' - ')[0].strip()
+    if corto.lower().startswith('dia '):
+        return 'Día ' + corto[4:].strip()
+    return corto
+
+
+def _anotar_semana_cerrada(cliente, decision, fecha_hoy):
+    try:
+        nota = _nota_semana_cerrada(cliente, fecha_hoy)
+    except Exception:
+        logger.exception('obtener_sesion_recomendada_hoy: nota de semana cerrada')
+        nota = None
+    if nota:
+        # Campo propio: _aplicar_contexto reescribe 'mensaje' según la causa.
+        decision['nota_semana'] = nota
+
+
 def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=None):
     """
     Returns the recommended session for today as a dict:
@@ -1362,18 +1570,32 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
     sincronizar_pendientes_recientes(cliente, fecha_hoy)
 
     # Live query — not cached. Respects pospuesta_hasta so "no puedo hoy" is instant.
-    from django.db.models import Q
-    pendiente = (
-        SesionProgramada.objects
-        .filter(
+    # Paso 3: la siguiente sesión de la cola de la semana (si hay una atrasada).
+    pendiente = None
+    try:
+        siguiente = _siguiente_de_cola(cliente, fecha_hoy)
+    except Exception:
+        logger.exception('obtener_sesion_recomendada_hoy: error calculando la cola semanal')
+        siguiente = None
+    if siguiente is not None and siguiente.get('sp') is not None:
+        pendiente = siguiente['sp']
+    elif siguiente is not None:
+        pendiente, _ = SesionProgramada.objects.get_or_create(
             cliente=cliente,
-            estado=SesionProgramada.ESTADO_PENDIENTE,
-            fecha_prevista__lte=fecha_hoy,
+            fecha_prevista=siguiente['fecha'],
+            defaults={
+                'estado': SesionProgramada.ESTADO_PENDIENTE,
+                'prioridad': inferir_prioridad_sesion(siguiente['entrenamiento']) or SesionProgramada.PRIORIDAD_ALTA,
+                'nombre_sesion': siguiente['nombre'],
+                'bloque_nombre': siguiente['entrenamiento'].get('bloque', '') or '',
+                'dia_numero': siguiente['entrenamiento'].get('dia'),
+                'motivo_estado': 'Sesión prevista no completada.',
+            },
         )
-        .filter(Q(pospuesta_hasta__isnull=True) | Q(pospuesta_hasta__lte=fecha_hoy))
-        .order_by('fecha_prevista', 'id')
-        .first()
-    )
+        if pendiente.estado != SesionProgramada.ESTADO_PENDIENTE:
+            pendiente.estado = SesionProgramada.ESTADO_PENDIENTE
+            pendiente.motivo_estado = 'Sesión prevista no completada.'
+            pendiente.save(update_fields=['estado', 'motivo_estado', 'actualizada_en'])
 
     if pendiente:
         try:
@@ -1431,10 +1653,17 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
             'sesion_programada': pendiente,
             'entrenamiento': entrenamiento,
             'mensaje': f'{contexto_tiempo} Sigue siendo la siguiente pieza útil del plan.',
+            'nota_semana': None,
+            # Datos planos para explicar la cola (regla 3: el porqué con el dato).
+            'cola': {
+                'dia': _etiqueta_dia(pendiente.nombre_sesion),
+                'fecha_prevista': pendiente.fecha_prevista.isoformat(),
+            },
             'causa_principal': None,
             'modo_reducido': False,
             'distribucion_aviso': None,
         }
+        _anotar_semana_cerrada(cliente, decision_base, fecha_hoy)
         contexto = _obtener_contexto_fisico(
             cliente,
             fecha_hoy,
@@ -1512,10 +1741,12 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
         'sesion_programada': None,
         'entrenamiento': entrenamiento_hoy,
         'mensaje': 'Esta es la sesión prevista para hoy.',
+        'nota_semana': None,
         'causa_principal': None,
         'modo_reducido': False,
         'distribucion_aviso': None,
     }
+    _anotar_semana_cerrada(cliente, decision_base, fecha_hoy)
     contexto = _obtener_contexto_fisico(
         cliente,
         fecha_hoy,
