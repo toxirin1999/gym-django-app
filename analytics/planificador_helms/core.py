@@ -246,7 +246,9 @@ class PlanificadorHelms:
             if not candidatos_grupo:
                 continue
             mrv_g = CalculadoraVolumen.calcular_volumen_maximo_adaptativo(grupo, nivel)
-            vol_efectivo = int(min(vol_base_grupo * vol_mult, mrv_g))
+            # Mismo redondeo que el reparto por toques (ceil): si no, el
+            # asignador decidía la frecuencia con 8 series y la sesión llevaba 9.
+            vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult, mrv_g))
             if vol_efectivo <= 0:
                 continue
             primer_ej = candidatos_grupo[0]
@@ -269,6 +271,7 @@ class PlanificadorHelms:
             resultado = asignar_semana(grupos_para_asignar, self.dias_disponibles)
             distribucion_volumen = resultado.asignacion
             frecuencia_map: dict | None = resultado.frecuencia_efectiva
+            volumen_efectivo_map: dict = resultado.volumen_efectivo or {}
         except AsignacionImposibleError as exc:
             logger.warning(
                 "Motor de asignación falló (perfil id=%s, dias=%d): %s — "
@@ -277,6 +280,7 @@ class PlanificadorHelms:
             )
             distribucion_volumen = DISTRIBUCION_DIAS.get(self.dias_disponibles, DISTRIBUCION_DIAS[4])
             frecuencia_map = None
+            volumen_efectivo_map = {}
 
         # X.14: construir variantes por toque para grupos con frecuencia≥2.
         # Solo se activa cuando el motor resolvió frecuencia_map con éxito.
@@ -340,7 +344,22 @@ class PlanificadorHelms:
                 # En descarga (vol_mult < 1.0), el resultado puede caer bajo MEV intencionalmente
                 # — no reintroducir el suelo de MEV: el objetivo de la descarga es disipar fatiga,
                 # no mantener el estímulo mínimo de adaptación.
-                vol_dia = math.ceil(min(vol_ajustado_bloque, mrv_grupo) / frecuencia) if frecuencia > 0 else 0
+                # 12-oct-2026: reparto exacto del volumen semanal entre toques
+                # (y luego entre ejercicios). Con ceil en cada toque y en cada
+                # ejercicio, un grupo a 3 toques inflaba su volumen por encima
+                # del MRV (pecho 20 → 24). Ahora la suma de la semana es el
+                # objetivo, repartido lo más parejo posible.
+                vol_semana_grupo = math.ceil(min(vol_ajustado_bloque, mrv_grupo))
+                if grupo in volumen_efectivo_map:
+                    # Grupo sin sitio para todas sus sesiones: se respeta el
+                    # límite por sesión y se pierde volumen, no se amontona.
+                    vol_semana_grupo = min(vol_semana_grupo, volumen_efectivo_map[grupo])
+                toque_previsto = toque_por_grupo.get(grupo, 0) + 1
+                if frecuencia > 0:
+                    base_toque, resto_toque = divmod(vol_semana_grupo, frecuencia)
+                    vol_dia = base_toque + (1 if toque_previsto <= resto_toque else 0)
+                else:
+                    vol_dia = 0
                 if vol_dia <= 0: continue
 
                 candidatos_todos = ejercicios_bloque.get(grupo, [])
@@ -353,7 +372,9 @@ class PlanificadorHelms:
                 variantes_grupo = plan_variantes.get(grupo, {})
                 candidatos = variantes_grupo.get(toque, candidatos_todos[:n_ejercicios_grupo])
 
-                for ej in candidatos[:n_ejercicios_grupo]:
+                n_ej_toque = len(candidatos[:n_ejercicios_grupo])
+                base_ej, resto_ej = divmod(vol_dia, n_ej_toque) if n_ej_toque else (0, 0)
+                for idx_ej, ej in enumerate(candidatos[:n_ejercicios_grupo]):
                     nombre = ej['nombre']
                     patron = ej['patron'] or patron_manager.obtener_patron_ejercicio(nombre)
                     tipo_ej = self._determinar_tipo_ejercicio_completo(grupo, nombre)
@@ -377,9 +398,9 @@ class PlanificadorHelms:
                     # aplica después de es_pesado para no cambiar el reparto de
                     # fatiga: un aislamiento a RPE 9 no es una serie "pesada".
                     tipo_progresion_ej = ej.get('tipo_progresion', 'peso_reps')
-                    rpe_objetivo_toque = rpe_por_tipo(rpe_objetivo_toque, tipo_ej, es_descarga_bloque)
+                    rpe_objetivo_toque = rpe_por_tipo(rpe_objetivo_toque, patron, nombre, es_descarga_bloque)
                     rango_salida = rango_por_tipo(tipo_progresion_ej, rep_range_ej, es_descarga_bloque)
-                    series_objetivo = max(2, min(tope_por_ejercicio, math.ceil(vol_dia / len(candidatos[:n_ejercicios_grupo]))))
+                    series_objetivo = max(2, min(tope_por_ejercicio, base_ej + (1 if idx_ej < resto_ej else 0)))
                     series_ajustadas = gestor_fatiga.ajustar_series_por_limite(
                         nombre, patron, tipo_ej, series_objetivo, es_pesado, grupo=grupo
                     )

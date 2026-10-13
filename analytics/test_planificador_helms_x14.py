@@ -74,6 +74,17 @@ def _nombres_por_grupo_y_dia(semana: dict) -> dict:
     return resultado
 
 
+def _dia_toque(semana: dict, grupo: str, toque: int):
+    """Día (clave) del toque ``toque`` del grupo, en orden cronológico, o None.
+
+    Desde el 12-oct-2026 el asignador elige los días de cada grupo por
+    patrones y el reparto ya no coincide con el de X.13: los tests localizan
+    el toque por orden, no por un día fijo.
+    """
+    dias = [d for d in sorted(semana) if any(ej['grupo_muscular'] == grupo for ej in semana[d])]
+    return dias[toque - 1] if len(dias) >= toque else None
+
+
 # ---------------------------------------------------------------------------
 # Datos de referencia de X.13 (toque 1 — invariante duro)
 # Copiados de TestCaracterizacionDavid.ESTRUCTURA_ESPERADA.
@@ -150,23 +161,29 @@ class TestX14InvarianteToque1(TestCase):
         _, self._planner = _build_planner(PERFIL_DAVID)
         self._semana = _semana_bloque0(self._planner)
 
+    def _comprobar_toque1(self, golden):
+        # Desde el 12-oct-2026 cambian los días y las series (reparto por
+        # patrones, tope de 8): el invariante es que el PRIMER toque de cada
+        # grupo usa los mismos ejercicios que en el golden master X.13.
+        nombres = _nombres_por_grupo_y_dia(self._semana)
+        esperados = {}
+        for nombre, grupo, _series in golden:
+            esperados.setdefault(grupo, []).append(nombre)
+        for grupo, lista in esperados.items():
+            with self.subTest(grupo=grupo):
+                dia = _dia_toque(self._semana, grupo, 1)
+                self.assertEqual(
+                    nombres.get(dia, {}).get(grupo, []), lista,
+                    f"{grupo}: el toque-1 cambió respecto al golden master X.13",
+                )
+
     def test_dia1_byte_identico_al_golden_master_x13(self):
-        """dia_1 es 100% toque-1 — ningún grupo con freq≥2 aparece por 2ª vez."""
-        estructura = _estructura_dia(self._semana)
-        self.assertEqual(
-            estructura['dia_1'],
-            DAVID_TOQUE1_DIA1,
-            "dia_1 cambió respecto al golden master X.13 — invariante toque-1 roto",
-        )
+        """Grupos del antiguo dia_1: su toque-1 conserva los ejercicios de X.13."""
+        self._comprobar_toque1(DAVID_TOQUE1_DIA1)
 
     def test_dia2_byte_identico_al_golden_master_x13(self):
-        """dia_2 es 100% toque-1 — primera aparición de biceps/espalda/hombros."""
-        estructura = _estructura_dia(self._semana)
-        self.assertEqual(
-            estructura['dia_2'],
-            DAVID_TOQUE1_DIA2,
-            "dia_2 cambió respecto al golden master X.13 — invariante toque-1 roto",
-        )
+        """Grupos del antiguo dia_2: su toque-1 conserva los ejercicios de X.13."""
+        self._comprobar_toque1(DAVID_TOQUE1_DIA2)
 
     def test_dia3_grupos_toque1_no_cambian(self):
         """En dia_3, core e isquios son toque-1 y no deben cambiar."""
@@ -174,14 +191,14 @@ class TestX14InvarianteToque1(TestCase):
         nombres = _nombres_por_grupo_y_dia(self._semana)
 
         # core toque-1: Crunch en Polea + Pallof Press
-        core_nombres = nombres.get('dia_3', {}).get('core', [])
+        core_nombres = nombres.get(_dia_toque(self._semana, 'core', 1), {}).get('core', [])
         self.assertIn('Crunch en Polea (Cable Crunch)', core_nombres,
                       "core toque-1 cambió — invariante roto")
         self.assertIn('Pallof Press', core_nombres,
                       "core toque-1 cambió — invariante roto")
 
         # isquios toque-1: Peso Muerto Rumano + Curl Femoral
-        isquios_nombres = nombres.get('dia_3', {}).get('isquios', [])
+        isquios_nombres = nombres.get(_dia_toque(self._semana, 'isquios', 1), {}).get('isquios', [])
         self.assertIn('Peso Muerto Rumano', isquios_nombres,
                       "isquios toque-1 cambió — invariante roto")
         self.assertIn('Curl Femoral Tumbado', isquios_nombres,
@@ -190,7 +207,7 @@ class TestX14InvarianteToque1(TestCase):
     def test_dia4_pecho_toque1_no_cambia(self):
         """En dia_4, pecho es toque-1 (freq=1) y no debe cambiar."""
         nombres = _nombres_por_grupo_y_dia(self._semana)
-        pecho_nombres = nombres.get('dia_4', {}).get('pecho', [])
+        pecho_nombres = nombres.get(_dia_toque(self._semana, 'pecho', 1), {}).get('pecho', [])
         self.assertIn('Convergent Machine Press', pecho_nombres,
                       "pecho toque-1 cambió — invariante roto")
         self.assertIn('Press Cerrado en Banca', pecho_nombres,
@@ -199,7 +216,7 @@ class TestX14InvarianteToque1(TestCase):
     def test_dia5_trapecios_toque1_no_cambia(self):
         """En dia_5, trapecios es toque-1 (freq=1) y no debe cambiar."""
         nombres = _nombres_por_grupo_y_dia(self._semana)
-        trapecios_nombres = nombres.get('dia_5', {}).get('trapecios', [])
+        trapecios_nombres = nombres.get(_dia_toque(self._semana, 'trapecios', 1), {}).get('trapecios', [])
         self.assertIn('Encogimientos con Barra', trapecios_nombres,
                       "trapecios toque-1 cambió — invariante roto")
         self.assertIn('Farmer Walk (Paseo del Granjero)', trapecios_nombres,
@@ -245,8 +262,8 @@ class TestX14VariacionToque2David(TestCase):
         bíceps aparece en dia_2 (toque 1) y dia_5 (toque 2).
         Toque 2 debe usar al menos un ejercicio distinto.
         """
-        t1 = self._toque1_nombres('biceps', 'dia_2')
-        t2 = self._toque2_nombres('biceps', 'dia_5')
+        t1 = self._toque1_nombres('biceps', _dia_toque(self._semana, 'biceps', 1))
+        t2 = self._toque2_nombres('biceps', _dia_toque(self._semana, 'biceps', 2))
         self.assertTrue(
             bool(t2 - t1),
             f"bíceps toque-2 {t2} no tiene ningún ejercicio nuevo respecto a toque-1 {t1}",
@@ -257,7 +274,7 @@ class TestX14VariacionToque2David(TestCase):
         bíceps es músculo pequeño: toque-1 usa '12-15' (post AJUSTE_PEQUENOS),
         toque-2 debe usar '15-20'.
         """
-        t2_ranges = self._rep_ranges.get('dia_5', {}).get('biceps', [])
+        t2_ranges = self._rep_ranges.get(_dia_toque(self._semana, 'biceps', 2), {}).get('biceps', [])
         self.assertTrue(
             all(r in ('15-20',) for r in t2_ranges),
             f"bíceps toque-2 debería tener rep_range '15-20', got {t2_ranges}",
@@ -265,8 +282,8 @@ class TestX14VariacionToque2David(TestCase):
 
     def test_espalda_toque2_ejercicio_diferente(self):
         """espalda: toque-1 en dia_2, toque-2 en dia_5."""
-        t1 = self._toque1_nombres('espalda', 'dia_2')
-        t2 = self._toque2_nombres('espalda', 'dia_5')
+        t1 = self._toque1_nombres('espalda', _dia_toque(self._semana, 'espalda', 1))
+        t2 = self._toque2_nombres('espalda', _dia_toque(self._semana, 'espalda', 2))
         self.assertTrue(
             bool(t2 - t1),
             f"espalda toque-2 {t2} no tiene ejercicio nuevo respecto a toque-1 {t1}",
@@ -274,8 +291,8 @@ class TestX14VariacionToque2David(TestCase):
 
     def test_hombros_toque2_ejercicio_diferente(self):
         """hombros: toque-1 en dia_2, toque-2 en dia_5."""
-        t1 = self._toque1_nombres('hombros', 'dia_2')
-        t2 = self._toque2_nombres('hombros', 'dia_5')
+        t1 = self._toque1_nombres('hombros', _dia_toque(self._semana, 'hombros', 1))
+        t2 = self._toque2_nombres('hombros', _dia_toque(self._semana, 'hombros', 2))
         self.assertTrue(
             bool(t2 - t1),
             f"hombros toque-2 {t2} no tiene ejercicio nuevo respecto a toque-1 {t1}",
@@ -286,8 +303,8 @@ class TestX14VariacionToque2David(TestCase):
         glúteos: toque-1 en dia_1 (Hip Thrust + Abducción), toque-2 en dia_3.
         Toque 2 prioriza 'variantes_compartidas' (búlgara) → debería diferir.
         """
-        t1 = self._toque1_nombres('gluteos', 'dia_1')
-        t2 = self._toque2_nombres('gluteos', 'dia_3')
+        t1 = self._toque1_nombres('gluteos', _dia_toque(self._semana, 'gluteos', 1))
+        t2 = self._toque2_nombres('gluteos', _dia_toque(self._semana, 'gluteos', 2))
         self.assertTrue(
             bool(t2 - t1),
             f"glúteos toque-2 {t2} no tiene ejercicio nuevo respecto a toque-1 {t1}",
@@ -298,7 +315,7 @@ class TestX14VariacionToque2David(TestCase):
         cuádriceps es grande: toque-1 usa '10-12', toque-2 debe usar '12-15'.
         dia_1=toque1, dia_4=toque2.
         """
-        t2_ranges = self._rep_ranges.get('dia_4', {}).get('cuadriceps', [])
+        t2_ranges = self._rep_ranges.get(_dia_toque(self._semana, 'cuadriceps', 2), {}).get('cuadriceps', [])
         self.assertTrue(
             all(r in ('12-15', '15-20') for r in t2_ranges),
             f"cuádriceps toque-2 debería tener rep_range '12-15' o '15-20', got {t2_ranges}",
@@ -306,7 +323,7 @@ class TestX14VariacionToque2David(TestCase):
 
     def test_triceps_toque2_rep_range_mayor(self):
         """tríceps pequeño: toque-1 '12-15', toque-2 '15-20'. dia_1=toque1, dia_4=toque2."""
-        t2_ranges = self._rep_ranges.get('dia_4', {}).get('triceps', [])
+        t2_ranges = self._rep_ranges.get(_dia_toque(self._semana, 'triceps', 2), {}).get('triceps', [])
         self.assertTrue(
             all(r in ('15-20',) for r in t2_ranges),
             f"tríceps toque-2 debería tener rep_range '15-20', got {t2_ranges}",
@@ -314,7 +331,7 @@ class TestX14VariacionToque2David(TestCase):
 
     def test_gemelos_toque2_rep_range_mayor(self):
         """gemelos pequeño: toque-1 '12-15', toque-2 '15-20'. dia_1=toque1, dia_4=toque2."""
-        t2_ranges = self._rep_ranges.get('dia_4', {}).get('gemelos', [])
+        t2_ranges = self._rep_ranges.get(_dia_toque(self._semana, 'gemelos', 2), {}).get('gemelos', [])
         self.assertTrue(
             all(r in ('15-20',) for r in t2_ranges),
             f"gemelos toque-2 debería tener rep_range '15-20', got {t2_ranges}",
@@ -338,7 +355,8 @@ class TestX14VariacionToque2David(TestCase):
                     out.setdefault(ej.get('tipo_ejercicio'), []).append(ej['rpe_objetivo'])
             return out
 
-        t1, t2 = _rpe_por_tipo('dia_2'), _rpe_por_tipo('dia_5')
+        t1 = _rpe_por_tipo(_dia_toque(semana, 'espalda', 1))
+        t2 = _rpe_por_tipo(_dia_toque(semana, 'espalda', 2))
         for tipo in set(t1) & set(t2):
             self.assertLessEqual(
                 max(t2[tipo]), max(t1[tipo]),
@@ -353,13 +371,13 @@ class TestX14VariacionToque2David(TestCase):
         nombres = self._nombres
         # antebrazos toque-1: dia_2
         self.assertIn('Aguante en Barra (Dead Hang)',
-                      nombres.get('dia_2', {}).get('antebrazos', []))
+                      nombres.get(_dia_toque(self._semana, 'antebrazos', 1), {}).get('antebrazos', []))
         # core toque-1: dia_3
         self.assertIn('Crunch en Polea (Cable Crunch)',
-                      nombres.get('dia_3', {}).get('core', []))
+                      nombres.get(_dia_toque(self._semana, 'core', 1), {}).get('core', []))
         # pecho toque-1: dia_4
         self.assertIn('Convergent Machine Press',
-                      nombres.get('dia_4', {}).get('pecho', []))
+                      nombres.get(_dia_toque(self._semana, 'pecho', 1), {}).get('pecho', []))
 
 
 # ---------------------------------------------------------------------------
@@ -383,8 +401,8 @@ class TestX14GluteosVarianteCompartida(TestCase):
         dia_3 = toque-2 de glúteos: debe diferir en al menos un ejercicio.
         """
         nombres = _nombres_por_grupo_y_dia(self._semana)
-        t1 = set(nombres.get('dia_1', {}).get('gluteos', []))
-        t2 = set(nombres.get('dia_3', {}).get('gluteos', []))
+        t1 = set(nombres.get(_dia_toque(self._semana, 'gluteos', 1), {}).get('gluteos', []))
+        t2 = set(nombres.get(_dia_toque(self._semana, 'gluteos', 2), {}).get('gluteos', []))
         self.assertNotEqual(
             t1, t2,
             f"glúteos toque-2 {sorted(t2)} es idéntico al toque-1 {sorted(t1)} — variación intra-semanal no activada",
@@ -397,8 +415,8 @@ class TestX14GluteosVarianteCompartida(TestCase):
         No forzamos el nombre exacto — verificamos que hay diferencia.
         """
         nombres = _nombres_por_grupo_y_dia(self._semana)
-        t1 = set(nombres.get('dia_1', {}).get('gluteos', []))
-        t2 = set(nombres.get('dia_3', {}).get('gluteos', []))
+        t1 = set(nombres.get(_dia_toque(self._semana, 'gluteos', 1), {}).get('gluteos', []))
+        t2 = set(nombres.get(_dia_toque(self._semana, 'gluteos', 2), {}).get('gluteos', []))
         nuevos = t2 - t1
         self.assertGreater(len(nuevos), 0,
                            f"glúteos toque-2 no tiene ningún ejercicio nuevo. t2={t2}, t1={t1}")
@@ -521,8 +539,8 @@ class TestX14Avanzado6dToque2(TestCase):
         """
         biceps toque-1 en dia_2, toque-2 en dia_6.
         """
-        t1 = set(self._nombres.get('dia_2', {}).get('biceps', []))
-        t2 = set(self._nombres.get('dia_6', {}).get('biceps', []))
+        t1 = set(self._nombres.get(_dia_toque(self._semana, 'biceps', 1), {}).get('biceps', []))
+        t2 = set(self._nombres.get(_dia_toque(self._semana, 'biceps', 2), {}).get('biceps', []))
         self.assertTrue(
             bool(t2) and t1 != t2,
             f"bíceps toque-2 {t2} es idéntico al toque-1 {t1} para Avanzado 6d",
@@ -532,8 +550,8 @@ class TestX14Avanzado6dToque2(TestCase):
         """
         trapecios toque-1 en dia_3, toque-2 en dia_5.
         """
-        t1 = set(self._nombres.get('dia_3', {}).get('trapecios', []))
-        t2 = set(self._nombres.get('dia_5', {}).get('trapecios', []))
+        t1 = set(self._nombres.get(_dia_toque(self._semana, 'trapecios', 1), {}).get('trapecios', []))
+        t2 = set(self._nombres.get(_dia_toque(self._semana, 'trapecios', 2), {}).get('trapecios', []))
         self.assertTrue(
             bool(t2) and t1 != t2,
             f"trapecios toque-2 {t2} es idéntico al toque-1 {t1} para Avanzado 6d",
@@ -546,11 +564,11 @@ class TestX14Avanzado6dToque2(TestCase):
         pero el rep_range debería ser distinto (más alto en toque-2).
         Verificamos que al menos uno de los dos difiere.
         """
-        t1_nombres = set(self._nombres.get('dia_3', {}).get('core', []))
-        t2_nombres = set(self._nombres.get('dia_6', {}).get('core', []))
+        t1_nombres = set(self._nombres.get(_dia_toque(self._semana, 'core', 1), {}).get('core', []))
+        t2_nombres = set(self._nombres.get(_dia_toque(self._semana, 'core', 2), {}).get('core', []))
 
-        rep_t1 = _rep_ranges_por_grupo_y_dia(self._semana).get('dia_3', {}).get('core', [])
-        rep_t2 = _rep_ranges_por_grupo_y_dia(self._semana).get('dia_6', {}).get('core', [])
+        rep_t1 = _rep_ranges_por_grupo_y_dia(self._semana).get(_dia_toque(self._semana, 'core', 1), {}).get('core', [])
+        rep_t2 = _rep_ranges_por_grupo_y_dia(self._semana).get(_dia_toque(self._semana, 'core', 2), {}).get('core', [])
 
         ejercicios_difieren = t1_nombres != t2_nombres
         reps_difieren = rep_t1 != rep_t2
@@ -566,10 +584,10 @@ class TestX14Avanzado6dToque2(TestCase):
         """
         nombres = self._nombres
         # cuadriceps en dia_5 (toque-1, freq=1)
-        cuad = nombres.get('dia_5', {}).get('cuadriceps', [])
+        cuad = nombres.get(_dia_toque(self._semana, 'cuadriceps', 1), {}).get('cuadriceps', [])
         self.assertIn('Sentadilla Hack', cuad,
                       "cuádriceps (freq=1) cambió en avanzado 6d — invariante roto")
         # isquios en dia_3 (toque-1, freq=1)
-        isq = nombres.get('dia_3', {}).get('isquios', [])
+        isq = nombres.get(_dia_toque(self._semana, 'isquios', 1), {}).get('isquios', [])
         self.assertIn('Peso Muerto Rumano', isq,
                       "isquios (freq=1) cambió en avanzado 6d — invariante roto")

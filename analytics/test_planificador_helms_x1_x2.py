@@ -84,10 +84,11 @@ class TestX1BicepsDosEjercicios(TestCase):
     def test_biceps_doce_series(self):
         """
         Con objetivo='general' anclado al MEV (2026-07-20, volumen moderado),
-        bíceps queda en freq=2, 12 series semanales para david.
+        bíceps queda en freq=2. Desde el 12-oct-2026 el volumen semanal se
+        reparte exacto (10 = 5 + 5) en vez de inflarse a 12 con redondeos.
         """
         total = sum(e['series'] for e in self.biceps_ejs)
-        self.assertEqual(total, 12, f"Total series bíceps: {total}, esperado: 12")
+        self.assertEqual(total, 10, f"Total series bíceps: {total}, esperado: 10")
 
     def test_biceps_ejercicios_distintos(self):
         """

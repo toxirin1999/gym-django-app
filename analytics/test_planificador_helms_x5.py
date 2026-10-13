@@ -40,6 +40,9 @@ from analytics.planificador_helms.models.perfil_cliente import PerfilCliente
 
 _CAP_GRANDE = LIMITES_SERIES_SESION['grupos_grandes']['max']    # 10
 _CAP_PEQUENO = LIMITES_SERIES_SESION['grupos_pequenos']['max']  # 8
+# Desde el 12-oct-2026 el reparto semanal usa un tope único de 8 series por
+# músculo y sesión (TOPE_SERIES_MUSCULO_SESION) para grandes y pequeños.
+_CAP_REPARTO = 8
 
 # Perfil real del desarrollador — el mismo que usan los tests de caracterización
 _DAVID = {
@@ -153,9 +156,11 @@ class TestCapSesionGrupo(TestCase):
     """cap_sesion_para_grupo diferencia correctamente grandes de pequeños."""
 
     def test_grupos_grandes_usan_cap_10(self):
+        # Nombre histórico: desde el 12-oct-2026 los grandes también usan 8
+        # para decidir el reparto (el 10 sigue como límite duro en GestorFatiga).
         for g in ['pecho', 'espalda', 'cuadriceps', 'isquios', 'gluteos']:
             with self.subTest(grupo=g):
-                self.assertEqual(cap_sesion_para_grupo(g), _CAP_GRANDE)
+                self.assertEqual(cap_sesion_para_grupo(g), _CAP_REPARTO)
 
     def test_grupos_pequenos_usan_cap_8(self):
         for g in ['biceps', 'triceps', 'hombros', 'gemelos', 'core', 'trapecios', 'antebrazos']:
@@ -163,19 +168,20 @@ class TestCapSesionGrupo(TestCase):
                 self.assertEqual(cap_sesion_para_grupo(g), _CAP_PEQUENO)
 
     def test_mismo_volumen_da_distinta_frecuencia_segun_grupo(self):
-        # volumen=9:
-        #   grande  (cap=10): ceil(9/10)=1
-        #   pequeño (cap=8):  ceil(9/8) =2
-        # El mismo volumen objetivo produce frecuencias distintas según el grupo.
-        self.assertEqual(calcular_frecuencia('pecho', 9, 5), 1)    # grande
-        self.assertEqual(calcular_frecuencia('biceps', 9, 5), 2)   # pequeño
+        # Desde el 12-oct-2026 el tope de reparto es 8 para todos: 9 series
+        # semanales se reparten en dos sesiones sea el grupo grande o pequeño.
+        self.assertEqual(calcular_frecuencia('pecho', 9, 5), 2)
+        self.assertEqual(calcular_frecuencia('biceps', 9, 5), 2)
+        self.assertEqual(calcular_frecuencia('pecho', 8, 5), 1)
 
     def test_diferenciacion_visible_en_resultado_final(self):
         # volumen=17:
         #   grande  (cap=10): ceil(17/10)=2 → 2
         #   pequeño (cap=8):  ceil(17/8) =3 → 3 (topado en cap duro = 3)
-        self.assertEqual(calcular_frecuencia('pecho', 17, 5), 2)
+        # Con tope 8 para todos: ceil(17/8)=3 en ambos.
+        self.assertEqual(calcular_frecuencia('pecho', 17, 5), 3)
         self.assertEqual(calcular_frecuencia('hombros', 17, 5), 3)
+        self.assertEqual(calcular_frecuencia('pecho', 16, 5), 2)
 
 
 # ---------------------------------------------------------------------------
@@ -214,7 +220,7 @@ class TestCaracterizacionDavid(TestCase):
         'biceps':      2,
         'triceps':     2,
         'cuadriceps':  2,
-        'isquios':     1,
+        'isquios':     2,   # 10 series / tope 8 (12-oct-2026)
         'gluteos':     2,
         'gemelos':     2,
         'core':        1,

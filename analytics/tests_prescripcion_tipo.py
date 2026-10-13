@@ -3,25 +3,40 @@
 from django.test import SimpleTestCase
 
 from analytics.planificador_helms.calculo.prescripcion_tipo import (
-    FARMER_KG_POR_MANO, carga_por_tipo, rango_por_tipo, rpe_por_tipo, unidad_por_tipo,
+    FARMER_KG_POR_MANO, carga_por_tipo, es_multiarticular, rango_por_tipo, rpe_por_tipo,
+    unidad_por_tipo,
 )
 
 
 class RpePorTipoTests(SimpleTestCase):
-    def test_compuesto_se_queda_entre_7_y_8(self):
-        self.assertEqual(rpe_por_tipo(9, 'compuesto_principal'), 8)
-        self.assertEqual(rpe_por_tipo(8, 'compuesto_secundario'), 8)
-        self.assertEqual(rpe_por_tipo(6, 'compuesto_principal'), 7)
+    def test_multiarticular_se_queda_entre_7_y_8(self):
+        self.assertEqual(rpe_por_tipo(9, 'rodilla', 'Sentadilla Hack'), 8)
+        self.assertEqual(rpe_por_tipo(8, 'empuje_horizontal', 'Convergent Machine Press'), 8)
+        self.assertEqual(rpe_por_tipo(6, 'traccion_vertical', 'Jalón al Pecho'), 7)
 
     def test_aislamiento_va_entre_8_y_9(self):
-        self.assertEqual(rpe_por_tipo(8, 'aislamiento'), 9)
-        self.assertEqual(rpe_por_tipo(7, 'aislamiento'), 8)
-        self.assertEqual(rpe_por_tipo(6, 'aislamiento'), 8)
-        self.assertEqual(rpe_por_tipo(9, 'aislamiento'), 9)
+        self.assertEqual(rpe_por_tipo(8, 'flexion_codo', 'Curl con Barra Z'), 9)
+        self.assertEqual(rpe_por_tipo(7, 'aislamiento', 'Abducción de Cadera en Máquina'), 8)
+        self.assertEqual(rpe_por_tipo(6, 'gemelos', 'Elevación de Gemelos de Pie'), 8)
+        self.assertEqual(rpe_por_tipo(9, 'extension_codo', 'Press Francés con Barra Z'), 9)
+
+    def test_categoria_principal_de_un_grupo_pequeno_no_es_multiarticular(self):
+        # En la base de datos "Curl con Barra Z" es el compuesto_principal de bíceps.
+        self.assertFalse(es_multiarticular('flexion_codo', 'Curl con Barra Z'))
+
+    def test_excepciones_por_nombre(self):
+        self.assertFalse(es_multiarticular('traccion_vertical', 'Jalon brazos rectos'))
+        self.assertFalse(es_multiarticular('rodilla', 'Sissy Squat'))
+        self.assertTrue(es_multiarticular('extension_codo', 'Press Cerrado en Banca'))
+        self.assertTrue(es_multiarticular('extension_codo', 'Fondos en Paralelas (con lastre)'))
+
+    def test_saltos_y_agarre_no_van_al_fallo(self):
+        self.assertEqual(rpe_por_tipo(8, 'pleometrico', 'Salto al Cajón (Box Jump)'), 8)
+        self.assertEqual(rpe_por_tipo(8, 'agarre', 'Farmer Walk (Paseo del Granjero)'), 8)
 
     def test_descarga_no_se_toca(self):
         self.assertEqual(rpe_por_tipo(6, 'aislamiento', es_descarga=True), 6)
-        self.assertEqual(rpe_por_tipo(6, 'compuesto_principal', es_descarga=True), 6)
+        self.assertEqual(rpe_por_tipo(6, 'rodilla', es_descarga=True), 6)
 
 
 class UnidadRealTests(SimpleTestCase):

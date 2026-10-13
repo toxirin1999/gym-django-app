@@ -14,7 +14,22 @@ Dos reglas, puras y sin acceso a BD:
    aquí se le da un rango y una carga coherentes con esa unidad.
 """
 
-COMPUESTOS = frozenset({'compuesto_principal', 'compuesto_secundario'})
+# Multiarticular o aislamiento se decide por el patrón de movimiento, no por
+# la categoría de la base de datos: allí "compuesto_principal" significa "el
+# ejercicio principal del grupo" y un Curl con Barra Z figura como tal.
+PATRONES_MULTIARTICULARES = frozenset({
+    'empuje_horizontal', 'empuje_vertical', 'traccion_horizontal',
+    'traccion_vertical', 'rodilla', 'bisagra',
+})
+# Patrones donde acercarse al fallo no aporta y sí riesgo (saltos, cargadas
+# de agarre): se tratan con el rango de los multiarticulares.
+PATRONES_SIN_FALLO = frozenset({'pleometrico', 'agarre'})
+# Excepciones por nombre dentro de esos patrones.
+_MONOARTICULARES_POR_NOMBRE = (
+    'face pull', 'brazos rectos', 'pull-over', 'pullover', 'sissy',
+    'extensiones de cuádriceps', 'extensión de cuádriceps', 'hiperextensiones',
+)
+_MULTIARTICULARES_POR_NOMBRE = ('press cerrado', 'fondos', 'dips')
 
 RPE_COMPUESTO = (7, 8)
 RPE_AISLAMIENTO = (8, 9)
@@ -36,11 +51,20 @@ def _acotar(valor, minimo, maximo):
     return max(minimo, min(maximo, valor))
 
 
-def rpe_por_tipo(rpe_objetivo, tipo_ejercicio, es_descarga=False):
-    """RPE objetivo según sea multiarticular o aislamiento."""
+def es_multiarticular(patron, nombre=''):
+    nombre = ' '.join(str(nombre or '').casefold().split())
+    if any(k in nombre for k in _MULTIARTICULARES_POR_NOMBRE):
+        return True
+    if patron in PATRONES_MULTIARTICULARES:
+        return not any(k in nombre for k in _MONOARTICULARES_POR_NOMBRE)
+    return False
+
+
+def rpe_por_tipo(rpe_objetivo, patron, nombre='', es_descarga=False):
+    """RPE objetivo según sea multiarticular (7–8) o aislamiento (8–9)."""
     if es_descarga or rpe_objetivo is None:
         return rpe_objetivo
-    if tipo_ejercicio in COMPUESTOS:
+    if es_multiarticular(patron, nombre) or patron in PATRONES_SIN_FALLO:
         return _acotar(rpe_objetivo, *RPE_COMPUESTO)
     return _acotar(rpe_objetivo + 1, *RPE_AISLAMIENTO)
 

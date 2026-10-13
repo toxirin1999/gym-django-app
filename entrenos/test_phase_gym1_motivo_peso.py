@@ -65,7 +65,8 @@ class TestMotivoPeso(TestCase):
 
                 # Validar que tipo es uno de los válidos
                 valid_tipos = ['sube', 'mantiene', 'frenado', 'sin_datos',
-                               'recalculado_fase', 'recalculado_descarga']
+                               'recalculado_fase', 'recalculado_descarga',
+                       'carga_por_tipo']  # 12-oct-2026: tiempo, distancia o reps
                 self.assertIn(ej['motivo_peso']['tipo'], valid_tipos,
                     f"tipo '{ej['motivo_peso']['tipo']}' no es válido")
 
@@ -111,7 +112,8 @@ class TestMotivoPeso(TestCase):
         entrenamiento = planificador.generar_entrenamiento_para_fecha(date.today())
 
         valid_tipos = ['sube', 'mantiene', 'frenado', 'sin_datos',
-                       'recalculado_fase', 'recalculado_descarga']
+                       'recalculado_fase', 'recalculado_descarga',
+                       'carga_por_tipo']  # 12-oct-2026: tiempo, distancia o reps
 
         if entrenamiento and entrenamiento.get('ejercicios'):
             for ej in entrenamiento['ejercicios']:
@@ -143,7 +145,8 @@ class TestMotivoPeso(TestCase):
                     'Sin historial' in texto or
                     'Peso determinado' in texto or
                     'Recalculado' in texto or
-                    'Descarga' in texto,
+                    'Descarga' in texto or
+                    'Carga según el tipo' in texto,
                     f"texto inesperado: {texto}"
                 )
 

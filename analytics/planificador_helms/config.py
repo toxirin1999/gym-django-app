@@ -192,6 +192,16 @@ LIMITES_SERIES_SESION = {
 GRUPOS_GRANDES = {'pecho', 'espalda', 'cuadriceps', 'isquios', 'gluteos'}
 
 # ============================================================
+# TOPE DE SERIES DE UN MÚSCULO EN UNA MISMA SESIÓN (reparto semanal)
+# ============================================================
+# Decisión del 12-oct-2026: pasadas ~8 series duras de un músculo en la misma
+# sesión, cada serie extra rinde cada vez menos. El asignador reparte el
+# volumen semanal de cada grupo en tantas sesiones como haga falta para no
+# superar este tope (frecuencia = ceil(volumen / tope), máximo 3).
+# GestorFatiga mantiene LIMITES_SERIES_SESION como red de seguridad dura.
+TOPE_SERIES_MUSCULO_SESION = 8
+
+# ============================================================
 # CAPACIDAD DE SERIES POR SESIÓN (presupuesto del asignador)
 # ============================================================
 # Máximo de series de trabajo que una sesión puede acumular sumando

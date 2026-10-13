@@ -278,7 +278,16 @@ class TestCoherenciaMotivoPeso(TestCase):
         if not entrenamiento or not entrenamiento.get('ejercicios'):
             self.skipTest("No hay ejercicios")
 
-        ej = entrenamiento['ejercicios'][0]
+        # Solo ejercicios con carga en kg: desde el 12-oct-2026 los de tiempo,
+        # distancia o reps llevan motivo 'carga_por_tipo' (y según el día de la
+        # semana el primero puede ser un Dead Hang).
+        con_kg = [
+            e for e in entrenamiento['ejercicios']
+            if e.get('tipo_progresion', 'peso_reps') in ('peso_reps', 'peso_corporal_lastre')
+        ]
+        if not con_kg:
+            self.skipTest("No hay ejercicios con carga en kg")
+        ej = con_kg[0]
         motivo_original = ej['motivo_peso']['tipo']
         peso_original = ej['peso_kg']
 

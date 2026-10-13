@@ -60,12 +60,19 @@ class TestIsquiosNoAhogadoPorPresupuestoBisagra(TestCase):
         ]
 
     def test_isquios_tiene_dos_ejercicios(self):
-        nombres_unicos = {e['nombre'] for e in self._isquios_ejs}
-        self.assertEqual(
-            len(nombres_unicos), 2,
-            f"Isquios tiene {len(nombres_unicos)} ejercicio(s) único(s): {nombres_unicos}. "
-            f"Se esperaban 2 (Peso Muerto Rumano + Curl Femoral)."
-        )
+        # Desde el 12-oct-2026 isquios se entrena dos veces por semana (tope de
+        # 8 series por sesión): cada sesión debe tener sus dos ejercicios y la
+        # primera, el par principal (Peso Muerto Rumano + Curl Femoral).
+        por_dia = {}
+        for dia, ejs in self._semana.items():
+            nombres = [e['nombre'] for e in ejs if e['grupo_muscular'] == 'isquios']
+            if nombres:
+                por_dia[dia] = nombres
+        for dia, nombres in por_dia.items():
+            self.assertEqual(len(set(nombres)), 2, f"Isquios en {dia}: {nombres}")
+        primer_dia = sorted(por_dia)[0]
+        self.assertIn('Peso Muerto Rumano', por_dia[primer_dia])
+        self.assertTrue(any('Curl Femoral' in n for n in por_dia[primer_dia]))
 
     def test_isquios_no_capado_a_la_mitad(self):
         """

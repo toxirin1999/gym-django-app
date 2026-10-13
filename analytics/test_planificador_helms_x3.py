@@ -419,19 +419,21 @@ class TestX3ObjetivoGeneralNoRegresion(TestCase):
                 g = ej['grupo_muscular']
                 grupos_series[g] = grupos_series.get(g, 0) + ej['series']
 
+        # 12-oct-2026: reparto exacto del volumen semanal (sin inflar con
+        # ceil por toque y por ejercicio) y tope de 8 series por sesión.
         esperado = {
             'pecho':      14,
-            'espalda':    16,
-            'cuadriceps': 16,
+            'espalda':    15,
+            'cuadriceps': 15,
             'gluteos':    12,
-            'isquios':    12,
+            'isquios':    11,
             'hombros':    12,
-            'biceps':     12,
-            'triceps':    12,
-            'gemelos':    12,
+            'biceps':     10,
+            'triceps':    10,
+            'gemelos':    10,
             'core':        8,
-            'trapecios':   8,
-            'antebrazos':  6,
+            'trapecios':   7,
+            'antebrazos':  5,
         }
         for grupo, total_esperado in esperado.items():
             self.assertEqual(

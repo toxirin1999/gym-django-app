@@ -15,6 +15,7 @@ Grupos de tests:
   TestExcepcionSinCabida    — dias=1 + varios grupos grandes → excepción clara
 """
 
+import math
 from django.test import TestCase
 
 from analytics.planificador_helms.distribucion.asignador import (
@@ -277,8 +278,13 @@ class TestReglaMEV(TestCase):
     def test_budget_no_excedido_en_escenario_saturado(self):
         grupos = self._construir_grupos_saturacion()
         resultado = asignar_semana(grupos, 3)
+        # Desde el 12-oct-2026 el presupuesto se mide con las series reales de
+        # cada sesión (volumen que cabe / sesiones), no con un techo fijo.
         for dia_key, grupos_lista in resultado.asignacion.items():
-            total = sum(cap_sesion_para_grupo(g) for g in grupos_lista)
+            total = 0
+            for g in grupos_lista:
+                vol = resultado.volumen_efectivo.get(g, grupos[g].volumen_objetivo)
+                total += math.ceil(vol / resultado.frecuencia_efectiva[g])
             self.assertLessEqual(
                 total, CAPACIDAD_SERIES_DIA,
                 msg=f'{dia_key} excede budget en escenario saturado',
@@ -450,23 +456,15 @@ class TestFusionSesionesCortas(TestCase):
         }
         resultado = asignar_semana(grupos, 3)
 
-        grupos_por_dia = {}
-        for dia_key, glist in resultado.asignacion.items():
-            for g in glist:
-                grupos_por_dia[g] = dia_key
-
-        dia_antebrazos = grupos_por_dia.get('antebrazos')
-        dia_cuadriceps = grupos_por_dia.get('cuadriceps')
-        dia_pecho = grupos_por_dia.get('pecho')
-
-        # Con fusión, antebrazos debe compartir día con cuadriceps o pecho
-        self.assertIn(
-            dia_antebrazos, [dia_cuadriceps, dia_pecho],
-            msg=(
-                f'antebrazos ({dia_antebrazos}) no se fusionó con cuadriceps ({dia_cuadriceps}) '
-                f'ni pecho ({dia_pecho}). '
-                f'Asignación completa: {resultado.asignacion}'
-            ),
+        # Desde el 12-oct-2026 cuádriceps y pecho (10 series, tope 8) van en
+        # dos sesiones: lo que importa es que antebrazos no quede solo en un día.
+        dia_antebrazos = next(
+            d for d, glist in resultado.asignacion.items() if 'antebrazos' in glist
+        )
+        companeros = set(resultado.asignacion[dia_antebrazos]) - {'antebrazos'}
+        self.assertTrue(
+            companeros & {'cuadriceps', 'pecho'},
+            msg=f'antebrazos quedó solo en {dia_antebrazos}. Asignación: {resultado.asignacion}',
         )
 
     def test_todos_los_grupos_asignados_tras_fusion(self):

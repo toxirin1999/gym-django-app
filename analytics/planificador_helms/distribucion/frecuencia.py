@@ -1,6 +1,8 @@
 import math
 
-from analytics.planificador_helms.config import GRUPOS_GRANDES, LIMITES_SERIES_SESION
+from analytics.planificador_helms.config import (
+    GRUPOS_GRANDES, LIMITES_SERIES_SESION, TOPE_SERIES_MUSCULO_SESION,
+)
 
 
 def cap_sesion_para_grupo(grupo: str) -> int:
@@ -9,9 +11,13 @@ def cap_sesion_para_grupo(grupo: str) -> int:
 
     Encapsula la distinción grupos_grandes/grupos_pequenos para que el código
     que llama a frecuencia_desde_volumen no tenga que repetir esa lógica.
+
+    Desde el 12-oct-2026 además se acota por TOPE_SERIES_MUSCULO_SESION (8):
+    un grupo grande con 10–12 series semanales se reparte en dos sesiones en
+    vez de concentrarlas en un solo día.
     """
     clave = 'grupos_grandes' if grupo in GRUPOS_GRANDES else 'grupos_pequenos'
-    return LIMITES_SERIES_SESION[clave]['max']
+    return min(LIMITES_SERIES_SESION[clave]['max'], TOPE_SERIES_MUSCULO_SESION)
 
 
 def frecuencia_desde_volumen(volumen_objetivo: int, cap_por_sesion: int, dias_disponibles: int) -> int:

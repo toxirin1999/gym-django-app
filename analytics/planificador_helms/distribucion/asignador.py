@@ -30,12 +30,14 @@ Bucle de convergencia (coste real vs coste presupuestado):
 """
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Set, Tuple
 
 from ..config import (
     CAPACIDAD_SERIES_DIA,
+    GRUPOS_GRANDES,
     GRUPOS_SINERGICOS,
+    LIMITES_SERIES_SESION,
     UMBRAL_FUSION_SESION,
 )
 from ..distribucion.frecuencia import calcular_frecuencia, cap_sesion_para_grupo
@@ -83,11 +85,49 @@ class ResultadoAsignacion:
     frecuencia_efectiva: Dict[str, int] = field(default_factory=dict)
     # grupos cuya frecuencia se redujo por falta de cabida
     grupos_degradados: List[str] = field(default_factory=list)
+    # grupo degradado → series semanales que caben respetando el límite por
+    # sesión (solo aparecen los grupos degradados): si no caben todas
+    # sus sesiones, cada sesión sube como mucho hasta el límite duro (10/8) y
+    # el resto del volumen se pierde esa semana en vez de amontonarse.
+    volumen_efectivo: Dict[str, int] = field(default_factory=dict)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers internos
 # ──────────────────────────────────────────────────────────────────────────────
+
+# Día de la semana (0 = lunes) de cada índice de sesión, igual que en
+# PlanificadorHelms (core.py). La separación entre toques de un mismo grupo y
+# la de bisagras pesadas se mide en días reales, no en índices: con 4 días
+# (lun, mar, jue, vie) martes y jueves están a 48 h aunque sus índices sean
+# contiguos.
+OFFSETS_DIAS_SEMANA = {
+    3: [0, 2, 4],
+    4: [0, 1, 3, 4],
+    5: [0, 1, 2, 3, 4],
+    6: [0, 1, 2, 3, 4, 5],
+}
+
+
+def _dist(d1: int, d2: int, num_dias: int) -> int:
+    """Días reales entre dos sesiones (1-based) dentro de la semana."""
+    offsets = OFFSETS_DIAS_SEMANA.get(num_dias)
+    if not offsets or not (1 <= d1 <= len(offsets)) or not (1 <= d2 <= len(offsets)):
+        return abs(d1 - d2)
+    return abs(offsets[d1 - 1] - offsets[d2 - 1])
+
+
+def _limite_duro_sesion(nombre: str) -> int:
+    clave = 'grupos_grandes' if nombre in GRUPOS_GRANDES else 'grupos_pequenos'
+    return LIMITES_SERIES_SESION[clave]['max']
+
+
+def _coste_sesion(grupo: 'GrupoParaAsignar', freq: int) -> int:
+    """Series por sesión con ``freq`` sesiones, sin pasar del límite duro."""
+    if freq <= 0:
+        return 0
+    return min(math.ceil(grupo.volumen_objetivo / freq), _limite_duro_sesion(grupo.nombre))
+
 
 def _sinergicos_para(nombre: str) -> Set[str]:
     """Devuelve el conjunto de grupos sinérgicos de 'nombre' (sin incluirlo a él)."""
@@ -112,6 +152,7 @@ def _encontrar_mejor_dia(
     costo_por_grupo: Dict[str, int],
     *,
     ignorar_budget: bool = False,
+    objetivo_dia: Optional[int] = None,
 ) -> Optional[int]:
     """
     Devuelve el índice de día (1-based) donde colocar el grupo, o None si no hay
@@ -123,6 +164,9 @@ def _encontrar_mejor_dia(
       - bisagra pesada: si grupo es bisagra pesada y d' ∈ bisagra_pesada_dias → |d-d'| ≠ 1
 
     Desempate blando (en este orden):
+      0. Día que, con este grupo, no supera ``objetivo_dia`` (la media de
+         series por sesión de la semana). Evita que la preferencia por
+         sinérgicos amontone seis grupos en un día y deje otro a medias.
       1. Día con al menos un grupo sinérgico ya colocado
       2. Día con más presupuesto libre
 
@@ -135,16 +179,16 @@ def _encontrar_mejor_dia(
     sinergicos = _sinergicos_para(grupo.nombre)
     es_bp = _es_bisagra_pesada(grupo)
 
-    candidatos: List[Tuple[int, int, int]] = []  # (dia, tiene_sinergico, espacio_libre)
+    candidatos: List[Tuple[int, int, int, int]] = []  # (dia, sinergico, libre, se_pasa)
 
     for d in range(1, num_dias + 1):
         # Restricción de separación
-        if any(abs(d - dp) < 2 for dp in dias_previos):
+        if any(_dist(d, dp, num_dias) < 2 for dp in dias_previos):
             continue
 
         # Restricción bisagra pesada en días adyacentes
         if es_bp:
-            if any(abs(d - bp) == 1 for bp in bisagra_pesada_dias):
+            if any(_dist(d, bp, num_dias) == 1 for bp in bisagra_pesada_dias):
                 continue
 
         # Restricción de presupuesto
@@ -155,13 +199,15 @@ def _encontrar_mejor_dia(
         tiene_sinergico = int(bool(sinergicos & set(dia_grupos[d])))
         espacio_libre = CAPACIDAD_SERIES_DIA - dia_series[d] - cap
 
-        candidatos.append((d, tiene_sinergico, espacio_libre))
+        se_pasa = int(objetivo_dia is not None and dia_series[d] + cap > objetivo_dia)
+
+        candidatos.append((d, tiene_sinergico, espacio_libre, se_pasa))
 
     if not candidatos:
         return None
 
-    # Orden determinista: sinérgico primero, luego más espacio libre, luego índice menor
-    candidatos.sort(key=lambda x: (-x[1], -x[2], x[0]))
+    # Orden determinista: sin pasarse de la media, sinérgico, más espacio libre, índice menor
+    candidatos.sort(key=lambda x: (x[3], -x[1], -x[2], x[0]))
     return candidatos[0][0]
 
 
@@ -184,15 +230,19 @@ def _colocar(
     bisagra_pesada_dias: Set[int] = set()
     grupos_degradados_set: Set[str] = set()
 
-    def _categoria(nombre: str, toque: int) -> Tuple[int, str]:
+    def _categoria(nombre: str, toque: int) -> Tuple[int, int, str]:
+        # Dentro de cada categoría, primero el grupo con más volumen semanal:
+        # si un segundo toque no cabe, que se quede sin él quien menos series
+        # acumularía en una sola sesión (antes era alfabético y espalda o
+        # pecho podían quedarse con 20 series en un día).
         g = activos[nombre]
         if toque == 1 and g.es_grande:
-            return (0, nombre)
+            return (0, -g.volumen_objetivo, nombre)
         if toque == 1 and not g.es_grande:
-            return (1, nombre)
+            return (1, -g.volumen_objetivo, nombre)
         if toque == 2:
-            return (2, nombre)
-        return (3, nombre)
+            return (2, -g.volumen_objetivo, nombre)
+        return (3, -g.volumen_objetivo, nombre)
 
     placements: List[Tuple[str, int]] = []
     for nombre in sorted(activos):  # sort garantiza determinismo en el origen
@@ -201,6 +251,10 @@ def _colocar(
             placements.append((nombre, toque))
 
     placements.sort(key=lambda p: _categoria(p[0], p[1]))
+    # Media de series por sesión si todo cabe: referencia blanda para repartir.
+    objetivo_dia = math.ceil(
+        sum(costo_por_grupo[n] for n, _ in placements) / dias_disponibles
+    ) if dias_disponibles else None
 
     for nombre, toque in placements:
         grupo = activos[nombre]
@@ -209,6 +263,7 @@ def _colocar(
         dia = _encontrar_mejor_dia(
             grupo, dias_disponibles,
             dia_series, dia_grupos, grupo_dias, bisagra_pesada_dias, costo_por_grupo,
+            objetivo_dia=objetivo_dia,
         )
 
         if dia is None:
@@ -240,6 +295,144 @@ def _colocar(
             bisagra_pesada_dias.add(dia)
 
     return dia_grupos, grupo_dias, dia_series, grupos_degradados_set
+
+
+def _equilibrar_dias(
+    activos: Dict[str, GrupoParaAsignar],
+    dias_disponibles: int,
+    costo_por_grupo: Dict[str, int],
+    dia_grupos: Dict[int, List[str]],
+    grupo_dias: Dict[str, List[int]],
+    dia_series: Dict[int, int],
+) -> None:
+    """Mueve toques del día más cargado a otro válido mientras reduzca el pico."""
+    max_movimientos = sum(len(v) for v in grupo_dias.values()) * dias_disponibles
+    for _ in range(max_movimientos):
+        dia_max = max(range(1, dias_disponibles + 1), key=lambda d: (dia_series[d], -d))
+        bp_dias = {
+            d for d in range(1, dias_disponibles + 1)
+            if any(_es_bisagra_pesada(activos[n]) for n in dia_grupos[d])
+        }
+        mejor = None  # (nueva_carga_destino, nombre, destino)
+        for nombre in sorted(dia_grupos[dia_max]):
+            coste = costo_por_grupo[nombre]
+            otros = [d for d in grupo_dias[nombre] if d != dia_max]
+            es_bp = _es_bisagra_pesada(activos[nombre])
+            for d in range(1, dias_disponibles + 1):
+                if d == dia_max or d in otros:
+                    continue
+                if any(_dist(d, dp, dias_disponibles) < 2 for dp in otros):
+                    continue
+                if es_bp and any(_dist(d, bp, dias_disponibles) == 1 for bp in (bp_dias - {dia_max})):
+                    continue
+                if dia_series[d] + coste > CAPACIDAD_SERIES_DIA:
+                    continue
+                # Solo si el destino queda por debajo del pico actual: baja la
+                # dispersión sin crear un pico nuevo igual o mayor.
+                if dia_series[d] + coste >= dia_series[dia_max]:
+                    continue
+                candidato = (dia_series[d] + coste, nombre, d)
+                if mejor is None or candidato < mejor:
+                    mejor = candidato
+        if mejor is None:
+            return
+        _, nombre, destino = mejor
+        coste = costo_por_grupo[nombre]
+        dia_grupos[dia_max].remove(nombre)
+        dia_grupos[destino].append(nombre)
+        dia_series[dia_max] -= coste
+        dia_series[destino] += coste
+        grupo_dias[nombre] = sorted([d for d in grupo_dias[nombre] if d != dia_max] + [destino])
+
+
+def _colocar_por_patrones(
+    activos: Dict[str, GrupoParaAsignar],
+    dias_disponibles: int,
+) -> Tuple[Dict[int, List[str]], Dict[str, List[int]], Dict[int, int], Set[str], Dict[str, int]]:
+    """Coloca cada grupo eligiendo de una vez TODOS sus días (12-oct-2026).
+
+    El greedy por toques sueltos dejaba los segundos toques sin sitio: los
+    primeros toques ocupaban días que la separación prohibía después. Aquí,
+    para cada grupo (los que piden más sesiones primero, luego más volumen),
+    se prueban todas las combinaciones de días válidas para su frecuencia
+    deseada y se elige la que deja la semana más equilibrada. Si ninguna cabe,
+    se prueba con una sesión menos (cada sesión carga como mucho el límite
+    duro por sesión; el volumen que no cabe se pierde esa semana).
+
+    Restricciones duras: presupuesto diario, ≥48 h entre sesiones del mismo
+    grupo, bisagras pesadas no en días consecutivos. Desempate: menor pico
+    diario, más grupos sinérgicos compartiendo día, menor suma de cuadrados.
+    """
+    from itertools import combinations
+
+    dia_series: Dict[int, int] = {d: 0 for d in range(1, dias_disponibles + 1)}
+    dia_grupos: Dict[int, List[str]] = {d: [] for d in range(1, dias_disponibles + 1)}
+    grupo_dias: Dict[str, List[int]] = {}
+    coste_final: Dict[str, int] = {}
+    degradados: Set[str] = set()
+    bp_dias: Set[int] = set()
+    dias = list(range(1, dias_disponibles + 1))
+
+    freq_deseada = {
+        n: max(1, calcular_frecuencia(n, g.volumen_objetivo, dias_disponibles))
+        for n, g in activos.items()
+    }
+    orden = sorted(activos, key=lambda n: (-freq_deseada[n], -activos[n].volumen_objetivo, n))
+
+    def _valida(combo, es_bp):
+        for a, b in combinations(combo, 2):
+            if _dist(a, b, dias_disponibles) < 2:
+                return False
+        if es_bp and any(_dist(d, bp, dias_disponibles) == 1 for d in combo for bp in bp_dias):
+            return False
+        return True
+
+    for nombre in orden:
+        grupo = activos[nombre]
+        es_bp = _es_bisagra_pesada(grupo)
+        sinergicos = _sinergicos_para(nombre)
+        elegido = None
+        for freq in range(freq_deseada[nombre], 0, -1):
+            coste = _coste_sesion(grupo, freq)
+            mejores = []
+            for combo in combinations(dias, freq):
+                if not _valida(combo, es_bp):
+                    continue
+                if any(dia_series[d] + coste > CAPACIDAD_SERIES_DIA for d in combo):
+                    continue
+                cargas = dict(dia_series)
+                for d in combo:
+                    cargas[d] += coste
+                syn = sum(1 for d in combo if sinergicos & set(dia_grupos[d]))
+                clave = (max(cargas.values()), -syn, sum(v * v for v in cargas.values()), combo)
+                mejores.append((clave, combo, coste))
+            if mejores:
+                mejores.sort()
+                elegido = (mejores[0][1], mejores[0][2], freq)
+                break
+        if elegido is None:
+            # Regla de oro: ningún grupo con volumen se queda fuera. Semana
+            # saturada (más series que capacidad): una sesión en el día menos
+            # cargado, recortada al hueco que queda (mínimo 2 series). Así el
+            # recorte cae en este grupo y no desencadena degradaciones en
+            # cascada de los que ya estaban bien colocados.
+            candidatos = [d for d in dias if _valida((d,), es_bp)] or dias
+            d = min(candidatos, key=lambda x: (dia_series[x], x))
+            hueco = CAPACIDAD_SERIES_DIA - dia_series[d]
+            coste = max(2, min(_coste_sesion(grupo, 1), hueco))
+            elegido = ((d,), coste, 1)
+        combo, coste, freq = elegido
+        if freq < freq_deseada[nombre]:
+            degradados.add(nombre)
+        for d in combo:
+            dia_series[d] += coste
+            dia_grupos[d].append(nombre)
+        grupo_dias[nombre] = sorted(combo)
+        coste_final[nombre] = coste
+        if es_bp:
+            bp_dias.update(combo)
+
+    return dia_grupos, grupo_dias, dia_series, degradados, coste_final
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -279,7 +472,13 @@ def asignar_semana(
     # Si la suma mínima de series (1 sesión por grupo, coste fijo) supera el
     # presupuesto total disponible, la asignación es matemáticamente imposible
     # incluso en el mejor de los casos.
-    series_minimas = sum(cap_sesion_para_grupo(n) for n in activos)
+    # Mínimo por grupo con una sola sesión: su volumen, como mucho el límite
+    # duro por sesión de GestorFatiga (10 grandes / 8 pequeños). No se usa el
+    # tope de reparto (8): ese decide cuántas sesiones conviene, no cuántas
+    # series caben como mínimo.
+    series_minimas = sum(
+        min(g.volumen_objetivo, _limite_duro_sesion(n)) for n, g in activos.items()
+    )
     capacidad_total = dias_disponibles * CAPACIDAD_SERIES_DIA
     if series_minimas > capacidad_total:
         raise AsignacionImposibleError(
@@ -289,20 +488,48 @@ def asignar_semana(
             f"Grupos activos: {sorted(activos)}."
         )
 
-    # ── Colocación (pasos 1-5) con coste fijo ───────────────────────────────────
-    # Se usa el coste fijo (cap_sesion_para_grupo) para decidir la colocación,
-    # NO un bucle que retroalimente el coste real de iteraciones anteriores:
-    # probado y descartado — retroalimentar el coste real de una degradación
-    # parcial hacia TODOS los toques futuros del mismo grupo (incluido el 1er
-    # toque, que nunca debería tratarse como "caro") produce un colapso en
-    # cascada hacia frecuencia=1 para casi todos los grupos, anulando el
-    # propósito de X.5/X.6 (dar más frecuencia a quien la necesita). El coste
-    # fijo aquí solo decide LA COLOCACIÓN; el coste REAL se corrige después,
-    # una única vez, en la red de seguridad final — ver más abajo.
-    costo_por_grupo: Dict[str, int] = {n: cap_sesion_para_grupo(n) for n in activos}
-    dia_grupos, grupo_dias, dia_series, grupos_degradados_set = _colocar(
-        activos, dias_disponibles, costo_por_grupo,
+    # ── Semana saturada: recorte proporcional hacia el MEV (12-oct-2026) ──
+    # Si la demanda supera lo que cabe (días × presupuesto, con un margen para
+    # redondeos), se recorta el volumen de TODOS los grupos en proporción a lo
+    # que tienen por encima de su MEV, en vez de dejar que los últimos en
+    # colocarse se queden con 4 series o que un día acumule 60.
+    volumen_original = {n: g.volumen_objetivo for n, g in activos.items()}
+    demanda = sum(volumen_original.values())
+    capacidad_util = int(dias_disponibles * CAPACIDAD_SERIES_DIA * 0.92)
+    recortados: Set[str] = set()
+    if demanda > capacidad_util:
+        suma_mev = sum(min(g.mev, g.volumen_objetivo) for g in activos.values())
+        exceso = demanda - suma_mev
+        k = max(0.0, (capacidad_util - suma_mev) / exceso) if exceso > 0 else 0.0
+        nuevos = {}
+        for n, g in activos.items():
+            base = min(g.mev, g.volumen_objetivo)
+            vol = max(1, base + math.floor((g.volumen_objetivo - base) * k))
+            if vol < g.volumen_objetivo:
+                recortados.add(n)
+            nuevos[n] = replace(g, volumen_objetivo=vol)
+        activos = nuevos
+
+    # ── Colocación por patrones de días (12-oct-2026) ──────────────────────
+    # Sustituye a la colocación greedy por toques (``_colocar``, que se
+    # conserva solo como referencia): presupuestaba cada toque con el techo
+    # fijo por sesión y colocaba los toques de uno en uno, así que los
+    # segundos toques se quedaban sin día y grupos como isquios, glúteos,
+    # bíceps o tríceps acababan con 10–20 series en una única sesión. Ahora
+    # cada grupo elige todos sus días a la vez, con su coste real por sesión.
+    dia_grupos, grupo_dias, dia_series, grupos_degradados_set, costo_por_grupo = _colocar_por_patrones(
+        activos, dias_disponibles,
     )
+    freq_colocada = {n: len(d) for n, d in grupo_dias.items()}
+
+    # ── Paso 5b: equilibrado (12-oct-2026) ────────────────────────────────────
+    # La colocación greedy puede dejar un día con 36 series y otro con 19
+    # porque los primeros toques ocupan días que luego la regla de separación
+    # prohíbe a los segundos. Se mueven toques sueltos del día más cargado al
+    # que más alivia, solo si respetan separación y bisagra y reducen de verdad
+    # la diferencia. Termina siempre: cada movimiento baja estrictamente la
+    # suma de cuadrados de las cargas diarias.
+    _equilibrar_dias(activos, dias_disponibles, costo_por_grupo, dia_grupos, grupo_dias, dia_series)
 
     # ── Paso 6: fusión de sesiones cortas ────────────────────────────────────
     dias_a_fusionar = sorted(
@@ -348,14 +575,14 @@ def asignar_semana(
 
             # Separación: otros días del mismo grupo (excluyendo dia_corto)
             otros_dias = [d for d in grupo_dias.get(nombre, []) if d != dia_corto]
-            if any(abs(destino - d) < 2 for d in otros_dias):
+            if any(_dist(destino, d, dias_disponibles) < 2 for d in otros_dias):
                 puede_mover = False
                 break
 
             # Bisagra pesada
             if _es_bisagra_pesada(grupo):
                 bp_otros = bisagra_pesada_dias_final - {dia_corto}
-                if any(abs(destino - bp) == 1 for bp in bp_otros):
+                if any(_dist(destino, bp, dias_disponibles) == 1 for bp in bp_otros):
                     puede_mover = False
                     break
 
@@ -395,7 +622,9 @@ def asignar_semana(
         freq_final = len(grupo_dias.get(nombre, []))
         if freq_final <= 0:
             return 0
-        return math.ceil(activos[nombre].volumen_objetivo / freq_final)
+        if freq_final == freq_colocada.get(nombre):
+            return costo_por_grupo[nombre]
+        return _coste_sesion(activos[nombre], freq_final)
 
     for _ in range(sum(len(v) for v in grupo_dias.values()) + 1):
         costos_finales = {n: _costo_real_final(n) for n in activos}
@@ -443,12 +672,12 @@ def asignar_semana(
                 # destino debe seguir respetando la separación ≥1 día completo
                 # respecto a ese otro día — reubicar un toque no debe romper
                 # la restricción que protege al resto de sus toques.
-                if any(abs(d - dp) < 2 for dp in otros_dias_nombre):
+                if any(_dist(d, dp, dias_disponibles) < 2 for dp in otros_dias_nombre):
                     continue
                 if sum(costos_finales[n] for n in dia_grupos[d]) + costo > CAPACIDAD_SERIES_DIA:
                     continue
                 if es_bp and any(
-                    abs(d - bp) == 1 for bp in (bisagra_pesada_dias_final - {dia_objetivo})
+                    _dist(d, bp, dias_disponibles) == 1 for bp in (bisagra_pesada_dias_final - {dia_objetivo})
                 ):
                     continue
                 # Reubicar: sustituir SOLO la entrada dia_objetivo dentro de
@@ -486,10 +715,10 @@ def asignar_semana(
                 for d in range(1, dias_disponibles + 1):
                     if d == dia_objetivo:
                         continue
-                    if any(abs(d - dp) < 2 for dp in otros_dias_nombre):
+                    if any(_dist(d, dp, dias_disponibles) < 2 for dp in otros_dias_nombre):
                         continue
                     if es_bp and any(
-                        abs(d - bp) == 1 for bp in (bisagra_pesada_dias_final - {dia_objetivo})
+                        _dist(d, bp, dias_disponibles) == 1 for bp in (bisagra_pesada_dias_final - {dia_objetivo})
                     ):
                         continue
                     total_d = sum(costos_finales[n] for n in dia_grupos[d])
@@ -532,8 +761,15 @@ def asignar_semana(
         if nombre not in frecuencia_efectiva:
             frecuencia_efectiva[nombre] = 0
 
+    volumen_efectivo: Dict[str, int] = {
+        nombre: min(g.volumen_objetivo, _costo_real_final(nombre) * frecuencia_efectiva[nombre])
+        for nombre, g in activos.items()
+        if nombre in grupos_degradados_set or nombre in recortados
+    }
+
     return ResultadoAsignacion(
         asignacion=asignacion,
         frecuencia_efectiva=frecuencia_efectiva,
         grupos_degradados=sorted(grupos_degradados_set),
+        volumen_efectivo=volumen_efectivo,
     )

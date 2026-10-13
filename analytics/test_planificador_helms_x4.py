@@ -124,12 +124,14 @@ class TestX4TopeDinamicoHipertrofia(TestCase):
         según su propio volumen_optimo (gluteos también sube a freq=2, isquios
         se queda en freq=1).
         """
+        # 12-oct-2026: reparto exacto del volumen (sin ceil por toque y por
+        # ejercicio) y tope de 8 series por músculo y sesión.
         esperado = {
             'pecho':       14,
-            'espalda':     16,
-            'cuadriceps':  16,
+            'espalda':     15,
+            'cuadriceps':  15,
             'gluteos':     12,
-            'isquios':     12,
+            'isquios':     11,
         }
         for grupo, series_esperadas in esperado.items():
             with self.subTest(grupo=grupo):
@@ -145,14 +147,16 @@ class TestX4TopeDinamicoHipertrofia(TestCase):
         gemelos y triceps alcanzan freq=2; core/trapecios/antebrazos quedan
         en freq=1 con el volumen moderado.
         """
+        # 12-oct-2026: reparto exacto del volumen (sin ceil por toque y por
+        # ejercicio) y tope de 8 series por músculo y sesión.
         esperado = {
-            'biceps':     12,
-            'triceps':    12,
+            'biceps':     10,
+            'triceps':    10,
             'hombros':    12,
-            'gemelos':    12,
+            'gemelos':    10,
             'core':        8,
-            'trapecios':   8,
-            'antebrazos':  6,
+            'trapecios':   7,
+            'antebrazos':  5,
         }
         for grupo, series_esperadas in esperado.items():
             with self.subTest(grupo=grupo):
@@ -257,7 +261,15 @@ class TestX4GestorFatigaSigueCortando(TestCase):
         semana = planner._generar_semana_especifica(bloque, 1)
 
         limite = LIMITES_FATIGA['hipertrofia']['rodilla_pesada_max']
-        for dia_key, ejercicios in semana.items():
+        # Solo el primer toque de cuádriceps es "pesado" (RPE 9): los toques
+        # 2.º y 3.º bajan un punto de RPE y GestorFatiga no los trata como
+        # pesados. Desde el 12-oct-2026 cuádriceps puede tener tres toques
+        # con vol_mult alto, así que se comprueba el día del primer toque.
+        dias_cuadriceps = [
+            d for d in sorted(semana)
+            if any(ej['grupo_muscular'] == 'cuadriceps' for ej in semana[d])
+        ]
+        for dia_key, ejercicios in ((d, semana[d]) for d in dias_cuadriceps[:1]):
             series_cuadriceps_dia = sum(
                 ej['series'] for ej in ejercicios
                 if ej['grupo_muscular'] == 'cuadriceps'
@@ -392,19 +404,21 @@ class TestX4SinRegresionNovato6d(TestCase):
     # Post fix presupuesto real del asignador + reducción vol_fin (2026-07-20).
     # Solo cuadriceps/espalda/hombros/pecho mantienen freq=2; el resto queda
     # en freq=1 con el volumen reducido.
+    # Actualizado el 12-oct-2026 (tope de 8 por sesión y reparto exacto):
+    # todos los grupos salvo antebrazos y trapecios pasan a dos sesiones.
     RESUMEN_PREVIO_X4 = {
-        'antebrazos': {'freq': 1, 'series':  6},
-        'biceps':     {'freq': 1, 'series': 10},
-        'core':       {'freq': 1, 'series': 10},
+        'antebrazos': {'freq': 1, 'series':  5},
+        'biceps':     {'freq': 2, 'series':  9},
+        'core':       {'freq': 2, 'series':  9},
         'cuadriceps': {'freq': 2, 'series': 16},
         'espalda':    {'freq': 2, 'series': 16},
-        'gemelos':    {'freq': 1, 'series': 10},
-        'gluteos':    {'freq': 1, 'series': 12},
-        'hombros':    {'freq': 2, 'series': 12},
-        'isquios':    {'freq': 1, 'series': 12},
-        'pecho':      {'freq': 2, 'series': 16},
+        'gemelos':    {'freq': 2, 'series':  9},
+        'gluteos':    {'freq': 2, 'series': 11},
+        'hombros':    {'freq': 2, 'series': 11},
+        'isquios':    {'freq': 2, 'series': 11},
+        'pecho':      {'freq': 2, 'series': 14},
         'trapecios':  {'freq': 1, 'series':  6},
-        'triceps':    {'freq': 1, 'series': 10},
+        'triceps':    {'freq': 2, 'series':  9},
     }
 
     def setUp(self):
@@ -421,12 +435,12 @@ class TestX4SinRegresionNovato6d(TestCase):
         self.assertEqual(self._resumen, self.RESUMEN_PREVIO_X4)
 
     def test_pecho_novato_6d_16_series_sin_cambio(self):
-        """Caso clave: pecho novato 6d vol_dia=7, ceil(7/2)=4 ≤ new_tope=5 → unchanged."""
-        self.assertEqual(self._resumen['pecho']['series'], 16)
+        """Pecho novato 6d: 14 series semanales repartidas exactas (7 + 7) desde el 12-oct-2026."""
+        self.assertEqual(self._resumen['pecho']['series'], 14)
 
     def test_antebrazos_novato_6d_6_series_sin_cambio(self):
-        """Antebrazos novato: vol_dia=5, ceil(5/2)=3 ≤ new_tope=5 → 3 per ej → 6 total."""
-        self.assertEqual(self._resumen['antebrazos']['series'], 6)
+        """Antebrazos novato: 5 series repartidas exactas (3 + 2) desde el 12-oct-2026."""
+        self.assertEqual(self._resumen['antebrazos']['series'], 5)
 
 
 # ===========================================================================

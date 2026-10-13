@@ -494,6 +494,21 @@ class TestX15FlujoPlanReal(TestCase):
         fecha = date.fromisoformat(fecha_iso)
         return _calcular_ejercicios_dia(self.cliente.id, fecha)
 
+    SEMANA_7 = ('2026-02-16', '2026-02-17', '2026-02-18', '2026-02-19', '2026-02-20')
+
+    def _toque_en_semana_7(self, grupo: str, toque: int) -> list:
+        """Ejercicios del grupo en su toque ``toque`` de la semana 7.
+
+        Desde el 12-oct-2026 el asignador elige los días por patrones: el
+        toque 2 ya no cae en un día fijo, así que se localiza por orden.
+        """
+        apariciones = []
+        for fecha in self.SEMANA_7:
+            ejs = [e for e in self._ejercicios_del_dia(fecha) if e.get('grupo_muscular') == grupo]
+            if ejs:
+                apariciones.append(ejs)
+        return apariciones[toque - 1] if len(apariciones) >= toque else []
+
     def test_dia1_toque1_retorna_ejercicios_no_vacio(self):
         """
         dia_1 (2026-01-05, lunes) = toque 1 para cuádriceps, glúteos, gemelos, tríceps.
@@ -514,16 +529,12 @@ class TestX15FlujoPlanReal(TestCase):
         (Hip Thrust) + dia_3 toque 2 (Búlgara). Este test verifica que el
         ejercicio distintivo del toque 2 llega intacto a la capa de servicio.
         """
-        ejercicios = self._ejercicios_del_dia('2026-02-18')
-        self.assertIsInstance(ejercicios, list)
-        self.assertGreater(
-            len(ejercicios), 0,
-            "dia_3 no retornó ejercicios — error en plan del dia miércoles",
-        )
+        ejercicios = self._toque_en_semana_7('gluteos', 2)
+        self.assertGreater(len(ejercicios), 0, "glúteos sin toque 2 en la semana 7")
         nombres = {e.get('nombre', '') for e in ejercicios}
         self.assertIn(
             'Sentadilla Búlgara', nombres,
-            f"dia_3 (toque 2 de glúteos) debería incluir la Búlgara. "
+            f"El toque 2 de glúteos debería incluir la Búlgara. "
             f"Nombres recibidos: {sorted(nombres)}",
         )
 
@@ -534,15 +545,8 @@ class TestX15FlujoPlanReal(TestCase):
         + dia_5 toque 2 (Jalon brazos rectos vertical + Remo Mancuerna horizontal).
         Verifica que la oposición vertical/horizontal llega intacta a la capa de servicio.
         """
-        ejercicios = self._ejercicios_del_dia('2026-02-20')
-        self.assertGreater(len(ejercicios), 0, "dia_5 no retornó ejercicios")
-
-        ejs_espalda = [e for e in ejercicios if e.get('grupo_muscular') == 'espalda']
-        self.assertGreater(
-            len(ejs_espalda), 0,
-            f"dia_5 no tiene ejercicios de espalda. grupos: "
-            f"{sorted({e.get('grupo_muscular') for e in ejercicios})}",
-        )
+        ejs_espalda = self._toque_en_semana_7('espalda', 2)
+        self.assertGreater(len(ejs_espalda), 0, "espalda sin toque 2 en la semana 7")
 
         nombres_espalda = [e['nombre'].lower() for e in ejs_espalda]
         tiene_vertical = any(any(k in n for k in KEYWORDS_VERTICAL) for n in nombres_espalda)
@@ -583,8 +587,8 @@ class TestX15FlujoPlanReal(TestCase):
         + dia_4 toque 2 (Zancadas + Sissy Squat). Sissy Squat es un candidato
         pendiente de decisión del usuario — el test acepta cualquiera de los dos.
         """
-        ejercicios = self._ejercicios_del_dia('2026-02-19')
-        self.assertGreater(len(ejercicios), 0, "dia_4 sin ejercicios")
+        ejercicios = self._toque_en_semana_7('cuadriceps', 2)
+        self.assertGreater(len(ejercicios), 0, "cuádriceps sin toque 2 en la semana 7")
 
         nombres = {e.get('nombre', '') for e in ejercicios}
         # 'Zancadas con Mancuernas' o 'Sissy Squat' — al menos uno debe estar
