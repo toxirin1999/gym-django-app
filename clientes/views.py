@@ -1994,6 +1994,10 @@ def _propuesta_zona_visible(cliente, hoy):
             'ejercicios': list(getattr(propuesta, 'ejercicios', None) or []),
             'series_extra': getattr(propuesta, 'series_extra', None),
             'semanas': getattr(propuesta, 'semanas', None),
+            # Paso 5: el ajuste es de series SEMANALES de la zona (±2).
+            'direccion': getattr(propuesta, 'direccion', 'subir'),
+            'ajuste_texto': ('−2' if getattr(propuesta, 'direccion', 'subir') == 'bajar' else '+2'),
+            'n_ejercicios_fatiga': len(deteccion.get('ejercicios_fatiga') or []),
         }
         return visible
     except Exception:
@@ -4423,6 +4427,13 @@ def obtener_proximo_entrenamiento(cliente):
         dias_para_lunes = (0 - primer_dia_del_año.weekday() + 7) % 7
         fecha_inicio_plan = primer_dia_del_año + timedelta(days=dias_para_lunes)
         semana_relativa = (fecha_proximo_entrenamiento - fecha_inicio_plan).days // 7 + 1
+        try:  # Paso 4: la semana del plan la decide la periodización dinámica
+            from entrenos.services.periodizacion_dinamica_service import resolver_semana
+            _info_semana = resolver_semana(cliente, fecha_proximo_entrenamiento)
+            if not _info_semana.get('legacy'):
+                semana_relativa = _info_semana['semana_plan']
+        except Exception:
+            pass
 
         for bloque in plan_completo.get('plan_por_bloques', []):
             semanas_del_bloque = [s['semana_num_total'] for s in bloque.get('semanas', [])]
@@ -4519,6 +4530,13 @@ def obtener_estadisticas_plan_anual(cliente):
 
         if total_semanas > 0:
             semana_actual = min((dias_transcurridos // 7) + 1, total_semanas)
+            try:  # Paso 4: la semana del plan la decide la periodización dinámica
+                from entrenos.services.periodizacion_dinamica_service import resolver_semana
+                _info_semana = resolver_semana(cliente, hoy)
+                if not _info_semana.get('legacy'):
+                    semana_actual = min(_info_semana['semana_plan'], total_semanas)
+            except Exception:
+                pass
             progreso_porcentaje = min(100.0, (semana_actual / total_semanas) * 100.0)
         else:
             semana_actual = 0

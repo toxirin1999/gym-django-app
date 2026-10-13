@@ -2596,6 +2596,14 @@ class PropuestaZonaGym(models.Model):
     zona = models.CharField(max_length=40, db_index=True)
     ejercicios = models.JSONField(default=list, help_text='Nombres de los ejercicios a los que se añade volumen.')
     series_extra = models.PositiveSmallIntegerField(default=1)
+    # Paso 5 (13-oct-2026): la propuesta cambia el volumen SEMANAL de la zona
+    # (±2 series repartidas en sus sesiones), no una serie por ejercicio.
+    DIRECCION_SUBIR = 'subir'
+    DIRECCION_BAJAR = 'bajar'
+    direccion = models.CharField(
+        max_length=6, choices=[(DIRECCION_SUBIR, 'Subir volumen'), (DIRECCION_BAJAR, 'Bajar volumen')],
+        default=DIRECCION_SUBIR,
+    )
     semanas = models.PositiveSmallIntegerField(default=4)
     deteccion = models.JSONField(default=dict, help_text='Datos que justificaron la propuesta (pct, ejemplos).')
     texto = models.TextField()
@@ -2619,3 +2627,49 @@ class PropuestaZonaGym(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} · {self.zona} · {self.estado}'
+
+
+class SemanaPlanGym(models.Model):
+    """Qué semana del plan anual se entrena en cada semana real (13-oct-2026).
+
+    La periodización ya no va atada al calendario: el plan avanza solo con
+    semanas entrenadas y la descarga llega cuando las señales la piden (o como
+    tarde a las 8 semanas). Cada semana se decide una vez, al empezar, y queda
+    guardada para no cambiar el pasado. Ver periodizacion_dinamica_service.
+    """
+
+    ORIGEN_CALENDARIO = 'calendario'
+    ORIGEN_AVANCE = 'avance'
+    ORIGEN_REPETICION = 'repeticion'
+    ORIGEN_DESCARGA_PROGRAMADA = 'descarga_programada'
+    ORIGEN_DESCARGA_SALTADA = 'descarga_saltada'
+    ORIGEN_DESCARGA_SENAL = 'descarga_senal'
+    ORIGEN_DESCARGA_OBLIGATORIA = 'descarga_obligatoria'
+    ORIGENES = [
+        (ORIGEN_CALENDARIO, 'Arranque desde el calendario'),
+        (ORIGEN_AVANCE, 'Avanza: la semana anterior se entrenó'),
+        (ORIGEN_REPETICION, 'Repite: la semana anterior apenas se entrenó'),
+        (ORIGEN_DESCARGA_PROGRAMADA, 'Descarga del bloque'),
+        (ORIGEN_DESCARGA_SALTADA, 'Descarga del bloque saltada: sin señales'),
+        (ORIGEN_DESCARGA_SENAL, 'Descarga por señales de fatiga'),
+        (ORIGEN_DESCARGA_OBLIGATORIA, 'Descarga obligatoria por semanas acumuladas'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='semanas_plan_gym')
+    lunes = models.DateField()
+    semana_plan = models.PositiveSmallIntegerField()
+    descarga = models.BooleanField(default=False)
+    origen = models.CharField(max_length=24, choices=ORIGENES)
+    motivo = models.TextField(blank=True)
+    sesiones_previas = models.PositiveSmallIntegerField(null=True, blank=True)
+    sesiones_previstas_previas = models.PositiveSmallIntegerField(null=True, blank=True)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['cliente', 'lunes']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'lunes'], name='unique_semana_plan_gym'),
+        ]
+
+    def __str__(self):
+        return f'{self.cliente_id} · {self.lunes} · semana {self.semana_plan} · {self.origen}'

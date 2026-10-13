@@ -36,7 +36,55 @@ class PlanificadorHelms:
         self.maximos_actuales = getattr(perfil_cliente, 'maximos_actuales', {})
         self.ejercicios_evitar = set(normalizar_nombre(e) for e in (perfil_cliente.ejercicios_evitar or []))
 
+    def _semana_dinamica(self, fecha_objetivo: date):
+        """Semana del plan según la periodización dinámica (paso 4), o None.
+
+        Solo para clientes reales: si el perfil no corresponde a un Cliente de
+        la base de datos (tests, simulaciones) se usa el calendario fijo. Para
+        fechas anteriores al arranque también (``legacy``).
+        """
+        if getattr(self, '_sin_dinamica', False):
+            return None
+        try:
+            if not hasattr(self, '_cliente_dinamico'):
+                from clientes.models import Cliente
+                self._cliente_dinamico = Cliente.objects.filter(pk=self.perfil.id).first()
+            if self._cliente_dinamico is None:
+                return None
+            from entrenos.services.periodizacion_dinamica_service import lunes_de, resolver_semana
+            memo = self.__dict__.setdefault('_memo_semanas', {})
+            clave = lunes_de(fecha_objetivo)
+            if clave not in memo:
+                memo[clave] = resolver_semana(self._cliente_dinamico, fecha_objetivo)
+            info = memo[clave]
+        except Exception:
+            logger.exception('PlanificadorHelms: periodización dinámica no disponible')
+            return None
+        if info.get('legacy'):
+            return None
+        return info
+
+    def _ajustes_volumen_grupo(self) -> Dict[str, int]:
+        """Series extra por grupo que decide el entrenador (paso 5), solo clientes reales."""
+        if '_ajustes_grupo' in self.__dict__:
+            return self._ajustes_grupo
+        self._ajustes_grupo = {}
+        try:
+            if not hasattr(self, '_cliente_dinamico'):
+                from clientes.models import Cliente
+                self._cliente_dinamico = Cliente.objects.filter(pk=self.perfil.id).first()
+            if self._cliente_dinamico is not None:
+                from django.utils import timezone
+                from entrenos.services.volumen_grupo_service import series_por_grupo
+                self._ajustes_grupo = series_por_grupo(self._cliente_dinamico, timezone.localdate())
+        except Exception:
+            logger.exception('PlanificadorHelms: ajustes de volumen por grupo no disponibles')
+        return self._ajustes_grupo
+
     def generar_entrenamiento_para_fecha(self, fecha_objetivo: date) -> Optional[Dict[str, Any]]:
+        info_dinamica = self._semana_dinamica(fecha_objetivo)
+        if info_dinamica is not None:
+            return self._generar_entrenamiento_dinamico(fecha_objetivo, info_dinamica)
         try:
             # Bug 1 fix: usar semana RELATIVA al plan, no semana ISO del calendario
             año_planificacion = getattr(self.perfil, 'año_planificacion', None) or datetime.now().year
@@ -113,6 +161,60 @@ class PlanificadorHelms:
             "semana_en_bloque": semana_en_bloque,
         }
 
+    def _generar_entrenamiento_dinamico(self, fecha_objetivo: date, info: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Igual que el camino por calendario, pero con la semana ya resuelta."""
+        from entrenos.services.periodizacion_dinamica_service import bloque_para_semana
+
+        periodizacion = GeneradorPeriodizacion.generar_periodizacion_anual()
+        semana_num_total = info['semana_plan']
+        bloque_actual, numero_bloque = bloque_para_semana(info, periodizacion)
+        if not bloque_actual:
+            return None
+        semanas_del_bloque = bloque_actual.get('semanas', [])
+        if semana_num_total in semanas_del_bloque:
+            idx_semana_en_bloque = semanas_del_bloque.index(semana_num_total)
+        else:
+            idx_semana_en_bloque = 0  # descarga intercalada: su única semana
+        detalle = bloque_actual.get('semanas_detalle', [])
+        bloque_actual = bloque_actual.copy()
+        if idx_semana_en_bloque < len(detalle):
+            bloque_actual['volumen_multiplicador'] = detalle[idx_semana_en_bloque].get(
+                'vol_mult', bloque_actual.get('volumen_multiplicador', 1.0)
+            )
+            bloque_actual['intensidad_rpe'] = (
+                detalle[idx_semana_en_bloque].get('rpe', bloque_actual.get('intensidad_rpe', (7,))[0]),
+            )
+
+        dias_entreno_indices = {3: [0, 2, 4], 5: [0, 1, 2, 3, 4], 6: [0, 1, 2, 3, 4, 5]}.get(
+            self.dias_disponibles, [0, 1, 3, 4]
+        )
+        dia_semana_num = fecha_objetivo.weekday()
+        if dia_semana_num not in dias_entreno_indices:
+            return {"rutina_nombre": "Día de Descanso", "ejercicios": [], "objetivo": "Descanso"}
+        idx_en_offset = dias_entreno_indices.index(dia_semana_num)
+        clave_dia = f'dia_{idx_en_offset + 1}'
+        semana_completa = self._generar_semana_especifica(bloque_actual, numero_bloque)
+        ejercicios_del_dia = semana_completa.get(clave_dia)
+        if not ejercicios_del_dia:
+            return {"rutina_nombre": "Día de Descanso", "ejercicios": [], "objetivo": "Descanso"}
+        semana_en_bloque = idx_semana_en_bloque + 1
+        return {
+            "rutina_nombre": f"{clave_dia.replace('_', ' ').title()} - {bloque_actual['nombre']}",
+            "ejercicios": ejercicios_del_dia,
+            "objetivo": bloque_actual['fase'].replace('_', ' ').title(),
+            "bloque": bloque_actual['nombre'],
+            "dia": idx_en_offset + 1,
+            "semana_nombre": f"Semana {semana_en_bloque}",
+            "semana_en_bloque": semana_en_bloque,
+            "semana_plan": semana_num_total,
+            "periodizacion": {
+                'origen': info.get('origen'),
+                'motivo': info.get('motivo'),
+                'descarga': bool(info.get('descarga')),
+                'proyectada': bool(info.get('proyectada')),
+            },
+        }
+
     def generar_plan_anual(self) -> Dict[str, Any]:
         from django.core.cache import cache as _djcache
         _año = getattr(self.perfil, 'año_planificacion', None) or datetime.now().year
@@ -184,6 +286,8 @@ class PlanificadorHelms:
             })
             if semana_global > 52: break
 
+        self._aplicar_semanas_dinamicas(entrenos_por_fecha, fecha_inicio_plan, dias_offsets, periodizacion)
+
         _result = {
             "cliente_id": self.perfil.id,
             "plan_por_bloques": plan_por_bloques,
@@ -197,8 +301,57 @@ class PlanificadorHelms:
         _djcache.set(_ck, _result, 3600)  # 1 hora
         return _result
 
+    def _aplicar_semanas_dinamicas(self, entrenos_por_fecha, fecha_inicio_plan, dias_offsets, periodizacion):
+        """Sustituye en el plan anual las semanas que decide la periodización dinámica.
+
+        Las semanas anteriores al arranque se quedan como en el calendario; desde
+        ahí, cada semana usa la que resolvió (o proyecta) el servicio dinámico,
+        para que el Plan y el calendario enseñen lo mismo que la sesión del día.
+        """
+        if self._semana_dinamica(fecha_inicio_plan + timedelta(days=7 * 51)) is None:
+            return
+        from entrenos.services.periodizacion_dinamica_service import bloque_para_semana
+
+        for k in range(52):
+            lunes = fecha_inicio_plan + timedelta(days=7 * k)
+            info = self._semana_dinamica(lunes)
+            if info is None:
+                continue
+            bloque, numero_bloque = bloque_para_semana(info, periodizacion)
+            if not bloque:
+                continue
+            semanas = bloque.get('semanas', [])
+            idx = semanas.index(info['semana_plan']) if info['semana_plan'] in semanas else 0
+            bloque_semana = bloque.copy()
+            detalle = bloque.get('semanas_detalle', [])
+            if idx < len(detalle):
+                bloque_semana['volumen_multiplicador'] = detalle[idx].get(
+                    'vol_mult', bloque.get('volumen_multiplicador', 1.0))
+                bloque_semana['intensidad_rpe'] = (
+                    detalle[idx].get('rpe', bloque.get('intensidad_rpe', (7,))[0]),)
+            plan_semana = self._generar_semana_especifica(bloque_semana, numero_bloque)
+            for offset in dias_offsets:
+                entrenos_por_fecha.pop((lunes + timedelta(days=offset)).isoformat(), None)
+            for i, dia_key in enumerate(sorted(plan_semana.keys())):
+                if i >= len(dias_offsets):
+                    break
+                fecha = lunes + timedelta(days=dias_offsets[i])
+                entrenos_por_fecha[fecha.isoformat()] = {
+                    "nombre_rutina": f"Día {i + 1} - {bloque['nombre']}",
+                    "ejercicios": plan_semana[dia_key],
+                    "semana_bloque": idx + 1,
+                    "total_semanas_bloque": len(semanas) or 1,
+                    "volumen_mult": bloque_semana["volumen_multiplicador"],
+                    "rpe_objetivo": bloque_semana["intensidad_rpe"][0],
+                    "periodizacion": {'origen': info.get('origen'), 'descarga': bool(info.get('descarga'))},
+                }
+
     def _generar_semana_especifica(self, bloque: Dict[str, Any], numero_bloque: int) -> Dict[str, List[Dict[str, Any]]]:
-        _cache_key = (numero_bloque, bloque.get('fase', ''), bloque.get('volumen_multiplicador', 1.0))
+        ajustes_grupo = self._ajustes_volumen_grupo()
+        _cache_key = (
+            numero_bloque, bloque.get('fase', ''), bloque.get('volumen_multiplicador', 1.0),
+            tuple(sorted(ajustes_grupo.items())),
+        )
         if not hasattr(self, '_semana_cache'):
             self._semana_cache = {}
         if _cache_key in self._semana_cache:
@@ -249,6 +402,8 @@ class PlanificadorHelms:
             # Mismo redondeo que el reparto por toques (ceil): si no, el
             # asignador decidía la frecuencia con 8 series y la sesión llevaba 9.
             vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult, mrv_g))
+            if grupo in ajustes_grupo:  # paso 5: ajuste del entrenador, acotado a MRV
+                vol_efectivo = max(1, min(vol_efectivo + ajustes_grupo[grupo], mrv_g))
             if vol_efectivo <= 0:
                 continue
             primer_ej = candidatos_grupo[0]
@@ -350,6 +505,8 @@ class PlanificadorHelms:
                 # del MRV (pecho 20 → 24). Ahora la suma de la semana es el
                 # objetivo, repartido lo más parejo posible.
                 vol_semana_grupo = math.ceil(min(vol_ajustado_bloque, mrv_grupo))
+                if grupo in ajustes_grupo:  # paso 5: ajuste del entrenador, acotado a MRV
+                    vol_semana_grupo = max(1, min(vol_semana_grupo + ajustes_grupo[grupo], mrv_grupo))
                 if grupo in volumen_efectivo_map:
                     # Grupo sin sitio para todas sus sesiones: se respeta el
                     # límite por sesión y se pierde volumen, no se amontona.

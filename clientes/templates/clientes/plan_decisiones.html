@@ -1363,7 +1363,7 @@
           {{ bloque_colaborativo.card.objetivo_sesiones }} sesiones · mínimo {{ bloque_colaborativo.card.minimo_valido }}
         </p>
         {% if bloque_colaborativo.card.secundarios %}
-        <p class="dc-card-meta">Énfasis: {{ bloque_colaborativo.card.secundarios|join:", " }}</p>
+        <p class="dc-card-meta">Énfasis: {{ bloque_colaborativo.card.secundarios|join:", " }} · +2 series por semana en cada uno</p>
         {% endif %}
         {% if bloque_colaborativo.card.estado == 'propuesto' and not bloque_colaborativo.cierre_pendiente %}
         <div class="dc-actions">

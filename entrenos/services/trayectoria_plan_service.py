@@ -58,6 +58,16 @@ def _periodizacion_actual(cliente, fecha, limitations):
     }
     primer_lunes = date(fecha.year, 1, 1)
     primer_lunes += timedelta(days=(7 - primer_lunes.weekday()) % 7)
+    # Paso 4 (13-oct-2026): con periodización dinámica la semana del plan no es
+    # la del calendario. Se recoloca el año para que la fase y la semana que
+    # enseña el Plan coincidan con las de la sesión de hoy.
+    try:
+        from entrenos.services.periodizacion_dinamica_service import lunes_de, resolver_semana
+        info = resolver_semana(cliente, fecha)
+        if not info.get('legacy'):
+            primer_lunes = lunes_de(fecha) - timedelta(weeks=info['semana_plan'] - 1)
+    except Exception:
+        pass
     cursor = primer_lunes
     fases_anio = []
     actual = None

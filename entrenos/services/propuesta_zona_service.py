@@ -1,12 +1,16 @@
-"""Primera iniciativa del entrenador: proponer más volumen a una zona que retrocede.
+"""Iniciativa del entrenador: ajustar el volumen semanal de una zona.
 
 Las cuatro reglas del rumbo (docs/rumbo_entrenador_vivo.md) en un solo gesto:
-1. Se da cuenta: una zona del mapa muscular retrocede a 90 días.
-2. Propone un cambio real y acotado: +1 serie en sus ejercicios que más caen,
-   durante 4 semanas. Solo se aplica si el usuario acepta.
-3. Lo explica con el dato: porcentaje y marcas antes/ahora.
+1. Se da cuenta: una zona del mapa muscular retrocede a 90 días, o acumula
+   fatiga (RPE alto o fallos no previstos en varios de sus ejercicios).
+2. Propone un cambio real y acotado: ±2 series semanales en esa zona,
+   repartidas en sus sesiones, durante 4 semanas (paso 5, 13-oct-2026; antes
+   era +1 serie en dos ejercicios). Solo se aplica si el usuario acepta, y lo
+   aplica el planificador (volumen_grupo_service).
+3. Lo explica con el dato: porcentaje y marcas antes/ahora, o los ejercicios
+   con fatiga.
 4. Al terminar, compara las 4 semanas de la propuesta con las 4 anteriores y
-   dice si funcionó.
+   dice si funcionó. Si funcionó, el cambio se queda.
 
 Regla de oro: si no puede citar el dato, no propone nada.
 """
@@ -18,7 +22,11 @@ from django.db import transaction
 from django.utils import timezone
 
 SEMANAS = 4
-SERIES_EXTRA = 1
+SERIES_EXTRA = 2              # series semanales de la zona (no por ejercicio)
+MIN_EJERCICIOS_FATIGA = 2
+_MOTIVOS_FATIGA = (
+    'rpe_alto_sostenido', 'rpe_extremo', 'fallo_no_controlado', 'fallo_repetido_no_controlado',
+)
 UMBRAL_EJERCICIO = -5.0      # % de caída de un ejercicio para tenerlo en cuenta
 ENFRIAMIENTO_DIAS = 28       # tras rechazar o evaluar, no repetir la misma zona
 MAX_EJERCICIOS = 2
@@ -82,7 +90,54 @@ def _texto_propuesta(deteccion):
         f"{deteccion['nombre_zona']}: {str(deteccion['pct']).replace('.', ',')} % en 90 días "
         f"({peor['ejercicio']}: {_kg(antes['peso_kg'])} kg × {antes['reps']} → "
         f"{_kg(ahora['peso_kg'])} kg × {ahora['reps']}). "
-        f"Te propongo +{SERIES_EXTRA} serie en {lista} durante {SEMANAS} semanas."
+        f"Te propongo +{SERIES_EXTRA} series semanales de {deteccion['nombre_zona']} "
+        f"durante {SEMANAS} semanas; lo mediré en {lista}."
+    )
+
+
+def detectar_zona_con_fatiga(cliente, hoy=None):
+    """Zona con fatiga en varios de sus ejercicios en 14 días, o None.
+
+    Señal: decisiones del plan por RPE alto o fallo no previsto en al menos
+    dos ejercicios distintos de la misma zona. No se propone bajar en una zona
+    que ya retrocede (ahí el problema puede ser falta de estímulo).
+    """
+    from entrenos.models import GymDecisionLog
+    from entrenos.services.evolucion_muscular_service import (
+        NOMBRES_ZONA, calcular_evolucion_por_grupo, normalizar_zona,
+    )
+
+    hoy = hoy or timezone.localdate()
+    por_zona = {}
+    for nombre in GymDecisionLog.objects.filter(
+        cliente=cliente, motivo_codigo__in=_MOTIVOS_FATIGA,
+        fecha_creacion__date__gte=hoy - timedelta(days=14), fecha_creacion__date__lte=hoy,
+    ).values_list('ejercicio', flat=True):
+        zona = normalizar_zona(None, nombre)
+        if zona:
+            por_zona.setdefault(zona, set()).add((nombre or '').strip())
+    candidatas = {z: e for z, e in por_zona.items() if len(e) >= MIN_EJERCICIOS_FATIGA}
+    if not candidatas:
+        return None
+    estados = (calcular_evolucion_por_grupo(cliente, hoy, 90).get('estado_por_zona') or {})
+    candidatas = {z: e for z, e in candidatas.items() if estados.get(z) != 'retrocede'}
+    if not candidatas:
+        return None
+    zona, ejercicios = max(candidatas.items(), key=lambda kv: (len(kv[1]), kv[0]))
+    return {
+        'zona': zona,
+        'nombre_zona': NOMBRES_ZONA.get(zona, zona.title()),
+        'ejercicios_fatiga': sorted(ejercicios),
+    }
+
+
+def _texto_propuesta_bajar(deteccion):
+    lista = ' y '.join(deteccion['ejercicios_fatiga'][:3])
+    n = len(deteccion['ejercicios_fatiga'])
+    return (
+        f"{deteccion['nombre_zona']}: RPE alto o fallos no previstos en {n} ejercicios en 14 días "
+        f"({lista}). Te propongo −{SERIES_EXTRA} series semanales de {deteccion['nombre_zona']} "
+        f"durante {SEMANAS} semanas para recuperar margen."
     )
 
 
@@ -99,7 +154,7 @@ def generar_propuesta_si_procede(cliente, hoy=None):
         return None
     deteccion = detectar_zona_en_retroceso(cliente, hoy)
     if deteccion is None:
-        return None
+        return _generar_propuesta_bajar(cliente, hoy)
     reciente = PropuestaZonaGym.objects.filter(
         cliente=cliente, zona=deteccion['zona'],
         estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
@@ -125,9 +180,34 @@ def generar_propuesta_si_procede(cliente, hoy=None):
         zona=deteccion['zona'],
         ejercicios=[e['ejercicio'] for e in deteccion['ejercicios']],
         series_extra=SERIES_EXTRA,
+        direccion=PropuestaZonaGym.DIRECCION_SUBIR,
         semanas=SEMANAS,
         deteccion=datos,
         texto=_texto_propuesta(deteccion),
+    )
+
+
+def _generar_propuesta_bajar(cliente, hoy):
+    from entrenos.models import PropuestaZonaGym
+
+    deteccion = detectar_zona_con_fatiga(cliente, hoy)
+    if deteccion is None:
+        return None
+    if PropuestaZonaGym.objects.filter(
+        cliente=cliente, zona=deteccion['zona'],
+        estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
+        creada_en__date__gte=hoy - timedelta(days=ENFRIAMIENTO_DIAS),
+    ).exists():
+        return None
+    return PropuestaZonaGym.objects.create(
+        cliente=cliente,
+        zona=deteccion['zona'],
+        ejercicios=deteccion['ejercicios_fatiga'][:MAX_EJERCICIOS],
+        series_extra=SERIES_EXTRA,
+        direccion=PropuestaZonaGym.DIRECCION_BAJAR,
+        semanas=SEMANAS,
+        deteccion={'ejercicios_fatiga': deteccion['ejercicios_fatiga']},
+        texto=_texto_propuesta_bajar(deteccion),
     )
 
 
@@ -198,31 +278,30 @@ def propuesta_visible(cliente, hoy=None):
 
 
 def aplicar_a_ejercicios(cliente, ejercicios, hoy, cambios, es_descarga=False):
-    """+series a los ejercicios de la propuesta en vigor (nunca en descarga)."""
+    """Deja constancia del ajuste en la sesión (el volumen ya lo puso el planificador).
+
+    Desde el paso 5 la propuesta cambia las series semanales de la zona dentro
+    del planificador (volumen_grupo_service); aquí ya no se suman series a
+    ejercicios sueltos, solo se explica el cambio si la zona sale hoy.
+    """
     if es_descarga:
         return
     p = propuesta_activa(cliente, hoy)
     if p is None:
         return
-    objetivo = {_plano(n) for n in p.ejercicios}
-    for ej in ejercicios:
-        if _plano(ej.get('nombre', '')) not in objetivo:
-            continue
-        try:
-            series = int(ej.get('series') or 0)
-        except (TypeError, ValueError):
-            continue
-        if series <= 0:
-            continue
-        ej['series'] = series + p.series_extra
+    de_la_zona = [ej for ej in ejercicios if ej.get('grupo_muscular') == p.zona]
+    if not de_la_zona:
+        return
+    signo = '−' if p.direccion == 'bajar' else '+'
+    for ej in de_la_zona:
         ej['propuesta_zona_id'] = p.pk
-        razon = f'+{p.series_extra} serie por la propuesta aceptada para {p.nombre_zona} (hasta el {p.fin:%d/%m}).'
-        cambios.append({
-            'tipo': 'propuesta_zona',
-            'ejercicio_original': ej.get('nombre'),
-            'ejercicio_nuevo': None,
-            'razon': razon,
-        })
+    cambios.append({
+        'tipo': 'propuesta_zona',
+        'ejercicio_original': de_la_zona[0].get('nombre'),
+        'ejercicio_nuevo': None,
+        'razon': (f'{signo}{SERIES_EXTRA} series semanales de {p.nombre_zona} por la propuesta '
+                  f'aceptada (hasta el {p.fin:%d/%m}).'),
+    })
 
 
 def evaluar_propuestas_vencidas(cliente, hoy=None):
@@ -246,7 +325,15 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
         else:
             pct = round(median(e['pct'] for e in filas), 1)
             pct_txt = f"{'+' if pct > 0 else ''}{str(pct).replace('.', ',')} %"
-            if pct >= 2:
+            if p.direccion == 'bajar':
+                # Bajar volumen funciona si se recupera margen sin perder fuerza.
+                if pct >= -2:
+                    resultado = 'validada'
+                    notas = f'Menos volumen sin perder fuerza ({pct_txt} frente a las {p.semanas} semanas anteriores)'
+                else:
+                    resultado = 'fallida'
+                    notas = f'Con menos volumen la fuerza bajó: {pct_txt} frente a las {p.semanas} semanas anteriores'
+            elif pct >= 2:
                 resultado = 'validada'
                 notas = f'Fuerza estimada {pct_txt} frente a las {p.semanas} semanas anteriores'
             elif pct <= -5:
@@ -267,9 +354,10 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
 def frase_evaluacion(p):
     """Para "Lo que decidí y si funcionó"."""
     from entrenos.services.aprendizaje_decisiones_service import VEREDICTO
-    lista = ' y '.join(p.ejercicios)
     veredicto = VEREDICTO.get(p.resultado, '')
-    frase = f'{p.nombre_zona}: propuse +{p.series_extra} serie en {lista} durante {p.semanas} semanas y aceptaste.'
+    signo = '−' if p.direccion == 'bajar' else '+'
+    frase = (f'{p.nombre_zona}: propuse {signo}{SERIES_EXTRA} series semanales durante '
+             f'{p.semanas} semanas y aceptaste.')
     if veredicto:
         frase += f' {veredicto[:1].upper()}{veredicto[1:]}: {p.notas_resultado[:1].lower()}{p.notas_resultado[1:]}.'
     return frase

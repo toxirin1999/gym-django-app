@@ -30,6 +30,7 @@ class BloqueGymColaborativoForm(forms.Form):
     )
     objetivos_secundarios = forms.MultipleChoiceField(
         label="Énfasis secundarios", choices=SECUNDARIOS, required=False,
+        help_text="Cada énfasis suma 2 series por semana a ese grupo (brazos: bíceps y tríceps).",
         widget=forms.CheckboxSelectMultiple,
     )
     motivo = forms.CharField(

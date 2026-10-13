@@ -46,7 +46,7 @@ class PropuestaZonaTests(TestCase):
         propuesta = generar_propuesta_si_procede(self.cliente, self.hoy)
         self.assertIn('Isquios: -', propuesta.texto)
         self.assertIn('kg × ', propuesta.texto)
-        self.assertIn('+1 serie en', propuesta.texto)
+        self.assertIn('+2 series semanales de Isquios', propuesta.texto)  # paso 5
         self.assertEqual(set(propuesta.ejercicios), {'Buenos días', 'Curl femoral tumbado'})
 
     def test_sin_retroceso_no_propone(self):
@@ -68,16 +68,22 @@ class PropuestaZonaTests(TestCase):
         p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
         self.assertEqual(p.inicio, self.hoy + timedelta(days=1))
         self.assertEqual(p.fin, p.inicio + timedelta(days=27))
-        ejercicios = [{'nombre': 'Buenos Días', 'series': 3}, {'nombre': 'Press banca', 'series': 3}]
+        # Paso 5: el volumen lo pone el planificador (+2 series semanales de
+        # la zona); aquí solo se explica el cambio, sin tocar series.
+        from entrenos.services.volumen_grupo_service import series_por_grupo
+        self.assertEqual(series_por_grupo(self.cliente, self.hoy), {})  # hoy aún no
+        self.assertEqual(series_por_grupo(self.cliente, p.inicio), {'isquios': 2})
+        ejercicios = [{'nombre': 'Buenos Días', 'grupo_muscular': 'isquios', 'series': 3},
+                      {'nombre': 'Press banca', 'grupo_muscular': 'pecho', 'series': 3}]
         cambios = []
-        aplicar_a_ejercicios(self.cliente, ejercicios, self.hoy, cambios)
-        self.assertEqual(ejercicios[0]['series'], 3)  # hoy aún no
         aplicar_a_ejercicios(self.cliente, ejercicios, p.inicio, cambios)
-        self.assertEqual([e['series'] for e in ejercicios], [4, 3])
+        self.assertEqual([e['series'] for e in ejercicios], [3, 3])
         self.assertEqual(cambios[0]['tipo'], 'propuesta_zona')
-        otros = [{'nombre': 'Buenos días', 'series': 3}]
-        aplicar_a_ejercicios(self.cliente, otros, p.inicio, [], es_descarga=True)
-        self.assertEqual(otros[0]['series'], 3)
+        self.assertIn('+2 series semanales de Isquios', cambios[0]['razon'])
+        otros = [{'nombre': 'Buenos días', 'grupo_muscular': 'isquios', 'series': 3}]
+        sin_cambios = []
+        aplicar_a_ejercicios(self.cliente, otros, p.inicio, sin_cambios, es_descarga=True)
+        self.assertEqual(sin_cambios, [])
 
     def test_al_terminar_comprueba_si_funciono(self):
         self._isquios_caen()
@@ -133,7 +139,7 @@ class PropuestaZonaTests(TestCase):
         )
         resumen = decisiones_evaluadas(self.cliente)
         self.assertEqual(resumen['funcionaron'], 1)
-        self.assertTrue(resumen['items'][0]['texto'].startswith('Isquios: propuse +1 serie en '))
+        self.assertTrue(resumen['items'][0]['texto'].startswith('Isquios: propuse +2 series semanales'))
         self.assertIn('Funcionó: fuerza estimada +6 %', resumen['items'][0]['texto'])
 
     def test_guardar_una_sesion_genera_la_propuesta(self):

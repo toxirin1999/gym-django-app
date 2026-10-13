@@ -151,7 +151,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, 'class="propuesta-resumen"')
         self.assertContains(response, "Isquios")
         self.assertContains(response, "-17,1 %")
-        self.assertContains(response, "1 serie extra")
+        self.assertContains(response, "series por semana")  # paso 5: ±2 semanales
         self.assertContains(response, "4 semanas")
         self.assertNotContains(response, "Texto legado que no debe ser la interfaz.")
 
