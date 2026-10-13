@@ -325,6 +325,9 @@ def cerrar_aprendizaje_gym(entreno):
     """
     evaluar_decisiones_para_entreno(entreno)
     generar_decisiones_para_entreno(entreno)
+    # Topes de máquina: se guardan (o retiran) con las series de esta sesión.
+    from entrenos.services.maquina_service import registrar_topes_de_entreno
+    registrar_topes_de_entreno(entreno)
 
 
 # ─────────────────────────────────────────────────────────────
@@ -661,10 +664,11 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
     # 2. Tope de máquina → subir reps (o distancia, si el ejercicio progresa así)
     if es_tope:
         if tipo_progresion == 'progresion_distancia':
+            # +1 m por sesión: lo mismo que propone el entrenamiento activo.
             return (
                 'subir_reps',
-                5,
-                'Tope de peso alcanzado — progresión por distancia (+5 m)',
+                1,
+                'Tope de peso alcanzado — progresión por distancia (+1 m)',
             )
         return (
             'subir_reps',

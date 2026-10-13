@@ -3926,6 +3926,19 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['estancado'] = detectar_estancamiento(
                     cliente, ejercicio.get('nombre', ''), fecha_obj,
                 )
+                # 13-oct-2026: tope de máquina guardado y salto real de peso.
+                from entrenos.services.maquina_service import incremento_real, tope_de
+                _base_inc = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
+                ejercicio['incremento_kg'] = incremento_real(
+                    cliente, ejercicio.get('nombre', ''),
+                    float(_base_inc.incremento_fisico_kg) if _base_inc else 2.5,
+                )
+                _tope_guardado = tope_de(cliente, ejercicio.get('nombre', ''))
+                if _tope_guardado:
+                    ejercicio['tope_maquina_kg'] = _tope_guardado
+                    ejercicio['sugerencia_tope'] = True
+                    _peso_ini = float(ejercicio.get('peso_inicial_kg') or _tope_guardado)
+                    ejercicio['peso_inicial_kg'] = min(_peso_ini, _tope_guardado)
                 try:
                     peso_trabajo = float(
                         ejercicio.get('peso_inicial_kg')
@@ -4126,7 +4139,10 @@ def vista_entrenamiento_activo(request, cliente_id):
             _base_carga = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
             if _base_carga:
                 ejercicio.setdefault('tipo_carga_default', _base_carga.tipo_carga_default)
-                ejercicio['incremento_kg'] = float(_base_carga.incremento_fisico_kg)
+                from entrenos.services.maquina_service import incremento_real
+                ejercicio['incremento_kg'] = incremento_real(
+                    cliente, ejercicio.get('nombre', ''), float(_base_carga.incremento_fisico_kg),
+                )
             from entrenos.services.peso_semantica_service import normalizar_semantica_carga
             ejercicio.update(normalizar_semantica_carga(ejercicio))
 
@@ -4218,6 +4234,15 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_peso'] = 0.0
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+
+            # 13-oct-2026: tope de máquina guardado (nunca por encima).
+            from entrenos.services.maquina_service import tope_de as _tope_de
+            _tope_guardado = _tope_de(cliente, ejercicio.get('nombre', ''))
+            if _tope_guardado:
+                ejercicio['tope_maquina_kg'] = _tope_guardado
+                ejercicio['sugerencia_tope'] = True
+                _peso_ini = float(ejercicio.get('peso_inicial_kg') or _tope_guardado)
+                ejercicio['peso_inicial_kg'] = min(_peso_ini, _tope_guardado)
 
             # --- Phase Gym Peso 2: carga dependiente de fase. El carry-forward
             # (peso_inicial_kg = peso de la última sesión real) solo tiene

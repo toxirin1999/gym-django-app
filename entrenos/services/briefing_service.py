@@ -167,7 +167,20 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                     distancia_metros__isnull=False,
                 ).order_by('-distancia_metros').values_list('distancia_metros', flat=True).first() or 0
             reps_tope = int(distancia_tope or tope_ej.repeticiones or 0)
-            peso_tope = float(tope_ej.peso_kg or 0)
+            # 13-oct-2026: el peso del tope es el guardado de la máquina o el
+            # de las series reales, no la media del resumen (salía 99,2 kg).
+            from entrenos.services.maquina_service import tope_de
+            from entrenos.services.ultima_sesion_service import kg as _kg_txt, series_de_trabajo
+            peso_tope = tope_de(cliente, nombre)
+            if peso_tope is None:
+                pesos_series = [s['peso'] for s in series_de_trabajo(tope_ej.entreno, nombre) if s['peso'] > 0]
+                peso_tope = max(pesos_series) if pesos_series else float(tope_ej.peso_kg or 0)
+            if not usa_distancia:
+                reps_series = [
+                    s['reps'] for s in series_de_trabajo(tope_ej.entreno, nombre) if s['peso'] == peso_tope
+                ]
+                if reps_series:
+                    reps_tope = min(reps_series)
             # Las sesiones anteriores al contrato de carga-distancia podían
             # guardar Farmer sin peso. No presentamos ese 0 como si fuera una
             # carga real: el ejercicio canónico usa 36 kg por mano.
@@ -177,10 +190,10 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 and ('farmer' in nombre_normalizado or 'granjero' in nombre_normalizado)
             ):
                 peso_tope = 36.0
-            carga_legible = f'{peso_tope:g} kg'
+            carga_legible = f'{_kg_txt(peso_tope)} kg'
             if 'farmer' in nombre_normalizado or 'granjero' in nombre_normalizado:
                 carga_legible += ' por mano'
-            objetivo = reps_tope + (5 if usa_distancia else 1)
+            objetivo = reps_tope + 1  # +1 rep o +1 m, como el entrenamiento activo
             texto_tope = (
                 f'Tope de peso — conserva {carga_legible} y apunta a '
                 f'{objetivo} {"m" if usa_distancia else "reps"}'

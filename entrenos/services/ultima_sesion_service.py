@@ -253,9 +253,19 @@ def aplicar_techo(cliente, ej, hoy):
         return None
 
     from rutinas.models import EjercicioBase
+    from entrenos.services.maquina_service import incremento_real
     base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
-    incremento = float(base.incremento_fisico_kg) if base else 2.5
+    incremento = incremento_real(cliente, nombre, float(base.incremento_fisico_kg) if base else 2.5)
     resultado = techo_peso(lectura, rango_hoy, ej.get('rpe_objetivo') or 8, incremento)
+    if lectura.get('es_tope_maquina'):
+        # La última vez se marcó tope: ese peso es el máximo de la máquina.
+        pesos = [s['peso'] for s in lectura['series'] if s['peso'] > 0]
+        if pesos:
+            resultado = (
+                max(pesos),
+                f'La última vez marcaste tope en {kg(max(pesos))} kg: progreso por repeticiones.',
+                'mantener',
+            )
     if not resultado:
         return None
     techo, frase, accion = resultado

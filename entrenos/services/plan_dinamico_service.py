@@ -535,6 +535,15 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 cambio = None
             if cambio:
                 cambios.append(cambio)
+            # Y nunca por encima del tope guardado de esa máquina.
+            from entrenos.services.maquina_service import aplicar_tope
+            try:
+                cambio_tope = aplicar_tope(cliente, ej)
+            except Exception:
+                logger.exception('[plan_dinamico] tope de máquina falló')
+                cambio_tope = None
+            if cambio_tope:
+                cambios.append(cambio_tope)
 
         # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
         from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios

@@ -2673,3 +2673,30 @@ class SemanaPlanGym(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} · {self.lunes} · semana {self.semana_plan} · {self.origen}'
+
+
+class TopeMaquinaGym(models.Model):
+    """Peso máximo de una máquina para un cliente y un ejercicio (13-oct-2026).
+
+    Antes, "Tope kg" solo marcaba la sesión; a la siguiente se olvidaba y el
+    plan volvía a proponer por encima de lo que la máquina permite (102,5 kg
+    en una máquina de 100). Se guarda al cerrar una sesión con el tope
+    marcado (peso de las series de trabajo) y se borra si un día se levanta
+    más sin marcarlo. Solo afecta a ese ejercicio.
+    """
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='topes_maquina_gym')
+    ejercicio_normalizado = models.CharField(max_length=120)
+    ejercicio = models.CharField(max_length=120)
+    peso_max_kg = models.DecimalField(max_digits=6, decimal_places=2)
+    actualizado_en = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=['cliente', 'ejercicio_normalizado'], name='unique_tope_maquina_gym',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.cliente_id} · {self.ejercicio} · {self.peso_max_kg} kg'

@@ -43,14 +43,15 @@ class TestDecidirAccionTopeProgresionDistancia(TestCase):
         ej.fallo_muscular = fallo
         return ej
 
-    def test_tope_con_progresion_distancia_devuelve_valor_cambio_5(self):
+    def test_tope_con_progresion_distancia_devuelve_valor_cambio_1(self):
+        # 13-oct-2026: +1 m por sesión, lo mismo que propone el entrenamiento activo.
         ej = self._ejercicio_realizado_obj(rpe=7.0)
         accion, valor_cambio, motivo = _decidir_accion(
             ej, historial=[], perfil=self._perfil(), rpe=7.0, fallo=False, es_tope=True,
             tipo_progresion='progresion_distancia',
         )
         self.assertEqual(accion, 'subir_reps')
-        self.assertEqual(valor_cambio, 5)
+        self.assertEqual(valor_cambio, 1)
         self.assertIn('distancia', motivo.lower())
 
     def test_tope_con_peso_reps_mantiene_valor_cambio_none(self):
