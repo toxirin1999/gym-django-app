@@ -84,7 +84,7 @@
       <div class="ejercicio">
         <p>{{ nombre }}</p>
         <div class="series">
-          {% for serie in series %}<span class="serie">{{ serie.repeticiones }} × {{ serie.peso_kg|floatformat:"-1" }} kg</span>{% endfor %}
+          {% for serie in series %}<span class="serie">{% if serie.distancia_metros %}{{ serie.distancia_metros|floatformat:"-1" }} m{% else %}{{ serie.repeticiones }}{% endif %} × {{ serie.peso_kg|floatformat:"-1" }} kg</span>{% endfor %}
         </div>
       </div>
       {% endfor %}

@@ -237,3 +237,21 @@ class CierreSemanticaUnidadesTests(TestCase):
 
         self.assertEqual(efectos['dead hang'], 'Añadirá 1 s')
         self.assertEqual(efectos['curl bíceps'], 'Aumentará la carga un 5%')
+
+
+class TopeEnDistanciaNoHablaDeReps(CierreSemanticaUnidadesTests):
+    """13-oct-2026: el Farmer con peso fijo salía como 'progresó por reps'."""
+
+    def test_farmer_con_peso_fijo_dice_metros(self):
+        entreno = self._entreno(date(2026, 10, 13))
+        ej = self._ejercicio(entreno, self.farmer, peso=36, series=3, reps=0)
+        ej.es_tope_maquina = True
+        cambios = _cambios_relevantes(self.cliente, entreno, [ej])
+        self.assertEqual(cambios[0]['detalle'], 'peso fijo · progresa por metros')
+
+    def test_maquina_normal_sigue_diciendo_reps(self):
+        entreno = self._entreno(date(2026, 10, 13))
+        ej = self._ejercicio(entreno, self.curl, peso=40, series=3, reps=12)
+        ej.es_tope_maquina = True
+        cambios = _cambios_relevantes(self.cliente, entreno, [ej])
+        self.assertEqual(cambios[0]['detalle'], 'tope de peso · progresó por reps')

@@ -512,10 +512,20 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
     cambios = []
     for ej in ejercicios:
         if ej.es_tope_maquina:
+            # Farmer, planchas…: el peso fijo no es un tope de máquina; lo
+            # que progresa son los metros o los segundos, no las reps.
+            progresion = (
+                EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
+                .values_list('tipo_progresion', flat=True).first()
+            )
+            detalle = {
+                'progresion_distancia': 'peso fijo · progresa por metros',
+                'progresion_tiempo': 'peso fijo · progresa por tiempo',
+            }.get(progresion, 'tope de peso · progresó por reps')
             cambios.append({
                 'nombre': ej.nombre_ejercicio,
                 'tipo': 'tope',
-                'detalle': 'tope de peso · progresó por reps',
+                'detalle': detalle,
             })
             continue
 
