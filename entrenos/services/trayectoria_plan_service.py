@@ -252,6 +252,44 @@ def _marcar_sesiones_helms_realizadas(cliente, sesiones, inicio, fin):
     return sesiones
 
 
+def _aplicar_cola_semanal(sesiones, fecha_corte, fin_semana):
+    """Recoloca las sesiones atrasadas como hace la cola de Ahora (paso 3).
+
+    Lo que no se hizo no se pierde: la primera sesión pendiente atrasada pasa a
+    hoy y las siguientes se corren a los próximos días de la semana (incluido
+    el fin de semana). Si hoy ya hay una sesión hecha, la cola empieza mañana.
+    Solo cambia cómo se enseña la semana (fecha_pospuesta/fecha_efectiva), no
+    guarda nada. Lo que no cabe antes del domingo se queda como no registrado.
+    """
+    pendientes_estados = {SesionProgramada.ESTADO_PENDIENTE, 'prevista'}
+    pendientes = sorted(
+        (s for s in sesiones
+         if s['estado'] in pendientes_estados and not s['realizada'] and not s['fecha_pospuesta']),
+        key=lambda s: (s['fecha_prevista'], s['id'] or 0),
+    )
+    if not any(s['fecha_efectiva'] < fecha_corte for s in pendientes):
+        return sesiones
+    hecha_hoy = any(s['realizada'] and s.get('fecha_realizada') == fecha_corte for s in sesiones)
+    inicio = fecha_corte + timedelta(days=1) if hecha_hoy else fecha_corte
+    huecos = []
+    dia = inicio
+    while dia <= fin_semana:
+        huecos.append(dia)
+        dia += timedelta(days=1)
+    # Primero los días con sesión prevista (el ritmo de la semana) y, si no
+    # bastan, el resto de días hasta el domingo.
+    previstos = sorted({s['fecha_prevista'] for s in pendientes if s['fecha_prevista'] >= inicio})
+    libres = [d for d in huecos if d not in previstos]
+    orden = sorted(set(previstos + ([inicio] if inicio in huecos else [])))
+    orden += [d for d in libres if d not in orden]
+    for sesion, hueco in zip(pendientes, sorted(orden[:len(pendientes)])):
+        if hueco != sesion['fecha_prevista']:
+            sesion['fecha_pospuesta'] = hueco
+            sesion['fecha_efectiva'] = hueco
+            sesion['en_cola'] = True
+    return sorted(sesiones, key=lambda s: (s['fecha_efectiva'], s['id'] or 0))
+
+
 def _contar_sesiones_no_registradas(sesiones, fecha_corte):
     """Cuenta pendientes ya pasadas para ofrecer una siguiente acción amable."""
     return sum(
@@ -354,6 +392,9 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
             cliente,
             _sesiones_helms_semana(plan, inicio_semana, inicio_semana + timedelta(days=6)),
             inicio_semana, inicio_semana + timedelta(days=6),
+        )
+        sesiones_planificadas = _aplicar_cola_semanal(
+            sesiones_planificadas, fecha, inicio_semana + timedelta(days=6),
         )
         if sesiones_planificadas:
             semana = {

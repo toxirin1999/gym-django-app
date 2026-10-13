@@ -920,9 +920,9 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% endwith %}
 
     {% if sesion_programada and sesion_programada.estado == 'pendiente' %}
-    {# La sesión canónica sigue siendo aplazable cuando alcanza su fecha efectiva.
+    {% comment %}La sesión canónica sigue siendo aplazable cuando alcanza su fecha efectiva.
        La decisión visual puede no tener Gym como dominante, pero no debe esconder
-       una sesión pendiente que el usuario aún puede conservar para mañana. #}
+       una sesión pendiente que el usuario aún puede conservar para mañana. {% endcomment %}
     <form data-postpone-session class="rb-session-calendar-action mt-3"
           method="post" action="{% url 'clientes:posponer_sesion' sesion_programada.id %}">
       {% csrf_token %}

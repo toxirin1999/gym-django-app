@@ -158,10 +158,12 @@ class TrayectoriaPlanTests(TestCase):
             [sesion['nombre'] for sesion in resultado['semana']['sesiones']],
             ['Día 1 - Fuerza', 'Día 2 - Fuerza'],
         )
+        # 13-oct-2026: la semana sigue la cola de Ahora; el Día 1 (del lunes,
+        # sin hacer) pasa a hoy y el Día 2 se corre a mañana.
         self.assertEqual(resultado['proximo_hito'], {
             'tipo': 'sesion',
             'fecha': date(2026, 8, 26),
-            'etiqueta': 'Día 2 - Fuerza',
+            'etiqueta': 'Día 1 - Fuerza',
             'sesion_id': None,
         })
 

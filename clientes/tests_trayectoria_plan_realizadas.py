@@ -51,9 +51,12 @@ class SesionesHelmsRealizadasTests(TestCase):
         self.assertEqual(self._proyectar_helms()['semana']['sesiones_no_registradas'], 0)
 
     def test_sin_entreno_sigue_pendiente_y_no_registrada(self):
+        # 13-oct-2026: sigue pendiente, pero no se pierde: la cola la pasa a hoy.
         resultado = self._proyectar_helms()
-        self.assertFalse(self._sesiones(resultado)['Día 1 - Fuerza']['realizada'])
-        self.assertEqual(resultado['semana']['sesiones_no_registradas'], 1)
+        dia1 = self._sesiones(resultado)['Día 1 - Fuerza']
+        self.assertFalse(dia1['realizada'])
+        self.assertEqual(dia1['fecha_efectiva'], date(2026, 8, 26))
+        self.assertEqual(resultado['semana']['sesiones_no_registradas'], 0)
 
     def test_sesion_hecha_otro_dia_de_la_semana_tambien_cuenta(self):
         # Planificada el lunes, hecha (y guardada) el martes.
