@@ -209,15 +209,33 @@ def _decisiones_entrenador(cliente, entreno):
             continue
         motivo = log.motivo
         evidencia, confianza = evidencia_de_ejercicio(log.ejercicio)
+        tipo_progresion = tipos_progresion.get(log.ejercicio.strip().lower()) or 'peso_reps'
+        # Regla 3 del rumbo: el porqué con el dato, y lo que hiciste en cifras.
+        porque = hoy = None
+        try:
+            from entrenos.services.cierre_porque_service import (
+                _sesion_anterior, porque_decision, texto_series,
+            )
+            ejercicio_hoy = next(
+                (ej for ej in entreno.ejercicios_realizados.all()
+                 if normalizar_ejercicio(ej.nombre_ejercicio) == nombre),
+                None,
+            )
+            porque = porque_decision(
+                log, ejercicio_hoy, _sesion_anterior(cliente, entreno, log.ejercicio), tipo_progresion,
+            )
+            hoy = texto_series(entreno, log.ejercicio, tipo_progresion)
+            if hoy and ejercicio_hoy is not None and ejercicio_hoy.rpe is not None:
+                hoy += f' · RPE {ejercicio_hoy.rpe:g}'.replace('.', ',')
+        except Exception:
+            porque = hoy = None
         decisiones.append({
             'ejercicio': log.ejercicio,
-            'accion': _accion_semantica(
-                log, tipos_progresion.get(log.ejercicio.strip().lower()),
-            ),
+            'accion': _accion_semantica(log, tipo_progresion),
             'motivo': motivo,
-            'efecto': _efecto_decision(
-                log, tipos_progresion.get(log.ejercicio.strip().lower()),
-            ),
+            'porque': porque,
+            'hoy': hoy,
+            'efecto': _efecto_decision(log, tipo_progresion),
             'evidencia': evidencia,
             'confianza': confianza,
         })
@@ -707,7 +725,21 @@ def construir_contexto_cierre(cliente, entreno):
 
     joi_mensaje = _joi_mensaje_cierre(cliente, entreno)
 
+    # Reglas 4 y "qué viene" del rumbo: comprobar la decisión anterior en el
+    # momento y decir lo siguiente. Si algo falla, el cierre guarda silencio.
+    from entrenos.services.cierre_porque_service import comprobaciones_de_hoy, lo_que_viene
+    try:
+        comprobaciones = comprobaciones_de_hoy(cliente, entreno)
+    except Exception:
+        comprobaciones = []
+    try:
+        que_viene = lo_que_viene(cliente, entreno)
+    except Exception:
+        que_viene = []
+
     return {
+        'comprobaciones': comprobaciones,
+        'que_viene': que_viene,
         'resumen': _resumen_sesion(entreno, ejercicios),
         'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy),
         'lectura_plan': lectura_plan,

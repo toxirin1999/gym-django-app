@@ -380,6 +380,16 @@
   </div>
   {% endif %}
 
+  {% if comprobaciones %}
+  <!-- REGLA 4: LO QUE COMPROBÉ HOY -->
+  <div class="sec-hdr"><span class="sec-tag">Lo que comprobé hoy</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for item in comprobaciones %}
+    <p style="margin:0 0 8px;">{% if item.resultado == 'validada' %}✓{% else %}✗{% endif %} {{ item.texto }}</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   {% if lectura_plan %}
   <!-- LECTURA DEL PLAN -->
   <div class="sec-hdr"><span class="sec-tag">Lectura del plan</span><div class="sec-line"></div></div>
@@ -410,8 +420,10 @@
     <div class="cambio-row">
       <div class="cambio-nombre">
         {{ decision.ejercicio }}<br>
-        <span style="color:var(--td);font-size:12px;">{% if decision.accion_semantica %}{{ decision.accion_semantica }}{% else %}{{ decision.accion }}{% endif %} · {{ decision.motivo }}</span>
-        {% if decision.evidencia %}
+        <span style="color:var(--td);font-size:12px;">{% if decision.accion_semantica %}{{ decision.accion_semantica }}{% else %}{{ decision.accion }}{% endif %} · {% if decision.porque %}{{ decision.porque }}{% else %}{{ decision.motivo }}{% endif %}</span>
+        {% if decision.hoy %}
+        <span style="display:block;color:var(--tdm);font-family:var(--fm);font-size:10px;margin-top:5px;">Hoy: {{ decision.hoy }}</span>
+        {% elif decision.evidencia %}
         <span style="display:block;color:var(--tdm);font-family:var(--fm);font-size:10px;margin-top:5px;">Evidencia: {{ decision.evidencia }} · confianza {{ decision.confianza }}</span>
         {% endif %}
         {% if decision.agrupada %}
@@ -429,6 +441,14 @@
   <div class="sec-hdr"><span class="sec-tag">Próxima vez</span><div class="sec-line"></div></div>
   <div class="card">
     <p>{{ proxima_vez }}</p>
+  </div>
+  {% endif %}
+
+  {% if que_viene %}
+  <!-- LO QUE VIENE -->
+  <div class="sec-hdr"><span class="sec-tag">Lo que viene</span><div class="sec-line"></div></div>
+  <div class="card">
+    {% for linea in que_viene %}<p style="margin:0 0 6px;">{{ linea }}</p>{% endfor %}
   </div>
   {% endif %}
 

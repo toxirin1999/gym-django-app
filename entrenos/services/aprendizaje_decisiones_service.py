@@ -83,18 +83,24 @@ def _sesion_evaluadora(log):
         reps = round(float(reps))
     except (TypeError, ValueError):
         reps = None
-    return {'peso': peso, 'reps': reps, 'rpe': ej.rpe, 'fecha': ej.entreno.fecha_ejecucion or ej.entreno.fecha}
+    return {
+        'peso': peso, 'reps': reps, 'rpe': ej.rpe,
+        'fecha': ej.entreno.fecha_ejecucion or ej.entreno.fecha, 'entreno_id': ej.entreno_id,
+    }
 
 
-def frase_decision(log):
-    """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'"""
+def frase_decision(log, etiqueta='Después'):
+    """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'
+
+    En el cierre de la sesión que la evaluó, ``etiqueta='Hoy'``.
+    """
     partes = [f'{_capitalizar(log.ejercicio)}: {describir_accion(log)}.']
     despues = _sesion_evaluadora(log)
     if despues and despues['peso'] is not None and despues['reps']:
         if float(despues['peso'] or 0) > 0:
-            dato = f"Después: {_kg(despues['peso'])} kg × {despues['reps']}"
+            dato = f"{etiqueta}: {_kg(despues['peso'])} kg × {despues['reps']}"
         else:  # peso corporal: "0 kg × 7" no dice nada
-            dato = f"Después: {despues['reps']} reps"
+            dato = f"{etiqueta}: {despues['reps']} reps"
         if despues['rpe'] is not None:
             dato += f" con RPE {_rpe(despues['rpe'])}"
         partes.append(dato + '.')
