@@ -87,6 +87,29 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     return None
 
 
+def _objetivo_distancia_snapshot(entreno, ejercicio_normalizado):
+    """Metros objetivo de la sesión: ``reps_objetivo`` o el mínimo del rango.
+
+    13-oct-2026: el plan solo escribe ``reps_objetivo`` cuando aplica una
+    progresión. Sin él, el Farmer quedaba sin objetivo, la evidencia nunca se
+    cumplía y se decidía "mantener" para siempre (52 m sobre un rango 20-30).
+    El rango prescrito ('20-30') es el objetivo mínimo de la sesión.
+    """
+    objetivo = _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado)
+    if objetivo is not None:
+        return objetivo
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    for ejercicio in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
+            continue
+        try:
+            return Decimal(str(ejercicio.get('repeticiones')).split('-')[0].strip())
+        except (TypeError, ValueError, ArithmeticError):
+            return None
+    return None
+
+
 def _ejercicio_completo_en_sesion(entreno, nombre_ejercicio):
     """Indica si el ejercicio agotó las series previstas para esta sesión.
 
@@ -218,7 +241,7 @@ def reconciliar_progresiones_distancia_heredadas(cliente):
         ).first()
         if not ejercicio_base:
             continue
-        objetivo = _objetivo_repeticiones_snapshot(
+        objetivo = _objetivo_distancia_snapshot(
             log.entreno_origen, normalizar_ejercicio(log.ejercicio),
         )
         if _distancia_cumple_evidencia(
@@ -397,7 +420,7 @@ def generar_decisiones_para_entreno(entreno):
 
         objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
         if tipo_progresion == 'progresion_distancia' and not _distancia_cumple_evidencia(
-            entreno, nombre, objetivo_reps,
+            entreno, nombre, _objetivo_distancia_snapshot(entreno, nombre),
         ):
             # Una carga externa fija no se progresa con una sola serie corta o
             # con RPE 9+. Conservamos la evidencia, pero consolidamos antes.

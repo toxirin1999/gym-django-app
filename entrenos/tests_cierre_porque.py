@@ -116,8 +116,7 @@ class PorQueConElDato(Base):
             'Completado con éxito en 2 sesiones consecutivas con RPE controlado', 140, 5,
         )
         frase = porque_decision(log, ej, anterior, 'peso_reps')
-        self.assertTrue(frase.startswith('RPE 7 hoy y 7 la vez anterior, sin fallo: subo a '), frase)
-        self.assertTrue(frase.endswith(' kg.'))
+        self.assertEqual(frase, 'RPE 7 hoy y 7 la vez anterior, sin fallo: subo el peso.')
 
     def test_tope_de_maquina(self):
         e = self.entreno(D2)
@@ -136,7 +135,7 @@ class PorQueConElDato(Base):
             'Distancia o margen insuficiente — consolidar carga y metros antes de progresar', 36,
             motivo_codigo='distancia_sin_margen',
         )
-        with patch('entrenos.services.decision_log_service._objetivo_repeticiones_snapshot',
+        with patch('entrenos.services.decision_log_service._objetivo_distancia_snapshot',
                    return_value=__import__('decimal').Decimal('53')):
             frase = porque_decision(log, ej, None, 'progresion_distancia')
         self.assertEqual(
@@ -190,7 +189,7 @@ class LoQueViene(Base):
     def test_siguiente_de_la_cola_y_propuesta(self):
         e = self.entreno(D2)
         PropuestaZonaGym.objects.create(
-            cliente=self.cliente, zona='isquios', ejercicios=['Curl femoral'], series_extra=2,
+            cliente=self.cliente, zona='isquios', ejercicios=['Curl femoral'], series_extra=1,
             direccion='subir', semanas=4, texto='x', estado=PropuestaZonaGym.ESTADO_ACEPTADA,
             inicio=D2 + timedelta(days=1), fin=D2 + timedelta(days=28),
         )
@@ -252,3 +251,29 @@ class CierreCompleto(Base):
         self.assertIn('Hoy: 145 kg × 12 con RPE 8', html)
         self.assertIn('RPE 8 hoy: subo cuando lo hagas a RPE 7,5 o menos', html)
         self.assertContains(r, 'Lo que viene')
+
+
+class ObjetivoDeMetrosSinReps(TestCase):
+    """El Farmer quedaba en 'mantener' para siempre: el plan no guardaba reps_objetivo."""
+
+    def entreno(self, ejercicio):
+        from types import SimpleNamespace
+        return SimpleNamespace(gym_decision_version=SimpleNamespace(
+            snapshot={'entrenamiento': {'ejercicios': [ejercicio]}}))
+
+    def test_usa_el_minimo_del_rango(self):
+        from decimal import Decimal
+        from entrenos.services.decision_log_service import _objetivo_distancia_snapshot
+        e = self.entreno({'nombre': 'Farmer Walk', 'repeticiones': '20-30'})
+        self.assertEqual(_objetivo_distancia_snapshot(e, 'farmer walk'), Decimal('20'))
+
+    def test_reps_objetivo_manda_si_existe(self):
+        from decimal import Decimal
+        from entrenos.services.decision_log_service import _objetivo_distancia_snapshot
+        e = self.entreno({'nombre': 'Farmer Walk', 'repeticiones': '20-30', 'reps_objetivo': 57})
+        self.assertEqual(_objetivo_distancia_snapshot(e, 'farmer walk'), Decimal('57'))
+
+    def test_sin_snapshot_no_hay_objetivo(self):
+        from types import SimpleNamespace
+        from entrenos.services.decision_log_service import _objetivo_distancia_snapshot
+        self.assertIsNone(_objetivo_distancia_snapshot(SimpleNamespace(), 'farmer walk'))

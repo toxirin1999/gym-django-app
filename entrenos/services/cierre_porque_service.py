@@ -95,10 +95,10 @@ def _decimal(valor):
 # ─────────────────────────────────────────────────────────────
 
 def _porque_distancia(entreno, nombre, rpe_txt):
-    from entrenos.services.decision_log_service import _objetivo_repeticiones_snapshot
+    from entrenos.services.decision_log_service import _objetivo_distancia_snapshot
 
     series = _series_trabajo(entreno, nombre)
-    objetivo = _objetivo_repeticiones_snapshot(entreno, normalizar_ejercicio(nombre))
+    objetivo = _objetivo_distancia_snapshot(entreno, normalizar_ejercicio(nombre))
     metros = [s.distancia_metros for s in series if s.distancia_metros is not None]
     if not series or len(metros) < len(series):
         return 'Alguna serie quedó sin metros registrados: mantengo hasta tener el dato.'
@@ -153,7 +153,9 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
         else:
             antes = f'RPE {rpe_txt} hoy y la vez anterior sin fallo'
         if log.accion == 'subir_peso':
-            destino = f'subo a {_kg(log.peso_sugerido)} kg' if log.peso_sugerido else 'subo el peso'
+            # Sin kg: el peso exacto lo fija la sesión (fase, incremento de la
+            # máquina) y no siempre coincide con el % bruto del log.
+            destino = 'subo el peso'
         elif tipo_progresion == 'progresion_tiempo':
             destino = 'añado tiempo'
         else:
@@ -237,6 +239,7 @@ def _grupos_texto(entrenamiento):
 def lo_que_viene(cliente, entreno):
     """Siguiente sesión de la cola y propuesta en curso. Solo en el último entreno."""
     from entrenos.models import EntrenoRealizado, PropuestaZonaGym
+    from entrenos.services.volumen_grupo_service import SERIES_POR_AJUSTE
     from entrenos.services.sesion_recomendada import (
         _build_planificador, _es_descanso, _etiqueta_dia, _normalizar_entrenamiento,
         _siguiente_de_cola,
@@ -280,7 +283,8 @@ def lo_que_viene(cliente, entreno):
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, fin__gte=manana,
     ).order_by('inicio'):
         signo = '−' if getattr(p, 'direccion', 'subir') == 'bajar' else '+'
-        cambio = f'{signo}{p.series_extra} series semanales de {p.nombre_zona}'
+        # Mismo número que aplica el planificador (volumen_grupo_service).
+        cambio = f'{signo}{SERIES_POR_AJUSTE} series semanales de {p.nombre_zona}'
         if p.inicio and p.inicio >= manana:
             lineas.append(f'Desde el {p.inicio:%d/%m}, {cambio} por la propuesta que aceptaste (hasta el {p.fin:%d/%m}).')
         else:
