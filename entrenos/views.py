@@ -133,7 +133,7 @@ def _sincronizar_rms_hyrox(cliente, nuevos_rms: dict):
 
 
 # --- FUNCIÓN DE UTILIDAD PARA OBTENER DATOS DEL ENTRENAMIENTO ANTERIOR ---
-def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
+def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, rango=None):
     """
     Busca el último registro de un ejercicio específico de un cliente
     antes de la fecha actual (o en el mismo día si no hay datos previos).
@@ -151,6 +151,11 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
 
     Retorna un diccionario con 'peso', 'fecha', 'series', 'repeticiones' y 'volumen',
     o None si no se encuentra.
+
+    13-oct-2026: peso, reps y RPE salen de la **serie de referencia** (la más
+    pesada que llegó al mínimo de ``rango``; ver ultima_sesion_service), no de
+    la media del resumen por ejercicio, que daba pesos inexistentes (60,1 kg)
+    y escondía series a RPE 10.
     """
     from clientes.models import Cliente
     from .models import EntrenoRealizado, EjercicioRealizado, EjercicioLiftinDetallado, SerieRealizada
@@ -189,10 +194,23 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
                 distancia_metros__isnull=False,
             ).values_list('distancia_metros', flat=True)
             mejor_distancia = max(distancias, default=None)
+            rpe_ref = ej.rpe
             if mejor_distancia is not None:
                 repeticiones = int(mejor_distancia)
                 volumen = 0
             else:
+                from entrenos.services.ultima_sesion_service import (
+                    rango_de_sesion, rango_reps, serie_referencia, series_de_trabajo,
+                )
+                series_reales = series_de_trabajo(ej.entreno, ej.nombre_ejercicio)
+                if series_reales:
+                    limites = rango_reps(rango) if rango else rango_de_sesion(ej.entreno, ej.nombre_ejercicio)
+                    ref = serie_referencia(series_reales, limites[0] if limites else None)
+                    if ref:
+                        peso = round(ref['peso'], 2)
+                        repeticiones = int(round(float(ref['reps'])))
+                        if ref['rpe'] is not None:
+                            rpe_ref = ref['rpe']
                 volumen = round(peso * series * repeticiones, 2)
             return {
                 'peso': peso,
@@ -202,7 +220,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual):
                 'volumen': volumen,
                 'es_tope_maquina': getattr(ej, 'es_tope_maquina', False),
                 'tempo': ej.tempo,
-                'rpe': ej.rpe,
+                'rpe': rpe_ref,
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -3806,6 +3824,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     cliente_id=cliente.id,
                     nombre_ejercicio=ejercicio.get('nombre', ''),
                     fecha_actual=fecha_obj,
+                    rango=ejercicio.get('repeticiones'),
                 )
                 tempo_registrado = datos_anterior.get('tempo') if datos_anterior else None
                 tempo, tempo_fuente = resolver_tempo_sesion(
@@ -4122,7 +4141,8 @@ def vista_entrenamiento_activo(request, cliente_id):
             datos_anterior = obtener_ultimo_peso_ejercicio(
                 cliente_id=cliente.id,
                 nombre_ejercicio=ejercicio.get('nombre', ''),
-                fecha_actual=fecha_obj
+                fecha_actual=fecha_obj,
+                rango=ejercicio.get('repeticiones'),
             )
 
             tempo_registrado = datos_anterior.get('tempo') if datos_anterior else None

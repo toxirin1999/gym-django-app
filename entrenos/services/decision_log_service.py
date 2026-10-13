@@ -397,6 +397,10 @@ def generar_decisiones_para_entreno(entreno):
         else:
             confianza = 'alta'
 
+        from rutinas.models import EjercicioBase
+        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+        tipo_progresion = ej_base.tipo_progresion if ej_base else 'peso_reps'
+
         rendimiento_series = _rendimiento_representativo_desde_series(entreno, nombre)
         reps_media = None
         if rendimiento_series is None:
@@ -409,9 +413,26 @@ def generar_decisiones_para_entreno(entreno):
         fallo = ej.fallo_muscular
         es_tope = ej.es_tope_maquina
 
-        from rutinas.models import EjercicioBase
-        ej_base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
-        tipo_progresion = ej_base.tipo_progresion if ej_base else 'peso_reps'
+        # 13-oct-2026: la referencia es la serie más pesada que entró en el
+        # rango de la sesión, con su propio RPE (no la media: 79 × 8 a RPE 10
+        # y 60 × 15 a RPE 7 no son "RPE 8"). Ver ultima_sesion_service.
+        from entrenos.services.ultima_sesion_service import (
+            kg as _kg_txt, peso_para_reps, rango_de_sesion, serie_referencia, series_de_trabajo,
+        )
+        rango_sesion = rango_de_sesion(entreno, nombre)
+        referencia = None
+        if tipo_progresion in ('peso_reps', 'peso_corporal_lastre', 'progresion_reps'):
+            series_reales = series_de_trabajo(entreno, nombre)
+            if series_reales:
+                referencia = serie_referencia(
+                    series_reales, rango_sesion[0] if rango_sesion else None,
+                )
+        if referencia is not None:
+            peso = Decimal(str(referencia['peso']))
+            reps_media = referencia['reps']
+            reps = _reps_para_log(reps_media)
+            if referencia['rpe'] is not None:
+                rpe = float(referencia['rpe'])
 
         accion, valor_cambio, motivo = _decidir_accion(
             ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
@@ -419,6 +440,10 @@ def generar_decisiones_para_entreno(entreno):
         motivo_codigo = ''
 
         objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
+        if objetivo_reps is None and rango_sesion and not es_tope:
+            # Doble progresión: con el mismo peso se sube cuando se llega al
+            # tope del rango (lo que el briefing le dijo al atleta).
+            objetivo_reps = Decimal(rango_sesion[1])
         if tipo_progresion == 'progresion_distancia' and not _distancia_cumple_evidencia(
             entreno, nombre, _objetivo_distancia_snapshot(entreno, nombre),
         ):
@@ -457,6 +482,35 @@ def generar_decisiones_para_entreno(entreno):
                     accion = 'subir_peso'
                     valor_cambio = perfil.incremento_peso_pct
                 motivo = f'{lectura} — objetivo superado con esfuerzo controlado'
+
+        if referencia is not None and rango_sesion and not es_tope:
+            minimo, maximo = rango_sesion
+            superior = referencia['superior']
+            if superior and accion in ('subir_peso', 'subir_reps'):
+                accion = 'mantener'
+                valor_cambio = None
+                motivo = (
+                    f'{_kg_txt(superior["peso"])} kg se quedó en {superior["reps"]} reps '
+                    f'(por debajo de {minimo}): la referencia es {_kg_txt(referencia["peso"])} kg '
+                    f'× {_formatear_reps(reps_media)}'
+                )
+                motivo_codigo = ''
+            elif (
+                not referencia['en_rango']
+                and Decimal(minimo) - reps_media >= 3
+                and accion not in ('bajar_peso', 'deload')
+                and float(peso) > 0
+            ):
+                objetivo_kg = peso_para_reps(float(peso), int(reps), rpe, minimo, 8)
+                if objetivo_kg and objetivo_kg < float(peso):
+                    pct = round((1 - objetivo_kg / float(peso)) * 100)
+                    accion = 'bajar_peso'
+                    valor_cambio = float(max(5, min(30, pct)))
+                    motivo = (
+                        f'{_kg_txt(peso)} kg × {_formatear_reps(reps_media)}: lejos de '
+                        f'{minimo}-{maximo} reps — bajar el peso para entrar en el rango'
+                    )
+                    motivo_codigo = ''
 
         if accion == 'subir_reps' and es_tope:
             motivo_codigo = 'tope_maquina'

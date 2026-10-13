@@ -225,8 +225,6 @@ def _decisiones_entrenador(cliente, entreno):
                 log, ejercicio_hoy, _sesion_anterior(cliente, entreno, log.ejercicio), tipo_progresion,
             )
             hoy = texto_series(entreno, log.ejercicio, tipo_progresion)
-            if hoy and ejercicio_hoy is not None and ejercicio_hoy.rpe is not None:
-                hoy += f' · RPE {ejercicio_hoy.rpe:g}'.replace('.', ',')
         except Exception:
             porque = hoy = None
         decisiones.append({
@@ -495,6 +493,16 @@ def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallba
     ]
     if not series:
         return float(fallback_peso or 0), fallback_reps or 0
+    # Misma referencia que el resto de la app (13-oct-2026): la serie más
+    # pesada que entró en el rango de esa sesión, no la más pesada a secas.
+    from entrenos.services.ultima_sesion_service import (
+        rango_de_sesion, serie_referencia, series_de_trabajo,
+    )
+    reales = series_de_trabajo(entreno, nombre_ejercicio)
+    rango = rango_de_sesion(entreno, nombre_ejercicio)
+    ref = serie_referencia(reales, rango[0] if rango else None) if reales else None
+    if ref is not None:
+        return float(ref['peso']), round(float(ref['reps']))
     peso = max(serie.peso_kg for serie in series)
     reps_peso = [serie.repeticiones for serie in series if serie.peso_kg == peso]
     reps = round(sum(reps_peso) / len(reps_peso))

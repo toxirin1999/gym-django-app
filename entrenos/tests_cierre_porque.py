@@ -232,7 +232,7 @@ class CierreCompleto(Base):
             ctx = construir_contexto_cierre(self.cliente, e2)
         decision = ctx['decisiones_entrenador'][0]
         self.assertEqual(decision['porque'], 'RPE 8 hoy: subo cuando lo hagas a RPE 7,5 o menos dos sesiones seguidas.')
-        self.assertEqual(decision['hoy'], '145 kg × 12, 12, 12 · RPE 8')
+        self.assertEqual(decision['hoy'], '145 kg × 12, 12, 12')
         self.assertEqual(len(ctx['comprobaciones']), 1)
         self.assertEqual(ctx['que_viene'], ['Mañana toca descanso.'])
 

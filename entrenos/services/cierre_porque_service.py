@@ -48,10 +48,15 @@ def texto_series(entreno, nombre, tipo_progresion='peso_reps'):
 
     def unidad(s):
         if tipo_progresion == 'progresion_distancia' and s.distancia_metros is not None:
-            return f'{_kg(s.distancia_metros)} m'
-        if tipo_progresion == 'progresion_tiempo':
-            return f'{s.repeticiones} s'
-        return str(s.repeticiones)
+            texto = f'{_kg(s.distancia_metros)} m'
+        elif tipo_progresion == 'progresion_tiempo':
+            texto = f'{s.repeticiones} s'
+        else:
+            texto = str(s.repeticiones)
+        # El RPE de cada serie: la media escondía una serie a RPE 10.
+        if s.rpe_real is not None:
+            texto += f' @{_rpe(s.rpe_real)}'
+        return texto
 
     tramos = []  # [(peso, [unidades])], agrupando series seguidas con el mismo peso
     for s in series:
@@ -122,7 +127,11 @@ def _porque_distancia(entreno, nombre, rpe_txt):
 def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
     """Una frase con el dato que sostiene la decisión, o None si no lo hay."""
     motivo = log.motivo or ''
-    rpe = float(ejercicio_hoy.rpe) if ejercicio_hoy and ejercicio_hoy.rpe is not None else None
+    # El RPE con el que se decidió (el de la serie de referencia), no la media.
+    if log.rpe_anterior is not None:
+        rpe = float(log.rpe_anterior)
+    else:
+        rpe = float(ejercicio_hoy.rpe) if ejercicio_hoy and ejercicio_hoy.rpe is not None else None
     rpe_txt = _rpe(rpe) if rpe is not None else None
     peso_hoy = log.peso_anterior if log.peso_anterior else getattr(ejercicio_hoy, 'peso_kg', None)
 

@@ -522,6 +522,20 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_descarga_hoy=deload)
         _aplicar_overlay_molestia_reciente(cliente, ejercicios_mod, hoy, cambios)
 
+        # ── Techo por la última sesión real (13-oct-2026) ───────────────────
+        # Ningún cálculo anterior (plan anual, e1RM, +%) puede proponer más de
+        # lo que dicen las series de la última vez: no subir si se quedó corto,
+        # bajar si se quedó muy corto, un salto de máquina como mucho.
+        from entrenos.services.ultima_sesion_service import aplicar_techo
+        for ej in ejercicios_mod:
+            try:
+                cambio = aplicar_techo(cliente, ej, hoy)
+            except Exception:
+                logger.exception('[plan_dinamico] techo de última sesión falló')
+                cambio = None
+            if cambio:
+                cambios.append(cambio)
+
         # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
         from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios
         aplicar_a_ejercicios(cliente, ejercicios_mod, hoy, cambios, es_descarga=deload)
