@@ -290,6 +290,30 @@
   </section>
   {% endif %}
 
+  {# ── REGLA 4 A ESCALA DE BLOQUE (14-oct-2026): qué prometía, qué pasó, qué cambia ── #}
+  {% if revision_bloque %}
+  <section class="mem-node mem-node--plan" aria-labelledby="memoria-bloque-title">
+    {% with r=revision_bloque.revision c=revision_bloque.en_curso %}
+    {% if r %}
+    <div class="mem-label">Revisión del bloque · {{ r.inicio|date:"d/m" }}–{{ r.fin|date:"d/m" }}</div>
+    <h2 class="mem-heading" id="memoria-bloque-title">{{ r.nombre }}{% if r.fuerza_media is not None %} · fuerza {% if r.fuerza_media >= 0 %}+{% endif %}{{ r.fuerza_media|floatformat:"0" }} %{% endif %}</h2>
+    <div class="mem-list">
+      <div class="mem-row"><div class="idx">01</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Sesiones: {{ r.sesiones.hechas }} de {{ r.sesiones.previstas }} previstas{% if r.sesiones.pct is not None %} ({{ r.sesiones.pct }} %){% endif %} en {{ r.semanas }} semana{{ r.semanas|pluralize }}{% if r.descargas %} y {{ r.descargas }} de descarga{% endif %}.</div></div></div>
+      <div class="mem-row"><div class="idx">02</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Frente a las semanas anteriores: {% if r.suben %}suben {{ r.suben|join:", " }}{% else %}ninguna zona sube claramente{% endif %}{% if r.bajan %}; bajan {{ r.bajan|join:", " }}{% endif %}.</div></div></div>
+      {% if r.equilibrar %}
+      <div class="mem-row"><div class="idx">03</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Equilibrar (zonas que caían al empezar):{% for e in r.equilibrar %}<br>{{ e.texto }}{% endfor %}</div></div></div>
+      {% endif %}
+      <div class="mem-row"><div class="idx">04</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Decisiones comprobadas en el bloque: {% if r.decisiones.total %}{{ r.decisiones.funcionaron }} de {{ r.decisiones.total }} funcionaron{% else %}ninguna con conclusión{% endif %}.{% for p in r.propuestas %}<br>{{ p }}{% endfor %}</div></div></div>
+      <div class="mem-row"><div class="idx">05</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">{{ r.cambia }}</div></div></div>
+    </div>
+    {% endif %}
+    {% if c %}
+    <p class="mem-desc"{% if not r %} id="memoria-bloque-title"{% endif %}>Bloque en curso: <strong>{{ c.nombre }}</strong>{% if c.semana %} · semana {{ c.semana }} de {{ c.de }}{% endif %}{% if c.descarga_ahora %} · esta semana, descarga{% endif %}. Al terminarlo verás aquí qué pasó con el dato.</p>
+    {% endif %}
+    {% endwith %}
+  </section>
+  {% endif %}
+
   {# ── MAPA CORPORAL · evolución por grupo muscular ── #}
   {% if evolucion_muscular %}
   {% include 'clientes/partials/_mapa_evolucion_muscular.html' %}

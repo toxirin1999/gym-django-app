@@ -586,3 +586,26 @@ def responder_evaluacion_bloque_gym(evaluacion, *, actor, aceptar):
             bloque.estado = ContratoBloqueGym.ESTADO_FINALIZADO
             bloque.save(update_fields=['estado', 'actualizado_en'])
     return evaluacion
+
+
+def finalizar_bloques_vencidos(cliente, hoy=None, gracia_dias=7):
+    """Cierra los acuerdos de bloque que terminaron hace más de una semana (14-oct-2026).
+
+    El cierre manual (comando ``cerrar_bloque_gym``) no se ejecutaba y el Centro
+    mostraba un bloque "pendiente de cierre" durante semanas. La revisión de
+    bloque se hace ahora sobre la periodización (``revision_bloque_service``);
+    el acuerdo vencido se da por finalizado y deja de mostrarse como pendiente.
+    """
+    hoy = hoy or timezone.localdate()
+    vencidos = ContratoBloqueGym.objects.filter(
+        cliente=cliente,
+        estado__in=[ContratoBloqueGym.ESTADO_ACTIVO, ContratoBloqueGym.ESTADO_PAUSADO],
+        semana_fin_prevista__lt=hoy - timedelta(days=gracia_dias),
+    )
+    n = 0
+    for bloque in vencidos:
+        # Un bloque aprobado es inmutable salvo su estado (igual que al aceptar su cierre).
+        bloque.estado = ContratoBloqueGym.ESTADO_FINALIZADO
+        bloque.save(update_fields=['estado', 'actualizado_en'])
+        n += 1
+    return n

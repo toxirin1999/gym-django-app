@@ -1336,7 +1336,7 @@
       <div class="dc-actions">
         <a class="dc-button is-primary" href="#preparar-bloque-gym" aria-label="Preparar bloque Gym">Preparar bloque Gym</a>
       </div>
-      {% elif bloque_colaborativo.bloque and resumen_operativo.proxima_sesion.estado != 'disponible' %}
+      {% elif bloque_colaborativo.bloque %}
       <div class="dc-actions">
         <a class="dc-button is-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver rutina</a>
       </div>

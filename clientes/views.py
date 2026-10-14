@@ -5837,6 +5837,7 @@ def memoria_entrenador(request, cliente_id):
         'hyrox_obj': hyrox_obj,
         'rpe_bias': rpe_bias,
         'rpe_gym': _calibracion_rpe_gym_segura(cliente),
+        'revision_bloque': _revision_bloque_segura(cliente),
         'estaciones_progreso': estaciones_progreso,
         'decisiones_agrupadas': decisiones_agrupadas,
         'decisiones_total': decisiones_total,
@@ -6794,5 +6795,14 @@ def _calibracion_rpe_gym_segura(cliente):
     try:
         from entrenos.services.calibracion_rpe_service import calibracion_rpe_gym
         return calibracion_rpe_gym(cliente)
+    except Exception:
+        return None
+
+
+def _revision_bloque_segura(cliente):
+    """Revisión del último bloque de la periodización (Memoria). Nunca rompe la página."""
+    try:
+        from entrenos.services.revision_bloque_service import revision_ultimo_bloque
+        return revision_ultimo_bloque(cliente)
     except Exception:
         return None

@@ -328,6 +328,10 @@ def cerrar_aprendizaje_gym(entreno):
     # Topes de máquina: se guardan (o retiran) con las series de esta sesión.
     from entrenos.services.maquina_service import registrar_topes_de_entreno
     registrar_topes_de_entreno(entreno)
+    # Acuerdos de bloque vencidos: se cierran al guardar una sesión (nunca en
+    # una lectura). La revisión de bloque va sobre la periodización.
+    from entrenos.services.contrato_bloque_gym_service import finalizar_bloques_vencidos
+    finalizar_bloques_vencidos(entreno.cliente)
 
 
 # ─────────────────────────────────────────────────────────────

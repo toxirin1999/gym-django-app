@@ -94,7 +94,9 @@ def construir_resumen_operativo_centro(
             'es_pospuesta': sesion.pospuesta_hasta is not None,
         }
     else:
-        proxima_dto = {
+        # 14-oct-2026: sin sesiones programadas (no hay acuerdo semanal), la
+        # próxima sesión es la de la cola de la semana, la misma que Ahora.
+        proxima_dto = _proxima_desde_cola(cliente, fecha_ref) or {
             'estado': 'desconocido',
             'nombre': None,
             'fecha': None,
@@ -334,3 +336,32 @@ def construir_estado_plan(
         'hay_senales_activas': True,
         'estado_continuidad': estado_continuidad,
     }
+
+
+def _proxima_desde_cola(cliente, fecha_ref, dias=7):
+    """La siguiente sesión según la cola semanal y el plan (lo que propone Ahora)."""
+    try:
+        from entrenos.services.sesion_recomendada import (
+            _build_planificador, _es_descanso, _normalizar_entrenamiento, _siguiente_de_cola,
+        )
+        planificador = None
+        for d in range(dias + 1):
+            fecha = fecha_ref + timedelta(days=d)
+            siguiente = _siguiente_de_cola(cliente, fecha)
+            if siguiente:
+                return {'estado': 'disponible', 'nombre': siguiente['nombre'], 'fecha': fecha,
+                        'es_pospuesta': siguiente['fecha'] < fecha}
+            planificador = planificador or _build_planificador(cliente)
+            sesion = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(fecha))
+            if not _es_descanso(sesion):
+                from entrenos.models import EntrenoRealizado
+                from django.db.models import Q
+                hecho = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+                    Q(fecha_ejecucion=fecha) | Q(fecha_ejecucion__isnull=True, fecha=fecha)
+                ).exists()
+                if not hecho:
+                    return {'estado': 'disponible', 'nombre': (sesion.get('rutina_nombre') or '').strip(),
+                            'fecha': fecha, 'es_pospuesta': False}
+    except Exception:
+        return None
+    return None
