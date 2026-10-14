@@ -1311,6 +1311,9 @@
           {% if resumen_operativo.semana.estado == 'materializada' %}
           <strong class="dc-next-value">{{ resumen_operativo.semana.completadas }} de {{ resumen_operativo.semana.objetivo }} completadas</strong>
           <span class="dc-next-meta">Mínimo válido: {{ resumen_operativo.semana.minimo }}</span>
+          {% elif resumen_operativo.semana.estado == 'periodizacion' %}
+          <strong class="dc-next-value">{{ resumen_operativo.semana.completadas }} de {{ resumen_operativo.semana.objetivo }} hechas</strong>
+          <span class="dc-next-meta">Sesiones de esta semana según tu plan de {{ resumen_operativo.semana.objetivo }} días.</span>
           {% else %}
           <strong class="dc-next-value">Semana pendiente de programar</strong>
           <span class="dc-next-meta">Aún no hay sesiones programadas para esta semana.</span>
@@ -1320,6 +1323,7 @@
           <span class="dc-next-label">Bloque y carga</span>
           {% if resumen_operativo.bloque.semana_actual %}
           <strong class="dc-next-value">Semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}</strong>
+          {% if resumen_operativo.bloque.nombre %}<span class="dc-next-meta">{{ resumen_operativo.bloque.nombre }}{% if resumen_operativo.bloque.descarga %} · semana de descarga{% endif %}</span>{% endif %}
           {% else %}
           <strong class="dc-next-value">Bloque sin semana actual</strong>
           {% endif %}
@@ -1332,11 +1336,11 @@
           {% endif %}
         </div>
       </div>
-      {% if not bloque_colaborativo.bloque and not bloque_colaborativo.cierre_pendiente %}
+      {% if not bloque_colaborativo.bloque and not bloque_colaborativo.cierre_pendiente and resumen_operativo.bloque.estado != 'periodizacion' %}
       <div class="dc-actions">
         <a class="dc-button is-primary" href="#preparar-bloque-gym" aria-label="Preparar bloque Gym">Preparar bloque Gym</a>
       </div>
-      {% elif bloque_colaborativo.bloque %}
+      {% elif bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}
       <div class="dc-actions">
         <a class="dc-button is-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver rutina</a>
       </div>
@@ -1385,6 +1389,21 @@
           </form>
         </details>
         {% endif %}
+      </article>
+      {% elif not bloque_colaborativo.cierre_pendiente and resumen_operativo.bloque.estado == 'periodizacion' %}
+      <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
+        <h3 id="preparar-bloque-titulo" class="dc-card-text">El bloque lo lleva la periodización</h3>
+        <p class="dc-card-meta">{{ resumen_operativo.bloque.nombre }} · semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}. No hace falta preparar nada.</p>
+        <details class="dc-accordion">
+          <summary>Añadir un énfasis por tu cuenta <span aria-hidden="true">⌄</span></summary>
+          <div class="dc-accordion-body">
+            <p class="dc-card-meta">Un acuerdo de bloque suma 2 series por semana a cada grupo que elijas, durante las semanas que digas.</p>
+            <form class="dc-form-grid" id="preparar-bloque-gym" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
+              {% csrf_token %}{{ form_bloque_gym.as_p }}
+              <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
+            </form>
+          </div>
+        </details>
       </article>
       {% elif not bloque_colaborativo.cierre_pendiente %}
       <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
@@ -1513,6 +1532,22 @@
         {% endif %}
       </article>
       {% endwith %}
+      {% elif balance_semana %}
+      <article class="dc-card is-weekly-close" aria-labelledby="balance-semana-titulo">
+        <div class="dc-close-head">
+          <h3 class="dc-close-title" id="balance-semana-titulo">Cierre semanal</h3>
+          <span class="dc-pill is-learned">Balance automático</span>
+        </div>
+        <p class="dc-card-meta">Semana del {{ balance_semana.lunes|date:"j N" }} al {{ balance_semana.domingo|date:"j N Y" }}{% if balance_semana.descarga %} · descarga{% endif %}</p>
+        <p class="dc-close-score">{{ balance_semana.hechas }} de {{ balance_semana.previstas }} sesiones{% if balance_semana.cumplida %} · semana completa{% endif %}</p>
+        <p class="dc-card-meta">Cuenta los días con sesión de gym registrada frente a los días de tu plan.</p>
+        <ul class="dc-close-metrics" aria-label="Métricas con evidencia disponible">
+          {% if balance_semana.volumen_kg %}<li><strong>{{ balance_semana.volumen_kg }} kg</strong>volumen total</li>{% endif %}
+          {% if balance_semana.minutos %}<li><strong>{{ balance_semana.minutos }} min</strong>duración registrada</li>{% endif %}
+          {% if balance_semana.rpe_medio %}<li><strong>{{ balance_semana.rpe_medio }}</strong>RPE medio</li>{% endif %}
+          {% if balance_semana.energia_media %}<li><strong>{{ balance_semana.energia_media }}</strong>energía media</li>{% endif %}
+        </ul>
+      </article>
       {% endif %}
 
       {% if sugerencia_prioritaria %}

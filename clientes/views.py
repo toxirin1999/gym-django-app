@@ -6309,6 +6309,21 @@ def plan_decisiones_view(request):
     ).order_by('contrato__semana', 'id').first()
     if cierre_semanal is None:
         cierre_semanal = cierres_semanales.order_by('-contrato__semana', '-id').first()
+    # 14-oct-2026: sin acuerdo semanal reciente, el balance es el de la semana
+    # pasada real según la periodización, no el último acuerdo que hubo.
+    balance_semana = None
+    lunes_pasado = hoy - timedelta(days=hoy.weekday() + 7)
+    if cierre_semanal is None or (
+        cierre_semanal.estado_revision != EvaluacionSemanalGym.ESTADO_PENDIENTE
+        and cierre_semanal.contrato.semana < lunes_pasado
+    ):
+        try:
+            from entrenos.services.revision_bloque_service import balance_semana_pasada
+            balance_semana = balance_semana_pasada(cliente, hoy)
+        except Exception:
+            balance_semana = None
+        if balance_semana:
+            cierre_semanal = None
     cierre_metricas_ui = {}
     if cierre_semanal:
         metricas_cierre = cierre_semanal.evidencia_snapshot.get('metricas') or {}
@@ -6561,6 +6576,7 @@ def plan_decisiones_view(request):
         'traces_agrupados': traces_agrupados,
         'decisiones_agrupadas': decisiones_agrupadas,
         'cierre_semanal': cierre_semanal,
+        'balance_semana': balance_semana,
         'cierre_metricas_ui': cierre_metricas_ui,
         'cierre_bloque': cierre_bloque,
         'cierre_bloque_semanas_ui': cierre_bloque_semanas_ui,

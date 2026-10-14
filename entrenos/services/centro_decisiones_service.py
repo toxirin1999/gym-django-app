@@ -26,9 +26,12 @@ def construir_resumen_operativo_centro(
     """Proyección factual y allowlisted para la cabecera operativa del Centro.
 
     La función es estrictamente de lectura: no materializa contratos ni corrige
-    estados. Una ausencia se expresa como desconocida en lugar de inferirse a
-    partir de entrenamientos u otras fuentes paralelas.
+    estados. Sin acuerdo de bloque ni acuerdo semanal, el bloque y la semana
+    salen de la periodización (``SemanaPlanGym``), la misma fuente que la
+    Memoria y que el briefing (14-oct-2026). Sin ninguna de las dos, la
+    ausencia se expresa como desconocida.
     """
+    periodizacion = _periodizacion_en_curso(cliente, fecha_ref)
     bloque = (bloque_colaborativo or {}).get('bloque')
     bloque_dto = {
         'estado': None,
@@ -44,6 +47,14 @@ def construir_resumen_operativo_centro(
             'semana_actual': semana_actual,
             'semanas_total': bloque.semanas_previstas,
         }
+    if bloque_dto['semana_actual'] is None and periodizacion and periodizacion.get('semana'):
+        bloque_dto = {
+            'estado': 'periodizacion',
+            'semana_actual': periodizacion['semana'],
+            'semanas_total': periodizacion['de'],
+            'nombre': periodizacion['nombre'],
+            'descarga': periodizacion['descarga_ahora'],
+        }
 
     lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
     contrato = (
@@ -52,7 +63,19 @@ def construir_resumen_operativo_centro(
         .order_by('-id')
         .first()
     )
-    if contrato is None:
+    if contrato is None and periodizacion:
+        from entrenos.services.revision_bloque_service import semana_en_curso
+        semana = semana_en_curso(cliente, fecha_ref)
+        semana_dto = {
+            'estado': 'periodizacion',
+            'completadas': semana['hechas'],
+            'sesiones_completadas': semana['hechas'],
+            'sesiones_parciales': None,
+            'sesiones_realizadas': semana['hechas'],
+            'objetivo': semana['previstas'],
+            'minimo': None,
+        }
+    elif contrato is None:
         semana_dto = {
             'estado': 'desconocido',
             'completadas': None,
@@ -138,6 +161,15 @@ def construir_resumen_operativo_centro(
         'proxima_sesion': proxima_dto,
         'carga': carga_dto,
     }
+
+def _periodizacion_en_curso(cliente, fecha_ref):
+    """Bloque en curso de la periodización, o None (nunca rompe el Centro)."""
+    try:
+        from entrenos.services.revision_bloque_service import estado_bloques
+        return estado_bloques(cliente, hoy=fecha_ref)['en_curso']
+    except Exception:
+        return None
+
 
 # Phase 62G.1 — etiquetas de grupo para "Carga por ejercicio". Distintas de
 # accion_label (que dice "Mantener"): aquí se nombra el grupo tal y como

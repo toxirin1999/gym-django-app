@@ -133,9 +133,12 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         self.assertIn('href="#preparar-bloque-gym"', siguiente)
         self.assertIn('aria-label="Preparar bloque Gym"', siguiente)
         self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", siguiente)
-        # 14-oct-2026: "Ver rutina" se ofrece siempre que hay bloque (la próxima
-        # sesión ya sale de la cola semanal aunque no haya calendario).
-        self.assertIn("{% elif bloque_colaborativo.bloque %}", siguiente)
+        # 14-oct-2026: "Ver rutina" se ofrece siempre que hay bloque, de acuerdo
+        # o de la periodización (la próxima sesión ya sale de la cola semanal).
+        self.assertIn(
+            "{% elif bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}",
+            siguiente,
+        )
         self.assertIn('id="preparar-bloque-gym"', source)
 
     def test_layout_cubre_375_y_escritorio_sin_overflow(self):

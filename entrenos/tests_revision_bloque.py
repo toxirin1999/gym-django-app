@@ -175,3 +175,77 @@ class CierreAlGuardarSesion(Base):
         cerrar_aprendizaje_gym(EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=hoy))
         bloque.refresh_from_db()
         self.assertEqual(bloque.estado, ContratoBloqueGym.ESTADO_FINALIZADO)
+
+
+class CentroSigueLaPeriodizacion(Base):
+    """El Centro dice lo mismo que la Memoria: bloque, semana y balance."""
+
+    def test_resumen_operativo_sin_acuerdos(self):
+        from entrenos.services.centro_decisiones_service import construir_resumen_operativo_centro
+        self.semanas([1, 2, 3])
+        hoy = LUNES + timedelta(weeks=2, days=2)
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=hoy - timedelta(days=1))
+        r = construir_resumen_operativo_centro(self.cliente, {'bloque': None}, None, hoy)
+        self.assertEqual(r['bloque']['estado'], 'periodizacion')
+        self.assertEqual((r['bloque']['semana_actual'], r['bloque']['semanas_total']), (3, 7))
+        self.assertEqual(r['bloque']['nombre'], 'Hipertrofia — Acumulación')
+        self.assertEqual(r['semana'], {
+            'estado': 'periodizacion', 'completadas': 1, 'sesiones_completadas': 1,
+            'sesiones_parciales': None, 'sesiones_realizadas': 1, 'objetivo': 4, 'minimo': None,
+        })
+
+    def test_sin_periodizacion_sigue_desconocido(self):
+        from entrenos.services.centro_decisiones_service import construir_resumen_operativo_centro
+        r = construir_resumen_operativo_centro(self.cliente, {'bloque': None}, None, LUNES)
+        self.assertIsNone(r['bloque']['semana_actual'])
+        self.assertEqual(r['semana']['estado'], 'desconocido')
+
+    def test_balance_de_la_semana_pasada(self):
+        from entrenos.models import EjercicioRealizado, SerieRealizada
+        from entrenos.services.revision_bloque_service import balance_semana_pasada
+        from rutinas.models import EjercicioBase
+        self.semanas([1, 2])
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        base = EjercicioBase.objects.create(nombre='Prensa', grupo_muscular='otros')
+        for dia, vol, minutos, energia, rpe in ((0, 10000, 60, 6, 8), (2, 12500, 70, 8, 9), (2, 500, 10, None, None)):
+            e = EntrenoRealizado.objects.create(
+                cliente=self.cliente, rutina=rutina, fecha=LUNES + timedelta(days=dia),
+                duracion_minutos=minutos, energia_pre_sesion=energia,
+            )
+            EntrenoRealizado.objects.filter(pk=e.pk).update(volumen_total_kg=vol)
+            if rpe:
+                SerieRealizada.objects.create(entreno=e, ejercicio=base, serie_numero=1, repeticiones=10,
+                                              peso_kg=100, rpe_real=rpe, completado=True)
+        b = balance_semana_pasada(self.cliente, hoy=LUNES + timedelta(days=9))
+        self.assertEqual((b['lunes'], b['hechas'], b['previstas'], b['cumplida']), (LUNES, 2, 4, False))
+        self.assertEqual((b['volumen_kg'], b['minutos'], b['rpe_medio'], b['energia_media']),
+                         ('23.000', 140, '8,5', '7,0'))
+
+    def test_sin_periodizacion_no_hay_balance(self):
+        from entrenos.services.revision_bloque_service import balance_semana_pasada
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=LUNES)
+        self.assertIsNone(balance_semana_pasada(self.cliente, hoy=LUNES + timedelta(days=9)))
+
+    def test_pantalla_del_centro(self):
+        from django.urls import reverse
+        from django.utils import timezone
+        from entrenos.services.periodizacion_dinamica_service import lunes_de
+        este_lunes = lunes_de(timezone.localdate())
+        for i, n in enumerate((1, 2)):
+            SemanaPlanGym.objects.create(cliente=self.cliente, lunes=este_lunes - timedelta(weeks=1 - i),
+                                         semana_plan=n, origen=SemanaPlanGym.ORIGEN_AVANCE)
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=este_lunes - timedelta(days=5))
+        self.client.force_login(self.cliente.user)
+        r = self.client.get(reverse('clientes:plan_decisiones'))
+        html = r.content.decode()
+        self.assertIn('Semana 2 de 7', html)
+        self.assertIn('Hipertrofia — Acumulación', html)
+        self.assertNotIn('Bloque sin semana actual', html)
+        self.assertNotIn('Semana pendiente de programar', html)
+        self.assertIn('1 de 4 sesiones', html)
+        self.assertIn('El bloque lo lleva la periodización', html)
+        self.assertIn('Ver rutina', html)
+        self.assertNotIn('aria-label="Preparar bloque Gym"', html)

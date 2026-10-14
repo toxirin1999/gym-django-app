@@ -186,3 +186,63 @@ def revision_ultimo_bloque(cliente, hoy=None):
     if not revision and not estado['en_curso']:
         return None
     return {'revision': revision, 'en_curso': estado['en_curso']}
+
+
+def semana_en_curso(cliente, hoy=None):
+    """Sesiones de gym de esta semana frente a las previstas por la periodización."""
+    from entrenos.services.periodizacion_dinamica_service import (
+        _dias_previstos, _sesiones_semana, lunes_de,
+    )
+    hoy = hoy or timezone.localdate()
+    return {'hechas': _sesiones_semana(cliente, lunes_de(hoy)), 'previstas': _dias_previstos(cliente)}
+
+
+def balance_semana_pasada(cliente, hoy=None):
+    """Balance de la semana pasada (lunes-domingo) con el dato registrado.
+
+    Sustituye al cierre del acuerdo semanal cuando ese acuerdo ya no existe:
+    sesiones hechas frente a previstas y, solo si hay dato, volumen, minutos,
+    RPE medio y energía media. Devuelve None si la semana no tuvo periodización
+    ni sesiones.
+    """
+    from django.db.models import Avg, Q, Sum
+    from entrenos.models import EntrenoRealizado, SemanaPlanGym, SerieRealizada
+    from entrenos.services.periodizacion_dinamica_service import (
+        _dias_previstos, _sesiones_semana, lunes_de,
+    )
+
+    hoy = hoy or timezone.localdate()
+    lunes = lunes_de(hoy) - timedelta(days=7)
+    domingo = lunes + timedelta(days=6)
+    registro = SemanaPlanGym.objects.filter(cliente=cliente, lunes=lunes).first()
+    entrenos = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+        Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=domingo)
+        | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=domingo)
+    )
+    hechas = _sesiones_semana(cliente, lunes)
+    hay_periodizacion = SemanaPlanGym.objects.filter(cliente=cliente, lunes__lte=lunes_de(hoy)).exists()
+    if not hay_periodizacion or (registro is None and not hechas):
+        return None
+    previstas = _dias_previstos(cliente)
+    agregados = entrenos.aggregate(
+        volumen=Sum('volumen_total_kg'), minutos=Sum('duracion_minutos'), energia=Avg('energia_pre_sesion'),
+    )
+    rpe = SerieRealizada.objects.filter(
+        entreno__in=entrenos, completado=True, rpe_real__isnull=False,
+    ).aggregate(m=Avg('rpe_real'))['m']
+
+    def coma(valor, decimales):
+        return f'{float(valor):.{decimales}f}'.replace('.', ',') if valor is not None else None
+
+    return {
+        'lunes': lunes,
+        'domingo': domingo,
+        'hechas': hechas,
+        'previstas': previstas,
+        'cumplida': hechas >= previstas,
+        'descarga': bool(registro and registro.descarga),
+        'volumen_kg': f"{round(float(agregados['volumen'])):,}".replace(',', '.') if agregados['volumen'] else None,
+        'minutos': agregados['minutos'] or None,
+        'rpe_medio': coma(rpe, 1),
+        'energia_media': coma(agregados['energia'], 1),
+    }
