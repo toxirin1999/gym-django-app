@@ -325,9 +325,7 @@
     <h1 class="head-title">{{ rutina_nombre|default:"Sesión de Fuerza" }}</h1>
     <span class="head-pill">{{ ejercicios|length }} ejercicios</span>
   </div>
-  <div class="head-sub">
-    {% if briefing.rpe_medio %}RPE medio 2 sem: {{ briefing.rpe_medio }}{% else %}Sin datos previos{% endif %}
-  </div>
+  {% if not briefing.rpe_medio %}<div class="head-sub">Sin datos previos</div>{% endif %}
   {% if porque_decision %}<p class="head-sub" data-porque-decision style="color:var(--td);margin-top:6px;">{{ porque_decision }}</p>{% endif %}
 
   {% if pausa_pregunta %}
@@ -586,7 +584,7 @@
         <div class="plan-spec-left">
           {{ ej.series|default:"3" }} series
           {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% endif %}{% endif %}
-          {% if ej.tempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
+          {% if ej.tempo and not ej.usa_distancia and not ej.usa_tiempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
         <div class="plan-objetivo">
           {% if not ej.usa_peso %}
@@ -595,7 +593,8 @@
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' and ej.peso_kg_anterior %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-down">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.progresion_pospuesta and ej.progresion_accion == 'subir_peso' and ej.peso_kg_anterior %}
-          <span class="plan-objetivo-prev">{{ ej.peso_kg_anterior|floatformat:"-1" }} kg</span><span class="plan-objetivo-val plan-objetivo-hold">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
+          {# 13-oct-2026: sin tachado; un número tachado junto a "MANTENER" parecía un cambio. El porqué va debajo. #}
+          <span class="plan-objetivo-lbl">mantiene</span><span class="plan-objetivo-val plan-objetivo-hold">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</span><span class="plan-objetivo-val {% if ej.motivo_bloqueo == 'lesion_activa' %}plan-objetivo-lock-lesion{% elif ej.motivo_bloqueo == 'lesion_retorno' %}plan-objetivo-lock-retorno-lesion{% elif ej.motivo_bloqueo == 'retorno_pausa' %}plan-objetivo-lock-pausa{% else %}plan-objetivo-hold{% endif %}">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %}

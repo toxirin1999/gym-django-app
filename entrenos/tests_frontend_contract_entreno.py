@@ -190,7 +190,8 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
 
     def test_distancia_no_se_presenta_ni_autoregula_como_repeticiones(self):
-        self.assertIn("{% elif ejercicio.usa_distancia %}<span class=\"chip-n\">{{ ejercicio.repeticiones }} m</span>", self.source)
+        # 13-oct-2026: con tope, la cabecera muestra el objetivo en metros (52 m), no el rango genérico.
+        self.assertIn("{% elif ejercicio.usa_distancia %}<span class=\"chip-n\">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>", self.source)
         self.assertIn("🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m", self.source)
         self.assertIn("const usaDistancia = panelSig.dataset.usaDistancia === '1';", self.source)
         self.assertIn("if (!usaPeso || usaDistancia) return;", self.source)

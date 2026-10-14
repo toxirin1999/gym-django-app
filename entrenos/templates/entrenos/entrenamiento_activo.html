@@ -1,6 +1,7 @@
 {% load static %}
 {% load entreno_metrics_filters %}
 {% load sum_volumen_filtros %}
+{% load l10n %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -655,6 +656,8 @@ input{background:transparent!important;border:none!important;outline:none!import
 .btn-fallo:hover,.btn-fallo.activo{border-color:#f87171;background:rgba(248,113,113,.15);color:#fecaca;}
 .fallo-dialog{width:min(420px,calc(100vw - 32px));padding:0;border:1px solid rgba(248,113,113,.28);border-radius:16px;background:#101216;color:#fff;box-shadow:0 30px 90px rgba(0,0,0,.72);}
 .fallo-dialog::backdrop{background:rgba(0,0,0,.76);backdrop-filter:blur(5px);}
+/* 13-oct-2026: el aviso de series pendientes se superponía transparente al entreno. */
+.pendientes-dialog::backdrop{background:rgba(0,0,0,.76);backdrop-filter:blur(5px);}
 .fallo-dialog-inner{padding:24px;}
 .fallo-kicker{font-family:var(--fm);font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:#f87171;margin-bottom:8px;}
 .fallo-title{font-family:var(--fu);font-size:20px;font-weight:800;margin-bottom:6px;}
@@ -1464,6 +1467,21 @@ body{background:
   <button type="button" class="nav-btn btn-ej-next" onclick="navEjercicio(1)">Siguiente ›</button>
 </div>
 
+<!-- ── Energía pre-sesión: se pregunta al empezar ── -->
+    <div class="mr-energia-wrap" id="energia-inicio" style="margin:0 16px 12px;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
+      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegas hoy? · energía</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
+        {% for n in "1234567890" %}{% with val=forloop.counter %}
+        <button type="button" class="btn-energia-pre" data-val="{{ val }}"
+                onclick="selEnergiaPreSesion({{ val }})"
+                style="padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
+          {{ val }}
+        </button>
+        {% endwith %}{% endfor %}
+      </div>
+      <div id="energia-pre-label" style="font-size:11px;color:var(--td);margin-top:8px;text-align:center;min-height:16px;"></div>
+    </div>
+
 <!-- ══ EJERCICIOS ══ -->
 {% for ejercicio in ejercicios_planificados %}
 {% if modo_reducido and not ejercicio.es_principal and forloop.counter == num_principales|add:1 %}
@@ -1473,15 +1491,15 @@ body{background:
 {% endif %}
 <div class="cyber-ejercicio-card" id="card-{{ ejercicio.form_id }}"
      data-form-id="{{ ejercicio.form_id }}"
-     data-rpe-target="{{ ejercicio.rpe_objetivo|default:8 }}"
+     data-rpe-target="{{ ejercicio.rpe_objetivo|default:8|unlocalize }}"
      data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
      data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
      data-inc-kg="{{ ejercicio.incremento_kg|default:2.5|stringformat:'s' }}"{% if ejercicio.tope_maquina_kg %} data-tope-kg="{{ ejercicio.tope_maquina_kg|stringformat:'s' }}"{% endif %}
      data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
      data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}"
      data-total-sets="{{ ejercicio.series }}"
-     data-descanso="{{ ejercicio.descanso_minutos|default:3 }}"
-     data-barra-kg="{{ ejercicio.barra_kg|default:0 }}"
+     data-descanso="{{ ejercicio.descanso_minutos|default:3|unlocalize }}"
+     data-barra-kg="{{ ejercicio.barra_kg|default:0|unlocalize }}"
      data-tipo-equipo="{{ ejercicio.tipo_equipo|default:'otro' }}"
      style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
@@ -1489,9 +1507,9 @@ body{background:
   <input type="hidden" name="{{ ejercicio.form_id }}_es_principal" value="{{ ejercicio.es_principal|yesno:'1,0,' }}">
   <input type="hidden" class="ejercicio-historial"
          data-ejercicio-id="{{ ejercicio.form_id }}"
-         data-peso-anterior="{{ ejercicio.peso_anterior_kg|default:0 }}"
-         data-volumen-anterior="{{ ejercicio.volumen_anterior|default:0 }}"
-         data-pr-peso="{{ ejercicio.pr_peso|default:0 }}"
+         data-peso-anterior="{{ ejercicio.peso_anterior_kg|default:0|unlocalize }}"
+         data-volumen-anterior="{{ ejercicio.volumen_anterior|default:0|unlocalize }}"
+         data-pr-peso="{{ ejercicio.pr_peso|default:0|unlocalize }}"
          data-pr-reps="{{ ejercicio.pr_reps|default:0 }}">
 
   <!-- Inputs ocultos de molestia — se rellenan por JS al confirmar -->
@@ -1534,7 +1552,7 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{{ ejercicio.repeticiones }} m</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m{% else %}reps{% endif %}</span>
         {% endif %}
@@ -1668,8 +1686,8 @@ body{background:
   {% for i in ""|center:ejercicio.series %}{% with forloop.counter as sn %}
   <div class="pantalla-registro" id="reg-{{ ejercicio.form_id }}-{{ sn }}"
        style="display:{% if forloop.first %}block{% else %}none{% endif %};"
-       data-rpe-obj="{{ ejercicio.rpe_objetivo }}"
-       data-reps-obj="{{ ejercicio.reps_objetivo }}"
+       data-rpe-obj="{{ ejercicio.rpe_objetivo|unlocalize }}"
+       data-reps-obj="{{ ejercicio.reps_objetivo|unlocalize }}"
        data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
        data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
        data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}"
@@ -1730,7 +1748,7 @@ body{background:
         </div>
         <div class="peso-lado" id="lado-{{ ejercicio.form_id }}-{{ sn }}"></div>
         <div class="pr-badge" id="pr-badge-{{ ejercicio.form_id }}-{{ sn }}"
-             data-pr="{{ ejercicio.pr_peso|default:0 }}">🏆 NUEVO PR</div>
+             data-pr="{{ ejercicio.pr_peso|default:0|unlocalize }}">🏆 NUEVO PR</div>
         {% if ejercicio.motivo_peso.texto %}
         <div class="peso-motivo">{{ ejercicio.motivo_peso.texto }}</div>
         {% endif %}
@@ -2143,14 +2161,14 @@ document.addEventListener('DOMContentLoaded', () => {
 </div>
 
 <!-- AVISO: SERIES PENDIENTES -->
-<dialog id="modal-series-pendientes" aria-labelledby="series-pendientes-title" style="max-width:430px;width:calc(100% - 32px);border:1px solid var(--bd);border-radius:18px;background:var(--panel);color:var(--tx);padding:0;box-shadow:0 24px 70px rgba(0,0,0,.55);">
+<dialog id="modal-series-pendientes" class="pendientes-dialog" aria-labelledby="series-pendientes-title" style="max-width:430px;width:calc(100% - 32px);border:1px solid var(--bd);border-radius:18px;background:#101216;color:var(--tx);padding:0;box-shadow:0 24px 70px rgba(0,0,0,.72);">
   <div style="padding:24px;">
     <p style="margin:0 0 8px;font:700 11px var(--fm);letter-spacing:1.5px;color:var(--amber);text-transform:uppercase;">Series pendientes</p>
     <h2 id="series-pendientes-title" style="margin:0;font:700 22px var(--fd);">Aún queda trabajo aquí</h2>
     <p id="series-pendientes-copy" style="margin:10px 0 20px;color:var(--td);line-height:1.5;">Puedes continuar registrando o avanzar sin cerrar este ejercicio.</p>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
       <button type="button" class="mbtn mbtn-back" id="btn-seguir-registrando">Seguir registrando</button>
-      <button type="button" class="mbtn mbtn-ok" id="btn-ir-al-siguiente">Ir al siguiente</button>
+      <button type="button" class="mbtn mbtn-ok" id="btn-ir-al-siguiente">Lo hago después</button>
     </div>
   </div>
 </dialog>
@@ -2175,38 +2193,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <p class="mr-subtitle" id="modal-resumen-subtitle">Entrenamiento completado</p>
     </div>
 
-    <!-- Anillos de actividad -->
-    <div class="mr-rings-section">
-      <div class="mr-rings-wrap">
-        <svg class="mr-rings-svg" viewBox="0 0 200 200" width="120" height="120">
-          <!-- Fondos -->
-          <circle cx="100" cy="100" r="80" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
-          <circle cx="100" cy="100" r="60" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
-          <circle cx="100" cy="100" r="40" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="12"/>
-          <!-- Anillo exterior: series (verde) -->
-          <circle id="ring-series" cx="100" cy="100" r="80" fill="none"
-                  stroke="#10B981" stroke-width="12" stroke-linecap="round"
-                  stroke-dasharray="502.65" stroke-dashoffset="502.65"
-                  transform="rotate(-90 100 100)" class="ring-track"/>
-          <!-- Anillo medio: volumen/reps (amarillo) -->
-          <circle id="ring-volumen" cx="100" cy="100" r="60" fill="none"
-                  stroke="#F1C40F" stroke-width="12" stroke-linecap="round"
-                  stroke-dasharray="376.99" stroke-dashoffset="376.99"
-                  transform="rotate(-90 100 100)" class="ring-track"/>
-          <!-- Anillo interior: tiempo (cyan) -->
-          <circle id="ring-tiempo" cx="100" cy="100" r="40" fill="none"
-                  stroke="#00C8FF" stroke-width="12" stroke-linecap="round"
-                  stroke-dasharray="251.33" stroke-dashoffset="251.33"
-                  transform="rotate(-90 100 100)" class="ring-track"/>
-        </svg>
-      </div>
-      <div class="mr-rings-labels">
-        <span style="color:#10B981">SERIES</span>
-        <span style="color:#F1C40F">VOLUMEN</span>
-        <span style="color:#00C8FF">TIEMPO</span>
-      </div>
-    </div>
-
+    {# 13-oct-2026: fuera los anillos SERIES/VOLUMEN/TIEMPO: se llenaban sin referencia (reps/100, min/60). Las cifras están debajo. #}
     <!-- Grid 2×2 estadísticas -->
     <div class="mr-stats-grid">
       <div class="mr-stat-card">
@@ -2273,20 +2260,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div id="modal-ejercicios-lista"></div>
     </div>
 
-    <!-- ── Energía pre-sesión ── -->
-    <div class="mr-energia-wrap" style="margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
-      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegaste al entreno?</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
-        {% for n in "1234567890" %}{% with val=forloop.counter %}
-        <button type="button" class="btn-energia-pre" data-val="{{ val }}"
-                onclick="selEnergiaPreSesion({{ val }})"
-                style="padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
-          {{ val }}
-        </button>
-        {% endwith %}{% endfor %}
-      </div>
-      <div id="energia-pre-label" style="font-size:11px;color:var(--td);margin-top:8px;text-align:center;min-height:16px;"></div>
-    </div>
+    {# 13-oct-2026: la energía de antes de entrenar se pregunta al empezar (arriba), no tras 74 minutos. #}
 
     <!-- RPE global de sesión (visible solo si ninguna serie tiene RPE) -->
     <div id="rpe-global-wrap" style="display:none;margin:16px 0 0;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
@@ -2471,7 +2445,7 @@ function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
         row.className='serie-done';
         row.dataset.sn=sn;
         row.innerHTML='<div class="sd-check">✓</div>'
-          +'<div class="sd-info">Serie '+sn+' — <strong>'+s.peso+'kg × '+s.reps+' reps</strong>'
+          +'<div class="sd-info">Serie '+sn+' — <strong>'+fmtKg(s.peso)+' kg × '+s.reps+' reps</strong>'
           +feedbackSerieHTML(fid,sn,s.reps,Boolean(s.esAproximacion),s.tecnica)+'</div>'
           +'<div class="sd-rpe">RPE '+Math.round(s.rpe)+'</div>'
           +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+totalSets+')" title="Editar esta serie">✎</button>';
@@ -2864,10 +2838,10 @@ function guardarSeriePanel(fid,sn,total){
     const usaDistLog = _regEl?.dataset.usaDistancia === '1';
     const usaTiempoLog = _regEl?.dataset.usaTiempo === '1';
     const resumenSerie = usaDistLog
-      ? (peso > 0 ? peso+'kg | '+reps+'m' : reps+'m')
+      ? (peso > 0 ? fmtKg(peso)+' kg | '+reps+' m' : reps+' m')
       : usaTiempoLog
         ? reps+'s'
-        : peso+'kg × '+reps+' reps';
+        : fmtKg(peso)+' kg × '+reps+' reps';
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'
@@ -2929,10 +2903,10 @@ function guardarSeriePanel(fid,sn,total){
     const recPeso = document.getElementById('peso-'+fid+'-'+snFlujo)?.value || peso;
     const recReps = document.getElementById('reps-hid-'+fid+'-'+snFlujo)?.value || reps;
     const proxResumen = usaDistProx
-      ? (recPeso > 0 ? '<span class="pd-prox-kg">'+recPeso+'kg</span> | '+recReps+'m' : recReps+'m')
+      ? (recPeso > 0 ? '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> | '+recReps+' m' : recReps+' m')
       : usaTiempoProx
         ? recReps+'s'
-        : '<span class="pd-prox-kg">'+recPeso+'kg</span> × '+recReps+' reps';
+        : '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> × '+recReps+' reps';
     proxEl.innerHTML=snFlujo>total
       ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
       :'Serie <span class="pd-prox-kg">'+snFlujo+'</span> de '+total+' — '+proxResumen;
@@ -2978,7 +2952,7 @@ function detectarPR(fid,sn,peso){
   if(!badge)return;
   const prAnterior=parseFloat(badge.dataset.pr)||0;
   if(prAnterior>0 && peso>prAnterior){
-    badge.innerHTML='🏆 NUEVO PR — '+peso+'kg (ant: '+prAnterior+'kg)';
+    badge.innerHTML='🏆 NUEVO PR — '+fmtKg(peso)+' kg (antes: '+fmtKg(prAnterior)+' kg)';
     badge.classList.add('visible');
     badge.style.animation='none';
     void badge.offsetWidth;
@@ -3014,9 +2988,15 @@ function resumenDeEjercicio(fid){
     return {e:'✓',t:'Ejercicio registrado',s:lectura};
   }
   if(rpeAlto || fueraDeRango){
+    // Qué series quedaron fuera, con su dato (antes: "recuperaron el rango
+    // tras el ajuste", aunque la primera ya estuviera en rango sin ajuste).
+    const fuera=scs
+      .map((s,index)=>({s, r:resultadoPlanSerie(fid,index+1,s.reps,false)}))
+      .filter(x=>x.r && x.r.clase!=='en-rango')
+      .map(x=>(x.s.peso>0?fmtKg(x.s.peso)+' kg × ':'')+x.s.reps);
     const lectura=enRango
-      ? `${enRango}/${scs.length} series recuperaron el rango tras el ajuste.`
-      : `0/${scs.length} series alcanzaron el rango previsto.`;
+      ? `${enRango} de ${scs.length} series en rango`+(fuera.length?`; fuera: ${fuera.join(', ')}.`:'.')
+      : `Ninguna de las ${scs.length} series llegó al rango previsto.`;
     return {e:'↗',t:'Ejercicio exigente registrado',s:lectura+' La próxima sesión conservará margen antes de progresar.'};
   }
   return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. Datos registrados en este borrador; se usarán al guardar el entrenamiento.`};
@@ -3236,8 +3216,8 @@ function pintarDesgloseDiscos(fid,pesoTotal,contenedor,txt){
     +(barraKg>0?'<div class="barra"></div>':'')
     +[...discos].reverse().map(d=>'<div class="disco '+cls[d]+'">'+d+'</div>').join('');
   if(txt){
-    const carga=(discos.map(d=>d+'kg').join(' + ')||'sin discos')+' por lado';
-    txt.innerHTML=(barraKg>0?'Barra '+barraKg+'kg + ':'')+'<strong>'+carga+'</strong> = '+pesoTotal+'kg total';
+    const carga=(discos.map(d=>fmtKg(d)+' kg').join(' + ')||'sin discos')+' por lado';
+    txt.innerHTML=(barraKg>0?'Barra '+fmtKg(barraKg)+' kg + ':'')+'<strong>'+carga+'</strong> = '+fmtKg(pesoTotal)+' kg total';
   }
 }
 
@@ -3623,7 +3603,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('hid-duracion').value=mins;
   prepararRevisionDuracion(mins, comp);
   document.getElementById('modal-series').textContent=comp+'/'+total;
-  document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1):'—';
+  document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1).replace('.',','):'—';
   const trabajo=[];
   if(reps)trabajo.push(reps+' reps');
   if(segundosTrabajo)trabajo.push(segundosTrabajo+' s');
@@ -4285,7 +4265,7 @@ function usarAlternativa(nombreAlt, pesoAnterior) {
       });
       // Actualizar también el chip de "Última vez"
       const chip = card.querySelector('.chip-n');
-      if (chip) chip.textContent = 'Última: ' + pesoAnterior + 'kg';
+      if (chip) chip.textContent = 'Última: ' + fmtKg(pesoAnterior) + ' kg';
     } else {
       // Sin historial: dejar a 0 para que el usuario introduzca el peso
       card.querySelectorAll('.weight-input').forEach(inp => { inp.value = '0.0'; });
