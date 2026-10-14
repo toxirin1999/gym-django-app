@@ -55,3 +55,14 @@ class Briefing(SimpleTestCase):
 
     def test_mantener_sin_tachado(self):
         self.assertIn('<span class="plan-objetivo-lbl">mantiene</span>', self.src)
+
+
+class MenosToques(SimpleTestCase):
+    """14-oct-2026: la técnica se marca 'buena' por defecto en el descanso."""
+
+    def test_tecnica_buena_por_defecto(self):
+        src = (BASE / 'entrenamiento_activo.html').read_text(encoding='utf-8')
+        i = src.index('iniciarDescanso(fid,descansoSeg,snDescanso,total);')
+        bloque = src[i:i + 600]
+        self.assertIn("selTecnica(fid,'buena')", bloque)
+        self.assertIn('if(serieHecha && !serieHecha.tecnica)', bloque)

@@ -2920,6 +2920,16 @@ function guardarSeriePanel(fid,sn,total){
   const descansoSeg=descSeg>0?descSeg:Math.round(descMin*60);
   const snDescanso = snFlujo - 1;
   iniciarDescanso(fid,descansoSeg,snDescanso,total);
+  // 14-oct-2026: la técnica viene marcada "buena" por defecto; solo hay que
+  // tocar si fue otra (antes era un toque más en cada serie).
+  if(!esEdicion){
+    const serieHecha=STATE.seriesCompletadas[fid]?.[snDescanso-1];
+    if(serieHecha && !serieHecha.tecnica){
+      selTecnica(fid,'buena');
+      const impacto=document.getElementById('tecnica-impacto-'+fid);
+      if(impacto)impacto.textContent='Marcada como buena por defecto. Toca otra opción si no lo fue.';
+    }
+  }
   actualizarProgreso();
   actualizarSticky();
 }
