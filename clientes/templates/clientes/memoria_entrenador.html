@@ -371,10 +371,33 @@
         <div class="n">{% if rpe_bias.bias > 0 %}+{% endif %}{{ rpe_bias.bias }}<small>{{ rpe_bias.n_sesiones }} sesiones · {{ rpe_bias.nivel }}</small></div>
         <div class="d">
           {% if rpe_bias.bias > 0 %}
-            <strong>Sobreestimas</strong> el esfuerzo: reportas más RPE del que indica tu FC. El plan ajusta los umbrales internamente.
+            <strong>Sobreestimas</strong> el esfuerzo en cardio/Hyrox: reportas más RPE del que indica tu FC. En fuerza el pulso no mide la reserva, así que no se aplica al gym (ver «Tu RPE en fuerza»).
           {% else %}
-            <strong>Subestimas</strong> el esfuerzo: tu FC real supera lo que indica tu RPE. Los triggers de adaptación se calibran a tu escala real.
+            <strong>Subestimas</strong> el esfuerzo en cardio/Hyrox: tu FC real supera lo que indica tu RPE. En fuerza no se aplica (ver «Tu RPE en fuerza»).
           {% endif %}
+        </div>
+      </div>
+    </article>
+    {% endif %}
+
+    {# ── §02b TU RPE EN FUERZA (14-oct-2026): medido con tu rendimiento, no con la FC ── #}
+    {% if rpe_gym %}
+    <article class="mem-node mem-node--system">
+      <div class="mem-label">Tu RPE en fuerza</div>
+      <h2 class="mem-heading">¿Tu esfuerzo marcado cuadra con lo que haces?</h2>
+      <div class="mem-big">
+        <div class="n">{{ rpe_gym.altos }} de {{ rpe_gym.casos }}<small>comparaciones · {{ rpe_gym.dias }} días</small></div>
+        <div class="d">
+          {% if rpe_gym.lectura == 'insuficiente' %}
+            Aún hay pocas comparaciones para concluir. Cuento las veces que, con el mismo peso, a los pocos días hiciste 2 o más repeticiones por encima de lo que tu RPE dejaba en reserva.
+          {% elif rpe_gym.lectura == 'alto' %}
+            <strong>Marcas el RPE alto</strong> a menudo: con el mismo peso, días después haces bastantes más repeticiones de las que dejaba tu RPE. Todavía no cambio las reglas por esto; primero lo vemos juntos.
+          {% elif rpe_gym.lectura == 'algo_alto' %}
+            A veces marcas el RPE algo alto: con el mismo peso, días después superas lo que dejaba tu RPE. Lo sigo midiendo.
+          {% else %}
+            Tu RPE cuadra con lo que haces después: es una buena guía para las decisiones.
+          {% endif %}
+          {% if rpe_gym.ejemplo %}<span style="display:block;margin-top:6px;opacity:.75;">Ejemplo: {{ rpe_gym.ejemplo }}</span>{% endif %}
         </div>
       </div>
     </article>

@@ -5836,6 +5836,7 @@ def memoria_entrenador(request, cliente_id):
         'perfil_atletico': perfil_atletico,
         'hyrox_obj': hyrox_obj,
         'rpe_bias': rpe_bias,
+        'rpe_gym': _calibracion_rpe_gym_segura(cliente),
         'estaciones_progreso': estaciones_progreso,
         'decisiones_agrupadas': decisiones_agrupadas,
         'decisiones_total': decisiones_total,
@@ -6786,3 +6787,12 @@ def plan_decisiones_mockup_view(request):
     agrupadores reales en 62G.1.
     """
     return render(request, 'clientes/plan_decisiones_mockup.html', {})
+
+
+def _calibracion_rpe_gym_segura(cliente):
+    """Fiabilidad del RPE en fuerza medida con el rendimiento (Memoria). Nunca rompe la página."""
+    try:
+        from entrenos.services.calibracion_rpe_service import calibracion_rpe_gym
+        return calibracion_rpe_gym(cliente)
+    except Exception:
+        return None
