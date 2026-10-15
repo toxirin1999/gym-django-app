@@ -71,3 +71,33 @@ class ResumenAprendizajeTests(TestCase):
             _resumen_aprendizaje_plan(['⚽ Fútbol reciente'], 'x', None, aprendizaje='Press: mantener.'),
             '⚽ Fútbol reciente',
         )
+
+
+class AprendizajeComprobadoTests(TestCase):
+    """14-oct-2026: lo que el plan volvió a mirar y funcionó va primero (regla 4)."""
+
+    def test_decision_comprobada_va_antes_que_la_senal(self):
+        frase = 'Curl femoral: subí el peso a 45 kg. Después: 45 kg × 6 con RPE 8. Funcionó.'
+        self.assertEqual(
+            _resumen_aprendizaje_plan(['⚽ Fútbol reciente'], 'x', None, aprendizaje=frase), frase,
+        )
+
+    def test_ultimo_aprendizaje_cita_la_comprobacion(self):
+        from django.contrib.auth.models import User
+        from django.utils import timezone
+        from clientes.models import Cliente
+        from clientes.views import _ultimo_aprendizaje_plan
+        from entrenos.models import GymDecisionLog
+        user = User.objects.create_user(username='aprendizaje-comprobado', password='x')
+        cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'A'})
+        GymDecisionLog.objects.create(
+            cliente=cliente, ejercicio='curl femoral tumbado', accion='subir_peso',
+            valor_cambio=5, peso_anterior=42.5, motivo='x', resultado='validada',
+            fecha_evaluacion=timezone.now(),
+        )
+        GymDecisionLog.objects.create(  # más reciente, pero sin comprobar
+            cliente=cliente, ejercicio='press banca', accion='mantener', motivo='x',
+        )
+        texto = _ultimo_aprendizaje_plan(cliente, timezone.localdate())
+        self.assertTrue(texto.startswith('Curl femoral tumbado: subí el peso a '), texto)
+        self.assertTrue(texto.endswith('Funcionó.'), texto)

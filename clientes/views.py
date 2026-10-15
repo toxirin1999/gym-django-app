@@ -2017,9 +2017,26 @@ def _decisiones_evaluadas_memoria(cliente):
 
 
 def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
-    """La última decisión de progresión del plan, como frase corta, o None."""
+    """Lo último que el plan comprobó (regla 4) o, si no, su última decisión.
+
+    14-oct-2026: primero la decisión más reciente ya comprobada que cambió algo
+    ("Curl femoral: subí el peso a 45 kg. Después: 45 kg × 6 con RPE 8.
+    Funcionó."); si no hay, la última decisión, como antes.
+    """
     from datetime import timedelta
     from entrenos.models import GymDecisionLog
+
+    comprobada = (
+        GymDecisionLog.objects
+        .filter(cliente=cliente, resultado__in=('validada', 'fallida'),
+                fecha_evaluacion__date__gte=hoy - timedelta(days=dias))
+        .exclude(accion='mantener')
+        .order_by('-fecha_evaluacion')
+        .first()
+    )
+    if comprobada is not None:
+        from entrenos.services.aprendizaje_decisiones_service import frase_decision
+        return frase_decision(comprobada)
 
     dec = (
         GymDecisionLog.objects
@@ -2041,6 +2058,20 @@ def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     return texto + '.'
 
 
+def _ultima_energia_pre_sesion(cliente, dias=7):
+    """{'valor', 'fecha'} de la última energía pre-sesión de los últimos ``dias``, o None."""
+    from entrenos.models import EntrenoRealizado
+    desde = timezone.localdate() - timedelta(days=dias)
+    e = (
+        EntrenoRealizado.objects
+        .filter(cliente=cliente, energia_pre_sesion__isnull=False, fecha__gte=desde)
+        .order_by('-fecha', '-id').values('energia_pre_sesion', 'fecha_ejecucion', 'fecha').first()
+    )
+    if not e:
+        return None
+    return {'valor': e['energia_pre_sesion'], 'fecha': e['fecha_ejecucion'] or e['fecha']}
+
+
 def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None, aprendizaje=None):
     """Elige una lectura longitudinal que no repita el titular operativo.
 
@@ -2059,7 +2090,10 @@ def _resumen_aprendizaje_plan(senales, decision_del_dia, fallback=None, aprendiz
         'esta es la sesion prevista para hoy.',
         'hoy el plan marca descanso.',
     }
-    for candidata in list(senales or []) + [aprendizaje, fallback]:
+    # Una decisión ya comprobada (regla 4: "volví a mirar y funcionó") va
+    # primero; una decisión sin comprobar, detrás de las señales activas.
+    primero = [aprendizaje] if aprendizaje and (' Funcionó.' in aprendizaje or ' No funcionó' in aprendizaje) else []
+    for candidata in primero + list(senales or []) + [aprendizaje, fallback]:
         candidata_normalizada = _normalizar(candidata)
         if (
             candidata
@@ -2281,6 +2315,12 @@ def dashboard_silencioso_preview(request):
             'titulo': titulo_semana,
             'checkin_pendiente': not tiene_energia_y_sueno,
             'energia': getattr(checkin, 'energia_subjetiva', None),
+            # 15-oct-2026: sin energía en el check-in (llega solo el sueño desde
+            # Salud), la última energía que diste al empezar un entreno.
+            'energia_entreno': (
+                _ultima_energia_pre_sesion(cliente)
+                if getattr(checkin, 'energia_subjetiva', None) is None else None
+            ),
             'sueno': getattr(checkin, 'horas_sueno', None),
             'carga': carga,
             'carga_detalle': carga_detalle,
@@ -5437,6 +5477,16 @@ def apple_health_token(request):
     })
 
 
+def _estaciones_paradas_desde(estaciones, dias=60):
+    """Fecha del último intento de estación si es de hace más de ``dias``; si no, None."""
+    fechas = [e.get('ultima_fecha') for e in estaciones or [] if e.get('ultima_fecha')]
+    if not fechas:
+        return None
+    ultima = max(fechas)
+    ultima = ultima.date() if hasattr(ultima, 'date') and callable(ultima.date) else ultima
+    return ultima if (timezone.localdate() - ultima).days > dias else None
+
+
 def _rms_numericos(one_rm_data):
     """Devuelve solo RMs que son realmente números, no metadatos del JSON."""
     resultado = []
@@ -5533,10 +5583,10 @@ def _progreso_estaciones_comparables(hyrox_obj):
         porcentaje = round((primera['segundos'] - ultima['segundos']) / primera['segundos'] * 100, 1)
         info = estancamiento.get(estacion, {})
         if porcentaje > 0:
-            lectura = f"{porcentaje:g}% más rápido"
+            lectura = f"{porcentaje:g} % más rápido".replace('.', ',')
             direccion = 'mejora'
         elif porcentaje < 0:
-            lectura = f"{abs(porcentaje):g}% más lento"
+            lectura = f"{abs(porcentaje):g} % más lento".replace('.', ',')
             direccion = 'retroceso'
         else:
             lectura = 'mismo tiempo'
@@ -5624,8 +5674,20 @@ def memoria_entrenador(request, cliente_id):
     records = list(
         RecordPersonal.objects
         .filter(cliente=cliente, superado=False, tipo_record='peso_maximo')
-        .order_by('-valor')[:8]
+        .order_by('-valor')[:12]
     )
+    # 15-oct-2026: una marca por encima del tope guardado de esa máquina es un
+    # error de registro (p. ej. 100,5 kg en una máquina que llega a 100).
+    try:
+        from entrenos.services.maquina_service import tope_de
+        records = [
+            r for r in records
+            if (tope_de(cliente, r.ejercicio_nombre) is None
+                or float(r.valor) <= tope_de(cliente, r.ejercicio_nombre))
+        ]
+    except Exception:
+        pass
+    records = records[:8]
 
     # ── 5. PATRONES DE CARGA ─────────────────────────────────────────────────
     from entrenos.models import EntrenoRealizado, EjercicioRealizado, ActividadRealizada
@@ -5841,6 +5903,8 @@ def memoria_entrenador(request, cliente_id):
         'rpe_gym': _calibracion_rpe_gym_segura(cliente),
         'revision_bloque': _revision_bloque_segura(cliente),
         'estaciones_progreso': estaciones_progreso,
+        # 15-oct-2026: si no hay intentos recientes, se dice desde cuándo.
+        'estaciones_paradas_desde': _estaciones_paradas_desde(estaciones_progreso),
         'decisiones_agrupadas': decisiones_agrupadas,
         'decisiones_total': decisiones_total,
         # Regla 4 del rumbo: qué decidió el plan y si funcionó.
@@ -5916,7 +5980,7 @@ def ausencia_planificada_gym_view(request):
                     )
                     cache.delete(f'dashboard_resumen_gym_{cliente.id}')
                     messages.info(request, f'Ausencia cancelada. {restauradas} sesiones futuras vuelven a pendientes.')
-                    return redirect('clientes:mockup_demo')
+                    return redirect('clientes:dashboard_silencioso_preview')
         return render(request, 'clientes/ausencia_planificada_gym.html', {
             'ausencia_activa': ausencia_activa, 'ampliar_form': ampliar_form,
             'preview_ampliacion': preview_ampliacion, 'error_cancelacion': error_cancelacion,
@@ -5935,7 +5999,7 @@ def ausencia_planificada_gym_view(request):
                 f'Ausencia guardada. {ausencia.sesiones_afectadas} sesiones quedan omitidas sin deuda.',
             )
             cache.delete(f'dashboard_resumen_gym_{cliente.id}')
-            return redirect('clientes:mockup_demo')
+            return redirect('clientes:dashboard_silencioso_preview')
     return render(request, 'clientes/ausencia_planificada_gym.html', {
         'form': form, 'preview': preview,
     })

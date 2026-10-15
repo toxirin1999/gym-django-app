@@ -263,8 +263,8 @@ def _get_patron_semanal(cliente, hoy):
             'n_datos': len(bitacoras),
             'descripcion': (
                 f"Tu energía es más alta los {_DIA_NOMBRES[dia_pico]} "
-                f"(media {round(medias[dia_pico], 1)}/10) y más baja los "
-                f"{_DIA_NOMBRES[dia_valle]} ({round(medias[dia_valle], 1)}/10). "
+                f"(media {str(round(medias[dia_pico], 1)).replace('.', ',')}/10) y más baja los "
+                f"{_DIA_NOMBRES[dia_valle]} ({str(round(medias[dia_valle], 1)).replace('.', ',')}/10). "
                 f"El plan puede priorizar sesiones pesadas los {_DIA_NOMBRES[dia_pico]}."
             ),
         }
@@ -328,7 +328,7 @@ def _get_ventana_recuperacion(cliente, hoy):
             'n_datos': sum(len(v) for v in intervalos_rpe.values()),
             'descripcion': (
                 f"Rindes mejor con {dias_optimo} {etiqueta_dia} de descanso entre sesiones "
-                f"(RPE medio {round(medias[dias_optimo], 1)} vs días adyacentes). "
+                f"(RPE medio {str(round(medias[dias_optimo], 1)).replace('.', ',')} vs días adyacentes). "
                 f"El plan respeta esta ventana cuando puede."
             ),
         }
@@ -472,8 +472,8 @@ def _get_hrv_patron(cliente, hoy):
             'rpe_hrv_bajo': round(rpe_hrv_bajo, 1),
             'n_datos': len(pares),
             'descripcion': (
-                f"Con HRV ≥{hrv_medio}ms (tu media) el RPE post-sesión baja a {round(rpe_hrv_alto, 1)}. "
-                f"Con HRV bajo sube a {round(rpe_hrv_bajo, 1)}. "
+                f"Con HRV ≥{hrv_medio}ms (tu media) el RPE post-sesión baja a {str(round(rpe_hrv_alto, 1)).replace('.', ',')}. "
+                f"Con HRV bajo sube a {str(round(rpe_hrv_bajo, 1)).replace('.', ',')}. "
                 f"Tu HRV medio es {hrv_medio}ms."
             ),
         }

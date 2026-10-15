@@ -112,7 +112,7 @@ class MemoriaEntrenadorUITests(TestCase):
 
         self.assertEqual(len(progreso), 1)
         self.assertEqual(progreso[0]['sesiones'], 2)
-        self.assertEqual(progreso[0]['lectura_progreso'], '10% más rápido')
+        self.assertEqual(progreso[0]['lectura_progreso'], '10 % más rápido')
         self.assertEqual(progreso[0]['ultimo_seg'], 90)
 
     def test_decisiones_total_usa_los_noventa_dias_no_el_limite_de_recientes(self):
@@ -253,3 +253,37 @@ class MemoriaEntrenadorUITests(TestCase):
             response,
             reverse('clientes:mi_cuerpo', args=[self.cliente.id]),
         )
+
+
+class MemoriaDatosViejosYFormato(TestCase):
+    """15-oct-2026: estaciones paradas se dicen, decimales con coma, marcas imposibles fuera."""
+
+    def test_estaciones_paradas_desde(self):
+        from datetime import timedelta
+        from django.utils import timezone
+        from clientes.views import _estaciones_paradas_desde
+        hoy = timezone.localdate()
+        self.assertEqual(_estaciones_paradas_desde([{'ultima_fecha': hoy - timedelta(days=120)}]),
+                         hoy - timedelta(days=120))
+        self.assertIsNone(_estaciones_paradas_desde([{'ultima_fecha': hoy - timedelta(days=10)}]))
+        self.assertIsNone(_estaciones_paradas_desde([]))
+
+    def test_marca_por_encima_del_tope_de_la_maquina_no_se_enseña(self):
+        from django.contrib.auth.models import User
+        from django.urls import reverse
+        from clientes.models import Cliente
+        from entrenos.models import RecordPersonal, TopeMaquinaGym
+        user = User.objects.create_user(username='records-tope', password='x')
+        cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'R'})
+        TopeMaquinaGym.objects.create(cliente=cliente, ejercicio='Elevación de Gemelos de Pie (Máquina)',
+                                      ejercicio_normalizado='elevación de gemelos de pie (máquina)', peso_max_kg=100)
+        from entrenos.models import EntrenoRealizado
+        from rutinas.models import Rutina
+        entreno = EntrenoRealizado.objects.create(cliente=cliente, rutina=Rutina.objects.create(nombre='Dia 1'))
+        for nombre, valor in (('Elevación de Gemelos de Pie (Máquina)', 100.5), ('Prensa de Piernas', 225)):
+            RecordPersonal.objects.create(cliente=cliente, ejercicio_nombre=nombre, entreno=entreno,
+                                          tipo_record='peso_maximo', valor=valor)
+        self.client.force_login(user)
+        r = self.client.get(reverse('clientes:memoria_entrenador', args=[cliente.id]))
+        nombres = [x.ejercicio_nombre for x in r.context['records']]
+        self.assertEqual(nombres, ['Prensa de Piernas'])

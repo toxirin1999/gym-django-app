@@ -479,6 +479,7 @@
     <article class="mem-node mem-node--good">
       <div class="mem-label">Progreso por estación</div>
       <h2 class="mem-heading">Evolución en estaciones</h2>
+      {% if estaciones_paradas_desde %}<p class="mem-intro">Sin intentos desde el {{ estaciones_paradas_desde|date:"d/m/Y" }}: es tu referencia de entonces, no de ahora.</p>{% endif %}
       <div class="mem-list">
         {% for e in estaciones_progreso %}
         <div class="mem-row">
@@ -487,9 +488,9 @@
             <div class="name">{{ e.estacion }}</div>
             <div class="meta">{{ e.sesiones }} intentos comparables · mejor {{ e.mejor_seg }}s</div>
             <div class="meta">{{ e.primera_fecha|date:"d/m/Y" }} → {{ e.ultima_fecha|date:"d/m/Y" }}{% if e.normalizada %} · Ski/Row normalizado a 1.000 m{% endif %}</div>
-            {% if e.estancada and e.sugerencia %}<div class="meta warn">↳ {{ e.sugerencia }}</div>{% endif %}
+            {% if e.estancada and e.sugerencia and not estaciones_paradas_desde %}<div class="meta warn">↳ {{ e.sugerencia }}</div>{% endif %}
           </div>
-          <div class="v {% if e.estancada %}warn{% elif e.direccion_progreso == 'mejora' %}ok{% elif e.direccion_progreso == 'retroceso' %}bad{% endif %}" style="font-size:13px;white-space:normal;max-width:105px;">{{ e.lectura_progreso }}<small>vs. primera comparable</small></div>
+          <div class="v {% if e.estancada %}warn{% elif e.direccion_progreso == 'mejora' %}ok{% elif e.direccion_progreso == 'retroceso' %}bad{% endif %}" style="font-size:13px;white-space:normal;max-width:105px;">{{ e.lectura_progreso }} <small>vs. primera comparable</small></div>
         </div>
         {% endfor %}
       </div>
@@ -596,28 +597,28 @@
       <div class="mem-ins">
         {% if modelo.patron_semanal %}
         <div>
-          <div class="k"><b>N°01</b><span>Patrón semanal</span></div>
+          <div class="k"><span>Patrón semanal</span></div>
           <div class="v">{{ modelo.patron_semanal.dia_pico }}</div>
           <div class="d">{{ modelo.patron_semanal.descripcion }}</div>
         </div>
         {% endif %}
         {% if modelo.ventana_recuperacion %}
         <div>
-          <div class="k"><b>N°02</b><span>Recuperación</span></div>
+          <div class="k"><span>Recuperación</span></div>
           <div class="v">{{ modelo.ventana_recuperacion.dias_optimos }}<small> día{{ modelo.ventana_recuperacion.dias_optimos|pluralize }}</small></div>
           <div class="d">{{ modelo.ventana_recuperacion.descripcion }}</div>
         </div>
         {% endif %}
         {% if modelo.serie_critica_global %}
         <div>
-          <div class="k"><b>N°03</b><span>Serie donde más cae la técnica</span></div>
+          <div class="k"><span>Serie donde más cae la técnica</span></div>
           <div class="v">{% if modelo.serie_critica_global.serie == 1 %}Primera serie{% else %}Serie {{ modelo.serie_critica_global.serie }}{% endif %}</div>
           <div class="d">{{ modelo.serie_critica_global.descripcion }}</div>
         </div>
         {% endif %}
         {% if modelo.hrv_patron %}
         <div>
-          <div class="k"><b>N°04</b><span>HRV medio</span></div>
+          <div class="k"><span>HRV medio</span></div>
           <div class="v">{{ modelo.hrv_patron.hrv_medio }}<small> ms</small></div>
           <div class="d">{{ modelo.hrv_patron.descripcion }}</div>
         </div>
