@@ -9237,6 +9237,8 @@ def timeline_atleta(request, cliente_id):
         # carga normalizada /10 para mostrar en pantalla (escala sRPE legible)
         a.carga_display = round(float(a.carga_ua) / 10, 1) if a.carga_ua else None
         a.volumen_kg = getattr(a.entreno_gym, 'volumen_total_kg', None) if a.entreno_gym else None
+        # "19.831": separador de miles con punto, como en el resto de la app.
+        a.volumen_txt = f"{round(float(a.volumen_kg)):,}".replace(',', '.') if a.volumen_kg else None
         actividades.append(a)
 
     # Calcular ring_dash server-side (evita dependencia de JS para el anillo SVG)

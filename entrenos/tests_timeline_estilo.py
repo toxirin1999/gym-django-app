@@ -29,3 +29,15 @@ class TimelineEstiloTests(TestCase):
         self.assertNotIn('TIMELINE.EXE', html)
         self.assertIn('bottom-nav-std', html)
         self.assertIn(reverse('clientes:memoria_entrenador', args=[self.cliente.id]), html)
+
+
+    def test_kilos_con_separador_de_miles(self):
+        from django.utils import translation
+        hoy = timezone.localdate()
+        from rutinas.models import Rutina
+        from entrenos.models import EntrenoRealizado
+        e = EntrenoRealizado.objects.create(cliente=self.cliente, rutina=Rutina.objects.create(nombre='Dia 1'), fecha=hoy)
+        EntrenoRealizado.objects.filter(pk=e.pk).update(volumen_total_kg=19831)
+        with translation.override('es'):
+            r = self.client.get(reverse('entrenos:timeline_atleta', args=[self.cliente.id]), HTTP_ACCEPT_LANGUAGE='es')
+        self.assertContains(r, '<strong>19.831</strong>')

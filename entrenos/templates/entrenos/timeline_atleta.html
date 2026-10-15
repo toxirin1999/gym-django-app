@@ -117,7 +117,7 @@ body{min-height:100vh;margin:0;background:radial-gradient(110% 32% at 54% -5%,#1
           </span>
           <span class="hl-metric">
             {% if actividad.distancia_metros %}<strong>{% widthratio actividad.distancia_metros 1000 1 %}</strong><small>km</small>
-            {% elif actividad.volumen_kg %}<strong>{{ actividad.volumen_kg|floatformat:0 }}</strong><small>kg</small>
+            {% elif actividad.volumen_kg %}<strong>{{ actividad.volumen_txt }}</strong><small>kg</small>
             {% elif actividad.carga_display %}<strong>{{ actividad.carga_display|floatformat:0 }}</strong><small>carga</small>
             {% elif actividad.calorias %}<strong>{{ actividad.calorias|floatformat:0 }}</strong><small>kcal</small>
             {% elif actividad.duracion_minutos %}<strong>{{ actividad.duracion_minutos }}</strong><small>min</small>
