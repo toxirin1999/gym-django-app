@@ -79,7 +79,7 @@ class TrayectoriaPlanPorQueTests(TestCase):
         self.assertEqual(progreso['semanas_restantes'], 3)
         self.assertContains(response, 'Progreso temporal')
         self.assertContains(response, '29%')
-        self.assertContains(response, 'Semana 42')
+        self.assertContains(response, '2 de 4')  # semana del bloque, no la ISO (14-oct-2026)
 
     def test_no_finge_un_progreso_anual_sin_rango_fechado(self):
         trayectoria = self._trayectoria(periodizacion=False)

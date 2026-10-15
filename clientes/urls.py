@@ -2,6 +2,7 @@
 
 from django.urls import path
 from . import views
+from . import views_salud
 from .views import calendario_bitacoras
 from .views import registrar_bitacora
 from clientes import views as clientes_views
@@ -104,6 +105,9 @@ urlpatterns = [
 
     # Apple Health token
     path('apple-health/token/', views.apple_health_token, name='apple_health_token'),
+    # Check-in automático desde la app Salud (Health Auto Export, 14-oct-2026)
+    path('api/salud-iphone/', views_salud.api_salud_iphone, name='api_salud_iphone'),
+    path('salud-iphone/', views_salud.salud_iphone, name='salud_iphone'),
 
     # Acciones sobre SesionProgramada (Phase 1.3)
     path('sesion/<int:sesion_id>/saltar/', views.saltar_sesion_view, name='saltar_sesion'),

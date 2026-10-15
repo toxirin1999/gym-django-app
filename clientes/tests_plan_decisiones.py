@@ -305,9 +305,9 @@ class TestCase10_URLResolution(PlanDecisionesBase):
         url = reverse('clientes:plan_decisiones')
         self.assertEqual(url, '/clientes/plan/decisiones/')
 
-    def test_volver_link_goes_to_mockup(self):
+    def test_volver_link_goes_to_ahora(self):
         response = self._get()
-        self.assertContains(response, '/clientes/mockup-demo/')
+        self.assertContains(response, '/clientes/mockup-dashboard-silencioso/')
 
 
 # ── Case 11: Phase 62G.3 — subir_peso agrupado en "Carga por ejercicio" ──────

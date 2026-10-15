@@ -5409,8 +5409,10 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
                 peso = float(peso) if peso not in (None, '') else None
             except (TypeError, ValueError):
                 peso = None
-            if peso is not None and peso <= 0:
-                peso = None  # "0 kg" no dice nada: tiempo, reps o peso corporal
+            # 14-oct-2026: la preview no enseña peso. El peso del día lo fija el
+            # briefing con tu última sesión (techo, tope de máquina, decisiones
+            # pendientes); el del plan anual era otro número y confundía.
+            peso = None
             tipo_progresion = ejercicio.get('tipo_progresion') or 'peso_reps'
             unidad = ejercicio.get('unidad') or (
                 's' if tipo_progresion == 'progresion_tiempo'
@@ -5512,14 +5514,30 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
             'preview': preview,
         })
 
+    # 14-oct-2026: lo que ya pasó se cuenta como pasó, y la semana en curso
+    # sigue la misma cola que Ahora (entrenos/services/semana_rutina_service).
+    nota_semana = None
+    try:
+        semana, nota_semana = _semana_rutina_real(cliente, hoy, inicio_semana, semana)
+    except Exception:
+        logger.exception('Rutina: no se pudo leer la semana real; se muestra el plan')
+
     preview_hoy = next((dia['preview'] for dia in semana if dia['fecha'] == hoy), None)
     if preview_hoy and preview_hoy['tipo'] == 'sesion':
         hoy_card = {
             'tipo': 'sesion',
             'titulo': preview_hoy['titulo'],
-            'detalle': 'Tu sesión está preparada. Puedes revisar el briefing antes de empezar.',
+            'detalle': preview_hoy.get('detalle_hoy') or 'Tu sesión está preparada. Puedes revisar el briefing antes de empezar.',
             'url': preview_hoy['url'],
             'cta': 'Ver mi sesión',
+        }
+    elif preview_hoy and preview_hoy['tipo'] == 'hecha':
+        hoy_card = {
+            'tipo': 'hecha',
+            'titulo': preview_hoy['titulo'],
+            'detalle': 'Hoy ya entrenaste. Mañana sigue la cola de la semana.',
+            'url': preview_hoy['url'],
+            'cta': 'Ver el cierre',
         }
     else:
         hoy_card = {
@@ -5562,8 +5580,113 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         'semana_inicio': inicio_semana,
         'hoy': hoy_card,
         'rms': rms[:4],
-        'insight': 'La fase actual organiza la carga para que puedas progresar sin perder margen.',
+        'insight': nota_semana,
     }
+
+
+def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
+    """Sustituye las previews de los días pasados por lo que se hizo y, en la
+    semana en curso, las de hoy y los días que vienen por la cola de Ahora.
+
+    Devuelve (semana, nota) — la nota solo en la semana en curso.
+    """
+    from urllib.parse import urlencode
+    from entrenos.services.semana_rutina_service import (
+        entrenos_por_dia, nota_semana, semana_segun_cola,
+    )
+
+    lunes_hoy = hoy - timedelta(days=hoy.weekday())
+    briefing = reverse('entrenos:briefing_entrenamiento', args=[cliente.id])
+
+    def preview_hecha(fecha, entrenos):
+        nombres = ' + '.join(e.rutina.nombre if e.rutina else 'Sesión' for e in entrenos)
+        ejercicios = []
+        for e in entrenos:
+            for ej in e.ejercicios_realizados.all().order_by('id'):
+                ejercicios.append({
+                    'nombre': ej.nombre_ejercicio, 'series': ej.series or 0,
+                    'reps': str(ej.repeticiones or '—'), 'unidad': 'reps', 'peso': None,
+                })
+        return {
+            'tipo': 'hecha', 'etiqueta': 'Sesión hecha', 'titulo': nombres,
+            'fecha_efectiva': fecha.isoformat(), 'ejercicios': ejercicios,
+            'url': reverse('entrenos:post_entreno_resumen', args=[cliente.id, entrenos[-1].id]),
+            'cta': 'Ver el cierre',
+        }
+
+    def preview_sin_entreno(fecha):
+        return {
+            'tipo': 'descanso', 'etiqueta': 'Sin entreno', 'titulo': 'Sin entreno',
+            'detalle': 'No hay ninguna sesión registrada este día.',
+            'fecha_efectiva': fecha.isoformat(), 'ejercicios': [],
+        }
+
+    nueva = []
+    if inicio_semana == lunes_hoy:
+        datos = semana_segun_cola(cliente, hoy)
+        for dia in semana:
+            f = dia['fecha']
+            d = datos['dias'].get(f) or {'tipo': 'descanso'}
+            if d['tipo'] == 'hecha':
+                preview = preview_hecha(f, d['entrenos'])
+            elif d['tipo'] == 'sin_entreno':
+                preview = preview_sin_entreno(f)
+            elif d['tipo'] == 'sesion':
+                ent = d.get('entrenamiento') or {}
+                sp = d.get('sp')
+                ejercicios_origen = ent.get('ejercicios')
+                if not ejercicios_origen and sp is not None:
+                    try:
+                        ejercicios_origen = _calcular_ejercicios_dia(cliente.id, sp.fecha_prevista)
+                    except Exception:
+                        ejercicios_origen = []
+                params = {'fecha': f.isoformat(), 'rutina_nombre': d['nombre']}
+                if sp is not None and f == hoy:
+                    params['sesion_programada_id'] = sp.pk
+                ejercicios = []
+                for ej in ejercicios_origen or []:
+                    try:
+                        series = int(ej.get('series') or 0)
+                    except (AttributeError, TypeError, ValueError):
+                        series = 0
+                    if series:
+                        tipo = ej.get('tipo_progresion') or 'peso_reps'
+                        ejercicios.append({
+                            'nombre': str(ej.get('nombre') or 'Ejercicio'), 'series': series,
+                            'reps': str(ej.get('reps_objetivo') or ej.get('repeticiones') or ej.get('reps') or '—'),
+                            'unidad': ej.get('unidad') or (
+                                's' if tipo == 'progresion_tiempo' else 'm' if tipo == 'progresion_distancia' else 'reps'),
+                            'peso': None,
+                        })
+                preview = {
+                    'tipo': 'sesion',
+                    'etiqueta': 'Sesión de hoy' if f == hoy else 'Prevista',
+                    'titulo': d['nombre'], 'fecha_efectiva': f.isoformat(),
+                    'ejercicios': ejercicios,
+                    'url': '{}?{}'.format(briefing, urlencode(params)),
+                    'cta': 'Revisar sesión',
+                }
+                if sp is not None and f == hoy:
+                    preview['sesion_programada_id'] = sp.pk
+                if f == hoy and d.get('atrasada'):
+                    preview['detalle_hoy'] = 'Es la sesión que quedó atrasada esta semana: no se pierde, la haces hoy.'
+            else:
+                preview = {
+                    'tipo': 'descanso', 'etiqueta': 'Recuperación', 'titulo': 'Día de descanso',
+                    'detalle': 'No hay sesión de fuerza prevista. Recuperar también forma parte del plan.',
+                    'fecha_efectiva': f.isoformat(), 'ejercicios': [],
+                }
+            nueva.append({**dia, 'tipo': preview['tipo'], 'preview': preview})
+        return nueva, nota_semana(datos)
+
+    hechos = entrenos_por_dia(cliente, inicio_semana, min(hoy - timedelta(days=1), inicio_semana + timedelta(days=6)))
+    for dia in semana:
+        f = dia['fecha']
+        if f < hoy:
+            preview = preview_hecha(f, hechos[f]) if hechos.get(f) else preview_sin_entreno(f)
+            dia = {**dia, 'tipo': preview['tipo'], 'preview': preview}
+        nueva.append(dia)
+    return nueva, None
 
 
 @login_required

@@ -664,7 +664,9 @@ def registrar_emocion(request):
 def redirigir_usuario(request):
     if request.user.is_superuser or request.user.is_staff:
         return redirect('clientes:panel_entrenador')
-    return redirect('clientes:mockup_demo')
+    # 14-oct-2026: la portada es Ahora (la de la barra de cinco paneles); el
+    # panel antiguo sigue en /clientes/mockup-demo/ para quien lo busque.
+    return redirect('clientes:dashboard_silencioso_preview')
 
 
 from django.contrib.auth.decorators import login_required
@@ -1522,7 +1524,7 @@ def _get_dashboard_context_data(request, cliente):
 
 @login_required
 def panel_cliente(request):
-    return redirect('clientes:mockup_demo')
+    return redirect('clientes:dashboard_silencioso_preview')
 
 
 def _panel_cliente_full(request):
@@ -2180,10 +2182,10 @@ def dashboard_silencioso_preview(request):
         estado_sistema.get('estado'), estado_sistema.get('motivo'),
     )
 
-    tiene_energia_y_sueno = (
-        getattr(checkin, 'energia_subjetiva', None) is not None
-        and getattr(checkin, 'horas_sueno', None) is not None
-    )
+    # 14-oct-2026: el sueño puede llegar solo desde la app Salud (Health Auto
+    # Export). Con el sueño registrado el check-in del día está hecho: la
+    # energía se pregunta al empezar el entreno.
+    tiene_energia_y_sueno = getattr(checkin, 'horas_sueno', None) is not None
 
     rutina_url = reverse('entrenos:rutina_silenciosa_preview', args=[cliente.id])
     movilidad_url = reverse('estiramientos:panel')

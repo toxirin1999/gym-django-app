@@ -339,6 +339,34 @@ def _proximo_hito(fecha, semana, bloque, periodizacion):
     return None
 
 
+def _semana_desde_cola(cliente, fecha, periodizacion):
+    """Semana de la periodización dinámica (SemanaPlanGym) contada con la cola, o None."""
+    if not periodizacion:
+        return None
+    try:
+        from entrenos.models import SemanaPlanGym
+        if not SemanaPlanGym.objects.filter(cliente=cliente, lunes__lte=fecha).exists():
+            return None
+        from entrenos.services.semana_rutina_service import sesiones_para_plan
+        sesiones, datos = sesiones_para_plan(cliente, fecha)
+    except Exception:
+        return None
+    inicio = _inicio_semana(fecha)
+    return {
+        'id': None,
+        'indice': periodizacion.get('semana_actual'),
+        'inicio': inicio,
+        'fin': inicio + timedelta(days=6),
+        'objetivo_sesiones': datos['previstas'],
+        'minimo_valido': None,
+        'sesiones': sesiones,
+        'sesiones_no_registradas': 0,
+        'evaluacion': None,
+        'origen': 'cola',
+        'fuera': datos['fuera'],
+    }
+
+
 def proyectar_trayectoria_plan(cliente, *, fecha=None):
     """Compone evidencia persistida y el plan Helms; nunca materializa ni evalúa."""
     fecha = fecha or timezone.localdate()
@@ -349,6 +377,23 @@ def proyectar_trayectoria_plan(cliente, *, fecha=None):
 
     if not bloque_base.get('disponible'):
         limitations.append(bloque_base.get('estado_evidencia', 'bloque_no_disponible'))
+        # 14-oct-2026: sin acuerdo de bloque, si la periodización dinámica está
+        # en marcha ella lleva el bloque; la semana es la misma cola que Ahora.
+        semana_cola = _semana_desde_cola(cliente, fecha, periodizacion)
+        if semana_cola is not None:
+            return {
+                'schema_version': 1,
+                'solo_lectura': True,
+                'fecha_corte': fecha,
+                'estado': 'available',
+                'periodizacion': periodizacion,
+                'macrociclo': macrociclo,
+                'bloque': None,
+                'semana': semana_cola,
+                'evaluacion_bloque': None,
+                'proximo_hito': _proximo_hito(fecha, semana_cola, None, periodizacion),
+                'limitations': list(dict.fromkeys(limitations)),
+            }
         return {
             'schema_version': 1,
             'solo_lectura': True,

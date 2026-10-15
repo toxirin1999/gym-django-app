@@ -156,21 +156,23 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn('aria-selected=', plantilla)
         self.assertNotIn('aria-pressed=', plantilla)
 
-    def test_preview_del_dia_abre_primero_con_datos_locales_y_se_hidrata_despues(self):
-        """La red legacy no puede retrasar ni reabrir el modal de Rutina."""
+    def test_preview_del_dia_abre_con_los_datos_del_servidor_sin_rehidratar(self):
+        """14-oct-2026: la preview del servidor es la buena (la cola de Ahora).
+
+        Antes se rehidrataba desde el calendario anual y enseñaba otra sesión y
+        otros pesos que el briefing.
+        """
         from pathlib import Path
 
         plantilla = Path(
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        apertura_local = "renderPreview(preview, { openModal: true });"
-        hidratacion_remota = "resolverPreviewLegacy(preview).then(previewCanonica =>"
         self.assertIn('id="routine-day-sync-status"', plantilla)
         self.assertIn('role="status"', plantilla)
-        self.assertIn(apertura_local, plantilla)
-        self.assertIn(hidratacion_remota, plantilla)
-        self.assertLess(plantilla.index(apertura_local), plantilla.index(hidratacion_remota))
+        self.assertIn("renderPreview(preview, { openModal: true });", plantilla)
+        self.assertNotIn("resolverPreviewLegacy", plantilla)
+        self.assertNotIn("entrenamientosMesUrl", plantilla)
         self.assertIn("if (openModal && !modal.open)", plantilla)
 
     @patch("entrenos.views.agregar_educacion_a_plan")
@@ -399,7 +401,7 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn("sesion_programada_id={}".format(sesion.pk), sabado["preview"]["url"])
         self.assertIn("rutina_nombre=Torso+pospuesto", sabado["preview"]["url"])
         self.assertEqual(sabado["preview"]["ejercicios"][0]["nombre"], "Press inclinado")
-        calcular_ejercicios.assert_called_once_with(
+        calcular_ejercicios.assert_called_with(
             self.cliente.id, date(2026, 9, 25),
         )
 
@@ -425,8 +427,20 @@ class RutinaSilenciosaPreviewTests(TestCase):
         }
         educacion.side_effect = lambda plan: plan
 
+        # 14-oct-2026: la sesión de hoy sale de la misma cola que Ahora (el
+        # planificador por fecha), no del calendario anual.
+        class Planificador:
+            def generar_entrenamiento_para_fecha(self, fecha):
+                if fecha != hoy:
+                    return None
+                return {"rutina_nombre": "Día 5 - Descarga activa", "ejercicios": [{
+                    "nombre": "Press inclinado", "series": 3, "repeticiones": "10-15", "peso_kg": 40,
+                }]}
+
         from entrenos.views import _obtener_contexto_rutina_silenciosa
-        contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
+        with patch("entrenos.services.sesion_recomendada._build_planificador",
+                   return_value=Planificador()):
+            contexto = _obtener_contexto_rutina_silenciosa(self.cliente, hoy=hoy)
         viernes = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
 
         self.assertEqual(viernes["tipo"], "sesion")
@@ -497,32 +511,15 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn("day.setAttribute('aria-selected', String(selected));", plantilla)
         self.assertIn("seleccionarDia(button, preview);", plantilla)
 
-    def test_selector_consulta_el_contrato_ajax_del_calendario_para_el_dia_elegido(self):
-        """La preview móvil no duplica el plan: lee el mismo JSON del calendario.
-
-        El plan anual legado ya resuelve sesiones materializadas, aplazamientos y
-        la prescripción Helms. Cada pulsación debe sustituir el preview inicial
-        por ``entrenamientos[YYYY-MM-DD]`` de ese contrato y conservar los
-        parámetros que consume el briefing.
-        """
+    def test_preview_explica_quien_fija_el_peso(self):
+        """La preview no enseña peso: lo fija el briefing con la última sesión."""
         from pathlib import Path
 
         plantilla = Path(
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
-
-        self.client.force_login(self.user)
-        response = self.client.get(self.url)
-
-        self.assertContains(
-            response,
-            reverse("entrenos:ajax_entrenamientos_mes", args=[self.cliente.id]),
-        )
-        self.assertIn('const entrenamientosMesUrl = "{{ entrenamientos_mes_url }}"', plantilla)
-        self.assertIn("const entrenamiento = entrenamientos[preview.fecha_efectiva];", plantilla)
-        self.assertIn("function buildLegacyBriefingUrl(entrenamiento, fecha, fallbackUrl)", plantilla)
-        self.assertIn("params.set('rutina_nombre', entrenamiento.nombre_rutina || '');", plantilla)
-        self.assertIn("params.set('sesion_programada_id', String(sesionProgramadaId));", plantilla)
+        self.assertIn("El peso de cada ejercicio lo fija el briefing con tu última sesión.", plantilla)
+        self.assertIn("preview.etiqueta", plantilla)
 
     def test_navegacion_global_de_rutina_vuelve_a_la_preview_no_al_calendario(self):
         """Rutina es una sección global; el calendario queda como acceso interno."""

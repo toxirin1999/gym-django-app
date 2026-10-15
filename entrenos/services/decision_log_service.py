@@ -331,7 +331,9 @@ def cerrar_aprendizaje_gym(entreno):
     # Acuerdos de bloque vencidos: se cierran al guardar una sesión (nunca en
     # una lectura). La revisión de bloque va sobre la periodización.
     from entrenos.services.contrato_bloque_gym_service import finalizar_bloques_vencidos
-    finalizar_bloques_vencidos(entreno.cliente)
+    # Se mide desde el día de la sesión (no desde el reloj): guardar una sesión
+    # antigua no cierra un bloque que entonces seguía en curso.
+    finalizar_bloques_vencidos(entreno.cliente, hoy=entreno.fecha_ejecucion or entreno.fecha)
 
 
 # ─────────────────────────────────────────────────────────────
