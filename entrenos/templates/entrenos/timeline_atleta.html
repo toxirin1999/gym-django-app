@@ -1,1067 +1,219 @@
-{% load entreno_tags static %}
-<!DOCTYPE html>
+{% load entreno_tags static %}<!doctype html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TIMELINE.EXE · {{ cliente.nombre }}</title>
-
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-
-    <style>
-    /* ═══════════════════════════════════════════════
-       TIMELINE.EXE · MS-DOS TERMINAL v04.26
-       Norton Commander / Turbo Vision palette
-    ═══════════════════════════════════════════════ */
-    :root {
-        /* CGA/EGA-inspired palette */
-        --bg:      #0000AA;   /* classic DOS blue */
-        --s1:      #0000AA;
-        --s2:      #000080;   /* deeper blue panel */
-        --s3:      #00007A;
-        --line:    #5555FF;
-        --line2:   #AAAAFF;
-        --txt:     #FFFFFF;
-        --muted:   #AAAAAA;
-        --dim:     #5555FF;
-
-        /* tipo colors — CGA bright */
-        --c-gym:      #55FF55;  /* bright green */
-        --c-hyrox:    #FF5555;  /* bright red */
-        --c-carrera:  #55FFFF;  /* bright cyan */
-        --c-ciclismo: #FF55FF;  /* bright magenta */
-        --c-remo:     #55FFFF;  /* cyan */
-        --c-cardio:   #FFAA00;  /* orange */
-        --c-natacion: #55FFFF;  /* cyan */
-        --c-yoga:     #FF55FF;  /* magenta */
-        --c-otro:     #AAAAAA;  /* light grey */
-
-        /* status */
-        --ok:   #55FF55;
-        --warn: #FFFF55;
-        --bad:  #FF5555;
-
-        --accent: #FFFF55;     /* amber/yellow */
-        --hi:     #FF5555;     /* red */
-
-        --mono:    'IBM Plex Mono', 'JetBrains Mono', ui-monospace, monospace;
-        --display: 'VT323', 'IBM Plex Mono', monospace;
-        --sans:    'IBM Plex Mono', ui-monospace, monospace;
-    }
-
-    *, *::before, *::after { box-sizing: border-box; }
-
-    html, body {
-        margin: 0; padding: 0;
-        background: #000000;
-        color: var(--txt);
-        font-family: var(--mono);
-        font-size: 14px;
-        -webkit-font-smoothing: none;
-        font-smooth: never;
-    }
-
-    /* CRT scanline + flicker overlay on the whole page */
-    body::before {
-        content: '';
-        position: fixed; inset: 0;
-        pointer-events: none;
-        background: repeating-linear-gradient(
-            0deg,
-            rgba(0,0,0,.15) 0px,
-            rgba(0,0,0,.15) 1px,
-            transparent 1px,
-            transparent 3px
-        );
-        z-index: 9999;
-        mix-blend-mode: multiply;
-    }
-    body::after {
-        content: '';
-        position: fixed; inset: 0;
-        pointer-events: none;
-        background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.45) 100%);
-        z-index: 9998;
-    }
-
-    .tl-shell {
-        min-height: 100vh;
-        max-width: 880px;
-        margin: 0 auto;
-        padding: 0;
-        background: var(--bg);
-        border-left: 2px solid #000;
-        border-right: 2px solid #000;
-        position: relative;
-    }
-
-    /* ── DOS TITLE BAR (Turbo Vision style) ── */
-    .dos-titlebar {
-        background: var(--txt);
-        color: var(--s2);
-        padding: 2px 10px;
-        font-family: var(--mono);
-        font-size: 13px;
-        font-weight: 700;
-        display: flex; justify-content: space-between; align-items: center;
-        letter-spacing: 0;
-    }
-    .dos-titlebar .dos-close {
-        background: var(--s2);
-        color: var(--txt);
-        padding: 0 6px;
-        font-weight: 700;
-    }
-    .dos-titlebar-center { letter-spacing: .05em; }
-
-    /* ── MENU BAR ── */
-    .dos-menubar {
-        background: var(--muted);
-        color: #000;
-        padding: 2px 10px;
-        font-family: var(--mono); font-size: 13px;
-        display: flex; gap: 18px;
-        border-bottom: 1px solid #000;
-    }
-    .dos-menubar span b { color: var(--hi); }
-
-    /* ── Inner padding ── */
-    .tl-inner { padding: 14px 18px 70px; }
-
-    /* ── PROMPT LINE ── */
-    .dos-prompt {
-        font-family: var(--mono);
-        font-size: 14px;
-        color: var(--ok);
-        padding: 8px 0 6px;
-        display: flex; align-items: center; gap: 0;
-    }
-    .dos-prompt .path { color: var(--accent); }
-    .dos-prompt .gt   { color: var(--txt); margin: 0 6px 0 4px; }
-    .dos-prompt .cmd  { color: var(--txt); }
-    .blink {
-        display: inline-block;
-        width: 9px; height: 16px;
-        background: var(--txt);
-        margin-left: 4px;
-        vertical-align: middle;
-        animation: blink 1s steps(2) infinite;
-    }
-    @keyframes blink { 50% { background: transparent; } }
-
-    /* ── ASCII Box helpers ── */
-    .dos-box {
-        border: 2px solid var(--line2);
-        background: var(--s2);
-        padding: 0;
-        margin: 10px 0;
-        position: relative;
-    }
-    .dos-box-title {
-        position: absolute;
-        top: -10px; left: 14px;
-        background: var(--bg);
-        color: var(--accent);
-        padding: 0 8px;
-        font-family: var(--mono); font-size: 13px; font-weight: 700;
-        letter-spacing: .05em;
-    }
-    .dos-box-title::before { content: '┤ '; color: var(--line2); }
-    .dos-box-title::after  { content: ' ├'; color: var(--line2); }
-    .dos-box-body { padding: 16px 14px 14px; }
-
-    /* ── MARQUEE / Status strip ── */
-    .tl-marquee {
-        background: var(--s2);
-        color: var(--ok);
-        font-family: var(--mono); font-size: 13px;
-        padding: 4px 12px;
-        display: flex; justify-content: space-between; align-items: center;
-        border-bottom: 1px solid var(--line);
-    }
-    .tl-marquee .live-dot {
-        display: inline-block; width: 8px; height: 8px;
-        background: var(--ok); margin-right: 6px;
-        animation: pulse 1s steps(2) infinite;
-        vertical-align: middle;
-    }
-    @keyframes pulse {
-        50% { background: transparent; }
-    }
-    .tl-marquee .clock { color: var(--accent); }
-
-    /* ── Topbar (back / version) ── */
-    .tl-topbar {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 0 6px;
-        font-family: var(--mono); font-size: 13px;
-    }
-    .tl-back {
-        color: var(--accent);
-        text-decoration: none;
-        padding: 2px 8px;
-        background: var(--s2);
-        border: 1px solid var(--accent);
-    }
-    .tl-back:hover { background: var(--accent); color: #000; }
-    .tl-back::before { content: '['; color: var(--txt); margin-right: 4px; }
-    .tl-back::after  { content: ']'; color: var(--txt); margin-left: 4px; }
-    .tl-version { color: var(--muted); }
-    .tl-version b { color: var(--ok); }
-
-    /* ── MASTHEAD (ASCII art title) ── */
-    .tl-masthead {
-        background: var(--s2);
-        border: 2px solid var(--line2);
-        padding: 12px 14px;
-        margin: 8px 0;
-        position: relative;
-    }
-    .tl-masthead-row {
-        font-family: var(--mono); font-size: 12px;
-        color: var(--muted);
-        display: flex; justify-content: space-between;
-    }
-    .tl-masthead-row .lbl { color: var(--accent); }
-    .tl-h1 {
-        font-family: var(--display); font-weight: 400;
-        font-size: clamp(56px, 13vw, 96px);
-        line-height: 1; margin: 6px 0 4px;
-        letter-spacing: .02em;
-        color: var(--txt);
-        text-shadow: 2px 0 var(--c-hyrox), -2px 0 var(--c-carrera);
-    }
-    .tl-h1 .mark { color: var(--accent); }
-    .tl-h1 .dot  { color: var(--c-hyrox); }
-    .tl-subtitle {
-        font-family: var(--mono); font-size: 13px;
-        color: var(--c-carrera);
-    }
-
-    /* ── Range buttons ── */
-    .tl-range {
-        display: flex; gap: 8px; align-items: center;
-        margin-top: 10px; flex-wrap: wrap;
-        font-family: var(--mono); font-size: 13px;
-    }
-    .tl-range-lbl {
-        color: var(--accent);
-    }
-    .tl-range-btn {
-        padding: 1px 10px;
-        border: 1px solid var(--line2);
-        background: var(--s3); cursor: pointer;
-        font-family: var(--mono); font-size: 13px; font-weight: 700;
-        color: var(--txt); text-decoration: none;
-    }
-    .tl-range-btn:hover { background: var(--accent); color: #000; }
-    .tl-range-btn.active {
-        background: var(--accent); color: #000;
-        border-color: var(--accent);
-    }
-
-    /* ── STATS grid ── */
-    .tl-stats {
-        margin-top: 16px;
-        display: grid; grid-template-columns: repeat(4, 1fr);
-        gap: 0;
-        border: 2px solid var(--line2);
-        background: var(--s2);
-    }
-    .tl-stat {
-        padding: 10px 12px 12px;
-        border-right: 1px solid var(--line);
-        position: relative;
-    }
-    .tl-stat:last-child { border-right: 0; }
-    .tl-stat-warn { background: rgba(255,255,85,.08); }
-    .tl-stat-bad  { background: rgba(255,85,85,.10); }
-    .tl-stat-ok   { background: rgba(85,255,85,.06); }
-    .tl-stat-lbl {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        color: var(--accent);
-    }
-    .tl-stat-lbl::before { content: '> '; color: var(--ok); }
-    .tl-stat-val {
-        font-family: var(--display);
-        font-size: 56px; line-height: 1;
-        margin-top: 4px;
-        font-variant-numeric: tabular-nums;
-        color: var(--c-carrera);
-    }
-    .tl-stat-val.warn { color: var(--warn); }
-    .tl-stat-val.bad  { color: var(--bad); text-shadow: 1px 0 #000; }
-    .tl-stat-val.ok   { color: var(--ok); }
-    .tl-stat-sub {
-        font-family: var(--mono); font-size: 11px;
-        color: var(--muted);
-        margin-top: 4px;
-    }
-
-    /* ── Section header ── */
-    .tl-section { margin-top: 18px; }
-    .tl-section-hdr {
-        display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-        font-family: var(--mono); font-size: 13px;
-    }
-    .tl-section-tag {
-        color: var(--c-ciclismo); font-weight: 700;
-    }
-    .tl-section-title {
-        font-family: var(--mono); font-weight: 700; font-size: 14px;
-        color: var(--accent); margin: 0; text-transform: uppercase;
-        letter-spacing: .04em;
-    }
-    .tl-section-title::before { content: '['; color: var(--txt); }
-    .tl-section-title::after  { content: ']'; color: var(--txt); }
-    .tl-rule {
-        flex: 1; height: 0;
-        border-top: 1px dashed var(--line2);
-    }
-
-    /* ── Filter pills ── */
-    .tl-filters {
-        display: flex; flex-wrap: wrap; gap: 6px;
-    }
-    .tl-filter-btn {
-        padding: 2px 10px;
-        border: 1px solid var(--line2);
-        background: var(--s2); cursor: pointer;
-        font-family: var(--mono); font-size: 12px; font-weight: 500;
-        color: var(--txt);
-    }
-    .tl-filter-btn:hover { background: var(--c-carrera); color: #000; }
-    .tl-filter-btn.active {
-        background: var(--c-carrera); color: #000;
-        border-color: var(--c-carrera);
-    }
-
-    /* ── CTA ── */
-    .tl-cta {
-        display: flex; align-items: center; justify-content: center; gap: 10px;
-        width: 100%; margin-top: 14px; padding: 10px;
-        background: var(--hi); color: #FFFFFF;
-        border: 2px solid var(--accent);
-        cursor: pointer;
-        font-family: var(--mono); font-size: 15px; font-weight: 700;
-        text-transform: uppercase; letter-spacing: .08em;
-        text-decoration: none;
-        box-shadow: 4px 4px 0 #000;
-    }
-    .tl-cta:hover { background: var(--accent); color: #000; }
-    .tl-cta:active { box-shadow: 0 0 0 #000; transform: translate(4px, 4px); }
-    .tl-cta::before { content: 'F2 ►'; color: var(--accent); margin-right: 6px; }
-    .tl-cta:hover::before { color: var(--hi); }
-
-    /* ── Day header ── */
-    .tl-day-hdr {
-        display: flex; justify-content: space-between; align-items: center;
-        padding: 10px 10px 6px;
-        margin-top: 10px;
-        background: var(--s2);
-        border-top: 1px solid var(--line2);
-        border-left: 4px solid var(--accent);
-    }
-    .tl-day-hdr:first-child { margin-top: 0; }
-    .tl-day-label {
-        display: flex; align-items: baseline; gap: 10px;
-        font-family: var(--mono);
-    }
-    .tl-day-num {
-        font-size: 13px; font-weight: 700;
-        color: var(--c-ciclismo);
-    }
-    .tl-day-name {
-        font-family: var(--display);
-        font-size: 28px;
-        color: var(--accent);
-        line-height: 1;
-    }
-    .tl-day-date {
-        font-family: var(--mono); font-size: 13px;
-        color: var(--c-carrera);
-    }
-    .tl-day-energy {
-        font-family: var(--mono); font-size: 12px; color: var(--muted);
-        display: flex; align-items: center; gap: 6px;
-    }
-    .tl-day-energy-val {
-        font-family: var(--display);
-        font-size: 22px;
-        color: var(--ok);
-    }
-
-    /* ── Activity row ── */
-    .tl-row {
-        display: flex; align-items: center; gap: 14px;
-        padding: 10px 12px;
-        margin: 2px 0 0;
-        background: var(--s2);
-        border: 1px solid var(--line);
-        border-left: 4px solid var(--c-otro);
-        cursor: pointer;
-        position: relative;
-    }
-    .tl-row:hover {
-        background: var(--s3);
-        outline: 1px solid var(--accent);
-        outline-offset: -2px;
-    }
-    .tl-row::before {
-        content: '►';
-        color: var(--accent);
-        position: absolute; left: -2px; top: 50%;
-        transform: translateY(-50%);
-        opacity: 0;
-        font-size: 12px;
-    }
-    .tl-row:hover::before { opacity: 1; left: -14px; }
-
-    /* Type-specific left borders */
-    .tl-row[data-tipo="gym"]          { border-left-color: var(--c-gym); }
-    .tl-row[data-tipo="hyrox"]        { border-left-color: var(--c-hyrox); }
-    .tl-row[data-tipo="carrera"]      { border-left-color: var(--c-carrera); }
-    .tl-row[data-tipo="ciclismo"]     { border-left-color: var(--c-ciclismo); }
-    .tl-row[data-tipo="remo"]         { border-left-color: var(--c-remo); }
-    .tl-row[data-tipo="cardio_sustituto"],
-    .tl-row[data-tipo="futbol"],
-    .tl-row[data-tipo="hiit"]         { border-left-color: var(--c-cardio); }
-    .tl-row[data-tipo="natacion"]     { border-left-color: var(--c-natacion); }
-    .tl-row[data-tipo="yoga"],
-    .tl-row[data-tipo="movilidad"],
-    .tl-row[data-tipo="estiramientos"]{ border-left-color: var(--c-yoga); }
-
-    /* SVG Ring */
-    .tl-ring { position: relative; width: 48px; height: 48px; flex-shrink: 0; }
-    .tl-ring-track { stroke: rgba(255,255,255,.12); }
-    .tl-ring-arc   { stroke: var(--c-otro); }
-
-    .tl-row[data-tipo="gym"]          .tl-ring-arc { stroke: var(--c-gym); }
-    .tl-row[data-tipo="hyrox"]        .tl-ring-arc { stroke: var(--c-hyrox); }
-    .tl-row[data-tipo="carrera"]      .tl-ring-arc { stroke: var(--c-carrera); }
-    .tl-row[data-tipo="ciclismo"]     .tl-ring-arc { stroke: var(--c-ciclismo); }
-    .tl-row[data-tipo="remo"]         .tl-ring-arc { stroke: var(--c-remo); }
-    .tl-row[data-tipo="cardio_sustituto"] .tl-ring-arc,
-    .tl-row[data-tipo="futbol"]       .tl-ring-arc,
-    .tl-row[data-tipo="hiit"]         .tl-ring-arc { stroke: var(--c-cardio); }
-    .tl-row[data-tipo="natacion"]     .tl-ring-arc { stroke: var(--c-natacion); }
-    .tl-row[data-tipo="yoga"]         .tl-ring-arc,
-    .tl-row[data-tipo="movilidad"]    .tl-ring-arc,
-    .tl-row[data-tipo="estiramientos"].tl-ring-arc { stroke: var(--c-yoga); }
-
-    .tl-ring-center {
-        position: absolute; inset: 0;
-        display: flex; align-items: center; justify-content: center;
-        font-family: var(--mono); font-size: 10px; font-weight: 700;
-        color: var(--accent);
-    }
-
-    /* Info */
-    .tl-info { flex: 1; min-width: 0; }
-    .tl-info-meta {
-        display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        color: var(--muted);
-        margin-bottom: 2px;
-    }
-    .tl-tipo-badge {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        padding: 0 6px;
-        background: #000;
-        border: 1px solid currentColor;
-    }
-    .tl-row[data-tipo="gym"]          .tl-tipo-badge { color: var(--c-gym); }
-    .tl-row[data-tipo="hyrox"]        .tl-tipo-badge { color: var(--c-hyrox); }
-    .tl-row[data-tipo="carrera"]      .tl-tipo-badge { color: var(--c-carrera); }
-    .tl-row[data-tipo="ciclismo"]     .tl-tipo-badge { color: var(--c-ciclismo); }
-    .tl-row[data-tipo="remo"]         .tl-tipo-badge { color: var(--c-remo); }
-    .tl-row[data-tipo="cardio_sustituto"] .tl-tipo-badge,
-    .tl-row[data-tipo="futbol"]       .tl-tipo-badge,
-    .tl-row[data-tipo="hiit"]         .tl-tipo-badge { color: var(--c-cardio); }
-    .tl-row[data-tipo="natacion"]     .tl-tipo-badge { color: var(--c-natacion); }
-    .tl-row[data-tipo="yoga"]         .tl-tipo-badge,
-    .tl-row[data-tipo="movilidad"]    .tl-tipo-badge,
-    .tl-row[data-tipo="estiramientos"].tl-tipo-badge { color: var(--c-yoga); }
-
-    .tl-plan {
-        background: var(--accent); color: #000;
-        padding: 0 6px;
-        font-weight: 700; font-size: 11px;
-    }
-    .tl-info-title {
-        font-family: var(--mono); font-size: 12px; font-weight: 400;
-        color: var(--txt); margin-top: 0;
-        white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .tl-info-title::before { content: '" '; color: var(--c-carrera); }
-    .tl-info-title::after  { content: ' "'; color: var(--c-carrera); }
-    .tl-info-metric {
-        font-family: var(--display);
-        font-size: 40px; line-height: 1;
-        margin-top: 2px;
-        font-variant-numeric: tabular-nums;
-        color: var(--ok);
-    }
-    .tl-info-metric .unit {
-        font-family: var(--mono); font-size: 12px; font-weight: 700;
-        margin-left: 4px; color: var(--accent);
-    }
-
-    /* Right side */
-    .tl-sub {
-        text-align: right; flex-shrink: 0;
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        color: var(--muted);
-        line-height: 1.5;
-    }
-    .tl-sub .rpe-val {
-        font-family: var(--display);
-        font-size: 24px;
-        color: var(--c-hyrox);
-        display: block; line-height: 1;
-    }
-
-    /* Expandable actions */
-    .tl-actions {
-        display: none;
-        background: #000;
-        border: 1px solid var(--accent);
-        border-top: 0;
-        margin-top: -1px;
-    }
-    .tl-actions.open { display: flex; }
-    .tl-action-btn {
-        flex: 1; padding: 6px 12px;
-        background: transparent; border: 0; cursor: pointer;
-        font-family: var(--mono); font-size: 12px; font-weight: 700;
-        color: var(--accent);
-        display: flex; align-items: center; justify-content: center; gap: 6px;
-        border-right: 1px solid var(--line);
-    }
-    .tl-action-btn:last-child { border-right: 0; }
-    .tl-action-btn:hover { background: var(--accent); color: #000; }
-    .tl-action-btn.del { color: var(--bad); }
-    .tl-action-btn.del:hover { background: var(--bad); color: #000; }
-    .tl-confirm {
-        display: none; flex: 1; align-items: center; justify-content: center;
-        font-family: var(--mono); font-size: 12px; font-weight: 700;
-        color: var(--bad);
-    }
-    .tl-confirm.show { display: flex; }
-    .tl-normal.hide  { display: none; }
-
-    /* Bitácora */
-    .tl-row-log {
-        display: flex; gap: 12px; align-items: flex-start;
-        padding: 10px 12px;
-        margin-top: 2px;
-        background: #000;
-        border: 1px solid var(--accent);
-        border-left: 4px solid var(--accent);
-        color: var(--accent);
-    }
-    .tl-log-icon {
-        width: 42px; height: 42px;
-        background: var(--s2); border: 1px solid var(--accent);
-        display: flex; align-items: center; justify-content: center;
-        font-size: 18px; flex-shrink: 0;
-    }
-    .tl-log-body { flex: 1; min-width: 0; }
-    .tl-log-hdr {
-        font-family: var(--mono); font-size: 11px; font-weight: 700;
-        color: var(--c-ciclismo);
-        margin-bottom: 4px;
-    }
-    .tl-log-hdr::before { content: 'REM '; color: var(--accent); }
-    .tl-log-text {
-        font-family: var(--mono); font-size: 13px;
-        line-height: 1.5; color: var(--txt);
-    }
-    .tl-log-energy {
-        text-align: right; flex-shrink: 0;
-        font-family: var(--mono); font-size: 11px;
-        color: var(--muted);
-    }
-    .tl-log-energy b {
-        font-family: var(--display);
-        font-size: 28px; color: var(--ok);
-        display: block; line-height: 1;
-    }
-
-    /* Empty state */
-    .tl-empty {
-        background: var(--s2); border: 2px dashed var(--line2);
-        padding: 40px 24px; text-align: center; margin-top: 12px;
-    }
-    .tl-empty-num {
-        font-family: var(--display); font-size: 96px;
-        line-height: 1; color: var(--c-hyrox);
-    }
-    .tl-empty-msg {
-        font-family: var(--mono); font-size: 13px; font-weight: 700;
-        color: var(--accent);
-    }
-    .tl-empty-msg::before, .tl-empty-msg::after { content: ' ── '; color: var(--muted); }
-    .tl-empty-copy { margin: 14px auto 0; max-width: 36ch; color: var(--text2); line-height: 1.45; }
-    .tl-empty-actions { display: grid; gap: 10px; max-width: 320px; margin: 22px auto 0; }
-    .tl-empty-actions .tl-cta { margin: 0; min-height: 44px; }
-    .tl-empty-link { min-height: 44px; display: inline-flex; align-items: center; justify-content: center; color: var(--accent); font-family: var(--mono); font-weight: 700; text-decoration: underline; }
-    .tl-cta:focus-visible, .tl-empty-link:focus-visible { outline: 3px solid var(--hi); outline-offset: 3px; }
-
-    /* Footer */
-    .tl-footer {
-        margin-top: 30px; padding: 8px 0;
-        border-top: 1px dashed var(--line2);
-        display: flex; justify-content: space-between;
-        font-family: var(--mono); font-size: 12px;
-        color: var(--muted);
-    }
-    .tl-footer b { color: var(--ok); }
-
-    /* ── F-key bar (DOS-style status bar at bottom) ── */
-    .dos-fbar {
-        position: fixed;
-        left: 0; right: 0; bottom: 0;
-        background: #000;
-        color: var(--txt);
-        font-family: var(--mono); font-size: 12px;
-        padding: 4px 8px;
-        display: flex; justify-content: center; gap: 14px;
-        z-index: 100;
-        border-top: 1px solid var(--line2);
-        overflow-x: auto;
-        white-space: nowrap;
-    }
-    .dos-fbar .fk {
-        display: inline-flex; align-items: center; gap: 4px;
-    }
-    .dos-fbar .fkey {
-        color: var(--txt);
-    }
-    .dos-fbar .flbl {
-        background: var(--c-carrera);
-        color: #000;
-        padding: 0 6px;
-    }
-
-    @media (max-width: 640px) {
-        .tl-stats { grid-template-columns: repeat(2, 1fr); }
-        .tl-stat:nth-child(2) { border-right: 0; }
-        .tl-stat:nth-child(1), .tl-stat:nth-child(2) { border-bottom: 1px solid var(--line); }
-        .tl-footer { flex-direction: column; gap: 6px; text-align: center; }
-        .tl-info-metric { font-size: 32px; }
-        .tl-day-name { font-size: 22px; }
-        .dos-fbar { font-size: 11px; gap: 8px; }
-    }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#030604">
+<title>Historial · {{ cliente.nombre }}</title>
+<style>
+/* 15-oct-2026: el historial con el estilo de la app (antes, estética MS-DOS). */
+:root{--ink:#030604;--paper:#f4f0e9;--muted:#a3ada7;--faint:#8e9a93;--line:#263b31;--panel:#08100c;--green:#42e4a0;--blue:#54caff;--amber:#f7bf54;--red:#ff8a80}
+*{box-sizing:border-box}html{background:var(--ink)}
+body{min-height:100vh;margin:0;background:radial-gradient(110% 32% at 54% -5%,#11271c 0%,transparent 58%),var(--ink);color:var(--paper);font-family:ui-rounded,"Avenir Next",Avenir,"Segoe UI",sans-serif;overflow-x:hidden}
+.mono,.hl-label,.hl-meta,.hl-top a,.hl-date{font-family:"SF Mono",SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+.hl-shell{width:min(100%,430px);min-height:100vh;margin:0 auto;padding:calc(17px + env(safe-area-inset-top)) 16px calc(104px + env(safe-area-inset-bottom))}
+.hl-top{display:flex;align-items:center;justify-content:space-between;margin:0 0 16px;padding:0 9px}
+.hl-top a{min-height:30px;color:#b7deef;font-size:9px;line-height:30px;text-decoration:none}
+.hl-date{margin:0;color:#929d9b;font-size:7px;line-height:1.5;text-align:right}
+.hl-card{position:relative;overflow:hidden;margin-top:13px;padding:19px;border:1px solid var(--line);border-radius:15px;background:radial-gradient(ellipse at 22% 0%,rgba(35,75,57,.2),transparent 58%),linear-gradient(135deg,#0b120f,#070b09)}
+.hl-hero{margin-top:0;padding:24px 19px 20px;background:radial-gradient(ellipse at 88% 94%,rgba(66,228,160,.13),transparent 33%),linear-gradient(135deg,#0b1710,#070b09 72%)}
+.hl-label{display:block;color:var(--green);font-size:8px;line-height:1.25}
+.hl-title{margin:12px 0 8px;font-size:39px;font-weight:900;letter-spacing:-.045em;line-height:.92;text-transform:uppercase}
+.hl-copy{margin:0;color:#dbe2dc;font-size:14px;line-height:1.4}
+.hl-range{display:flex;gap:8px;margin-top:16px}
+.hl-range a{display:inline-flex;align-items:center;justify-content:center;min-width:56px;min-height:36px;padding:0 12px;border:1px solid #315445;border-radius:999px;color:var(--muted);font:700 10px/1 "SF Mono",SFMono-Regular,Menlo,monospace;letter-spacing:.1em;text-decoration:none}
+.hl-range a[aria-current=page]{border-color:var(--green);color:var(--green);background:rgba(66,228,160,.08)}
+.hl-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:13px}
+.hl-stat{min-width:0;padding:13px;border:1px solid #2a3b32;border-radius:12px;background:var(--panel)}
+.hl-stat dt{color:var(--faint);font:700 7px/1.3 "SF Mono",SFMono-Regular,Menlo,monospace;letter-spacing:.11em;text-transform:uppercase}
+.hl-stat dd{margin:7px 0 0;color:var(--paper);font:800 24px/1 "SF Mono",SFMono-Regular,Menlo,monospace;letter-spacing:-.06em}
+.hl-stat small{display:block;margin-top:6px;color:var(--muted);font-size:11px;line-height:1.3}
+.hl-stat.ok dd{color:var(--green)}.hl-stat.warn dd{color:var(--amber)}.hl-stat.bad dd{color:var(--red)}
+.hl-filters{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px}
+.hl-filter{min-height:34px;padding:0 12px;border:1px solid #304439;border-radius:999px;color:var(--muted);background:transparent;font:700 9px/1 "SF Mono",SFMono-Regular,Menlo,monospace;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.hl-filter.active{border-color:var(--green);color:var(--green);background:rgba(66,228,160,.08)}
+.hl-cta{display:flex;align-items:center;justify-content:center;min-height:44px;margin-top:13px;border:1.5px solid var(--green);border-radius:999px;color:var(--green);font:800 10px/1 "SF Mono",SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-decoration:none;text-transform:uppercase}
+.hl-cta:hover,.hl-cta:focus-visible{color:#041009;background:var(--green);outline:none}
+.hl-list{margin-top:4px}
+.hl-day{margin-top:16px;padding-top:14px;border-top:1px solid #223029}
+.hl-day:first-child{margin-top:8px;padding-top:0;border-top:0}
+.hl-day-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.hl-day-name{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.hl-today{display:inline-block;margin-left:6px;padding:3px 6px;border:1px solid rgba(66,228,160,.55);border-radius:999px;color:var(--green);font:700 7px/1 "SF Mono",monospace;letter-spacing:.1em;text-transform:uppercase;vertical-align:middle}
+.hl-day-energy{color:var(--muted);font:700 9px/1 "SF Mono",monospace;letter-spacing:.06em}
+.hl-day-energy b{color:var(--paper)}
+.hl-row{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:11px;align-items:center;width:100%;min-height:58px;margin-top:8px;padding:9px 11px;border:1px solid #2a3b32;border-radius:12px;color:inherit;background:var(--panel);text-align:left;cursor:pointer;font:inherit}
+.hl-row:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.hl-chip{display:grid;place-items:center;width:44px;height:44px;border:1px solid #315c49;border-radius:11px;color:var(--green);font:800 9px/1 "SF Mono",monospace;letter-spacing:.06em}
+.hl-row[data-tipo=futbol] .hl-chip,.hl-row[data-tipo=carrera] .hl-chip,.hl-row[data-tipo=ciclismo] .hl-chip{border-color:rgba(84,202,255,.45);color:var(--blue)}
+.hl-row[data-tipo=hyrox] .hl-chip{border-color:rgba(247,191,84,.5);color:var(--amber)}
+.hl-info{min-width:0}
+.hl-name{overflow:hidden;font-size:13px;font-weight:750;line-height:1.25;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hl-meta{margin-top:4px;color:var(--faint);font-size:7px;line-height:1.4;letter-spacing:.08em}
+.hl-metric{text-align:right;white-space:nowrap}
+.hl-metric strong{display:block;color:var(--paper);font:800 15px/1 "SF Mono",monospace;letter-spacing:-.04em}
+.hl-metric small{display:block;margin-top:4px;color:var(--faint);font:700 7px/1 "SF Mono",monospace;letter-spacing:.1em;text-transform:uppercase}
+.hl-actions{display:none;gap:8px;margin-top:6px}
+.hl-actions.open{display:flex}
+.hl-actions button{flex:1;min-height:40px;border:1px solid #304439;border-radius:999px;color:var(--paper);background:transparent;font:700 9px/1 "SF Mono",monospace;letter-spacing:.1em;text-transform:uppercase;cursor:pointer}
+.hl-actions .del{border-color:rgba(255,138,128,.5);color:var(--red)}
+.hl-confirm{display:none;flex:1;gap:8px;align-items:center}
+.hl-confirm.show{display:flex}.hl-normal.hide{display:none!important}
+.hl-confirm span{flex:1.3;color:var(--red);font-size:12px;font-weight:700}
+.hl-log{margin-top:8px;padding:11px 12px;border:1px dashed #304439;border-radius:12px;color:#cdd5cf;font-size:13px;line-height:1.4}
+.hl-log .hl-label{margin-bottom:5px;color:var(--amber)}
+.hl-empty{padding:6px 0 4px;text-align:left}
+.hl-empty-msg{margin:6px 0 0;color:var(--amber);font:700 9px/1.4 "SF Mono",monospace;letter-spacing:.12em}
+.hl-empty p{margin:10px 0 0;color:#a9b2ac;font-size:13px;line-height:1.45}
+.hl-empty-link{display:inline-block;margin-top:12px;color:var(--blue);font-size:12px;text-decoration:none}
+@media(max-width:350px){.hl-shell{padding-inline:12px}.hl-title{font-size:34px}}
+</style>
 </head>
 <body>
+<main class="hl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
+  <header class="hl-top"><a href="{% url 'clientes:memoria_entrenador' cliente.id %}">← Memoria</a><p class="hl-date">Historial<br>{% now "d M Y" %}</p></header>
 
-<div class="tl-shell" id="tl-shell" data-cliente="{{ cliente.id }}">
+  <section class="hl-card hl-hero" aria-labelledby="hl-title">
+    <span class="hl-label">Lo que has hecho</span>
+    <h1 class="hl-title" id="hl-title">Historial</h1>
+    <p class="hl-copy">Últimos {{ dias_rango }} días · {{ dias_activos }} con actividad · {{ total_actividades }} registro{{ total_actividades|pluralize }}.</p>
+    <nav class="hl-range" aria-label="Rango de fechas">
+      {% for r in rangos %}<a href="?dias={{ r }}"{% if dias_rango == r %} aria-current="page"{% endif %}>{{ r }} d</a>{% endfor %}
+    </nav>
+  </section>
 
-    <!-- DOS TITLE BAR -->
-    <div class="dos-titlebar">
-        <span><span class="dos-close">■</span> &nbsp;TIMELINE.EXE</span>
-        <span class="dos-titlebar-center">─ [ CL-{{ cliente.id }} · {{ cliente.nombre|upper }} ] ─</span>
-        <span>[▼][▲][X]</span>
+  <dl class="hl-stats">
+    <div class="hl-stat"><dt>Días con actividad</dt><dd>{{ dias_activos }}</dd><small>de {{ dias_rango }}</small></div>
+    <div class="hl-stat"><dt>Registros</dt><dd>{{ total_actividades }}</dd><small>sesiones y actividades</small></div>
+    {% if tsb_data %}
+    <div class="hl-stat {% if tsb_data.zona == 'sobrecargado' %}bad{% elif tsb_data.zona == 'fatigado' %}warn{% else %}ok{% endif %}"><dt>Forma (TSB) · {{ tsb_data.zona }}</dt><dd>{{ tsb_data.tsb }}</dd><small>CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</small></div>
+    {% else %}
+    <div class="hl-stat"><dt>Forma (TSB)</dt><dd>—</dd><small>sin datos</small></div>
+    {% endif %}
+    <div class="hl-stat {% if acwr.zona_riesgo == 'optima' %}ok{% elif acwr.zona_riesgo == 'cuidado' %}warn{% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}"><dt>Carga (ACWR){% if acwr.zona_riesgo == 'optima' %} · óptima{% elif acwr.zona_riesgo == 'cuidado' %} · cuidado{% elif acwr.zona_riesgo == 'riesgo_alto' %} · alta{% endif %}</dt><dd>{{ acwr.acwr_actual|default:"—" }}</dd><small>aguda frente a crónica</small></div>
+  </dl>
+
+  <section class="hl-card" aria-labelledby="hl-lista">
+    <span class="hl-label" id="hl-lista">Día a día · lo último arriba</span>
+    <div class="hl-filters" role="group" aria-label="Filtrar por tipo">
+      <button class="hl-filter tl-filter-btn active" type="button" data-filter="all">Todo · {{ total_actividades }}</button>
+      {% for d in desglose %}<button class="hl-filter tl-filter-btn" type="button" data-filter="{{ d.tipo }}">{{ d.label }}{% if d.n %} · {{ d.n }}{% endif %}</button>{% endfor %}
     </div>
+    <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="hl-cta">Registrar actividad</a>
 
-    <!-- DOS MENU BAR -->
-    <div class="dos-menubar">
-        <span><b>F</b>ile</span>
-        <span><b>E</b>dit</span>
-        <span><b>V</b>iew</span>
-        <span><b>R</b>egistro</span>
-        <span><b>O</b>ptions</span>
-        <span><b>H</b>elp</span>
-    </div>
-
-    <!-- MARQUEE -->
-    <div class="tl-marquee">
-        <span><span class="live-dot"></span>LIVE :: PID #{{ cliente.id }} :: REGISTRO DE ACTIVIDAD</span>
-        <span class="clock" id="tl-clock">--:--:--</span>
-    </div>
-
-    <div class="tl-inner">
-
-        <!-- TOPBAR -->
-        <div class="tl-topbar">
-            <a href="{% url 'clientes:panel_cliente' %}" class="tl-back">&lt; CD ..\PANEL</a>
-            <span class="tl-version">BUILD <b>v04.26</b> · DOS-MODE</span>
+    <div class="hl-list" id="tl-list">
+      {% if tiene_registros_timeline %}{% for dia in dias %}{% if dia.actividades or dia.bitacora %}
+      <div class="hl-day">
+        <div class="hl-day-head">
+          <span class="hl-day-name">{{ dia.dia_semana }} {{ dia.fecha|date:"d M" }}{% if dia.es_hoy %}<span class="hl-today">Hoy</span>{% endif %}</span>
+          {% if dia.energia %}<span class="hl-day-energy">Energía <b>{{ dia.energia }}</b>/10 {{ dia.humor_emoji|default:"" }}</span>{% endif %}
         </div>
-
-        <!-- PROMPT -->
-        <div class="dos-prompt">
-            <span class="path">C:\ATLETA\{{ cliente.nombre|upper }}</span>
-            <span class="gt">&gt;</span>
-            <span class="cmd">TYPE HISTORIAL.LOG /RANGE={{ dias_rango }}D</span>
-            <span class="blink"></span>
+        {% for actividad in dia.actividades %}
+        <button type="button" class="hl-row tl-row" data-tipo="{{ actividad.tipo }}" data-id="{{ actividad.id }}" aria-expanded="false" aria-controls="tl-actions-{{ actividad.id }}" onclick="tlToggleRow(this)">
+          <span class="hl-chip" aria-hidden="true">{% if actividad.tipo == 'gym' %}GYM{% elif actividad.tipo == 'hyrox' %}HYX{% elif actividad.tipo == 'carrera' %}RUN{% elif actividad.tipo == 'ciclismo' %}BICI{% elif actividad.tipo == 'remo' %}REMO{% elif actividad.tipo == 'futbol' %}FÚT{% elif actividad.tipo == 'cardio_sustituto' %}CARD{% elif actividad.tipo == 'natacion' %}SWIM{% else %}ACT{% endif %}</span>
+          <span class="hl-info">
+            <span class="hl-name">{{ actividad.titulo|default:actividad.get_tipo_display }}</span>
+            <span class="hl-meta mono">{{ actividad.get_tipo_display }}{% if actividad.duracion_minutos %} · {{ actividad.duracion_minutos }} min{% endif %}{% if actividad.rpe_medio %} · RPE {{ actividad.rpe_medio|floatformat:1 }}{% endif %}{% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %} · del plan {{ actividad.fecha|date:"d/m" }}{% endif %}</span>
+          </span>
+          <span class="hl-metric">
+            {% if actividad.distancia_metros %}<strong>{% widthratio actividad.distancia_metros 1000 1 %}</strong><small>km</small>
+            {% elif actividad.volumen_kg %}<strong>{{ actividad.volumen_kg|floatformat:0 }}</strong><small>kg</small>
+            {% elif actividad.carga_display %}<strong>{{ actividad.carga_display|floatformat:0 }}</strong><small>carga</small>
+            {% elif actividad.calorias %}<strong>{{ actividad.calorias|floatformat:0 }}</strong><small>kcal</small>
+            {% elif actividad.duracion_minutos %}<strong>{{ actividad.duracion_minutos }}</strong><small>min</small>
+            {% else %}<strong>—</strong>{% endif %}
+          </span>
+        </button>
+        <div class="hl-actions tl-actions" id="tl-actions-{{ actividad.id }}" data-id="{{ actividad.id }}">
+          <div class="hl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;gap:8px">
+            <button type="button" onclick="tlEditActivity('{{ actividad.id }}')">Editar</button>
+            <button type="button" class="del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">Borrar</button>
+          </div>
+          <div class="hl-confirm" id="tl-confirm-{{ actividad.id }}">
+            <span>¿Borrar esta actividad?</span>
+            <button type="button" class="del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">Sí, borrar</button>
+            <button type="button" onclick="tlCancelDelete('{{ actividad.id }}', event)">No</button>
+          </div>
         </div>
-
-        <!-- MASTHEAD -->
-        <section class="tl-masthead">
-            <div class="tl-masthead-row">
-                <span class="lbl">► REGISTRO DE ACTIVIDAD</span>
-                <span>CL-{{ cliente.id }} · {{ cliente.nombre|upper }}</span>
-            </div>
-            <h1 class="tl-h1">HIS<span class="mark">TO</span>RIAL<span class="dot">_</span></h1>
-            <div class="tl-subtitle">// últimos {{ dias_rango }} días // ventana {{ dias_activos }}/{{ dias_rango }} activos //</div>
-
-            <div class="tl-range" role="group" aria-label="Rango de fechas">
-                <span class="tl-range-lbl">RANGE:</span>
-                {% for r in rangos %}
-                <a href="?dias={{ r }}"
-                    class="tl-range-btn {% if dias_rango == r %}active{% endif %}"
-                    {% if dias_rango == r %}aria-current="page"{% endif %}>
-                    {% if r == 7 %}07D{% elif r == 30 %}30D{% else %}90D{% endif %}
-                </a>
-                {% endfor %}
-            </div>
-        </section>
-
-        <!-- STATS -->
-        <section class="tl-stats">
-            <div class="tl-stat">
-                <div class="tl-stat-lbl">DIAS_ACTIVOS</div>
-                <div class="tl-stat-val">{{ dias_activos }}</div>
-                <div class="tl-stat-sub">de {{ dias_rango }} dias</div>
-            </div>
-            <div class="tl-stat">
-                <div class="tl-stat-lbl">ACTIVIDADES</div>
-                <div class="tl-stat-val">{{ total_actividades }}</div>
-                <div class="tl-stat-sub">total registros</div>
-            </div>
-            {% if tsb_data %}
-            <div class="tl-stat
-                {% if tsb_data.zona == 'sobrecargado' %}tl-stat-bad
-                {% elif tsb_data.zona == 'fatigado' %}tl-stat-warn
-                {% else %}tl-stat-ok{% endif %}">
-                <div class="tl-stat-lbl">TSB :: {{ tsb_data.zona|upper }}</div>
-                <div class="tl-stat-val
-                    {% if tsb_data.zona == 'sobrecargado' %}bad
-                    {% elif tsb_data.zona == 'fatigado' %}warn
-                    {% else %}ok{% endif %}">{{ tsb_data.tsb }}</div>
-                <div class="tl-stat-sub">CTL {{ tsb_data.ctl }} · ATL {{ tsb_data.atl }}</div>
-            </div>
-            {% else %}
-            <div class="tl-stat">
-                <div class="tl-stat-lbl">TSB</div>
-                <div class="tl-stat-val" style="color:var(--dim)">--</div>
-                <div class="tl-stat-sub">sin datos</div>
-            </div>
-            {% endif %}
-            <div class="tl-stat
-                {% if acwr.zona_riesgo == 'optima' %}tl-stat-ok
-                {% elif acwr.zona_riesgo == 'cuidado' %}tl-stat-warn
-                {% elif acwr.zona_riesgo == 'riesgo_alto' %}tl-stat-bad{% endif %}">
-                <div class="tl-stat-lbl">ACWR ::
-                    {% if acwr.zona_riesgo == 'optima' %}OPTIMA
-                    {% elif acwr.zona_riesgo == 'cuidado' %}CUIDADO
-                    {% elif acwr.zona_riesgo == 'riesgo_alto' %}RIESGO
-                    {% else %}--{% endif %}
-                </div>
-                <div class="tl-stat-val
-                    {% if acwr.zona_riesgo == 'optima' %}ok
-                    {% elif acwr.zona_riesgo == 'cuidado' %}warn
-                    {% elif acwr.zona_riesgo == 'riesgo_alto' %}bad{% endif %}">{{ acwr.acwr_actual }}</div>
-                <div class="tl-stat-sub">ratio aguda/cronica</div>
-            </div>
-        </section>
-
-        <!-- FILTERS -->
-        <section class="tl-section">
-            <div class="tl-section-hdr">
-                <span class="tl-section-tag">§01</span>
-                <h2 class="tl-section-title">FILTRAR</h2>
-                <div class="tl-rule"></div>
-            </div>
-            <div class="tl-filters" role="group" aria-label="Filtrar por tipo">
-                <button class="tl-filter-btn active" data-filter="all">*.* · {{ total_actividades }}</button>
-                {% for d in desglose %}
-                <button class="tl-filter-btn" data-filter="{{ d.tipo }}">
-                    {{ d.label }}{% if d.n %} · {{ d.n }}{% endif %}
-                </button>
-                {% endfor %}
-            </div>
-        </section>
-
-        <!-- CTA -->
-        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-cta">
-            REGISTRAR.ACTIVIDAD /NEW
-        </a>
-
-        <!-- TIMELINE -->
-        <section class="tl-section">
-            <div class="tl-section-hdr">
-                <span class="tl-section-tag">§02</span>
-                <h2 class="tl-section-title">SECUENCIA · {{ dias_rango }}D</h2>
-                <div class="tl-rule"></div>
-            </div>
-
-            <div class="tl-list" id="tl-list">
-                {% if tiene_registros_timeline %}{% for dia in dias %}
-
-                    <!-- Day header -->
-                    <div class="tl-day-hdr">
-                        <div class="tl-day-label">
-                            <span class="tl-day-num">[D{{ forloop.counter|stringformat:"02d" }}]</span>
-                            <span class="tl-day-name">{{ dia.dia_semana|upper }} <span class="tl-day-date">// {{ dia.fecha|date:"d M" }}</span></span>
-                        </div>
-                        {% if dia.energia %}
-                        <div class="tl-day-energy">
-                            <span>ENG:</span>
-                            <span class="tl-day-energy-val">{{ dia.energia }}</span>
-                            <span>/10 {{ dia.humor_emoji|default:"" }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    {% for actividad in dia.actividades %}
-                    <div class="tl-row"
-                            data-tipo="{{ actividad.tipo }}"
-                            data-carga="{{ actividad.carga_ua|default:actividad.volumen_kg|default:actividad.duracion_minutos|default:0 }}"
-                            data-id="{{ actividad.id }}"
-                            onclick="tlToggleRow(this)">
-
-                        <!-- Ring -->
-                        <div class="tl-ring">
-                            <svg viewBox="0 0 48 48" width="48" height="48">
-                                <circle cx="24" cy="24" r="20" fill="none" class="tl-ring-track" stroke-width="3"/>
-                                <circle cx="24" cy="24" r="20" fill="none"
-                                        class="tl-ring-arc"
-                                        stroke-width="3"
-                                        stroke-dasharray="0 125.66"
-                                        stroke-linecap="butt"
-                                        transform="rotate(-90 24 24)"
-                                        />
-                            </svg>
-                            <div class="tl-ring-center">
-                                {% if actividad.tipo == 'gym' %}GYM
-                                {% elif actividad.tipo == 'hyrox' %}HYX
-                                {% elif actividad.tipo == 'carrera' %}RUN
-                                {% elif actividad.tipo == 'ciclismo' %}BIK
-                                {% elif actividad.tipo == 'remo' %}ROW
-                                {% elif actividad.tipo == 'cardio_sustituto' or actividad.tipo == 'futbol' %}CRD
-                                {% elif actividad.tipo == 'natacion' %}SWM
-                                {% else %}ACT{% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Info -->
-                        <div class="tl-info">
-                            <div class="tl-info-meta">
-                                <span class="tl-tipo-badge">{{ actividad.tipo|upper }}</span>
-                                {% if actividad.titulo %}
-                                <span class="tl-info-title">{{ actividad.titulo }}</span>
-                                {% endif %}
-                                {% if actividad.fecha_realizado and actividad.fecha_realizado != actividad.fecha %}
-                                <span class="tl-plan">PLAN {{ actividad.fecha|date:"d/m" }}</span>
-                                {% endif %}
-                            </div>
-                            <div class="tl-info-metric">
-                                {% if actividad.distancia_metros %}{% widthratio actividad.distancia_metros 1000 1 %}<span class="unit">KM</span>
-                                {% elif actividad.calorias %}{{ actividad.calorias|floatformat:0 }}<span class="unit">CAL</span>
-                                {% elif actividad.carga_display %}{{ actividad.carga_display|floatformat:0 }}<span class="unit">sRPE</span>
-                                {% elif actividad.volumen_kg %}{{ actividad.volumen_kg|floatformat:0 }}<span class="unit">KG</span>
-                                {% elif actividad.duracion_minutos %}{{ actividad.duracion_minutos }}<span class="unit">MIN</span>
-                                {% elif actividad.rpe_medio %}{{ actividad.rpe_medio|floatformat:1 }}<span class="unit">RPE</span>
-                                {% else %}--{% endif %}
-                            </div>
-                        </div>
-
-                        <!-- Right: RPE + duration -->
-                        <div class="tl-sub">
-                            {% if actividad.rpe_medio %}
-                            <span class="rpe-val">{{ actividad.rpe_medio|floatformat:1 }}</span>
-                            RPE
-                            {% endif %}
-                            {% if actividad.duracion_minutos %}
-                            {{ actividad.duracion_minutos }}min
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <!-- Expandable actions -->
-                    <div class="tl-actions" id="tl-actions-{{ actividad.id }}">
-                        <div class="tl-normal" id="tl-normal-{{ actividad.id }}" style="display:flex;flex:1;">
-                            <button class="tl-action-btn" onclick="tlEditActivity('{{ actividad.id }}')">
-                                ►&nbsp; EDIT.EXE
-                            </button>
-                            <button class="tl-action-btn del" onclick="tlConfirmDelete('{{ actividad.id }}', event)">
-                                ►&nbsp; DEL.EXE
-                            </button>
-                        </div>
-                        <div class="tl-confirm" id="tl-confirm-{{ actividad.id }}" style="flex:1;">
-                            <span style="flex:1;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--bad)">!! CONFIRMAR DELETE ?</span>
-                            <button class="tl-action-btn del" onclick="tlDeleteActivity('{{ actividad.id }}', event)">[Y] SI</button>
-                            <button class="tl-action-btn" onclick="tlCancelDelete('{{ actividad.id }}', event)">[N] NO</button>
-                        </div>
-                    </div>
-                    {% endfor %}
-
-                    {% if dia.bitacora %}
-                    <div class="tl-row-log">
-                        <div class="tl-log-icon">{{ dia.humor_emoji|default:"$" }}</div>
-                        <div class="tl-log-body">
-                            <div class="tl-log-hdr">BITACORA.TXT · {{ dia.dia_semana|upper }} {{ dia.fecha|date:"d M" }}</div>
-                            <div class="tl-log-text">
-                                {% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}
-                                {% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}
-                            </div>
-                        </div>
-                        {% if dia.energia %}
-                        <div class="tl-log-energy">
-                            ENG<b>{{ dia.energia }}</b>/10
-                        </div>
-                        {% endif %}
-                    </div>
-                    {% endif %}
-
-                {% endfor %}{% else %}
-                    <div class="tl-empty">
-                        <div class="tl-empty-num">00</div>
-                        <div class="tl-empty-msg">AÚN NO HAY ACTIVIDAD NI BITÁCORA EN ESTE PERIODO</div>
-                        <p class="tl-empty-copy">La cronología se construirá con tu primera sesión o nota diaria. Elige la forma en que quieres empezar.</p>
-                        <div class="tl-empty-actions">
-                            <a href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}" class="tl-cta">VER TU RUTINA /START</a>
-                            <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="tl-empty-link">Registrar actividad libre →</a>
-                        </div>
-                    </div>
-                {% endif %}
-            </div>
-        </section>
-
-        <!-- FOOTER -->
-        <footer class="tl-footer">
-            <span>EOF :: FIN.DEL.HISTORIAL</span>
-            <span>&lt;LIVE&gt; <b>ACTUALIZADO</b></span>
-            <span>CL-{{ cliente.id }}</span>
-        </footer>
-
+        {% endfor %}
+        {% if dia.bitacora and dia.emocion_dia or dia.bitacora and dia.nota %}
+        <div class="hl-log"><span class="hl-label">Bitácora</span>{% if dia.emocion_dia %}"{{ dia.emocion_dia }}"{% endif %}{% if dia.nota %}{% if dia.emocion_dia %} — {% endif %}{{ dia.nota }}{% endif %}</div>
+        {% endif %}
+      </div>
+      {% endif %}{% endfor %}{% else %}
+      <div class="hl-empty">
+        <p class="hl-empty-msg">AÚN NO HAY ACTIVIDAD NI BITÁCORA EN ESTE PERIODO</p>
+        <p>La cronología se construirá con tu primera sesión o nota diaria.</p>
+        <a href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}" class="hl-cta">Ver tu rutina</a>
+        <a href="{% url 'entrenos:registrar_actividad_libre' cliente.id %}" class="hl-empty-link">Registrar actividad libre →</a>
+      </div>
+      {% endif %}
     </div>
-
-</div>
-
-<!-- F-KEY STATUS BAR -->
-<div class="dos-fbar">
-    <span class="fk"><span class="fkey">F1</span><span class="flbl">Help</span></span>
-    <span class="fk"><span class="fkey">F2</span><span class="flbl">New</span></span>
-    <span class="fk"><span class="fkey">F3</span><span class="flbl">Filter</span></span>
-    <span class="fk"><span class="fkey">F4</span><span class="flbl">Edit</span></span>
-    <span class="fk"><span class="fkey">F5</span><span class="flbl">Reload</span></span>
-    <span class="fk"><span class="fkey">F8</span><span class="flbl">Del</span></span>
-    <span class="fk"><span class="fkey">F10</span><span class="flbl">Quit</span></span>
-</div>
-
+  </section>
+</main>
+{% include 'includes/bottom_nav.html' with activo='memoria' %}
 <script>
 (function () {
-'use strict';
-
-/* CLOCK */
-function tickClock() {
-    const el = document.getElementById('tl-clock');
-    if (!el) return;
-    el.textContent = new Date().toTimeString().slice(0, 8);
-}
-setInterval(tickClock, 1000); tickClock();
-
-/* RINGS */
-const CIRC = 2 * Math.PI * 20;
-function initRings() {
-    const rows = document.querySelectorAll('.tl-row[data-carga]');
-    let max = 1;
-    rows.forEach(r => { const v = parseFloat(r.dataset.carga) || 0; if (v > max) max = v; });
-    rows.forEach((row, i) => {
-        const arc = row.querySelector('.tl-ring-arc');
-        if (!arc) return;
-        const c = parseFloat(row.dataset.carga) || 0;
-        const dash = Math.min(c / max, 1) * CIRC;
-        setTimeout(() => {
-            arc.style.transition = 'stroke-dasharray .9s steps(12)';
-            arc.setAttribute('stroke-dasharray', dash.toFixed(2) + ' ' + CIRC.toFixed(2));
-        }, 80 + i * 40);
+  'use strict';
+  document.querySelectorAll('.tl-filter-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.tl-filter-btn').forEach(function (b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var f = btn.dataset.filter;
+      document.querySelectorAll('#tl-list .tl-row').forEach(function (el) {
+        var show = f === 'all' || el.dataset.tipo === f;
+        el.style.display = show ? '' : 'none';
+        var act = document.getElementById('tl-actions-' + el.dataset.id);
+        if (act && !show) act.classList.remove('open');
+      });
+      document.querySelectorAll('#tl-list .hl-day').forEach(function (dia) {
+        var visibles = Array.prototype.some.call(dia.querySelectorAll('.tl-row'), function (r) { return r.style.display !== 'none'; });
+        dia.style.display = (f === 'all' || visibles) ? '' : 'none';
+      });
     });
-}
+  });
 
-/* FILTERS */
-function initFilters() {
-    document.querySelectorAll('.tl-filter-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('.tl-filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            const f = btn.dataset.filter;
-            document.querySelectorAll('#tl-list .tl-row').forEach(el => {
-                const tipo = el.dataset.tipo;
-                const show = (f === 'all') || tipo === f;
-                el.style.display = show ? '' : 'none';
-                const id = el.dataset.id;
-                const act = id ? document.getElementById('tl-actions-' + id) : null;
-                if (act) act.style.display = show ? '' : 'none';
-            });
-        });
-    });
-}
-
-/* ROW TOGGLE */
-let openRow = null;
-function tlToggleRow(rowEl) {
-    const id = rowEl.dataset.id;
-    const actions = document.getElementById('tl-actions-' + id);
+  var openRow = null;
+  function cancelDeleteUI(id) {
+    var n = document.getElementById('tl-normal-' + id), c = document.getElementById('tl-confirm-' + id);
+    if (n) n.classList.remove('hide');
+    if (c) c.classList.remove('show');
+  }
+  window.tlToggleRow = function (rowEl) {
+    var id = rowEl.dataset.id, actions = document.getElementById('tl-actions-' + id);
     if (!actions) return;
     if (openRow && openRow !== id) {
-        const prev = document.getElementById('tl-actions-' + openRow);
-        if (prev) prev.classList.remove('open');
-        cancelDeleteUI(openRow);
+      var prev = document.getElementById('tl-actions-' + openRow);
+      if (prev) prev.classList.remove('open');
+      var prevRow = document.querySelector('.tl-row[data-id="' + openRow + '"]');
+      if (prevRow) prevRow.setAttribute('aria-expanded', 'false');
+      cancelDeleteUI(openRow);
     }
     actions.classList.toggle('open');
-    openRow = actions.classList.contains('open') ? id : null;
-}
-window.tlToggleRow = tlToggleRow;
-
-/* EDIT */
-function tlEditActivity(id) {
-    const c = document.getElementById('tl-shell').dataset.cliente;
+    var abierta = actions.classList.contains('open');
+    rowEl.setAttribute('aria-expanded', String(abierta));
+    openRow = abierta ? id : null;
+  };
+  window.tlEditActivity = function (id) {
+    var c = document.getElementById('tl-shell').dataset.cliente;
     window.location.href = '/entrenos/cliente/' + c + '/actividad/' + id + '/editar/';
-}
-window.tlEditActivity = tlEditActivity;
-
-/* DELETE */
-function tlConfirmDelete(id, e) {
+  };
+  window.tlConfirmDelete = function (id, e) {
     e.stopPropagation();
     document.getElementById('tl-normal-' + id).classList.add('hide');
     document.getElementById('tl-confirm-' + id).classList.add('show');
-}
-window.tlConfirmDelete = tlConfirmDelete;
-
-function tlCancelDelete(id, e) { e.stopPropagation(); cancelDeleteUI(id); }
-window.tlCancelDelete = tlCancelDelete;
-
-function cancelDeleteUI(id) {
-    const n = document.getElementById('tl-normal-' + id);
-    const c = document.getElementById('tl-confirm-' + id);
-    if (n) n.classList.remove('hide');
-    if (c) c.classList.remove('show');
-}
-
-function tlDeleteActivity(id, e) {
+  };
+  window.tlCancelDelete = function (id, e) { e.stopPropagation(); cancelDeleteUI(id); };
+  window.tlDeleteActivity = function (id, e) {
     e.stopPropagation();
-    const c = document.getElementById('tl-shell').dataset.cliente;
-    const csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
+    var c = document.getElementById('tl-shell').dataset.cliente;
+    var csrf = (document.cookie.match(/csrftoken=([^;]+)/) || [])[1] || '';
     fetch('/entrenos/cliente/' + c + '/actividad/' + id + '/eliminar/', {
-        method: 'POST',
-        headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' }
-    })
-        .then(r => r.ok ? location.reload() : alert('Error al eliminar'))
-        .catch(() => alert('Error de conexión'));
-}
-window.tlDeleteActivity = tlDeleteActivity;
-
-document.addEventListener('DOMContentLoaded', () => { initRings(); initFilters(); });
+      method: 'POST', headers: { 'X-CSRFToken': csrf, 'Content-Type': 'application/json' }
+    }).then(function (r) { if (r.ok) { location.reload(); } else { cancelDeleteUI(id); } })
+      .catch(function () { cancelDeleteUI(id); });
+  };
 })();
 </script>
-
-{% include 'includes/_joi_fab.html' %}
 </body>
 </html>

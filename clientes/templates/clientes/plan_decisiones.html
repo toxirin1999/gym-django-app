@@ -4,34 +4,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#05080b">
+  <meta name="theme-color" content="#030604">
   <title>Centro de decisiones · Gym</title>
   <style>
     :root {
       color-scheme: dark;
-      --bg: #05080b;
-      --surface: #0d1115;
-      --surface-raised: #12171c;
-      --surface-soft: #0a0d10;
-      --ink: #f2f3f5;
-      --ink-muted: #9da5ad;
-      --ink-faint: #7f8992;
-      --line: #273039;
-      --line-strong: #33404b;
-      --cyan: #72ddff;
-      --cyan-soft: rgba(114, 221, 255, 0.10);
-      --gold: #d1a732;
-      --gold-soft: rgba(209, 167, 50, 0.12);
-      --purple: #ba8cff;
-      --purple-soft: rgba(186, 140, 255, 0.10);
-      --green: #53d88b;
-      --green-soft: rgba(83, 216, 139, 0.10);
+      /* 15-oct-2026: misma paleta y tipografía que Plan y Memoria. */
+      --bg: #030604;
+      --surface: #08100c;
+      --surface-raised: #0c1812;
+      --surface-soft: #060b08;
+      --ink: #f4f0e9;
+      --ink-muted: #a3ada7;
+      --ink-faint: #8e9a93;
+      --line: #263b31;
+      --line-strong: #304439;
+      --cyan: #42e4a0;
+      --cyan-soft: rgba(66, 228, 160, 0.10);
+      --gold: #f7bf54;
+      --gold-soft: rgba(247, 191, 84, 0.10);
+      --purple: #54caff;
+      --purple-soft: rgba(84, 202, 255, 0.08);
+      --green: #42e4a0;
+      --green-soft: rgba(66, 228, 160, 0.10);
       --red: #ff8a80;
       --red-soft: rgba(255, 138, 128, 0.10);
-      --font-display: Arial, sans-serif;
-      --font-body: Arial, sans-serif;
-      --font-mono: monospace;
-      --radius: 0px;
+      --font-display: ui-rounded, "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      --font-body: ui-rounded, "Avenir Next", Avenir, "Segoe UI", sans-serif;
+      --font-mono: "SF Mono", SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      --radius: 12px;
     }
 
     * {
@@ -1205,15 +1206,77 @@
         transition-duration: 0.01ms !important;
       }
     }
+
+    /* ── 15-oct-2026 · estilo de la app (Plan / Memoria) ─────────────────── */
+    body {
+      background: radial-gradient(110% 32% at 54% -5%, #11271c 0%, transparent 58%), var(--bg);
+      padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    }
+    .dc-timeline { margin-left: 0; padding-left: 0; }
+    .dc-timeline::before, .dc-node::before { display: none; }
+    .dc-node {
+      margin-bottom: 13px;
+      padding: 19px;
+      border-color: var(--line);
+      border-radius: 15px;
+      background: radial-gradient(ellipse at 22% 0%, rgba(35, 75, 57, .2), transparent 58%), linear-gradient(135deg, #0b120f, #070b09);
+      box-shadow: inset 0 1px rgba(255, 255, 255, .025);
+    }
+    .dc-node--state {
+      background: radial-gradient(ellipse at 88% 94%, rgba(66, 228, 160, .13), transparent 33%), linear-gradient(135deg, #0b1710, #070b09 72%);
+    }
+    .dc-node--next { border-color: rgba(247, 191, 84, .42); }
+    .dc-node--active:not(.is-clean) { border-color: rgba(84, 202, 255, .38); }
+    .dc-node .dc-label { font-size: 8px; }
+    .dc-node .dc-heading, .dc-close-title {
+      margin: 10px 0 13px;
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -.035em;
+      line-height: .95;
+      text-transform: uppercase;
+    }
+    h1 { font-weight: 900; letter-spacing: -.045em; }
+    .dc-node .dc-section, .dc-node .dc-hero.is-compact, .dc-node .dc-next { margin-bottom: 0; }
+    .dc-node > :last-child { margin-bottom: 0; }
+    .dc-badge { border-radius: 999px; }
+    .dc-card + .dc-card { margin-top: 10px; }
+    .dc-accordion, .dc-accordion > summary { border-radius: 10px; }
+    .dc-hero.is-compact { margin-bottom: 0; }
+    .dc-hero.is-compact h1 { font-size: clamp(36px, 10vw, 56px); }
+    .dc-state, .dc-next, .dc-stats-quiet, .dc-card, .dc-accordion, .dc-technical-card, .dc-week, .dc-empty {
+      border-radius: 12px;
+    }
+    .dc-state { border-left-width: 1px; background: #08100c; }
+    .dc-next { margin-bottom: 0; padding: 0; border: 0; background: transparent; }
+    .dc-next-grid { gap: 8px; background: transparent; }
+    .dc-next-cell { border: 1px solid #2a3b32; border-radius: 10px; background: #08100c; }
+    .dc-hero.is-compact .dc-stat, .dc-stat { border-radius: 10px; background: #08100c; }
+    .dc-card { background: #08100c; }
+    .dc-card.is-weekly-close { border-left-width: 1px; border-color: rgba(66, 228, 160, .32); }
+    .dc-pill { border-radius: 999px; font-size: 9px; letter-spacing: .1em; }
+    .dc-button {
+      border-radius: 999px;
+      background: transparent;
+      font-size: 10px;
+      letter-spacing: .12em;
+    }
+    .dc-button.is-primary { border: 1.5px solid var(--green); background: transparent; color: var(--green); }
+    .dc-button.is-primary:hover, .dc-button.is-primary:focus-visible { background: var(--green); color: #041009; }
+    .dc-back, .dc-kicker { font-size: 9px; }
+    .dc-back { color: #b7deef; }
+    @media (max-width: 640px) {
+      .dc-next-grid { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
   <header class="dc-top">
-    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="dc-back">
+    <a href="{% url 'clientes:trayectoria_plan' %}" class="dc-back">
       <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
         <path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
       </svg>
-      <span>Volver</span>
+      <span>Plan</span>
     </a>
     <p class="dc-kicker">Auditoría del plan</p>
     <span class="dc-top-spacer" aria-hidden="true"></span>
@@ -2108,5 +2171,6 @@
       }
     }
   </style>
+  {% include 'includes/bottom_nav.html' with activo='plan' %}
 </body>
 </html>
