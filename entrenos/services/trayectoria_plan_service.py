@@ -347,7 +347,7 @@ def _semana_desde_cola(cliente, fecha, periodizacion):
         from entrenos.models import SemanaPlanGym
         if not SemanaPlanGym.objects.filter(cliente=cliente, lunes__lte=fecha).exists():
             return None
-        from entrenos.services.semana_rutina_service import sesiones_para_plan
+        from entrenos.services.semana_rutina_service import _etiqueta as _etiqueta_dia, sesiones_para_plan
         sesiones, datos = sesiones_para_plan(cliente, fecha)
     except Exception:
         return None
@@ -363,7 +363,7 @@ def _semana_desde_cola(cliente, fecha, periodizacion):
         'sesiones_no_registradas': 0,
         'evaluacion': None,
         'origen': 'cola',
-        'fuera': datos['fuera'],
+        'fuera': [_etiqueta_dia(n) for n in datos['fuera']],
     }
 
 

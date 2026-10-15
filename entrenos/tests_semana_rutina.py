@@ -65,13 +65,31 @@ class SemanaSegunCola(Base):
         self.assertTrue(dias[MIERCOLES]['atrasada'])
         self.assertEqual(dias[LUNES + timedelta(days=3)]['nombre'], 'Dia 3 - Hipertrofia — Metabólica')
         self.assertEqual(dias[LUNES + timedelta(days=4)]['nombre'], 'Dia 4 - Hipertrofia — Metabólica')
-        self.assertEqual(dias[LUNES + timedelta(days=5)]['tipo'], 'descanso')
-        self.assertEqual(s['fuera'], ['Dia 5 - Hipertrofia — Metabólica'])
-        self.assertEqual(
-            nota_semana(s),
-            'Llevas 1 de 5 sesiones esta semana. Con los días que quedan no entra Día 5: '
-            'la semana se cierra el domingo y no se arrastra.',
-        )
+        # Como Ahora, la atrasada también toca en fin de semana.
+        self.assertEqual(dias[LUNES + timedelta(days=5)]['nombre'], 'Dia 5 - Hipertrofia — Metabólica')
+        self.assertEqual(dias[LUNES + timedelta(days=6)]['tipo'], 'descanso')
+        self.assertEqual(s['fuera'], [])
+        self.assertEqual(nota_semana(s), 'Llevas 1 de 5 sesiones esta semana.')
+
+    def test_lo_que_no_cabe_antes_del_domingo_se_nombra(self):
+        from entrenos.services.semana_rutina_service import nota_semana, semana_segun_cola
+        s = semana_segun_cola(self.cliente, LUNES + timedelta(days=5))  # sábado sin más entrenos
+        self.assertEqual(s['dias'][LUNES + timedelta(days=5)]['nombre'], 'Dia 2 - Hipertrofia — Metabólica')
+        self.assertEqual(s['dias'][LUNES + timedelta(days=6)]['nombre'], 'Dia 3 - Hipertrofia — Metabólica')
+        self.assertEqual(len(s['fuera']), 2)
+        self.assertIn('no entran Día 4 y Día 5', nota_semana(s))
+
+    def test_sin_atrasos_respeta_los_dias_de_descanso_del_plan(self):
+        from entrenos.services.semana_rutina_service import semana_segun_cola
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 2 - Hipertrofia — Metabólica')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=MARTES)
+        rutina1, _ = Rutina.objects.get_or_create(nombre='Dia 1 - Hipertrofia — Metabólica')
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina1, fecha=LUNES)
+        s = semana_segun_cola(self.cliente, MIERCOLES)
+        self.assertEqual(s['dias'][MIERCOLES]['nombre'], 'Dia 3 - Hipertrofia — Metabólica')
+        self.assertFalse(s['dias'][MIERCOLES]['atrasada'])
+        self.assertEqual(s['dias'][LUNES + timedelta(days=4)]['nombre'], 'Dia 5 - Hipertrofia — Metabólica')
+        self.assertEqual(s['dias'][LUNES + timedelta(days=5)]['tipo'], 'descanso')
 
     def test_hoy_coincide_con_ahora(self):
         from entrenos.services.semana_rutina_service import semana_segun_cola
@@ -149,7 +167,7 @@ class PlanSinAcuerdo(Base):
         self.assertEqual(nombres[0], (MARTES, 'Dia 1 - Hipertrofia — Metabólica', True))
         self.assertEqual(nombres[1], (MIERCOLES, 'Dia 2 - Hipertrofia — Metabólica', False))
         self.assertTrue(t['semana']['sesiones'][1]['en_cola'])
-        self.assertEqual(t['semana']['fuera'], ['Dia 5 - Hipertrofia — Metabólica'])
+        self.assertEqual(t['semana']['fuera'], [])
 
     def test_antes_de_la_periodizacion_dinamica_sigue_sin_configurar(self):
         from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan

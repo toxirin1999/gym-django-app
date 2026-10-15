@@ -101,17 +101,24 @@ def semana_segun_cola(cliente, hoy):
         {'fecha': f, 'nombre': plan[f].get('rutina_nombre') or 'Sesión', 'entrenamiento': plan[f]}
         for f in futuros
     ]
+    # Día a día, como Ahora: cada día toca la sesión más antigua cuya fecha ya
+    # llegó (la atrasada o la del día), una por día, también en fin de semana.
     for f in fechas:
-        if f > hoy:
+        if f <= hoy:
+            continue
+        disponible = next((s for s in pendientes if s['fecha'] <= f), None)
+        if disponible is None:
             dias[f] = {'tipo': 'descanso'}
-    for f, s in zip(futuros, pendientes):
-        dias[f] = {'tipo': 'sesion', 'nombre': s['nombre'], 'entrenamiento': s['entrenamiento'],
-                   'sp': None, 'atrasada': s['fecha'] < f, 'fecha_origen': s['fecha']}
+            continue
+        pendientes.remove(disponible)
+        dias[f] = {'tipo': 'sesion', 'nombre': disponible['nombre'],
+                   'entrenamiento': disponible['entrenamiento'], 'sp': None,
+                   'atrasada': disponible['fecha'] < f, 'fecha_origen': disponible['fecha']}
 
     previstas = sum(1 for f in fechas if not _es_descanso(plan.get(f)))
     return {
         'dias': dias,
-        'fuera': [s['nombre'] for s in pendientes[len(futuros):]],
+        'fuera': [s['nombre'] for s in pendientes],
         'hechas': sum(1 for d in dias.values() if d['tipo'] == 'hecha'),
         'previstas': previstas,
     }
