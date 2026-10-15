@@ -430,7 +430,15 @@
       color: var(--ink-muted);
       font-size: 12px;
       line-height: 1.35;
-      overflow-wrap: anywhere;
+      /* 15-oct-2026: "preferenc/ias aprendid/as" en móvil; se parte por sílabas. */
+      overflow-wrap: normal;
+      hyphens: auto;
+      -webkit-hyphens: auto;
+    }
+
+    @media (max-width: 420px) {
+      .dc-stat { padding: 12px 10px; }
+      .dc-stat-label { font-size: 11px; }
     }
 
     .dc-stats-quiet {

@@ -5605,14 +5605,28 @@ def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
     lunes_hoy = hoy - timedelta(days=hoy.weekday())
     briefing = reverse('entrenos:briefing_entrenamiento', args=[cliente.id])
 
+    from entrenos.services.ultima_sesion_service import kg, series_de_trabajo
+
     def preview_hecha(fecha, entrenos):
         nombres = ' + '.join(e.rutina.nombre if e.rutina else 'Sesión' for e in entrenos)
         ejercicios = []
         for e in entrenos:
             for ej in e.ejercicios_realizados.all().order_by('id'):
+                # 15-oct-2026: lo que hiciste de verdad, de las series: la mejor
+                # serie ("mejor 22 kg × 8", "mejor 51 m"), no la media guardada.
+                series = series_de_trabajo(e, ej.nombre_ejercicio)
+                if series and any(s['metros'] for s in series):
+                    mejor = max(s['metros'] or 0 for s in series)
+                    detalle = f"mejor {kg(mejor)} m"
+                elif series:
+                    top = max(series, key=lambda s: (s['peso'], s['reps']))
+                    detalle = (f"mejor {kg(top['peso'])} kg × {top['reps']}" if top['peso'] > 0
+                               else f"mejor {top['reps']} reps")
+                else:
+                    detalle = f"{ej.repeticiones or '—'} reps"
                 ejercicios.append({
-                    'nombre': ej.nombre_ejercicio, 'series': ej.series or 0,
-                    'reps': str(ej.repeticiones or '—'), 'unidad': 'reps', 'peso': None,
+                    'nombre': ej.nombre_ejercicio, 'series': len(series) or ej.series or 0,
+                    'reps': detalle, 'unidad': '', 'peso': None,
                 })
         return {
             'tipo': 'hecha', 'etiqueta': 'Sesión hecha', 'titulo': nombres,
@@ -9262,7 +9276,8 @@ def timeline_atleta(request, cliente_id):
     DIAS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
     dias = []
-    for i in range(dias_rango - 1, -1, -1):
+    # 15-oct-2026: lo más reciente arriba (antes empezaba hace 30 días).
+    for i in range(dias_rango):
         f = hoy - timedelta(days=i)
         actos = actos_por_dia.get(f, [])
         bitacora = bitacora_por_dia.get(f)

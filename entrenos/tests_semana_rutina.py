@@ -184,3 +184,27 @@ class PortadaEsAhora(TestCase):
         self.assertRedirects(self.client.get('/redirigir/'), destino, fetch_redirect_response=False)
         self.assertRedirects(self.client.get(reverse('clientes:panel_cliente')), destino,
                              fetch_redirect_response=False)
+
+
+class RutinaHechaCuentaLasSeries(RutinaPreview):
+    def test_dia_hecho_ensena_la_mejor_serie_y_los_metros(self):
+        from entrenos.models import SerieRealizada
+        from rutinas.models import EjercicioBase
+        hack = EjercicioBase.objects.create(nombre='Sentadilla Hack', grupo_muscular='otros')
+        farmer = EjercicioBase.objects.create(nombre='Farmer Walk', grupo_muscular='otros',
+                                              tipo_progresion='progresion_distancia')
+        EjercicioRealizado.objects.create(entreno=self.entreno, nombre_ejercicio='Farmer Walk',
+                                          peso_kg=36, series=2, repeticiones=1, completado=True)
+        for i, (peso, reps) in enumerate(((20, 12), (22.5, 10)), start=1):
+            SerieRealizada.objects.create(entreno=self.entreno, ejercicio=hack, serie_numero=i,
+                                          peso_kg=peso, repeticiones=reps, completado=True)
+        for i, m in enumerate((50, 51), start=1):
+            SerieRealizada.objects.create(entreno=self.entreno, ejercicio=farmer, serie_numero=i,
+                                          peso_kg=36, repeticiones=1, distancia_metros=m, completado=True)
+        c = self.contexto()
+        martes = next(d for d in c['semana'] if d['fecha'] == MARTES)['preview']['ejercicios']
+        por_nombre = {e['nombre']: e for e in martes}
+        self.assertEqual((por_nombre['Sentadilla Hack']['series'], por_nombre['Sentadilla Hack']['reps']),
+                         (2, 'mejor 22,5 kg × 10'))
+        self.assertEqual(por_nombre['Farmer Walk']['reps'], 'mejor 51 m')
+        self.assertEqual(por_nombre['Farmer Walk']['unidad'], '')

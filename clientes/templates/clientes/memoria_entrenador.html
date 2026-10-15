@@ -119,7 +119,7 @@
   .mem-ins{display:grid;grid-template-columns:repeat(2,1fr);border-top:1px solid var(--line);border-left:1px solid var(--line);margin-top:16px}
   .mem-ins>div{padding:16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
   .mem-ins .k{display:flex;justify-content:space-between;gap:8px;color:var(--ink-faint);font:700 8px/1.4 var(--font-mono);letter-spacing:.12em;text-transform:uppercase}
-  .mem-ins .k b{color:var(--mem-accent,var(--cyan));font-weight:700}
+  .mem-ins .k b{flex:0 0 auto;color:var(--mem-accent,var(--cyan));font-weight:700}
   .mem-ins .v{margin-top:14px;font-size:28px;line-height:1;letter-spacing:-.02em}
   .mem-ins .d{margin-top:12px;color:var(--ink-muted);font-size:12px;line-height:1.55}
 
@@ -241,8 +241,8 @@
     {% with r=semaforo.datos_raw %}
     <div class="mem-signals" aria-label="Señales esenciales">
       <div class="mem-signal"><div class="mem-signal-k">Readiness</div><div class="mem-signal-v">{% if r.readiness_pct is not None %}{{ r.readiness_pct|floatformat:0 }}<small>%</small>{% else %}—{% endif %}</div></div>
-      <div class="mem-signal"><div class="mem-signal-k">Energía</div><div class="mem-signal-v">{% if energia_media %}{{ energia_media }}<small>/10</small>{% else %}—{% endif %}</div></div>
-      <div class="mem-signal"><div class="mem-signal-k">Sueño</div><div class="mem-signal-v">{% if bio_resumen.sueno_medio %}{{ bio_resumen.sueno_medio|floatformat:1 }}<small>h</small>{% else %}—{% endif %}</div></div>
+      <div class="mem-signal"><div class="mem-signal-k">Energía · media 28 d</div><div class="mem-signal-v">{% if energia_media %}{{ energia_media }}<small>/10</small>{% else %}—{% endif %}</div></div>
+      <div class="mem-signal"><div class="mem-signal-k">Sueño · media 14 d</div><div class="mem-signal-v">{% if bio_resumen.sueno_medio %}{{ bio_resumen.sueno_medio|floatformat:1 }}<small>h</small>{% else %}—{% endif %}</div></div>
     </div>
     {% endwith %}
   </section>
