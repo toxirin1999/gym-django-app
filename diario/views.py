@@ -3415,7 +3415,7 @@ def presencia_apertura(request):
                 })
 
             messages.success(request, 'Día comenzado.')
-            return redirect('clientes:mockup_demo')
+            return redirect('clientes:dashboard_silencioso_preview')
 
     entrada = entrada or ProsocheDiario(fecha=hoy)
     vires = vires or SeguimientoVires(usuario=request.user, fecha=hoy)

@@ -88,7 +88,7 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
 
 
 def _objetivo_distancia_snapshot(entreno, ejercicio_normalizado):
-    """Metros objetivo de la sesión: ``reps_objetivo`` o el mínimo del rango.
+    """Metros objetivo de la sesión: ``reps_objetivo``; si no, lo de la última vez (o el mínimo del rango).
 
     13-oct-2026: el plan solo escribe ``reps_objetivo`` cuando aplica una
     progresión. Sin él, el Farmer quedaba sin objetivo, la evidencia nunca se
@@ -100,14 +100,49 @@ def _objetivo_distancia_snapshot(entreno, ejercicio_normalizado):
         return objetivo
     version = getattr(entreno, 'gym_decision_version', None)
     snapshot = getattr(version, 'snapshot', None) or {}
+    minimo = None
     for ejercicio in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
         if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
             continue
         try:
-            return Decimal(str(ejercicio.get('repeticiones')).split('-')[0].strip())
+            minimo = Decimal(str(ejercicio.get('repeticiones')).split('-')[0].strip())
         except (TypeError, ValueError, ArithmeticError):
-            return None
-    return None
+            minimo = None
+        break
+    # 15-oct-2026: sin objetivo escrito, la pantalla enseña "mantiene" los
+    # metros de la última vez; el mínimo del rango (20 m con 51 m hechos) era
+    # un objetivo laxo. Se exige al menos lo que hiciste la última vez.
+    previa = _distancia_sesion_anterior(entreno, ejercicio_normalizado)
+    candidatos = [v for v in (minimo, previa) if v is not None]
+    return max(candidatos) if candidatos else None
+
+
+def _distancia_sesion_anterior(entreno, ejercicio_normalizado):
+    """Mejor distancia (m) de ese ejercicio en la sesión anterior a ``entreno``, o None."""
+    from entrenos.models import SerieRealizada
+
+    cliente_id, fecha = getattr(entreno, 'cliente_id', None), getattr(entreno, 'fecha', None)
+    if cliente_id is None or fecha is None:
+        return None
+    series = (
+        SerieRealizada.objects.filter(
+            entreno__cliente_id=cliente_id, entreno__fecha__lt=fecha,
+            completado=True, es_aproximacion=False, distancia_metros__isnull=False,
+        )
+        .select_related('ejercicio', 'entreno')
+        .order_by('-entreno__fecha', '-entreno_id')[:200]
+    )
+    sesion, mejor = None, None
+    for serie in series:
+        if normalizar_ejercicio(serie.ejercicio.nombre) != ejercicio_normalizado:
+            continue
+        if sesion is None:
+            sesion = serie.entreno_id
+        elif serie.entreno_id != sesion:
+            break
+        valor = Decimal(str(serie.distancia_metros))
+        mejor = valor if mejor is None else max(mejor, valor)
+    return mejor
 
 
 def _ejercicio_completo_en_sesion(entreno, nombre_ejercicio):

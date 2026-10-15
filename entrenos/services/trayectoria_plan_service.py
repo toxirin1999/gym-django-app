@@ -105,6 +105,11 @@ def _periodizacion_actual(cliente, fecha, limitations):
                 'objetivo_raw': bloque.get('objetivo'),
                 'objetivo': etiqueta_objetivo_plan(bloque.get('objetivo')),
                 'objetivo_display': etiqueta_objetivo_plan(bloque.get('objetivo')),
+                # 15-oct-2026: "Hipertrofia — Metabólica" / "Hipertrofia metabólica"
+                'objetivo_repite_nombre': (
+                    ''.join(c for c in str(etiqueta_objetivo_plan(bloque.get('objetivo')) or '').casefold() if c.isalnum())
+                    == ''.join(c for c in str(bloque.get('nombre') or '').casefold() if c.isalnum())
+                ),
                 'inicio': cursor,
                 'fin': fin,
                 'semana_actual': fase_info['semana_actual'],

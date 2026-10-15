@@ -185,7 +185,7 @@ class AusenciaPlanificadaViewTests(TestCase):
         self.assertContains(preview, 'Confirmar ausencia')
 
         confirmacion = self.client.post(url, {**datos, 'accion': 'confirmar'})
-        self.assertRedirects(confirmacion, reverse('clientes:mockup_demo'))
+        self.assertRedirects(confirmacion, reverse('clientes:dashboard_silencioso_preview'))
         sesion.refresh_from_db()
         self.assertEqual(sesion.estado, SesionProgramada.ESTADO_OMITIDA_USUARIO)
 
@@ -233,7 +233,7 @@ class AusenciaPlanificadaViewTests(TestCase):
         ausencia.refresh_from_db()
         self.assertEqual(ausencia.fin, date(2026, 9, 15))
         cancelar = self.client.post(url, {'accion': 'cancelar_tramo', 'confirmar_cancelacion': 'si'})
-        self.assertRedirects(cancelar, reverse('clientes:mockup_demo'))
+        self.assertRedirects(cancelar, reverse('clientes:dashboard_silencioso_preview'))
         ausencia.refresh_from_db()
         self.assertIsNotNone(ausencia.cancelada_en)
 

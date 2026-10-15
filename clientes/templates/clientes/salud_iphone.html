@@ -38,7 +38,7 @@
       {% if ultimo %}
         <p class="estado">Recibido el <strong>{{ ultimo.cuando|slice:":10" }} a las {{ ultimo.cuando|slice:"11:16" }}</strong> (hora UTC).</p>
         {% for dia, valores in ultimo.guardado.items %}
-          <p class="nota">{{ dia }} · {% if valores.horas_sueno %}sueño {{ valores.horas_sueno }} h{% endif %}{% if valores.fc_reposo %} · FC reposo {{ valores.fc_reposo }}{% endif %}{% if valores.hrv_ms %} · HRV {{ valores.hrv_ms }} ms{% endif %}</p>
+          <p class="nota">{{ dia }} · {% if valores.horas_sueno %}sueño {{ valores.horas_sueno }} h{% endif %}{% if valores.fc_reposo %} · FC reposo {{ valores.fc_reposo }}{% endif %}{% if valores.hrv_ms %} · HRV {{ valores.hrv_ms }} ms{% endif %}{% if valores.peso_kg %} · peso {{ valores.peso_kg }} kg{% endif %}</p>
         {% empty %}
           <p class="nota">Llegó, pero sin sueño, FC en reposo ni HRV de los últimos 7 días. Revisa qué métricas exporta la automatización.</p>
         {% endfor %}
@@ -60,7 +60,7 @@
       <ol>
         <li>Automations → nueva → tipo <strong>REST API</strong>.</li>
         <li>Pega la URL. En <strong>Headers</strong> añade la cabecera de arriba.</li>
-        <li>Data Type: <strong>Health Metrics</strong>. Elige <strong>Sleep Analysis</strong>, <strong>Resting Heart Rate</strong> y <strong>Heart Rate Variability</strong>.</li>
+        <li>Data Type: <strong>Health Metrics</strong>. Elige <strong>Sleep Analysis</strong>, <strong>Resting Heart Rate</strong> y <strong>Heart Rate Variability</strong> (y <strong>Weight &amp; Body Mass</strong> si te pesas con una báscula conectada a Salud).</li>
         <li>Export Format: <strong>JSON</strong>. Date Range: <strong>últimos 2 días</strong>. Agrupa por <strong>día</strong> (Summarize data activado).</li>
         <li>Frecuencia: cada mañana, después de despertarte (por ejemplo, cada hora entre las 7 y las 11). Pulsa <strong>Manual Export</strong> para probar y vuelve aquí.</li>
       </ol>

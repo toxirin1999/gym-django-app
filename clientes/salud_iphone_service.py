@@ -15,6 +15,8 @@ la ``BitacoraDiaria`` del día en que te despiertas (la misma fila que rellena
 el check-in a mano). La energía no está en Salud: se sigue preguntando al
 empezar el entreno.
 
+Si llega el peso (``weight_body_mass``), va a ``PesoDiario``.
+
 Solo se aceptan los últimos ``DIAS_VENTANA`` días: es un check-in, no una
 importación de histórico.
 """
@@ -24,6 +26,7 @@ from datetime import date, timedelta
 
 DIAS_VENTANA = 7
 NOMBRES_HRV = ('heart_rate_variability', 'heart_rate_variability_sdnn')
+NOMBRES_PESO = ('weight_body_mass', 'body_mass')
 VALORES_NO_SUENO = {'awake', 'in bed', 'inbed', 'despierto', 'en cama'}
 
 
@@ -103,7 +106,37 @@ def leer_metricas(payload):
                 hrv = round(sum(ns) / len(ns))
                 if 1 <= hrv <= 300:
                     por_dia[dia]['hrv_ms'] = hrv
+        elif nombre in NOMBRES_PESO:
+            por_libras = (unidades or '').lower().startswith('lb')
+            ultimos = {}
+            for p in puntos:  # el último peso del día
+                dia, n = _fecha(p.get('date')), _numero(p.get('qty'))
+                if dia and n:
+                    ultimos[dia] = n * 0.45359237 if por_libras else n
+            for dia, kg in ultimos.items():
+                if 30 <= kg <= 250:
+                    por_dia[dia]['peso_kg'] = round(kg, 1)
     return dict(por_dia)
+
+
+def _guardar_peso(cliente, dia, kg):
+    """El peso va a ``PesoDiario`` (la serie que leen Memoria y el control de peso)."""
+    from django.db import IntegrityError, transaction
+    from clientes.models import PesoDiario
+
+    fila = PesoDiario.objects.filter(cliente=cliente, fecha=dia).first()
+    if fila is not None:
+        if float(fila.peso_kg) != kg:
+            fila.peso_kg = kg
+            fila.save(update_fields=['peso_kg'])
+        return
+    try:
+        with transaction.atomic():
+            fila = PesoDiario.objects.create(cliente=cliente, peso_kg=kg)
+            if fila.fecha != dia:  # ``fecha`` es auto_now_add
+                PesoDiario.objects.filter(pk=fila.pk).update(fecha=dia)
+    except IntegrityError:
+        pass
 
 
 def guardar_checkin_iphone(cliente, payload, hoy=None):
@@ -118,6 +151,12 @@ def guardar_checkin_iphone(cliente, payload, hoy=None):
     for dia, valores in sorted(leer_metricas(payload).items()):
         if not valores or dia > hoy or dia < hoy - timedelta(days=DIAS_VENTANA):
             continue
+        peso = valores.pop('peso_kg', None)
+        if peso is not None:
+            _guardar_peso(cliente, dia, peso)
+        if not valores:
+            guardado[dia.isoformat()] = {'peso_kg': peso}
+            continue
         with transaction.atomic():
             fila = (
                 BitacoraDiaria.objects.select_for_update()
@@ -131,7 +170,7 @@ def guardar_checkin_iphone(cliente, payload, hoy=None):
                 for campo, valor in valores.items():
                     setattr(fila, campo, valor)
                 fila.save(update_fields=list(valores))
-        guardado[dia.isoformat()] = valores
+        guardado[dia.isoformat()] = {**valores, **({'peso_kg': peso} if peso is not None else {})}
     cache.set(f'salud_iphone_ultimo_{cliente.id}',
               {'cuando': timezone.now().isoformat(), 'guardado': guardado}, 60 * 60 * 24 * 30)
     if guardado:

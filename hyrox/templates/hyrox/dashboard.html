@@ -1026,7 +1026,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     {% else %}
     <div class="rb-live"><span class="rb-archive-dot"></span>ARCHIVO</div>
     {% endif %}
-    <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost rb-btn-sm"><i class="fas fa-home"></i> Panel</a>
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="rb-btn rb-btn-ghost rb-btn-sm"><i class="fas fa-home"></i> Panel</a>
   </nav>
 </header>
 
@@ -1096,10 +1096,10 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
         <a href="{% url 'hyrox:registrar_entrenamiento' objective_id=objetivo_activo.id %}" class="pulso-route pulso-route-primary">
           <i class="fas fa-play"></i> Entrenar completo
         </a>
-        <a href="{% url 'clientes:mockup_demo' %}" class="pulso-route pulso-route-secondary">
+        <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="pulso-route pulso-route-secondary">
           <i class="fas fa-chart-line"></i> Ver continuidad
         </a>
-        <a href="{% url 'clientes:mockup_demo' %}" class="pulso-route pulso-route-secondary">
+        <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="pulso-route pulso-route-secondary">
           <i class="fas fa-sliders-h"></i> Explorar métricas
         </a>
       </div>
@@ -1148,12 +1148,12 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     </span>
     {% endif %}
     {% if checkin_hoy %}
-    <a href="{% url 'clientes:mockup_demo' %}" class="hd-checkin-chip hd-checkin-chip--ok">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="hd-checkin-chip hd-checkin-chip--ok">
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
       Check-in {{ checkin_hoy.fc_reposo }} BPM
     </a>
     {% else %}
-    <a href="{% url 'clientes:mockup_demo' %}" class="hd-checkin-chip hd-checkin-chip--pendiente">
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}?checkin=1" class="hd-checkin-chip hd-checkin-chip--pendiente">
       <i class="fas fa-circle-exclamation"></i> Check-in pendiente
     </a>
     {% endif %}
@@ -1302,7 +1302,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
 
   <!-- Hero actions -->
   <div class="rb-hero-actions" style="margin-top:16px;">
-    <a href="{% url 'clientes:mockup_demo' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-home"></i> Panel</a>
+    <a href="{% url 'clientes:dashboard_silencioso_preview' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-home"></i> Panel</a>
     <a href="{% url 'hyrox:strava_reconciliacion' %}" class="rb-btn rb-btn-ghost" style="color:#FC4C02;border-color:#FC4C02;"><i class="fab fa-strava"></i> Strava</a>
     {% if not lesion_activa %}
     <a href="{% url 'hyrox:reportar_lesion' %}" class="rb-btn rb-btn-ghost"><i class="fas fa-heartbeat"></i> Lesión</a>

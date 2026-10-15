@@ -5567,6 +5567,13 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         fase_actual.get('objetivo') or fase_actual.get('descripcion')
     ) or 'Adaptación sostenible'
     nombre_fase = fase_actual.get('nombre') or fase_actual.get('tipo_fase') or 'Plan activo'
+
+    def _clave_texto(texto):
+        return ''.join(c for c in str(texto or '').casefold() if c.isalnum())
+
+    # "HIPERTROFIA — METABÓLICA" / "Hipertrofia metabólica": no se repite.
+    if _clave_texto(objetivo) == _clave_texto(nombre_fase):
+        objetivo = ''
     return {
         'fase': {
             'nombre': nombre_fase,

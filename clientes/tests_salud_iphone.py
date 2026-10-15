@@ -99,3 +99,36 @@ class Endpoint(TestCase):
         self.assertContains(r, f'Bearer {self.token}')
         self.assertContains(r, '/clientes/api/salud-iphone/')
         self.assertContains(r, 'sueño 7.25 h')
+
+    def test_sin_energia_en_el_checkin_se_ve_la_del_ultimo_entreno(self):
+        from entrenos.models import EntrenoRealizado
+        from rutinas.models import Rutina
+        ayer = self.hoy - timedelta(days=1)
+        EntrenoRealizado.objects.create(cliente=self.cliente, rutina=Rutina.objects.create(nombre='Dia 1'),
+                                        fecha=ayer, energia_pre_sesion=7)
+        self.post(payload(self.hoy), token=self.token)
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('clientes:dashboard_silencioso_preview'))
+        self.assertEqual(r.context['quiet_week']['energia_entreno'], {'valor': 7, 'fecha': ayer})
+        self.assertContains(r, 'Al empezar el entreno · ' + ayer.strftime('%d/%m'))
+
+
+class PesoDesdeSalud(TestCase):
+    def test_el_peso_va_a_peso_diario(self):
+        from clientes.models import PesoDiario
+        from clientes.salud_iphone_service import guardar_checkin_iphone
+        user = User.objects.create_user(username='peso-salud', password='x')
+        cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'P'})
+        hoy = timezone.localdate()
+        ayer = hoy - timedelta(days=1)
+        guardado = guardar_checkin_iphone(cliente, {'data': {'metrics': [
+            {'name': 'weight_body_mass', 'units': 'kg', 'data': [
+                {'date': f'{ayer} 07:10:00 +0200', 'qty': 84.9},
+                {'date': f'{hoy} 07:05:00 +0200', 'qty': 85.3},
+                {'date': f'{hoy} 21:00:00 +0200', 'qty': 84.6},
+            ]},
+        ]}}, hoy=hoy)
+        self.assertEqual(guardado[hoy.isoformat()], {'peso_kg': 84.6})
+        pesos = {p.fecha: float(p.peso_kg) for p in PesoDiario.objects.filter(cliente=cliente)}
+        self.assertEqual(pesos, {ayer: 84.9, hoy: 84.6})
+        self.assertFalse(BitacoraDiaria.objects.filter(cliente=cliente).exists())
