@@ -67,9 +67,10 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         evidence = source.index('id="evidencia-tecnica"')
         self.assertLess(active, recent)
         self.assertLess(recent, evidence)
-        self.assertIn(">Activo ahora<", source)
-        self.assertIn(">Decisiones recientes<", source)
-        self.assertIn(">Evidencia técnica<", source)
+        # 15-oct-2026: títulos en lenguaje claro.
+        self.assertIn(">Tus ajustes<", source)
+        self.assertIn(">Qué decidí y si funcionó<", source)
+        self.assertIn(">Detalle técnico<", source)
 
     def test_resumen_superior_prioriza_estado_causa_y_contadores(self):
         source = self.source
@@ -77,12 +78,12 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         active_start = source.index('id="activo-ahora"')
         hero = source[hero_start:active_start]
 
-        self.assertIn("Estado actual", hero)
-        self.assertIn("Causa y evidencia", hero)
-        self.assertIn("{{ estado_plan.narrativa }}", hero)
-        self.assertIn("{{ preferencias_activas|length }}", hero)
-        self.assertIn("{{ intervenciones_activas|length }}", hero)
-        self.assertIn("{{ hipotesis_abiertas|length }}", hero)
+        # 15-oct-2026: el resumen dice qué cambia y por qué, sin contadores.
+        self.assertIn("Qué está cambiando ahora", hero)
+        self.assertIn("{% for c in cambios_ahora %}", hero)
+        self.assertIn("{{ c.porque }}", hero)
+        self.assertNotIn("hipotesis_abiertas|length", hero)
+        self.assertNotIn("preferencias_activas|length", hero)
 
     def test_estados_vacios_son_honestos_y_no_inventan_inactividad(self):
         html = self._render_empty().lower()

@@ -177,5 +177,6 @@ class TestCase10_CentroMuestra(HipotesisBase):
             self._trace_eval(estado='posponer', dias_atras=i+2)
         response = self._get_centro()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Activo ahora')
-        self.assertContains(response, 'Hipótesis ·')
+        # 15-oct-2026: las hipótesis ya no se enseñan en el Centro.
+        self.assertContains(response, 'Tus ajustes')
+        self.assertNotContains(response, 'Hipótesis ·')

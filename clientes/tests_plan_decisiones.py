@@ -261,7 +261,7 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         self._crear_decision()
         response = self._get()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Activo ahora')
+        self.assertContains(response, 'Tus ajustes')
         self.assertContains(response, 'permanente · revocable')
         self.assertContains(response, 'temporal · hasta el')
 
@@ -269,7 +269,7 @@ class TestCase9_TemplateSmokeTest(PlanDecisionesBase):
         response = self._get()
         self.assertEqual(response.status_code, 200)
         # Sin datos, la sección "Activo ahora" siempre aparece
-        self.assertContains(response, 'Activo ahora')
+        self.assertContains(response, 'Tus ajustes')
         # Las cards de preferencias/intervenciones no aparecen si no hay datos
         self.assertNotContains(response, 'permanente · revocable')
         self.assertNotContains(response, 'temporal · hasta el')

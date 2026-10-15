@@ -907,6 +907,9 @@ def _aplicar_efecto_distribucion(cliente, decision, fecha_hoy):
                     tipo=_IP.TIPO_VIGILAR_SENAL,
                     estado=_IP.ESTADO_ACTIVA,
                     fecha_inicio__lte=fecha_hoy, fecha_fin__gte=fecha_hoy,
+                    # 15-oct-2026: la frase habla del diario; solo es verdad
+                    # cuando la vigilancia nace de una señal del Diario.
+                    origen_patron='diario_tendencia_corporal',
                 )
                 .first()
             )

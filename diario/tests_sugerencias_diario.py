@@ -213,6 +213,7 @@ class MotorVigilarSenalTest(TestCase):
         IntervencionPlan.objects.create(
             cliente=self.cliente,
             tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron='diario_tendencia_corporal',
             estado=IntervencionPlan.ESTADO_ACTIVA,
             fecha_inicio=date.today(),
             fecha_fin=date.today() + timedelta(days=10),
@@ -227,6 +228,7 @@ class MotorVigilarSenalTest(TestCase):
         IntervencionPlan.objects.create(
             cliente=self.cliente,
             tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron='diario_tendencia_corporal',
             estado=IntervencionPlan.ESTADO_ACTIVA,
             fecha_inicio=date.today(),
             fecha_fin=date.today() + timedelta(days=10),
@@ -240,6 +242,7 @@ class MotorVigilarSenalTest(TestCase):
         IntervencionPlan.objects.create(
             cliente=self.cliente,
             tipo=IntervencionPlan.TIPO_VIGILAR_SENAL,
+            origen_patron='diario_tendencia_corporal',
             estado=IntervencionPlan.ESTADO_ACTIVA,
             fecha_inicio=date.today(),
             fecha_fin=date.today() + timedelta(days=10),

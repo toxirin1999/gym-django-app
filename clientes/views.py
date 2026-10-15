@@ -6538,33 +6538,21 @@ def plan_decisiones_view(request):
         logger.exception('No se pudo cargar la lectura semanal JOI del Centro')
         incidencias_contexto.append('lectura_semanal')
 
-    # Phase 36 + 38 — Hipótesis abiertas con gobernanza de ciclo de vida
+    # 15-oct-2026: las hipótesis y sus "experimentos de observación" se
+    # retiraron (no cambiaban el plan y su texto confundía). El Centro ya no
+    # las calcula ni las enseña.
     hipotesis_abiertas = []
-    try:
-        from entrenos.services.hipotesis_service import detectar_hipotesis_abiertas
-        from entrenos.services.gobernanza_service import aplicar_gobernanza_hipotesis
-        hipotesis_raw = detectar_hipotesis_abiertas(cliente)
-        hipotesis_abiertas = aplicar_gobernanza_hipotesis(cliente, hipotesis_raw, hoy)
-    except Exception:
-        logger.exception('No se pudieron cargar las hipótesis abiertas del Centro')
-        incidencias_contexto.append('hipotesis_abiertas')
-
-    # Phase 37 — Sugerencia experimental activa (solo una a la vez)
     sugerencia_hipotesis = None
     sugerencia_hipotesis_ui = None
     resultados_hipotesis = []
+
+    cambios_ahora = _cambios_plan_ahora(cliente, hoy)
     try:
-        from entrenos.services.hipotesis_service import (
-            get_sugerencia_hipotesis_activa, presentar_sugerencia_hipotesis,
-            resultados_hipotesis_recientes,
-        )
-        sugerencia_hipotesis = get_sugerencia_hipotesis_activa(cliente)
-        if sugerencia_hipotesis:
-            sugerencia_hipotesis_ui = presentar_sugerencia_hipotesis(sugerencia_hipotesis)
-        resultados_hipotesis = resultados_hipotesis_recientes(cliente)
+        from entrenos.services.aprendizaje_decisiones_service import decisiones_evaluadas
+        aprendizaje_plan = decisiones_evaluadas(cliente, dias=28, limite=4)
     except Exception:
-        logger.exception('No se pudo cargar el ciclo de hipótesis del Centro')
-        incidencias_contexto.append('ciclo_hipotesis')
+        logger.exception('Centro: no se pudo leer lo que el plan comprobó')
+        aprendizaje_plan = None
 
     # Phase Continuidad 1.4: lectura de continuidad para el Centro (read-only).
     continuidad_evaluada = None
@@ -6634,6 +6622,8 @@ def plan_decisiones_view(request):
         'sugerencia_hipotesis': sugerencia_hipotesis,
         'sugerencia_hipotesis_ui': sugerencia_hipotesis_ui,
         'resultados_hipotesis': resultados_hipotesis,
+        'cambios_ahora': cambios_ahora,
+        'aprendizaje_plan': aprendizaje_plan,
         'incidencias_contexto': sorted(set(incidencias_contexto)),
         'sugerencia_prioritaria': sugerencia_prioritaria,
         'lectura_semanal_joi': lectura_semanal_joi,
@@ -6665,6 +6655,77 @@ def _version_bloque_post(request):
         return int(request.POST.get('version', ''))
     except (TypeError, ValueError):
         return None
+
+
+_ESTADO_HOY = {
+    'entrenar': 'Hoy: sesión completa',
+    'version_reducida': 'Hoy: versión reducida',
+    'descanso': 'Hoy: descanso',
+    'recuperar': 'Hoy: recuperar',
+    'posponer': 'Hoy: sesión aplazada',
+}
+
+
+def _cambios_plan_ahora(cliente, hoy):
+    """Lo que el plan está cambiando ahora, cada cosa con su porqué y su fecha.
+
+    15-oct-2026: sustituye a "1 señal activa · 0 preferencias · 1 ajuste ·
+    0 hipótesis". Solo dice lo que puede citar con un dato registrado.
+    """
+    from entrenos.models import GymDecisionVersion, IntervencionPlan
+    cambios = []
+
+    # 1. Hoy, con el mismo porqué que Ahora (la decisión guardada del día).
+    try:
+        from entrenos.services.porque_decision_service import construir_porque
+        version = (GymDecisionVersion.objects.filter(cliente=cliente, fecha=hoy)
+                   .order_by('-version', '-id').first())
+        snapshot = (version.snapshot if version else None) or {}
+        titulo = _ESTADO_HOY.get(snapshot.get('estado'))
+        if titulo:
+            cambios.append({'titulo': titulo, 'porque': construir_porque(snapshot)})
+    except Exception:
+        logger.exception('Centro: no se pudo leer la decisión de hoy')
+
+    # 2. La propuesta por zona en curso: el cambio, el porqué y cuándo se comprueba.
+    zona_en_curso = None
+    visible = _propuesta_zona_visible(cliente, hoy)
+    if visible and visible.get('tipo') == 'en_curso':
+        p, pres = visible['propuesta'], visible['presentacion']
+        zona_en_curso = (pres.get('zona') or '').casefold()
+        semana = f" · semana {visible['semana']} de {pres['semanas']}" if visible.get('semana') else ''
+        porque = None
+        if pres.get('variacion_texto'):
+            signo = '+' if float(pres['variacion_pct']) > 0 else ''
+            porque = f"Tu fuerza estimada en {pres['zona'].lower()} cambió {signo}{pres['variacion_texto']} % en 90 días."
+        detalle = []
+        if pres.get('ejercicios'):
+            detalle.append('Se mide en ' + ' y '.join(pres['ejercicios']) + '.')
+        if getattr(p, 'fin', None):
+            detalle.append(f"Lo compruebo al terminar, el {p.fin:%d/%m}.")
+        cambios.append({
+            'titulo': f"{pres['ajuste_texto']} series por semana de {pres['zona'].lower()}{semana}",
+            'porque': porque, 'detalle': ' '.join(detalle) or None,
+        })
+
+    # 3. Otros cambios de volumen vigentes (énfasis que elegiste, propuestas que funcionaron).
+    try:
+        from entrenos.services.volumen_grupo_service import ajustes_volumen
+        for grupo, item in sorted(ajustes_volumen(cliente, hoy).items()):
+            motivos = [m for m in item['motivos'] if 'propuesta aceptada' not in m]
+            if not motivos or (zona_en_curso and grupo.casefold() == zona_en_curso):
+                continue
+            cambios.append({'titulo': f"{item['series']:+d} series por semana de {grupo}", 'porque': '; '.join(motivos).capitalize() + '.'})
+    except Exception:
+        logger.exception('Centro: no se pudieron leer los ajustes de volumen')
+
+    # 4. Ajustes temporales que sí cambian algo (no las vigilancias).
+    for iv in IntervencionPlan.objects.filter(
+        cliente=cliente, estado=IntervencionPlan.ESTADO_ACTIVA,
+        fecha_inicio__lte=hoy, fecha_fin__gte=hoy,
+    ).exclude(tipo=IntervencionPlan.TIPO_VIGILAR_SENAL):
+        cambios.append({'titulo': iv.get_tipo_display(), 'porque': None, 'detalle': f'Hasta el {iv.fecha_fin:%d/%m}.'})
+    return cambios
 
 
 def _mensaje_conflicto_bloque(request, exc):

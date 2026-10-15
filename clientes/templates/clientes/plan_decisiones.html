@@ -1240,6 +1240,14 @@
     .dc-node .dc-section, .dc-node .dc-hero.is-compact, .dc-node .dc-next { margin-bottom: 0; }
     .dc-node > :last-child { margin-bottom: 0; }
     .dc-badge { border-radius: 999px; }
+    .dc-cambio { padding-top: 10px; border-top: 1px solid var(--line); }
+    .dc-cambio:first-of-type { padding-top: 0; border-top: 0; }
+    .dc-cambio .dc-meta { margin-top: 2px; }
+    .dc-aprendido { margin: 14px 0 0; padding: 0; list-style: none; }
+    .dc-aprendido li { padding: 10px 0 10px 12px; border-top: 1px solid var(--line); border-left: 2px solid var(--line-strong); color: var(--ink); font-size: 14px; line-height: 1.45; }
+    .dc-aprendido li.is-ok { border-left-color: var(--green); }
+    .dc-aprendido li.is-bad { border-left-color: var(--red); }
+    .dc-aprendido .dc-date { color: var(--ink-faint); font-family: var(--font-mono); font-size: 10px; }
     .dc-card + .dc-card { margin-top: 10px; }
     .dc-accordion, .dc-accordion > summary { border-radius: 10px; }
     .dc-hero.is-compact { margin-bottom: 0; }
@@ -1293,72 +1301,29 @@
     <div class="dc-message" role="status">Parte de la evidencia no pudo cargarse. No se interpreta como ausencia de señales; vuelve a intentarlo más tarde.</div>
     {% endif %}
 
-    {% if sugerencia_hipotesis_ui %}
-    <article class="dc-card is-experiment-priority" aria-labelledby="propuesta-experimento-titulo">
-      <span class="dc-pill is-hypothesis">Propuesta de experimento</span>
-      <h2 class="dc-card-text" id="propuesta-experimento-titulo">Observar {{ sugerencia_hipotesis_ui.senal }}</h2>
-      <p class="dc-card-meta">{{ sugerencia_hipotesis_ui.texto }}</p>
-      <p class="dc-card-note"><strong>Qué observará:</strong> {{ sugerencia_hipotesis_ui.que_observa }}</p>
-      <p class="dc-card-note"><strong>Qué no cambia:</strong> {{ sugerencia_hipotesis_ui.que_no_cambia }}</p>
-      <p class="dc-card-note"><strong>Cómo termina:</strong> {{ sugerencia_hipotesis_ui.como_termina }}</p>
-      <div class="dc-actions">
-        <form method="post" action="{% url 'clientes:aceptar_hipotesis' sugerencia_hipotesis.id %}">
-          {% csrf_token %}
-          <button class="dc-button is-primary" type="submit">Probar 2 semanas</button>
-        </form>
-        <form method="post" action="{% url 'clientes:ignorar_hipotesis' sugerencia_hipotesis.id %}">
-          {% csrf_token %}
-          <button class="dc-button is-quiet" type="submit">No por ahora</button>
-        </form>
-      </div>
-    </article>
-    {% endif %}
-
     <section class="dc-timeline" aria-label="Línea del plan">
     <article class="dc-node dc-node--state">
     <section class="dc-hero is-compact" data-contract='class="dc-hero"' aria-labelledby="titulo-centro">
       <div class="dc-hero-head">
-        <div class="dc-label">Estado actual</div>
+        <div class="dc-label">Por qué el plan decide así</div>
         <h1 id="titulo-centro">Centro de decisiones</h1>
         <p class="dc-purpose">
-          Qué está usando el plan, qué decidió recientemente y en qué evidencia se apoya.
+          Lo que el plan está cambiando ahora, por qué, y si lo que decidió funcionó.
         </p>
       </div>
 
-      <div class="dc-state" aria-label="Lectura actual del plan">
-        <span class="dc-state-label">El plan, ahora mismo</span>
-        <p class="dc-state-value">{{ estado_plan.narrativa }}</p>
-        <span class="dc-cause-label">Causa y evidencia</span>
-        <span class="dc-meta">Señales confirmadas, ajustes temporales e hipótesis en observación.</span>
-      </div>
-
-      {% if preferencias_activas|length == 0 and intervenciones_activas|length == 0 and hipotesis_abiertas|length == 0 %}
-      <div class="dc-stats-quiet" aria-label="Sin señales activas registradas">
-        <span class="dc-stats-quiet-dot" aria-hidden="true"></span>
-        Modo estándar activo · Decisiones basadas en el histórico inmediato
-      </div>
-      {% else %}
-      <div class="dc-stats" aria-label="Contadores de señales activas">
-        <div class="dc-stat is-learned">
-          <span class="dc-stat-value">{{ preferencias_activas|length }}</span>
-          <span class="dc-stat-label">
-            {% if preferencias_activas|length == 1 %}preferencia aprendida{% else %}preferencias aprendidas{% endif %}
-          </span>
+      <div class="dc-state" aria-label="Lo que el plan está cambiando ahora">
+        <span class="dc-state-label">Qué está cambiando ahora</span>
+        {% for c in cambios_ahora %}
+        <div class="dc-cambio">
+          <p class="dc-state-value"><strong>{{ c.titulo }}</strong></p>
+          {% if c.porque %}<p class="dc-meta">{{ c.porque }}</p>{% endif %}
+          {% if c.detalle %}<p class="dc-meta">{{ c.detalle }}</p>{% endif %}
         </div>
-        <div class="dc-stat is-temporary">
-          <span class="dc-stat-value">{{ intervenciones_activas|length }}</span>
-          <span class="dc-stat-label">
-            {% if intervenciones_activas|length == 1 %}ajuste activo{% else %}ajustes activos{% endif %}
-          </span>
-        </div>
-        <div class="dc-stat is-temporary">
-          <span class="dc-stat-value">{{ hipotesis_abiertas|length }}</span>
-          <span class="dc-stat-label">
-            {% if hipotesis_abiertas|length == 1 %}hipótesis abierta{% else %}hipótesis abiertas{% endif %}
-          </span>
-        </div>
+        {% empty %}
+        <p class="dc-state-value">Ahora mismo el plan sigue tu programación sin cambios.</p>
+        {% endfor %}
       </div>
-      {% endif %}
     </section>
     </article>
 
@@ -1421,8 +1386,8 @@
 
     <article class="dc-node dc-node--active{% if not preferencias_activas and not intervenciones_activas and not hipotesis_abiertas %} is-clean{% endif %}">
     <section class="dc-section" id="activo-ahora" aria-labelledby="titulo-activo">
-      <div class="dc-label">Activo ahora</div>
-      <h2 class="dc-heading" id="titulo-activo">Señales del plan</h2>
+      <div class="dc-label">Lo que puedes decidir</div>
+      <h2 class="dc-heading" id="titulo-activo">Tus ajustes</h2>
 
       {% if bloque_colaborativo.bloque %}
       <article class="dc-card is-temporary" aria-labelledby="bloque-colaborativo-titulo">
@@ -1463,12 +1428,12 @@
       </article>
       {% elif not bloque_colaborativo.cierre_pendiente and resumen_operativo.bloque.estado == 'periodizacion' %}
       <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
-        <h3 id="preparar-bloque-titulo" class="dc-card-text">El bloque lo lleva la periodización</h3>
-        <p class="dc-card-meta">{{ resumen_operativo.bloque.nombre }} · semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}. No hace falta preparar nada.</p>
+        <h3 id="preparar-bloque-titulo" class="dc-card-text">Priorizar un grupo muscular</h3>
+        <p class="dc-card-meta">El bloque lo lleva la periodización ({{ resumen_operativo.bloque.nombre }}, semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}) y el plan ya sube series solo cuando una zona se queda atrás. Esto es para cuando tú quieras priorizar algo más.</p>
         <details class="dc-accordion">
-          <summary>Añadir un énfasis por tu cuenta <span aria-hidden="true">⌄</span></summary>
+          <summary>Elegir grupos <span aria-hidden="true">⌄</span></summary>
           <div class="dc-accordion-body">
-            <p class="dc-card-meta">Un acuerdo de bloque suma 2 series por semana a cada grupo que elijas, durante las semanas que digas.</p>
+            <p class="dc-card-meta">Cada grupo que marques gana 2 series por semana durante las semanas que elijas (brazos: bíceps y tríceps). El total por grupo nunca pasa de +4.</p>
             <form class="dc-form-grid" id="preparar-bloque-gym" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
               {% csrf_token %}{{ form_bloque_gym.as_p }}
               <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
@@ -1671,7 +1636,7 @@
       </div>
       {% elif preferencias_activas or intervenciones_activas or hipotesis_abiertas or continuidad %}
       <details class="dc-active-shell">
-        <summary>Señales activas · {{ preferencias_activas|length }} preferencias · {{ intervenciones_activas|length }} ajustes · {{ hipotesis_abiertas|length }} hipótesis</summary>
+        <summary>Ajustes en curso y lo aprendido de ti</summary>
       <div class="dc-card-grid is-active">
         {% for pref in preferencias_activas %}
         <article class="dc-card is-learned">
@@ -1694,9 +1659,9 @@
         {% for iv in intervenciones_activas %}
         <article class="dc-card is-temporary">
           <span class="dc-pill is-temporary">temporal · hasta el {{ iv.fecha_fin|date:"j N" }}</span>
-          <p class="dc-card-text">{% if iv.tipo == 'vigilar_senal' %}Experimento de observación{% else %}{{ iv.get_tipo_display }}{% endif %}</p>
+          <p class="dc-card-text">{% if iv.tipo == 'vigilar_senal' %}Tu Diario comparte una señal de recuperación{% else %}{{ iv.get_tipo_display }}{% endif %}</p>
           {% if iv.tipo == 'vigilar_senal' %}
-          <p class="dc-card-meta">Observa una señal concreta durante 14 días. No modifica cargas, ejercicios ni calendario.</p>
+          <p class="dc-card-meta">El entrenador la ve al decidir cada sesión. No cambia cargas, ejercicios ni calendario por sí sola.</p>
           {% elif iv.origen_patron %}
           <p class="dc-card-meta">Origen: {{ iv.origen_patron }}.</p>
           {% endif %}
@@ -1725,21 +1690,6 @@
         </article>
         {% endfor %}
 
-        {% for h in hipotesis_abiertas %}
-        <article class="dc-card is-hypothesis">
-          <span class="dc-pill is-hypothesis">Hipótesis · {{ h.ocurrencias }} veces</span>
-          <p class="dc-card-text">{{ h.texto }}</p>
-          {% if h.fechas %}
-          <p class="dc-card-meta">
-            Fechas: {% for f in h.fechas %}{{ f|date:"j N" }}{% if not forloop.last %}, {% endif %}{% endfor %}
-          </p>
-          {% endif %}
-          <p class="dc-card-note">
-            Todavía no es una preferencia ni un ajuste. El plan la vigila hasta tener evidencia suficiente.
-          </p>
-        </article>
-        {% endfor %}
-
         {% if continuidad %}
         <article class="dc-card is-continuity">
           <span class="dc-pill">Continuidad protegida</span>
@@ -1765,25 +1715,6 @@
       {% endif %}
     </section>
     </article>
-
-    {% if resultados_hipotesis %}
-    <article class="dc-node dc-node--decisions">
-      <section class="dc-section" aria-labelledby="titulo-resultados-hipotesis">
-        <div class="dc-label">Experimentos cerrados</div>
-        <h2 class="dc-heading" id="titulo-resultados-hipotesis">Qué observó el plan</h2>
-        <div class="dc-card-grid">
-        {% for item in resultados_hipotesis %}
-          <article class="dc-card">
-            <span class="dc-pill is-hypothesis">{{ item.evaluacion.resultado }}</span>
-            <p class="dc-card-text">{{ item.senal|capfirst }}</p>
-            <p class="dc-card-meta">{{ item.evaluacion.texto }}</p>
-            <p class="dc-card-note">Comparación descriptiva: observar no demuestra que el experimento causara el resultado.</p>
-          </article>
-        {% endfor %}
-        </div>
-      </section>
-    </article>
-    {% endif %}
 
     {% if resultados_contractuales %}
     <article class="dc-node dc-node--decisions">
@@ -1822,11 +1753,32 @@
 
     <article class="dc-node dc-node--decisions">
     <section class="dc-section" id="decisiones-recientes" aria-labelledby="titulo-decisiones">
-      <div class="dc-label">Historial del plan</div>
-      <h2 class="dc-heading" id="titulo-decisiones">Decisiones recientes</h2>
+      <div class="dc-label">Comprobado con tus sesiones</div>
+      <h2 class="dc-heading" id="titulo-decisiones">Qué decidí y si funcionó</h2>
+      {% if aprendizaje_plan and aprendizaje_plan.con_conclusion %}
+      <p class="dc-card-text"><strong>{{ aprendizaje_plan.funcionaron }} de {{ aprendizaje_plan.con_conclusion }} funcionaron</strong> en los últimos {{ aprendizaje_plan.dias }} días.</p>
+      <p class="dc-card-meta">Cada cambio de peso o reps se comprueba en tu siguiente sesión de ese ejercicio.{% if aprendizaje_plan.sin_conclusion %} Otras {{ aprendizaje_plan.sin_conclusion }} aún no dan para concluir.{% endif %}</p>
+      <ul class="dc-aprendido">
+        {% for item in aprendizaje_plan.items %}
+        <li class="{% if item.resultado == 'validada' %}is-ok{% elif item.resultado == 'fallida' %}is-bad{% endif %}"><span class="dc-date">{{ item.fecha|date:"d/m" }}</span> {{ item.texto }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <div class="dc-empty">No hay decisiones recientes registradas para este periodo.</div>
+      {% endif %}
+      {% if cliente.id %}<div class="dc-actions"><a class="dc-button" href="{% url 'clientes:memoria_entrenador' cliente.id %}">Ver todo en Memoria</a></div>{% endif %}
+    </section>
+    </article>
 
+    <article class="dc-node dc-node--evidence">
+    <section class="dc-section" id="evidencia-tecnica" aria-labelledby="titulo-evidencia">
+      <div class="dc-label">Para revisar a fondo</div>
+      <h2 class="dc-heading" id="titulo-evidencia">Detalle técnico</h2>
+
+      <details class="dc-technical-shell">
+        <summary>Abrir el registro técnico del plan</summary>
       <div class="dc-subsection">
-        <h3 class="dc-subtitle">Qué decidió últimamente</h3>
+        <h3 class="dc-subtitle">Registro diario de decisiones</h3>
         <div class="dc-card-grid">
           {% for g in traces_agrupados|slice:":3" %}
           <article class="dc-group{% if g.lesion_label %} is-protected{% endif %}">
@@ -1865,16 +1817,7 @@
         </details>
         {% endif %}
       </div>
-    </section>
-    </article>
 
-    <article class="dc-node dc-node--evidence">
-    <section class="dc-section" id="evidencia-tecnica" aria-labelledby="titulo-evidencia">
-      <div class="dc-label">Trazabilidad</div>
-      <h2 class="dc-heading" id="titulo-evidencia">Evidencia técnica</h2>
-
-      <details class="dc-technical-shell">
-        <summary>Abrir detalle técnico y trazabilidad</summary>
       {% if analisis_semanal and analisis_semanal.hay_datos or lectura_semanal_joi and lectura_semanal_joi.texto or decisiones_agrupadas or traces_recientes or decisiones_carga or sesiones_esenciales or pruebas_recientes or patron_multisemanal %}
       <div class="dc-evidence-grid">
         {% if patron_multisemanal %}

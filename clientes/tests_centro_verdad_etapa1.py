@@ -116,21 +116,11 @@ class TestProductorExplicito(CentroVerdadBase):
                     senales_posteriores={},
                 )
 
-        sugerencia = SugerenciaPlan.objects.get(
-            cliente=self.cliente,
-            patron='hipotesis_senal_entrenar',
-            estado=SugerenciaPlan.ESTADO_PENDIENTE,
-        )
-        repetida = producir_sugerencia_hipotesis(self.cliente, fecha_ref=self.hoy)
-        self.assertEqual(repetida.pk, sugerencia.pk)
-        self.assertEqual(
-            SugerenciaPlan.objects.filter(
-                cliente=self.cliente,
-                patron='hipotesis_senal_entrenar',
-                estado=SugerenciaPlan.ESTADO_PENDIENTE,
-            ).count(),
-            1,
-        )
+        # 15-oct-2026: la producción de hipótesis está retirada.
+        self.assertIsNone(producir_sugerencia_hipotesis(self.cliente, fecha_ref=self.hoy))
+        self.assertFalse(SugerenciaPlan.objects.filter(
+            cliente=self.cliente, patron__startswith='hipotesis_senal_',
+        ).exists())
 
 
 class TestContinuidadSoberana(CentroVerdadBase):

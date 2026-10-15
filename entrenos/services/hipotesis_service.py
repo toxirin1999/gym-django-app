@@ -172,8 +172,21 @@ def generar_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | N
     )
 
 
+PRODUCCION_ACTIVA = False
+
+
 def producir_sugerencia_hipotesis(cliente, fecha_ref=None) -> 'SugerenciaPlan | None':
-    """Productor explícito e idempotente disparado al persistir una evaluación."""
+    """Productor explícito e idempotente disparado al persistir una evaluación.
+
+    15-oct-2026: retirado. El "experimento de observación" no cambiaba nada del
+    plan, su texto en pantalla hablaba de una señal del diario que no existía y
+    su veredicto dependía de una tarea programada que no corre. La pregunta de
+    fondo (¿acertó el plan?) la responden las decisiones comprobadas de Memoria
+    y la evaluación de las propuestas por zona. Se conserva el código por si se
+    recupera con otro diseño (``PRODUCCION_ACTIVA``).
+    """
+    if not PRODUCCION_ACTIVA:
+        return None
     existente = get_sugerencia_hipotesis_activa(cliente)
     if existente:
         return existente

@@ -189,8 +189,8 @@ class CancelacionYCentroTests(CicloBase):
         self.assertContains(response, 'Qué aprendió el plan')
         self.assertContains(response, 'Resultado del ajuste')
         html = response.content.decode()
-        self.assertLess(html.index('Activo ahora'), html.index('Qué aprendió el plan'))
-        self.assertLess(html.index('Qué aprendió el plan'), html.index('Decisiones recientes'))
+        self.assertLess(html.index('Tus ajustes'), html.index('Qué aprendió el plan'))
+        self.assertLess(html.index('Qué aprendió el plan'), html.index('Qué decidí y si funcionó'))
 
 
 class CommandTests(CicloBase):

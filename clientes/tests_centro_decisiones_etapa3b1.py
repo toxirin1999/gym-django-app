@@ -128,7 +128,9 @@ class TestSugerenciaOrdinariaPrioritaria(CentroDecisionesEtapa3B1Base):
         response = self.client.get(reverse('clientes:plan_decisiones'))
 
         self.assertIsNone(response.context['sugerencia_prioritaria'])
-        self.assertEqual(response.context['sugerencia_hipotesis'].pk, hipotesis.pk)
+        # 15-oct-2026: los experimentos de hipótesis se retiraron del Centro.
+        self.assertIsNone(response.context['sugerencia_hipotesis'])
+        self.assertNotContains(response, 'Observar una señal.')
         self.assertNotContains(response, 'Revisar volumen real.')
         self.assertNotContains(response, 'esenciales_frecuentes')
         self.assertNotContains(response, 'Propuesta antigua.')

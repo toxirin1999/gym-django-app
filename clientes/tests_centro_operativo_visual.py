@@ -26,7 +26,7 @@ class CentroOperativoVisualTests(TestCase):
             with timezone.override('Europe/Madrid'):
                 response = self.client.get(reverse('clientes:plan_decisiones'))
         html = response.content.decode()
-        self.assertLess(html.index('Siguiente paso'), html.index('Activo ahora'))
+        self.assertLess(html.index('Siguiente paso'), html.index('Tus ajustes'))
         self.assertIn('class="dc-hero is-compact"', html)
         # El panel fijo de definiciones ("Qué significa cada señal") se eliminó
         # a propósito del rediseño del Centro de decisiones: ya no debe existir.

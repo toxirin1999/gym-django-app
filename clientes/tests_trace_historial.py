@@ -79,7 +79,7 @@ class TestCase1_BloqueMostrado(TraceHistorialBase):
         self._crear_trace()
         response = self._get_centro()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Qué decidió últimamente')
+        self.assertContains(response, 'Registro diario de decisiones')
 
     def test_no_muestra_historial_sin_traces(self):
         GymDecisionTrace.objects.filter(cliente=self.cliente).delete()
@@ -241,7 +241,7 @@ class TestCase12_FalloSilencioso(TraceHistorialBase):
         GymDecisionTrace.objects.filter(cliente=self.cliente).delete()
         response = self._get_centro()
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Activo ahora')
+        self.assertContains(response, 'Tus ajustes')
         self.assertNotContains(response, 'Por qué decidió así recientemente')
 
     def test_contexto_traces_recientes_es_lista_cuando_falla(self):

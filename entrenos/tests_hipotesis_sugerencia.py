@@ -215,8 +215,9 @@ class TestCase11_CentroMuestraExperimento(HipotesisSugerenciaBase):
         c.login(username='tester_h37', password='x')
         response = c.get(reverse('clientes:plan_decisiones'))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Propuesta de experimento')
-        self.assertContains(response, 'Probar 2 semanas')
+        # 15-oct-2026: retirado; ni se produce ni se enseña.
+        self.assertNotContains(response, 'Propuesta de experimento')
+        self.assertNotContains(response, 'Probar 2 semanas')
 
 
 # ── Cases 12-14: evaluar fin de experimento ───────────────────────────────────
