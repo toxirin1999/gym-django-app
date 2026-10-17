@@ -208,6 +208,22 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
 
     superior = ref['superior']
     if superior:
+        # 17-oct-2026: si después de la serie pesada se bajó el peso (back-off),
+        # la serie ligera llega cansada y subestima. La pesada también dice
+        # algo: con ella se estima el peso para el rango de hoy, sin pasar
+        # nunca de esa serie pesada (menos un salto) ni bajar de la que entró.
+        estimado = peso_para_reps(
+            superior['peso'], int(superior['reps']), superior.get('rpe'), minimo, rpe_objetivo,
+        ) if superior['reps'] > 0 else None
+        if estimado:
+            propuesto = min(_redondear_abajo(estimado, incremento), superior['peso'] - incremento)
+            if propuesto > peso:
+                return (
+                    propuesto,
+                    f'La última vez {kg(superior["peso"])} kg × {superior["reps"]} y después '
+                    f'{kg(peso)} kg × {reps_txt(reps)}; para {rango_txt}, hoy {kg(propuesto)} kg.',
+                    'mantener',
+                )
         return (
             peso,
             f'La última vez {kg(superior["peso"])} kg se quedó en {superior["reps"]} reps '

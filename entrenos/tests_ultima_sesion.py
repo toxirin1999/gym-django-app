@@ -91,6 +91,17 @@ class TechoPeso(TestCase):
         )
 
 
+    def test_back_off_no_ancla_el_peso(self):
+        # Curl femoral 13-oct: 45 × 6 (RPE 8) y después bajó a 26 × 12.
+        techo, frase, accion = techo_peso(lectura([s(45, 6, 8), s(26, 12, 8)], 12), (12, 15), 8, 2.5)
+        self.assertEqual((techo, accion), (37.5, 'mantener'))
+        self.assertEqual(frase, 'La última vez 45 kg × 6 y después 26 kg × 12; para 12-15, hoy 37,5 kg.')
+
+    def test_back_off_nunca_pasa_de_la_serie_pesada(self):
+        techo, _, _ = techo_peso(lectura([s(30, 11, 6), s(20, 12, 8)], 12), (12, 15), 8, 2.5)
+        self.assertEqual(techo, 27.5)
+
+
 class Base(TestCase):
     def setUp(self):
         cache.clear()
