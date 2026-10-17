@@ -4,6 +4,15 @@ register = template.Library()
 
 
 @register.filter
+def kg_miles(valor):
+    """14914.3 → '14.914' (17-oct-2026: separador de miles español)."""
+    try:
+        return f'{round(float(valor)):,}'.replace(',', '.')
+    except (TypeError, ValueError):
+        return valor
+
+
+@register.filter
 def subtract(value, arg):
     try:
         return round(float(value) - float(arg), 1)

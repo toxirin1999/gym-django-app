@@ -71,6 +71,11 @@ _PROXIMA_VEZ_ACCION = {
 }
 
 
+
+def _kg_txt(valor):
+    """-2.5 → '-2,5'; 13.9 → '13,9' (coma decimal, como el resto de la app)."""
+    return f'{float(valor):g}'.replace('.', ',')
+
 def _formatear_magnitud(valor):
     return f'{valor:g}'
 
@@ -211,7 +216,7 @@ def _decisiones_entrenador(cliente, entreno):
         evidencia, confianza = evidencia_de_ejercicio(log.ejercicio)
         tipo_progresion = tipos_progresion.get(log.ejercicio.strip().lower()) or 'peso_reps'
         # Regla 3 del rumbo: el porqué con el dato, y lo que hiciste en cifras.
-        porque = hoy = None
+        porque = hoy = ejercicio_hoy = None
         try:
             from entrenos.services.cierre_porque_service import (
                 _sesion_anterior, porque_decision, texto_series,
@@ -228,7 +233,8 @@ def _decisiones_entrenador(cliente, entreno):
         except Exception:
             porque = hoy = None
         decisiones.append({
-            'ejercicio': log.ejercicio,
+            # 17-oct-2026: el nombre tal como sale en la rutina, no el normalizado.
+            'ejercicio': (ejercicio_hoy.nombre_ejercicio if ejercicio_hoy else None) or log.ejercicio,
             'accion': _accion_semantica(log, tipo_progresion),
             'motivo': motivo,
             'porque': porque,
@@ -642,16 +648,16 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         if diff == 0:
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'mantenida', 'detalle': 'carga mantenida'})
         elif diff > 0:
-            cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'subida', 'detalle': f'+{diff:g} kg'})
+            cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'subida', 'detalle': f'+{_kg_txt(diff)} kg'})
         elif es_descarga_hoy:
             # La descarga reduce carga a propósito (ver resolver_peso_objetivo
             # caso D) — no es una regresión que deba leerse como alarma.
             cambios.append({
                 'nombre': ej.nombre_ejercicio, 'tipo': 'bajada_descarga',
-                'detalle': f'{diff:g} kg · descarga',
+                'detalle': f'{_kg_txt(diff)} kg · descarga',
             })
         else:
-            cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'bajada', 'detalle': f'{diff:g} kg'})
+            cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'bajada', 'detalle': f'{_kg_txt(diff)} kg'})
     return cambios
 
 

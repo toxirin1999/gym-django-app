@@ -157,7 +157,7 @@ class TestCambiosRelevantes(CierreEntrenamientoBase):
 
         cambios = ctx['cambios_relevantes']
         self.assertEqual(cambios[0]['tipo'], 'subida')
-        self.assertEqual(cambios[0]['detalle'], '+2.5 kg')
+        self.assertEqual(cambios[0]['detalle'], '+2,5 kg')
 
     def test_carga_bajada(self):
         anterior = self._crear_entreno(date(2026, 5, 25))
@@ -171,7 +171,7 @@ class TestCambiosRelevantes(CierreEntrenamientoBase):
 
         cambios = ctx['cambios_relevantes']
         self.assertEqual(cambios[0]['tipo'], 'bajada')
-        self.assertEqual(cambios[0]['detalle'], '-2.5 kg')
+        self.assertEqual(cambios[0]['detalle'], '-2,5 kg')
 
     def test_carga_bajada_en_descarga_se_etiqueta_como_esperada(self):
         """
@@ -458,7 +458,8 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
 
         self.assertEqual(len(ctx['decisiones_entrenador']), 1)
         decision = ctx['decisiones_entrenador'][0]
-        self.assertEqual(decision['ejercicio'], 'press banca')
+        # 17-oct-2026: el nombre como en la rutina, no el normalizado.
+        self.assertEqual(decision['ejercicio'], 'Press banca')
         self.assertEqual(decision['accion'], actual.get_accion_display())
         self.assertEqual(decision['motivo'], 'La técnica se comprometió')
         self.assertEqual(decision['efecto'], 'Reducirá la carga un 5%')
@@ -486,7 +487,7 @@ class TestDecisionesEntrenador(CierreEntrenamientoBase):
                    return_value=_permiso('progresion_permitida')):
             decisiones = construir_contexto_cierre(self.cliente, entreno)['decisiones_entrenador']
 
-        efectos = {item['ejercicio']: item['efecto'] for item in decisiones}
+        efectos = {item['ejercicio'].lower(): item['efecto'] for item in decisiones}
         self.assertEqual(efectos['farmer walk'], 'Añadirá 10 m')
         self.assertEqual(efectos['curl femoral'], 'Añadirá 2 repeticiones')
 

@@ -1,4 +1,4 @@
-{% load static %}
+{% load static entreno_tags %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -277,7 +277,7 @@
       <div class="bib-info">
         <h1 class="bib-title">{{ resumen.titulo|default:"Sesión" }}</h1>
         <div class="bib-sub">
-          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio|floatformat:1 }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|floatformat:0 }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
+          {{ resumen.n_series }} serie{{ resumen.n_series|pluralize }}{% if resumen.duracion_minutos %} · {{ resumen.duracion_minutos }} min{% endif %}{% if resumen.rpe_medio %} · RPE {{ resumen.rpe_medio|floatformat:1 }}{% endif %}{% if resumen.volumen_kg %} · {{ resumen.volumen_kg|kg_miles }} kg{% endif %}{% if resumen.sesion_tipo %} {{ resumen.sesion_tipo }}{% endif %}
         </div>
       </div>
     </div>
@@ -295,7 +295,7 @@
     {% if resumen.volumen_kg %}
     <div class="work-metric">
       <span class="work-label">Tonelaje</span>
-      <span class="work-value">{{ resumen.volumen_kg|floatformat:0 }} kg</span>
+      <span class="work-value">{{ resumen.volumen_kg|kg_miles }} kg</span>
       <span class="work-detail">peso × repeticiones</span>
     </div>
     {% endif %}
@@ -349,7 +349,7 @@
           <span class="unit-piece">{{ trabajo.segundos|floatformat:0 }} s</span>
         {% else %}
           <span class="unit-piece">{{ trabajo.repeticiones|floatformat:0 }} reps</span>
-          <span class="unit-piece">{{ trabajo.tonelaje_kg|floatformat:0 }} kg</span>
+          <span class="unit-piece">{{ trabajo.tonelaje_kg|kg_miles }} kg</span>
         {% endif %}
       </span>
     </div>

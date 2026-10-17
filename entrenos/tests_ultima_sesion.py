@@ -101,6 +101,11 @@ class TechoPeso(TestCase):
         techo, _, _ = techo_peso(lectura([s(30, 11, 6), s(20, 12, 8)], 12), (12, 15), 8, 2.5)
         self.assertEqual(techo, 27.5)
 
+    def test_back_off_con_salto_deducido_enorme(self):
+        # Solo dos pesos usados (45 y 26): el "salto" deducido sería 19 kg.
+        techo, _, _ = techo_peso(lectura([s(45, 6, 8), s(26, 12, 8)], 12), (12, 15), 8, 19)
+        self.assertEqual(techo, 35)
+
 
 class Base(TestCase):
     def setUp(self):
@@ -175,6 +180,17 @@ class TechoEnElPlan(Base):
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
         self.assertEqual(ej['progresion_motivo'], 'La última vez 22 kg × 8; para 12-15, hoy 20 kg.')
         self.assertEqual(cambio['accion'], 'bajar_peso')
+
+    def test_si_el_plan_ya_propone_el_techo_explica_por_que(self):
+        # Curl femoral 17-oct: el plan proponía 37,5 tras 45 × 6 y 26 × 12, sin porqué.
+        e = self.entreno(AYER, {'Sentadilla Hack': '12-15'})
+        self.hacer(e, self.hack, [(45, 6, 8), (26, 12, 8), (23.5, 12, 8)])
+        ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '12-15', 'peso_kg': 37.5,
+              'rpe_objetivo': 8, 'tipo_progresion': 'peso_reps'}
+        self.assertIsNone(aplicar_techo(self.cliente, ej, HOY))
+        self.assertEqual(ej['peso_kg'], 37.5)
+        self.assertEqual(ej['progresion_motivo'],
+                         'La última vez 45 kg × 6 y después 26 kg × 12; para 12-15, hoy 37,5 kg.')
 
     def test_no_toca_un_peso_razonable(self):
         e = self.entreno(AYER, {'Prensa de Piernas': '12-15'})

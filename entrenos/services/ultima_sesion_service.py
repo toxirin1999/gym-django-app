@@ -212,11 +212,17 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
         # la serie ligera llega cansada y subestima. La pesada también dice
         # algo: con ella se estima el peso para el rango de hoy, sin pasar
         # nunca de esa serie pesada (menos un salto) ni bajar de la que entró.
+        # Solo si esa serie pesada no fue al fallo (RPE conocido y < 10): una
+        # serie a RPE 10 por encima no debe tirar del peso (gemelos 79 × 8 @10).
+        rpe_sup = superior.get('rpe')
         estimado = peso_para_reps(
-            superior['peso'], int(superior['reps']), superior.get('rpe'), minimo, rpe_objetivo,
-        ) if superior['reps'] > 0 else None
+            superior['peso'], int(superior['reps']), rpe_sup, minimo, rpe_objetivo,
+        ) if superior['reps'] > 0 and rpe_sup is not None and rpe_sup < 10 else None
         if estimado:
-            propuesto = min(_redondear_abajo(estimado, incremento), superior['peso'] - incremento)
+            # El salto de máquina se deduce de los pesos usados; con solo una
+            # serie pesada y una ligera saldría enorme (45 − 26 = 19 kg).
+            salto = min(incremento, 5.0)
+            propuesto = min(_redondear_abajo(estimado, salto), superior['peso'] - salto)
             if propuesto > peso:
                 return (
                     propuesto,
@@ -286,6 +292,12 @@ def aplicar_techo(cliente, ej, hoy):
         return None
     techo, frase, accion = resultado
     if propuesto <= techo + 1e-6:
+        # 17-oct-2026: si el plan ya propone justo ese peso, no hay que
+        # corregir nada, pero el porqué sigue valiendo (curl femoral tras un
+        # back-off salía sin explicación).
+        if frase and abs(propuesto - techo) < 1e-6 and not ej.get('progresion_motivo'):
+            ej['progresion_motivo'] = frase
+            ej['progresion_motivo_local'] = 'techo_ultima_sesion'
         return None
 
     ej['peso_kg_anterior'] = propuesto
