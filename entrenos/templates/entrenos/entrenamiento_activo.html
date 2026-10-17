@@ -366,6 +366,13 @@ input{background:transparent!important;border:none!important;outline:none!import
   padding:14px 0 4px;display:flex;flex-direction:column;gap:10px;
   background:#000;border-top:1px solid rgba(255,255,255,0.08);
 }
+/* 17-oct-2026: el pie fijo cubre hasta el borde (el desglose asomaba por
+   debajo de "Descartar borrador") y la caja de estado vacía no se pinta. */
+.modal-resumen-full .mr-actions{
+  margin-bottom:calc(-32px - env(safe-area-inset-bottom));
+  padding-bottom:calc(16px + env(safe-area-inset-bottom));
+}
+#modal-save-status:empty{display:none;}
 .mbtn-ok{
   width:100%;height:56px;font-size:16px;font-weight:700;
   background:var(--green);border:none;color:#000;
@@ -419,6 +426,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   color:#fecaca;font-size:13px;font-weight:600;line-height:1.4;
 }
 .session-feedback[hidden]{display:none;}
+#energia-resumen[hidden],#energia-grid[hidden]{display:none!important;}
 
 /* ── APROXIMACIONES ── */
 .aprox-toggle-btn{
@@ -594,6 +602,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   padding:14px 16px;border-top:1px solid var(--bd);
   text-align:center;
 }
+.msg-motivacional{margin-bottom:110px;}
 .msg-moti-txt{font-family:var(--fu);font-size:14px;font-weight:600;color:var(--gb);letter-spacing:0.5px;margin-bottom:2px;}
 .msg-moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:0.5px;}
 
@@ -1224,6 +1233,8 @@ body{background:
   color:#fff;font-weight:800;text-transform:none;
 }
 .ex-aprox-pill{position:absolute;right:10px;top:10px;padding:5px 8px;font-size:9px;background:rgba(5,10,11,.65);}
+/* 17-oct-2026: el título no se mete debajo de "Calentamiento · 3 pasos". */
+.ex-header-card:has(.ex-aprox-pill){padding-top:44px;}
 .ex-header-combo .exname-meta{position:absolute;z-index:1;left:0;right:0;bottom:0;padding:8px 14px;border-top:1px solid rgba(255,255,255,.1);background:rgba(3,8,10,.45);}
 .exname-meta-line{font-size:10px;color:#d7e0e2;}
 .exname-meta .tipo-carga-select{font-size:9px;padding:3px 8px;background:rgba(0,0,0,.28);}
@@ -1445,6 +1456,28 @@ body{background:
 </div>
 {% endif %}
 
+<!-- ── Energía pre-sesión (17-oct-2026): se pregunta en el briefing; aquí,
+     una vez respondida, queda en una línea que se puede tocar para cambiarla. ── -->
+    <div class="mr-energia-wrap" id="energia-inicio" style="margin:0 16px 12px;padding:12px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
+      <div id="energia-grid">
+      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegas hoy? · energía</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
+        {% for n in "1234567890" %}{% with val=forloop.counter %}
+        <button type="button" class="btn-energia-pre" data-val="{{ val }}"
+                onclick="selEnergiaPreSesion({{ val }})"
+                style="padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
+          {{ val }}
+        </button>
+        {% endwith %}{% endfor %}
+      </div>
+      </div>
+      <button type="button" id="energia-resumen" onclick="abrirEnergia()" hidden
+              style="display:flex;width:100%;justify-content:space-between;align-items:center;background:none;border:0;padding:0;color:var(--td);font-family:var(--fm);font-size:11px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;">
+        <span>Energía <strong id="energia-resumen-valor" style="color:#eaf3f2;"></strong> · <span id="energia-pre-label" style="text-transform:none;letter-spacing:0;"></span></span>
+        <span style="text-decoration:underline;text-transform:none;letter-spacing:0;">Cambiar</span>
+      </button>
+    </div>
+
 <!-- ══ NAVEGACIÓN GLOBAL (prev · dots · next) ══ -->
 <div class="nav-ej">
   <button type="button" class="nav-btn btn-ej-prev" onclick="navEjercicio(-1)">‹ Anterior</button>
@@ -1466,21 +1499,6 @@ body{background:
   </div>
   <button type="button" class="nav-btn btn-ej-next" onclick="navEjercicio(1)">Siguiente ›</button>
 </div>
-
-<!-- ── Energía pre-sesión: se pregunta al empezar ── -->
-    <div class="mr-energia-wrap" id="energia-inicio" style="margin:0 16px 12px;padding:14px 16px;background:var(--surf2,rgba(255,255,255,0.05));border-radius:12px;">
-      <div style="font-family:var(--fm);font-size:11px;color:var(--td);letter-spacing:.5px;text-transform:uppercase;margin-bottom:10px;">¿Cómo llegas hoy? · energía</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;">
-        {% for n in "1234567890" %}{% with val=forloop.counter %}
-        <button type="button" class="btn-energia-pre" data-val="{{ val }}"
-                onclick="selEnergiaPreSesion({{ val }})"
-                style="padding:7px 4px;border:1.5px solid var(--bd,rgba(255,255,255,0.1));border-radius:8px;background:transparent;color:var(--td);font-size:12px;font-family:var(--fu);cursor:pointer;transition:all .15s;">
-          {{ val }}
-        </button>
-        {% endwith %}{% endfor %}
-      </div>
-      <div id="energia-pre-label" style="font-size:11px;color:var(--td);margin-top:8px;text-align:center;min-height:16px;"></div>
-    </div>
 
 <!-- ══ EJERCICIOS ══ -->
 {% for ejercicio in ejercicios_planificados %}
@@ -1552,7 +1570,7 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps</span>{% endif %}</span>
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps{% if ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m{% else %}reps{% endif %}</span>
         {% endif %}
@@ -1563,9 +1581,14 @@ body{background:
                 id="tipo-carga-{{ ejercicio.form_id }}"
                 onchange="actualizarPreviewCarga('{{ ejercicio.form_id }}')"
                 aria-label="Cómo se interpreta el peso de {{ ejercicio.nombre }}">
-          <option value="total" {% if ejercicio.tipo_carga_default == 'total' or not ejercicio.tipo_carga_default %}selected{% endif %}>Peso total</option>
-          <option value="por_mano" {% if ejercicio.tipo_carga_default == 'por_mano' %}selected{% endif %}>Por mano</option>
-          <option value="por_lado" {% if ejercicio.tipo_carga_default == 'por_lado' %}selected{% endif %}>Por lado</option>
+          {# 17-oct-2026: el selector coincide con la etiqueta del peso (remo "por lado" decía "Peso total"). #}
+          {% if ejercicio.peso_formato == 'por_lado' or ejercicio.tipo_carga_default == 'por_lado' %}
+          <option value="total">Peso total</option><option value="por_mano">Por mano</option><option value="por_lado" selected>Por lado</option>
+          {% elif ejercicio.peso_formato == 'por_mano' or ejercicio.tipo_carga_default == 'por_mano' %}
+          <option value="total">Peso total</option><option value="por_mano" selected>Por mano</option><option value="por_lado">Por lado</option>
+          {% else %}
+          <option value="total" selected>Peso total</option><option value="por_mano">Por mano</option><option value="por_lado">Por lado</option>
+          {% endif %}
         </select>
       </div>
     </div>
@@ -1825,13 +1848,12 @@ body{background:
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
-        <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
-        {% if ejercicio.sugerencia_tope and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
-        {% elif ejercicio.diferencia_peso > 0 %}
+        {# 17-oct-2026: el RPE de la última vez, no el objetivo de hoy (que ya está en la tarjeta). #}
+        {% if ejercicio.rpe_anterior %}<span class="peso-ultima-vez__rpe" aria-label="RPE de la última vez">RPE {{ ejercicio.rpe_anterior|floatformat:"-1" }}</span>{% endif %}
+        {% if ejercicio.diferencia_peso > 0 %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
         {% elif ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
-          <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} rep objetivo</span>
+          <span class="peso-ultima-vez__cue">Hoy a por {{ ejercicio.reps_objetivo }} reps</span>
         {% endif %}
       </div>
       {% endif %}
@@ -2519,7 +2541,9 @@ function ajustarPesoPanel(fid,sn,delta){
   const inp=document.getElementById('peso-'+fid+'-'+sn);
   if(!inp)return;
   const actual=parseFloat((inp.value||'0').replace(',','.'))||0;
-  const nuevo=Math.max(0,actual+delta);
+  // 17-oct-2026: el +/− se mueve por la escala real (50, 55, 60…); desde un
+  // peso raro como 59,5 el siguiente es 60, no 64,5.
+  const nuevo=Math.max(0,aEscalaJS(actual,Math.abs(delta),delta>0?'arriba':'abajo'));
   inp.value=String(Number(nuevo.toFixed(2)));
   inp.dispatchEvent(new Event('input',{bubbles:true}));
   if(navigator.vibrate)navigator.vibrate(20);
@@ -2643,39 +2667,6 @@ function fmtKg(n) {
   return String(Number((+n).toFixed(2))).replace('.', ',');
 }
 
-function calcularPesoSiguienteSerie(fid, peso, rpe, repsReales, rpeObj, repsObj) {
-  if (!peso || peso <= 0) return null;
-  const deltaRpe = rpe - rpeObj;      // positivo = demasiado duro, negativo = demasiado fácil
-  const deltaReps = repsReales - repsObj; // positivo = más reps de las objetivo
-
-  // Cada unidad de RPE ≈ 2.5% del peso
-  let factorRpe = -deltaRpe * 0.025;
-  // Cada rep extra/menos ≈ 1% adicional (secundario al RPE)
-  let factorReps = deltaReps * 0.01;
-  let factor = factorRpe + factorReps;
-
-  // Limitar el ajuste a ±10% por seguridad
-  factor = Math.max(-0.10, Math.min(0.10, factor));
-
-  if (Math.abs(factor) < 0.012) return null; // Diferencia insignificante, no sugerir
-
-  // Saltos reales de la máquina contados DESDE el peso que se acaba de
-  // levantar (62,5 → 65, no "62 kg (+2)"): así el "+/−" siempre es respecto
-  // a la serie anterior y nunca propone menos diciendo que sube.
-  const pesoRaw = peso * (1 + factor);
-  const incremento = incrementoPeso(fid);
-  const pasos = factor > 0
-    ? Math.ceil((pesoRaw - peso) / incremento - 1e-9)
-    : Math.floor((pesoRaw - peso) / incremento + 1e-9);
-  if (pasos === 0) return null;
-  let pesoSugerido = +(peso + pasos * incremento).toFixed(2);
-  const tope = parseFloat(document.getElementById('card-'+fid)?.dataset.topeKg || '');
-  if (Number.isFinite(tope) && pesoSugerido > tope) pesoSugerido = tope;
-  if ((factor > 0 && pesoSugerido <= peso) || (factor < 0 && pesoSugerido >= peso) || pesoSugerido <= 0) return null;
-  const diff = +(pesoSugerido - peso).toFixed(2);
-  return { pesoSugerido, diff, deltaRpe, deltaReps };
-}
-
 function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) {
   const snSig = snActual + 1;
 
@@ -2711,66 +2702,95 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     return;
   }
 
-  const resultado = calcularPesoSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsObj);
+  const repsMin = parseInt(panelSig.dataset.repsMin || repsObj) || repsObj;
+  const repsMax = parseInt(panelSig.dataset.repsMax || repsObj) || repsObj;
+  const plan = planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax);
 
-  // ── Banner en la pantalla de descanso ────────────────────────────────────
-  if (bannerDescanso) {
-    if (!resultado) {
-      bannerDescanso.style.display = 'none';
-    } else {
-      const signo = resultado.diff > 0 ? '+' : '';
-      let razon = '';
-      if (Math.abs(resultado.deltaRpe) >= 1) {
-        razon = resultado.deltaRpe > 0
-          ? `RPE ${rpe} > objetivo ${rpeObj}`
-          : `RPE ${rpe} < objetivo ${rpeObj}`;
-      } else if (Math.abs(resultado.deltaReps) >= 2) {
-        razon = resultado.deltaReps > 0
-          ? `${reps} reps > objetivo ${repsObj}`
-          : `${reps} reps < objetivo ${repsObj}`;
-      }
-      const bajada = resultado.diff < 0;
-      bannerDescanso.style.borderLeftColor = bajada ? 'var(--rl)' : 'var(--ok)';
-      bannerDescanso.style.background = bajada ? 'rgba(200,75,49,0.07)' : 'rgba(74,222,128,0.07)';
-      bannerDescanso.innerHTML =
-        `<div style="font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">⚡ Autorregulación</div>`
-        + `<div style="font-size:13px;font-weight:700;color:${bajada ? 'var(--rl)' : 'var(--ok)'};">`
-        + `${fmtKg(resultado.pesoSugerido)} kg `
-        + `<span style="font-size:11px;font-weight:400;">(${signo}${fmtKg(resultado.diff)} kg)</span></div>`
-        + (razon ? `<div style="font-size:10px;color:var(--td);margin-top:2px;">${razon}</div>` : '');
-      bannerDescanso.style.display = 'block';
-    }
-  }
-
-  // ── Pre-rellenar peso en el panel de la siguiente serie ───────────────────
-  // SIEMPRE propagar el peso real usado (con ajuste si hay, sin ajuste si no)
+  // ── Peso y reps de la siguiente serie ────────────────────────────────────
   const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
   if (pesoInput) {
-    const pesoPrefill = resultado ? resultado.pesoSugerido : peso;
-    pesoInput.value = pesoPrefill.toFixed(1);
-    calcularDiscosInline(fid, snSig, pesoPrefill);
-    detectarPR(fid, snSig, pesoPrefill);
+    pesoInput.value = plan.peso.toFixed(1);
+    calcularDiscosInline(fid, snSig, plan.peso);
+    detectarPR(fid, snSig, plan.peso);
   }
+  const repsHid = document.getElementById('reps-hid-'+fid+'-'+snSig);
+  const repsDisp = document.getElementById('reps-disp-'+fid+'-'+snSig);
+  if (repsHid) repsHid.value = plan.reps;
+  if (repsDisp) repsDisp.textContent = plan.reps;
 
-  // ── Banner secundario en el panel de la siguiente serie ──────────────────
   const bannerSig = document.getElementById('sugerencia-'+fid+'-'+snSig);
+  if (!plan.texto) {
+    if (bannerSig) bannerSig.style.display = 'none';
+    return;
+  }
+  const bajada = plan.tipo === 'bajar';
+  const color = bajada ? 'var(--rl)' : 'var(--ok)';
+  if (bannerDescanso) {
+    bannerDescanso.style.borderLeftColor = color;
+    bannerDescanso.style.background = bajada ? 'rgba(200,75,49,0.07)' : 'rgba(74,222,128,0.07)';
+    bannerDescanso.innerHTML =
+      `<div style="font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Siguiente serie</div>`
+      + `<div style="font-size:13px;font-weight:700;color:${color};">${fmtKg(plan.peso)} kg × ${plan.reps} reps</div>`
+      + `<div style="font-size:10px;color:var(--td);margin-top:2px;">${plan.texto}</div>`;
+    bannerDescanso.style.display = 'block';
+  }
   if (bannerSig) {
-    if (!resultado) { bannerSig.style.display = 'none'; return; }
-    const signo = resultado.diff > 0 ? '+' : '';
-    const bajada = resultado.diff < 0;
-    bannerSig.style.borderLeftColor = bajada ? 'var(--rl)' : 'var(--ok)';
-    bannerSig.style.color = bajada ? 'var(--rl)' : 'var(--ok)';
+    bannerSig.style.borderLeftColor = color;
+    bannerSig.style.color = color;
     bannerSig.style.background = bajada ? 'rgba(200,75,49,0.06)' : 'rgba(74,222,128,0.06)';
-    const motivo = resultado.deltaRpe > 0
-      ? `RPE ${rpe} frente al objetivo ${rpeObj}`
-      : resultado.deltaReps < 0
-        ? `${reps} reps frente al objetivo ${repsObj}`
-        : 'autorregulación de la serie anterior';
-    bannerSig.innerHTML = `⚡ Propuesta para la próxima serie: <strong>${fmtKg(resultado.pesoSugerido)} kg</strong> `
-      + `<span style="opacity:0.75;">(${signo}${fmtKg(resultado.diff)} kg · ${motivo})</span>`
-      + `<div style="font-size:10px;opacity:0.72;margin-top:3px;">Aplicada al selector; puedes ajustarla antes de guardar.</div>`;
+    bannerSig.innerHTML = `Siguiente serie: <strong>${fmtKg(plan.peso)} kg × ${plan.reps} reps</strong>`
+      + `<div style="font-size:10px;opacity:0.8;margin-top:3px;">${plan.texto}</div>`;
     bannerSig.style.display = 'block';
   }
+}
+
+// 17-oct-2026 (regla C): primero las repeticiones, luego el peso.
+// - Serie fácil y aún no estás arriba del rango → mismo peso, más reps.
+// - Arriba del rango con margen → un salto real de la máquina.
+// - Por debajo del rango con esfuerzo alto, o RPE muy por encima → un salto menos.
+function aEscalaJS(peso, salto, hacia){
+  if (!(peso > 0) || !(salto > 0)) return peso;
+  const k = peso / salto;
+  let n;
+  if (hacia === 'arriba') n = Math.floor(k + 1e-9) + 1;
+  else if (hacia === 'abajo') n = Math.ceil(k - 1e-9) - 1;
+  else n = (k - Math.floor(k) <= 0.5 + 1e-9) ? Math.floor(k) : Math.ceil(k);
+  return +(Math.max(n, 1) * salto).toFixed(2);
+}
+
+function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
+  const salto = incrementoPeso(fid);
+  const tope = parseFloat(document.getElementById('card-'+fid)?.dataset.topeKg || '');
+  const mismo = { peso, reps: Math.max(repsMin, Math.min(repsMax, reps)), tipo: null, texto: '' };
+  if (!peso || peso <= 0 || !Number.isFinite(rpe)) return mismo;
+
+  const bajar = () => {
+    const p = aEscalaJS(peso, salto, 'abajo');
+    if (!(p > 0) || p >= peso) return mismo;
+    return { peso: p, reps: repsMin, tipo: 'bajar',
+             texto: `${reps} reps a RPE ${rpe}: bajo a ${fmtKg(p)} kg para entrar en ${repsMin}-${repsMax}.` };
+  };
+
+  if (reps < repsMin) {
+    if (rpe >= rpeObj) return bajar();
+    return { peso, reps: repsMin, tipo: 'reps', texto: `Mismo peso: llega a ${repsMin} reps.` };
+  }
+  if (rpe >= 10 || rpe >= rpeObj + 2) return bajar();
+  if (rpe <= rpeObj - 1) {
+    if (reps < repsMax) {
+      const extra = Math.max(1, Math.round((rpeObj - rpe) * 2));
+      const objetivo = Math.min(repsMax, reps + extra);
+      return { peso, reps: objetivo, tipo: 'reps',
+               texto: `RPE ${rpe} con margen: mismo peso, a por ${objetivo} reps.` };
+    }
+    let p = aEscalaJS(peso, salto, 'arriba');
+    if (Number.isFinite(tope) && p > tope) p = tope;
+    if (p > peso) {
+      return { peso: p, reps: repsMin, tipo: 'subir',
+               texto: `${reps} reps a RPE ${rpe}, arriba del rango: subes a ${fmtKg(p)} kg.` };
+    }
+  }
+  return mismo;
 }
 
 function guardarSeriePanel(fid,sn,total){
@@ -2987,7 +3007,9 @@ function mostrarMensajeEjercicio(card,fid){
 
 function resumenDeEjercicio(fid){
   const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
-  const rpeAlto=scs.some(s=>(s.rpe||0)>=9);
+  // Alto respecto al objetivo de este ejercicio (RPE 9 en un ejercicio que pide 9 es lo pedido).
+  const rpeObjEj=parseFloat(document.getElementById('reg-'+fid+'-1')?.dataset.rpeObj||'8')||8;
+  const rpeAlto=scs.some(s=>(s.rpe||0)>=9&&(s.rpe||0)>rpeObjEj);
   const resultados=scs.map((s,index)=>resultadoPlanSerie(fid,index+1,s.reps,false)).filter(Boolean);
   const fueraDeRango=resultados.some(resultado=>resultado.clase!=='en-rango');
   const enRango=resultados.filter(resultado=>resultado.clase==='en-rango').length;
@@ -3007,9 +3029,13 @@ function resumenDeEjercicio(fid){
     const lectura=enRango
       ? `${enRango} de ${scs.length} series en rango`+(fuera.length?`; fuera: ${fuera.join(', ')}.`:'.')
       : `Ninguna de las ${scs.length} series llegó al rango previsto.`;
-    return {e:'↗',t:'Ejercicio exigente registrado',s:lectura+' La próxima sesión conservará margen antes de progresar.'};
+    // 17-oct-2026: lo que pasará la próxima vez, en vez de "exigente".
+    if(fueraDeRango){
+      return {e:'!',t:'Alguna serie por debajo del rango',s:lectura+' La próxima vez ajusto el peso para que entren todas.'};
+    }
+    return {e:'✓',t:'En rango, con esfuerzo alto',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y mismas reps.`};
   }
-  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. Datos registrados en este borrador; se usarán al guardar el entrenamiento.`};
+  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por una rep más.`};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────
@@ -3391,8 +3417,10 @@ function metricasSerie(s){
 
 function textoMetricas(tonelaje, cargaDistancia){
   const partes=[];
-  if(tonelaje>0)partes.push(Math.round(tonelaje)+' kg');
-  if(cargaDistancia>0)partes.push(Math.round(cargaDistancia)+' kg·m');
+  // 17-oct-2026: punto de miles (4.425 kg), como el resto de la app.
+  const miles=v=>String(Math.round(v)).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+  if(tonelaje>0)partes.push(miles(tonelaje)+' kg');
+  if(cargaDistancia>0)partes.push(miles(cargaDistancia)+' kg·m');
   return partes.join(' · ')||'0 kg';
 }
 
@@ -3910,7 +3938,20 @@ function selEnergiaPreSesion(val){
   document.getElementById('hid-energia-pre').value = val;
   const lbl = ENERGIA_LABELS[val] || '';
   document.getElementById('energia-pre-label').textContent = lbl;
+  const valorEl = document.getElementById('energia-resumen-valor');
+  if (valorEl) valorEl.textContent = val;
+  const grid = document.getElementById('energia-grid');
+  const resumen = document.getElementById('energia-resumen');
+  if (grid) grid.hidden = true;
+  if (resumen) resumen.hidden = false;
 }
+function abrirEnergia(){
+  const grid = document.getElementById('energia-grid');
+  const resumen = document.getElementById('energia-resumen');
+  if (grid) grid.hidden = false;
+  if (resumen) resumen.hidden = true;
+}
+{% if energia_inicial %}document.addEventListener('DOMContentLoaded',()=>selEnergiaPreSesion({{ energia_inicial }}));{% endif %}
 
 let _sessionGuardada = false;
 let _envioCierreEnCurso = false;

@@ -130,8 +130,8 @@ class TestReferenciaUltimaSesionEnRegistro(ProgresionDependienteFaseBase):
         self.assertLess(referencia, rpe)
         self.assertIn('Referencia de la última sesión', html)
         self.assertIn('Última vez', html)
-        self.assertIn('+1 rep objetivo', html)
-        self.assertNotIn('+1,0 rep objetivo', html)
+        self.assertIn('Hoy a por 11 reps', html)  # 17-oct-2026: el objetivo, dicho claro
+        self.assertNotIn('11,0 reps', html)
 
 
 # ── Test 2: Client() real, motivo visible debe reflejar el recálculo ────────

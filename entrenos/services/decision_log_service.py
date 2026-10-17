@@ -87,6 +87,20 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     return None
 
 
+def _rpe_objetivo_snapshot(entreno, ejercicio_normalizado):
+    """RPE objetivo que mostró la sesión (17-oct-2026), o None."""
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    for ejercicio in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
+            continue
+        try:
+            return float(ejercicio.get('rpe_objetivo'))
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _objetivo_distancia_snapshot(entreno, ejercicio_normalizado):
     """Metros objetivo de la sesión: ``reps_objetivo``; si no, lo de la última vez (o el mínimo del rango).
 
@@ -478,16 +492,20 @@ def generar_decisiones_para_entreno(entreno):
             if referencia['rpe'] is not None:
                 rpe = float(referencia['rpe'])
 
+        rpe_objetivo_sesion = _rpe_objetivo_snapshot(entreno, nombre)
         accion, valor_cambio, motivo = _decidir_accion(
-            ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion
+            ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion,
+            rpe_objetivo=rpe_objetivo_sesion,
         )
         motivo_codigo = ''
 
         objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
+        objetivo_es_tope_rango = False
         if objetivo_reps is None and rango_sesion and not es_tope:
             # Doble progresión: con el mismo peso se sube cuando se llega al
             # tope del rango (lo que el briefing le dijo al atleta).
             objetivo_reps = Decimal(rango_sesion[1])
+            objetivo_es_tope_rango = True
         if tipo_progresion == 'progresion_distancia' and not _distancia_cumple_evidencia(
             entreno, nombre, _objetivo_distancia_snapshot(entreno, nombre),
         ):
@@ -513,11 +531,13 @@ def generar_decisiones_para_entreno(entreno):
                 valor_cambio = None
                 motivo = f'{lectura} — completar el objetivo antes de progresar'
             elif (
-                reps_media > objetivo_reps
+                # 17-oct-2026 (regla C): llegar al tope del rango en todas las
+                # series ya basta para subir; antes había que superarlo.
+                (reps_media >= objetivo_reps if objetivo_es_tope_rango else reps_media > objetivo_reps)
                 and not fallo
                 and not es_tope
                 and rpe is not None
-                and rpe <= 8
+                and rpe <= max(8.0, rpe_objetivo_sesion or 8.0)
             ):
                 if tipo_progresion == 'progresion_reps':
                     accion = 'subir_reps'
@@ -546,6 +566,13 @@ def generar_decisiones_para_entreno(entreno):
                 and float(peso) > 0
             ):
                 objetivo_kg = peso_para_reps(float(peso), int(reps), rpe, minimo, 8)
+                # 17-oct-2026: con todas las series, no solo la más pesada
+                # (Arnold 40 × 9 y 30 × 12: el 30 dice que 35 no entra en 15).
+                for s_otra in referencia.get('validas') or []:
+                    if 0 < s_otra['peso'] < float(peso) and s_otra['reps'] > 0:
+                        otra = peso_para_reps(s_otra['peso'], int(s_otra['reps']), s_otra['rpe'], minimo, 8)
+                        if otra and (objetivo_kg is None or otra < objetivo_kg):
+                            objetivo_kg = otra
                 if objetivo_kg and objetivo_kg < float(peso):
                     pct = round((1 - objetivo_kg / float(peso)) * 100)
                     accion = 'bajar_peso'
@@ -669,8 +696,14 @@ def generar_decisiones_para_entreno(entreno):
         )
 
 
-def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion='peso_reps'):
-    """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado."""
+def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion='peso_reps',
+                    rpe_objetivo=None):
+    """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado.
+
+    17-oct-2026: ``rpe_objetivo`` es el que pidió la sesión. Un RPE 9 en un
+    ejercicio que pedía RPE 9 no es una "sesión intensa": es lo pedido.
+    """
+    rpe_objetivo = float(rpe_objetivo) if rpe_objetivo is not None else 8.0
 
     # 1. Fallo muscular. La intención se clasifica después con el campo
     # explícito; RIR=0 ya no se interpreta como prueba de intención.
@@ -718,7 +751,7 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
         )
 
     # 3. RPE alto sostenido: 3 ejecuciones consecutivas con RPE entero ≥9.
-    if rpe is not None and rpe >= 9 and len(historial) >= 2:
+    if rpe is not None and rpe >= 9 and rpe > rpe_objetivo and len(historial) >= 2:
         rpes_prev = [h.rpe for h in historial[:2] if h.rpe is not None]
         if len(rpes_prev) >= 2 and all(r >= 9 for r in rpes_prev):
             return (
@@ -726,6 +759,12 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
                 perfil.reduccion_peso_pct,
                 'RPE alto sostenido en múltiples sesiones consecutivas',
             )
+        return (
+            'mantener',
+            None,
+            'Sesión intensa — consolidar antes de progresar',
+        )
+    if rpe is not None and rpe >= 9 and rpe > rpe_objetivo:
         return (
             'mantener',
             None,

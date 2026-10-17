@@ -3805,7 +3805,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 # después de materializar la progresión canónica (105 kg).
                 # Las excepciones ejecutivas, como el tope de máquina, se aplican
                 # explícitamente más abajo y pueden volver a sobrescribirlo.
-                ejercicio['peso_inicial_kg'] = ejercicio.get('peso_recomendado_kg', 0.0)
+                # 17-oct-2026: el número exacto que enseñó el briefing (con
+                # una bajada del techo, ``peso_kg``; el Arnold arrancaba en 40
+                # cuando el briefing decía 37,5).
+                from entrenos.services.ultima_sesion_service import peso_contractual
+                ejercicio['peso_inicial_kg'] = peso_contractual(ejercicio)
                 ejercicio.setdefault('descanso_minutos', 2)
                 ejercicio.setdefault('tipo_progresion', 'peso_reps')
                 ejercicio.setdefault('usa_tiempo', ejercicio['tipo_progresion'] == 'progresion_tiempo')
@@ -3834,6 +3838,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio.setdefault('tempo_fuente', tempo_fuente)
                 if datos_anterior:
                     ejercicio['peso_anterior_kg'] = datos_anterior['peso']
+                    ejercicio['rpe_anterior'] = datos_anterior.get('rpe')
                     ejercicio['fecha_anterior'] = datos_anterior['fecha']
                     ejercicio['series_anterior'] = datos_anterior['series']
                     ejercicio['repeticiones_anterior'] = datos_anterior['repeticiones']
@@ -3927,12 +3932,25 @@ def vista_entrenamiento_activo(request, cliente_id):
                     cliente, ejercicio.get('nombre', ''), fecha_obj,
                 )
                 # 13-oct-2026: tope de máquina guardado y salto real de peso.
-                from entrenos.services.maquina_service import incremento_real, tope_de
-                _base_inc = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
-                ejercicio['incremento_kg'] = incremento_real(
-                    cliente, ejercicio.get('nombre', ''),
-                    float(_base_inc.incremento_fisico_kg) if _base_inc else 2.5,
-                )
+                from entrenos.services.maquina_service import a_escala, salto_carga, tope_de
+                # 17-oct-2026: escala real del equipo (máquina 5, discos 2,5).
+                ejercicio['incremento_kg'] = salto_carga(cliente, ejercicio.get('nombre', ''))
+                if (
+                    not ejercicio.get('sugerencia_tope')
+                    and float(ejercicio.get('peso_inicial_kg') or 0) > 0
+                    and abs(float(ejercicio['peso_inicial_kg']) - float(ejercicio.get('peso_anterior_kg') or 0)) >= 0.01
+                ):
+                    ejercicio['peso_inicial_kg'] = a_escala(
+                        float(ejercicio['peso_inicial_kg']), ejercicio['incremento_kg'],
+                    )
+                # Regla C: arranca con las reps de hoy que calculó el plan.
+                if (
+                    ejercicio.get('reps_objetivo_hoy')
+                    and not ejercicio.get('sugerencia_tope')
+                    and not ejercicio.get('usa_distancia')
+                    and not ejercicio.get('usa_tiempo')
+                ):
+                    ejercicio['reps_objetivo'] = int(ejercicio['reps_objetivo_hoy'])
                 _tope_guardado = tope_de(cliente, ejercicio.get('nombre', ''))
                 if _tope_guardado:
                     ejercicio['tope_maquina_kg'] = _tope_guardado
@@ -4139,10 +4157,8 @@ def vista_entrenamiento_activo(request, cliente_id):
             _base_carga = EjercicioBase.objects.filter(nombre__iexact=ejercicio.get('nombre', '')).first()
             if _base_carga:
                 ejercicio.setdefault('tipo_carga_default', _base_carga.tipo_carga_default)
-                from entrenos.services.maquina_service import incremento_real
-                ejercicio['incremento_kg'] = incremento_real(
-                    cliente, ejercicio.get('nombre', ''), float(_base_carga.incremento_fisico_kg),
-                )
+                from entrenos.services.maquina_service import salto_carga
+                ejercicio['incremento_kg'] = salto_carga(cliente, ejercicio.get('nombre', ''))
             from entrenos.services.peso_semantica_service import normalizar_semantica_carga
             ejercicio.update(normalizar_semantica_carga(ejercicio))
 
@@ -4168,6 +4184,7 @@ def vista_entrenamiento_activo(request, cliente_id):
 
             if datos_anterior:
                 ejercicio['peso_anterior_kg'] = datos_anterior['peso']
+                ejercicio['rpe_anterior'] = datos_anterior.get('rpe')
                 # --- PESO INICIAL PARA INPUTS (prioriza última vez si existe) ---
                 try:
                     peso_rec = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
@@ -4486,6 +4503,12 @@ def vista_entrenamiento_activo(request, cliente_id):
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
         'permiso_progresion': _permiso_prog_template,
         'retorno_tras_ausencia': _retorno_tras_ausencia,
+        # 17-oct-2026: la energía se pregunta en el briefing y llega aquí.
+        'energia_inicial': (
+            int(request.GET['energia'])
+            if str(request.GET.get('energia', '')).isdigit() and 1 <= int(request.GET['energia']) <= 10
+            else None
+        ),
     }
 
     return render(request, 'entrenos/entrenamiento_activo.html', context)

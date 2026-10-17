@@ -46,7 +46,8 @@ class PoliticaIncrementosFisicosTests(TestCase):
             nombre='Press banca con barra', grupo_muscular='Pecho',
             equipo='Barra y discos', incremento_kg=2.5,
         )
-        self.assertEqual(self._log('Press banca con barra', 80).peso_sugerido, 84)
+        # 17-oct-2026: los discos de David van de 2,5 en 2,5.
+        self.assertEqual(self._log('Press banca con barra', 80).peso_sugerido, 85)
 
     def test_contexto_ui_usa_la_misma_politica_fisica(self):
         maquina = EjercicioBase.objects.create(
@@ -56,7 +57,7 @@ class PoliticaIncrementosFisicosTests(TestCase):
             nombre='Sentadilla con barra', grupo_muscular='Pierna', equipo='Barra',
         )
         self.assertEqual(float(maquina.incremento_fisico_kg), 5.0)
-        self.assertEqual(float(barra.incremento_fisico_kg), 2.0)
+        self.assertEqual(float(barra.incremento_fisico_kg), 2.5)  # discos de 2,5 (17-oct-2026)
 
 
 class RPERealObligatorioTests(TestCase):

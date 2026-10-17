@@ -96,19 +96,12 @@ class EjercicioBase(models.Model):
 
     @property
     def incremento_fisico_kg(self):
-        """Salto montable de carga: máquinas 5 kg; barras/discos 2 kg."""
-        descriptor = f'{self.nombre} {self.equipo or ""}'.lower()
-        tokens_maquina = ('máquina', 'maquina', 'polea', 'cable', 'pec deck')
-        tokens_discos = (
-            'barra', 'barbell', 'disco', 'press banca', 'sentadilla',
-            'peso muerto', 'deadlift', 'squat', 'bench press', 'multipower',
-            'smith', 'prensa', 'leg press', 'hack squat',
-        )
-        if any(token in descriptor for token in tokens_discos):
-            return 2
-        if any(token in descriptor for token in tokens_maquina):
-            return 5
-        return self.incremento_kg
+        """Salto montable de carga: máquinas 5 kg; discos 2,5; mancuernas 2,5 (5 en total de dos).
+
+        17-oct-2026: una sola fuente, ``maquina_service.salto_fisico``.
+        """
+        from entrenos.services.maquina_service import salto_fisico
+        return salto_fisico(self.nombre, self.equipo) or self.incremento_kg
 
 
 class Rutina(models.Model):

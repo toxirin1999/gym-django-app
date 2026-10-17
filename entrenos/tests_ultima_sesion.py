@@ -77,9 +77,13 @@ class TechoPeso(TestCase):
         self.assertIn('a RPE 9', frase)
 
     def test_bien_permite_un_salto(self):
-        techo, frase, _ = techo_peso(lectura([s(20, 12, 7)] * 3, 12), (12, 15), 9, 2.5)
+        # 17-oct-2026 (regla C): el salto llega al completar el rango (15).
+        techo, frase, _ = techo_peso(lectura([s(20, 15, 7)] * 3, 12), (12, 15), 9, 2.5)
         self.assertEqual(techo, 22.5)
         self.assertIsNone(frase)
+        techo, frase, _ = techo_peso(lectura([s(20, 12, 7)] * 3, 12), (12, 15), 9, 2.5)
+        self.assertEqual(techo, 20)
+        self.assertIn('hoy a por 13 reps', frase)
 
     def test_serie_superior_corta_fija_la_referencia(self):
         techo, frase, _ = techo_peso(

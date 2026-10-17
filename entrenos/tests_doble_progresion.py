@@ -38,8 +38,8 @@ class DobleProgresionTests(ProgresionEjecutivaBase):
         ej, cambios, log = self._aplicar(11, '15-20')
         self.assertEqual(ej['peso_kg'], 72.5)
         self.assertTrue(ej['progresion_pospuesta'])
-        self.assertIn('Doble progresión', ej['progresion_motivo'])
-        self.assertIn('20 reps', ej['progresion_motivo'])
+        self.assertIn('Mismo peso', ej['progresion_motivo'])  # regla C (17-oct-2026)
+        self.assertIn('con 20 en todas las series', ej['progresion_motivo'])
         self.assertEqual(log.estado_aplicacion, 'pospuesta')
 
     def test_en_el_tope_si_sube(self):

@@ -157,7 +157,7 @@ class CierreSemanticaUnidadesTests(TestCase):
 
         self.assertEqual(cambios, [{
             'nombre': 'Curl bíceps', 'tipo': 'mantenida',
-            'detalle': 'carga mantenida',
+            'detalle': 'igual que la última vez (12 kg × 10)',
         }])
         self.assertNotEqual(anterior_ej.peso_kg, actual_ej.peso_kg)
 
@@ -231,7 +231,7 @@ class CierreSemanticaUnidadesTests(TestCase):
         )
 
         efectos = {
-            item['ejercicio']: item['efecto']
+            item['ejercicio'].lower(): item['efecto']
             for item in _decisiones_entrenador(self.cliente, entreno)
         }
 

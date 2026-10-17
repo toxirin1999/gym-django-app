@@ -68,7 +68,7 @@ class TestTempoVisible(BriefingTempoCalentamientoBase):
         ejercicios = [{
             'nombre': 'Press Banca con Mancuernas',
             'series': 4, 'repeticiones': '3-5',
-            'peso_kg': 102.5, 'rpe_objetivo': 8,
+            'peso_kg': 100, 'rpe_objetivo': 8,  # dos mancuernas: escala de 5 kg
             'tempo': '3-1-1',
             'tipo_progresion': 'peso_reps',
         }]
@@ -97,7 +97,7 @@ class TestCalentamientoVisibleConPeso(BriefingTempoCalentamientoBase):
         ejercicios = [{
             'nombre': 'Press Banca con Mancuernas',
             'series': 4, 'repeticiones': '3-5',
-            'peso_kg': 102.5, 'rpe_objetivo': 8,
+            'peso_kg': 100, 'rpe_objetivo': 8,  # dos mancuernas: escala de 5 kg
             'tempo': '3-1-1',
             'tipo_progresion': 'peso_reps',
         }]
@@ -105,7 +105,7 @@ class TestCalentamientoVisibleConPeso(BriefingTempoCalentamientoBase):
         contenido = resp.content.decode()
         self.assertIn('class="plan-warmup"', contenido)
 
-        esperado = get_aproximaciones_calentamiento(102.5, True)
+        esperado = get_aproximaciones_calentamiento(100, True)
         for peso in esperado.values():
             texto_peso = (f"{peso:.0f}" if peso == int(peso) else f"{peso:g}")
             self.assertIn(texto_peso, contenido)

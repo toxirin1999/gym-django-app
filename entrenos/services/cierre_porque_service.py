@@ -146,12 +146,16 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
             return f'{_kg(peso_hoy)} kg es el máximo de la máquina: progreso por repeticiones.'
         return None
 
+    # 17-oct-2026 (regla C): el peso concreto y las reps de la próxima vez.
+    doble = _doble_progresion(log, tipo_progresion)
+
     if motivo.startswith('Sesión intensa'):
         if rpe_txt is None:
             return None
+        peso_txt = f'{_kg(peso_hoy)} kg' if peso_hoy else 'el peso'
         return (
-            f'RPE {rpe_txt} hoy: mantengo el peso. Si sigue en 9 o más tres sesiones '
-            'seguidas, lo bajo.'
+            f'RPE {rpe_txt} hoy, por encima del objetivo: mantengo {peso_txt} y las mismas reps. '
+            'Si sigue en 9 o más tres sesiones seguidas, lo bajo.'
         )
 
     if motivo.startswith('Completado con éxito en 2 sesiones'):
@@ -162,14 +166,16 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
         else:
             antes = f'RPE {rpe_txt} hoy y la vez anterior sin fallo'
         if log.accion == 'subir_peso':
-            # Sin kg: el peso exacto lo fija la sesión (fase, incremento de la
-            # máquina) y no siempre coincide con el % bruto del log.
-            destino = 'subo el peso'
+            sugerido = getattr(log, 'peso_sugerido', None)
+            destino = f'subo a {_kg(sugerido)} kg' if sugerido else 'subo el peso'
         elif tipo_progresion == 'progresion_tiempo':
             destino = 'añado tiempo'
         else:
             destino = 'una repetición más'
         return f'{antes}: {destino}.'
+
+    if doble and (motivo.startswith('Parámetros estables') or 'completar el objetivo' in motivo):
+        return doble
 
     if motivo.startswith('Parámetros estables'):
         if rpe is None:
@@ -187,6 +193,23 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
                 'si se repite lo de hoy, subo.'
             )
     return None
+
+
+def _doble_progresion(log, tipo_progresion):
+    """'Mantengo 60 kg: la próxima vez a por 13 reps. Con 15 en todas, subo.' o None."""
+    if tipo_progresion not in ('peso_reps', 'peso_corporal_lastre') or log.accion != 'mantener':
+        return None
+    if not log.peso_anterior or log.reps_anteriores is None or not log.entreno_origen_id:
+        return None
+    from entrenos.services.ultima_sesion_service import objetivo_reps_hoy, rango_de_sesion
+    rango = rango_de_sesion(log.entreno_origen, log.ejercicio)
+    if not rango or log.reps_anteriores < rango[0] or log.reps_anteriores >= rango[1]:
+        return None
+    siguiente = objetivo_reps_hoy(log.reps_anteriores, rango)
+    return (
+        f'Mantengo {_kg(log.peso_anterior)} kg: la próxima vez a por {siguiente} reps. '
+        f'Con {rango[1]} en todas las series, subo el peso.'
+    )
 
 
 # ─────────────────────────────────────────────────────────────

@@ -104,7 +104,8 @@ class PorQueConElDato(Base):
         log = self.log(e, self.prensa, 'mantener', 'Sesión intensa — consolidar antes de progresar', 145)
         self.assertEqual(
             porque_decision(log, ej, None, 'peso_reps'),
-            'RPE 9 hoy: mantengo el peso. Si sigue en 9 o más tres sesiones seguidas, lo bajo.',
+            'RPE 9 hoy, por encima del objetivo: mantengo 145 kg y las mismas reps. '
+            'Si sigue en 9 o más tres sesiones seguidas, lo bajo.',
         )
 
     def test_subida_dice_el_peso_nuevo(self):
@@ -116,7 +117,7 @@ class PorQueConElDato(Base):
             'Completado con éxito en 2 sesiones consecutivas con RPE controlado', 140, 5,
         )
         frase = porque_decision(log, ej, anterior, 'peso_reps')
-        self.assertEqual(frase, 'RPE 7 hoy y 7 la vez anterior, sin fallo: subo el peso.')
+        self.assertEqual(frase, 'RPE 7 hoy y 7 la vez anterior, sin fallo: subo a 147,5 kg.')
 
     def test_tope_de_maquina(self):
         e = self.entreno(D2)

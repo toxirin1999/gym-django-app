@@ -82,12 +82,22 @@ def serie_referencia(series, reps_min=None):
     rpes = [s['rpe'] for s in a_ese_peso if s['rpe'] is not None]
     superiores = [s for s in validas if s['peso'] > peso_ref]
     superior = max(superiores, key=lambda s: s['peso']) if superiores else None
+    # 17-oct-2026: una serie posterior más ligera que se hundió por debajo
+    # del rango (jalón 59,5 × 12 y después 55,5 × 8): la referencia no se
+    # sostuvo en todas las series.
+    caida = None
+    if en_rango and reps_min is not None:
+        ultima_ref = max(i for i, s in enumerate(validas) if s['peso'] == peso_ref and s['reps'] >= reps_min)
+        caidas = [s for s in validas[ultima_ref + 1:] if s['peso'] < peso_ref and s['reps'] < reps_min]
+        caida = caidas[-1] if caidas else None
     return {
         'peso': peso_ref,
         'reps': reps,
         'rpe': max(rpes) if rpes else None,
         'en_rango': bool(en_rango),
         'superior': superior,
+        'caida': caida,
+        'validas': validas,
     }
 
 
@@ -189,22 +199,45 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
     if not ref['en_rango']:
         deficit = minimo - reps
         if deficit >= DEFICIT_PARA_BAJAR:
-            objetivo = peso_para_reps(peso, int(reps), rpe, minimo, rpe_objetivo)
-            if objetivo:
-                techo = min(_redondear_abajo(objetivo, incremento), peso - incremento)
+            # 17-oct-2026: con todas las series, no solo la más pesada (Arnold
+            # 40 × 9 y después 30 × 12: lo que entra en 15-20 lo dice el 30).
+            otras = [s for s in (ref.get('validas') or []) if s['peso'] < peso and s['reps'] > 0]
+            estimaciones = [peso_para_reps(peso, int(reps), rpe, minimo, rpe_objetivo)] + [
+                peso_para_reps(s['peso'], int(s['reps']), s['rpe'], minimo, rpe_objetivo) for s in otras
+            ]
+            estimaciones = [e for e in estimaciones if e]
+            if estimaciones:
+                from entrenos.services.maquina_service import a_escala
+                techo = a_escala(min(estimaciones), incremento)
+                if techo >= peso:
+                    techo = a_escala(peso - incremento, incremento, 'abajo')
                 if techo > 0:
-                    return (
-                        techo,
-                        f'La última vez {kg(peso)} kg × {reps_txt(reps)}; '
-                        f'para {rango_txt}, hoy {kg(techo)} kg.',
-                        'bajar',
-                    )
+                    if otras:
+                        ligera = min(otras, key=lambda s: s['peso'])
+                        antes = (f'La última vez {kg(peso)} kg × {reps_txt(reps)} y '
+                                 f'{kg(ligera["peso"])} kg × {ligera["reps"]}')
+                    else:
+                        antes = f'La última vez {kg(peso)} kg × {reps_txt(reps)}'
+                    return (techo, f'{antes}; para {rango_txt}, hoy {kg(techo)} kg.', 'bajar')
         return (
             peso,
             f'La última vez {kg(peso)} kg × {reps_txt(reps)}: mantengo el peso '
             f'hasta llegar a {minimo}.',
             'mantener',
         )
+
+    caida = ref.get('caida')
+    if caida:
+        from entrenos.services.maquina_service import a_escala
+        techo = a_escala(peso - incremento, incremento)
+        if 0 < techo < peso:
+            return (
+                techo,
+                f'La última vez {kg(peso)} kg × {reps_txt(reps)}, pero después '
+                f'{kg(caida["peso"])} kg × {caida["reps"]}: hoy {kg(techo)} kg para que '
+                f'todas las series entren en {rango_txt}.',
+                'bajar',
+            )
 
     superior = ref['superior']
     if superior:
@@ -243,7 +276,31 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
             f'mantengo hasta que salga con margen.',
             'mantener',
         )
+    # 17-oct-2026 (regla C): primero las repeticiones, luego el peso.
+    if reps < maximo:
+        return (peso, texto_doble_progresion(reps, rango_hoy), 'mantener')
     return (peso + incremento, None, 'mantener')
+
+
+def objetivo_reps_hoy(reps_ultima, rango, mismo_peso=True):
+    """Regla C: con el mismo peso, una repetición más que la última vez, dentro del rango."""
+    minimo, maximo = rango
+    if not mismo_peso or reps_ultima is None:
+        return minimo
+    try:
+        reps_ultima = int(round(float(reps_ultima)))
+    except (TypeError, ValueError):
+        return minimo
+    return max(minimo, min(maximo, reps_ultima + 1))
+
+
+def texto_doble_progresion(reps_ultima, rango):
+    minimo, maximo = rango
+    objetivo = objetivo_reps_hoy(reps_ultima, rango)
+    return (
+        f'Mismo peso: hoy a por {objetivo} reps (la última vez {reps_txt(reps_ultima)}); '
+        f'con {maximo} en todas las series, sube la carga.'
+    )
 
 
 def aplicar_techo(cliente, ej, hoy):
@@ -274,10 +331,8 @@ def aplicar_techo(cliente, ej, hoy):
     if not son_rangos_compatibles(int(lectura['referencia']['reps']), ej.get('repeticiones')):
         return None
 
-    from rutinas.models import EjercicioBase
-    from entrenos.services.maquina_service import incremento_real
-    base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
-    incremento = incremento_real(cliente, nombre, float(base.incremento_fisico_kg) if base else 2.5)
+    from entrenos.services.maquina_service import salto_carga
+    incremento = salto_carga(cliente, nombre)
     resultado = techo_peso(lectura, rango_hoy, ej.get('rpe_objetivo') or 8, incremento)
     if lectura.get('es_tope_maquina'):
         # La última vez se marcó tope: ese peso es el máximo de la máquina.
@@ -330,3 +385,78 @@ def aplicar_techo(cliente, ej, hoy):
         'peso_sugerido': techo,
         'razon': ej['progresion_motivo'],
     }
+
+
+def ajustar_escala_y_reps(cliente, ej, hoy):
+    """Último paso del plan de hoy (17-oct-2026): peso en la escala real y reps de hoy.
+
+    - El peso se lleva a la escala del equipo (máquina 5, discos 2,5,
+      mancuernas 2,5 o 5 en total de dos). Si lo fijó el techo de la última
+      sesión, se redondea hacia abajo: el techo es un máximo.
+    - ``reps_objetivo_hoy``: regla C. Con el mismo peso que la última vez,
+      una repetición más (dentro del rango); con otro peso, el mínimo.
+      Briefing y ejercicio arrancan con este número.
+    """
+    from entrenos.services.maquina_service import a_escala, salto_carga, tope_de
+
+    tipo = ej.get('tipo_progresion') or 'peso_reps'
+    if tipo not in ('peso_reps', 'peso_corporal_lastre'):
+        return
+    nombre = ej.get('nombre') or ''
+    # Ejercicios de estabilidad (antirrotación): se trata de no girar, no de
+    # acercarse al fallo. RPE de la fase, como mucho 8.
+    if any(t in nombre.casefold() for t in ('pallof', 'antirrot', 'anti-rot')):
+        try:
+            ej['rpe_objetivo'] = min(float(ej.get('rpe_objetivo') or 8), 8)
+        except (TypeError, ValueError):
+            ej['rpe_objetivo'] = 8
+        if float(ej['rpe_objetivo']).is_integer():
+            ej['rpe_objetivo'] = int(ej['rpe_objetivo'])
+    salto = salto_carga(cliente, nombre)
+    ej['incremento_kg'] = salto
+    try:
+        peso = float(ej.get('peso_kg') or 0)
+    except (TypeError, ValueError):
+        peso = 0
+    rango = rango_reps(ej.get('repeticiones'))
+    lectura = ultima_sesion(cliente, nombre, hoy, reps_min=rango[0]) if rango else None
+    if lectura and (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS):
+        lectura = None
+    ref_peso = lectura['referencia']['peso'] if lectura else None
+    # El mismo peso que usó la última vez no se toca: es el que hay en su gimnasio.
+    mantiene = ej.get('progresion_motivo_local') == 'doble_progresion'
+    if peso > 0 and not mantiene and not (ref_peso and abs(peso - ref_peso) < 0.01):
+        hacia = 'abajo' if ej.get('progresion_motivo_local') == 'techo_ultima_sesion' else 'cerca'
+        nuevo = a_escala(peso, salto, hacia)
+        tope = tope_de(cliente, nombre)
+        if tope:
+            nuevo = min(nuevo, float(tope))
+        if abs(nuevo - peso) > 1e-6:
+            ej['peso_kg'] = nuevo
+            if 'peso_recomendado_kg' in ej:
+                ej['peso_recomendado_kg'] = nuevo
+            motivo = ej.get('progresion_motivo') or ''
+            if motivo and kg(peso) in motivo:
+                ej['progresion_motivo'] = motivo.replace(f'hoy {kg(peso)} kg', f'hoy {kg(nuevo)} kg')
+        peso = nuevo
+
+    if not rango or ej.get('sugerencia_tope'):
+        return
+    if not lectura:
+        ej['reps_objetivo_hoy'] = rango[0]
+        return
+    ref = lectura['referencia']
+    mismo_peso = peso > 0 and abs(peso - ref['peso']) < salto / 2
+    ej['reps_objetivo_hoy'] = objetivo_reps_hoy(ref['reps'], rango, mismo_peso and ref['en_rango'])
+
+
+def peso_contractual(ej):
+    """El peso que enseña el briefing: con el mismo número arranca el ejercicio."""
+    if ej.get('progresion_aplicada') or ej.get('progresion_pospuesta') or ej.get('progresion_bloqueada'):
+        valor = ej.get('peso_kg')
+    else:
+        valor = ej.get('peso_recomendado_kg') or ej.get('peso_kg')
+    try:
+        return float(valor or 0)
+    except (TypeError, ValueError):
+        return 0.0

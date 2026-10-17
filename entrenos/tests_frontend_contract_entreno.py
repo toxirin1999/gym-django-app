@@ -151,7 +151,7 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
 
     def test_cierre_de_ejercicio_es_local_y_ofrece_continuar(self):
         self.assertIn("function resumenDeEjercicio", self.source)
-        self.assertIn("Ejercicio exigente registrado", self.source)
+        self.assertIn("Alguna serie por debajo del rango", self.source)
         self.assertIn("Continuar con ", self.source)
         self.assertNotIn("setTimeout(()=>{if(STATE.ejActual===ejIdxAtCompletion)navEjercicio(1);},2000);", self.source)
 

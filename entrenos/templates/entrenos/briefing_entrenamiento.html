@@ -201,6 +201,11 @@
   .directriz-text b { color: var(--ink); }
 
 
+  .energia-briefing { margin: 0 0 18px; }
+  .energia-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; }
+  .energia-btn { min-height: 40px; border-radius: 8px; border: 1px solid rgba(255,255,255,.14); background: transparent; color: rgba(240,238,232,.75); font: 600 14px/1 inherit; cursor: pointer; }
+  .energia-btn[aria-checked="true"] { background: #42e4a0; border-color: #42e4a0; color: #04110b; }
+  .energia-txt { margin: 8px 0 0; font-size: 12px; color: rgba(240,238,232,.6); }
   /* ── PLAN DE SESIÓN ──────────────────────────── */
   .plan-list { display: flex; flex-direction: column; gap: 6px; }
   .plan-row {
@@ -541,6 +546,19 @@
   {% endif %}
   {% endwith %}
 
+  <!-- ENERGÍA (17-oct-2026): se pregunta aquí, antes de empezar, y viaja a la sesión -->
+  {% if puede_iniciar_sesion %}
+  <div class="energia-briefing" id="energia-briefing">
+    <div class="sec-hdr"><span class="sec-tag">¿Cómo llegas hoy?</span><div class="sec-line"></div></div>
+    <div class="energia-grid" role="radiogroup" aria-label="Energía antes de empezar">
+      {% for n in "1234567890" %}{% with val=forloop.counter %}
+      <button type="button" class="energia-btn" role="radio" aria-checked="false" data-val="{{ val }}">{{ val }}</button>
+      {% endwith %}{% endfor %}
+    </div>
+    <p class="energia-txt" id="energia-txt">Tócala antes de empezar: ajusta la sesión.</p>
+  </div>
+  {% endif %}
+
   <!-- PLAN DE SESIÓN -->
   {% if ejercicios %}
   <div class="sec-hdr">
@@ -583,7 +601,8 @@
       <div class="plan-spec-row">
         <div class="plan-spec-left">
           {{ ej.series|default:"3" }} series
-          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% endif %}{% endif %}
+          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% if ej.peso_formato == 'por_lado' %} por lado{% endif %}{% endif %}{% endif %}
+          {% if ej.rpe_objetivo and not ej.usa_distancia and not ej.usa_tiempo %} · RPE {{ ej.rpe_objetivo }}{% endif %}
           {% if ej.tempo and not ej.usa_distancia and not ej.usa_tiempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
         <div class="plan-objetivo">
@@ -607,6 +626,9 @@
 
       {% if ej.progresion_motivo %}
       <div class="plan-motivo">{{ ej.progresion_motivo }}</div>
+      {% endif %}
+      {% if ej.propuesta_zona_texto %}
+      <div class="plan-motivo">{{ ej.propuesta_zona_texto }}</div>
       {% endif %}
 
       {% if ej.aproximaciones %}
@@ -646,5 +668,21 @@
   {% endif %}
 </div>
 
+<script>
+(function(){
+  var etiquetas = {1:'Agotado/a',2:'Muy bajo',3:'Bajo',4:'Regular',5:'Neutral',6:'Bien',7:'Bastante bien',8:'Con energía',9:'Muy energético/a',10:'Al máximo'};
+  var btn = document.querySelector('.btn-comenzar[href]');
+  var base = btn ? btn.getAttribute('href') : null;
+  document.querySelectorAll('.energia-btn').forEach(function(b){
+    b.addEventListener('click', function(){
+      var v = b.dataset.val;
+      document.querySelectorAll('.energia-btn').forEach(function(o){ o.setAttribute('aria-checked', String(o === b)); });
+      var t = document.getElementById('energia-txt');
+      if (t) t.textContent = 'Energía ' + v + ' · ' + (etiquetas[v] || '');
+      if (btn && base) btn.setAttribute('href', base + (base.indexOf('?') >= 0 ? '&' : '?') + 'energia=' + v);
+    });
+  });
+})();
+</script>
 </body>
 </html>

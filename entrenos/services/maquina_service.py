@@ -122,3 +122,88 @@ def incremento_real(cliente, nombre, por_defecto=2.5):
         round(b - a, 2) for a, b in zip(pesos, pesos[1:]) if b - a >= INCREMENTO_MINIMO - 1e-9
     ]
     return float(min(saltos)) if saltos else float(por_defecto)
+
+
+# ─────────────────────────────────────────────────────────────
+# Escala real de carga (17-oct-2026)
+# ─────────────────────────────────────────────────────────────
+# David: "todas las máquinas van de 5 en 5; los discos de 2,5 en 2,5". El
+# salto aprendido del historial heredaba los pesos raros que dejaba el
+# selector (50,5 → 55,5 → 59,5 daba saltos de 4 kg) y proponía 37,5 kg en
+# total para dos mancuernas. Cuando el tipo de equipo se reconoce, manda su
+# escala física; el historial solo decide si no se reconoce.
+
+SALTO_MAQUINA = 5.0
+SALTO_DISCOS = 2.5
+SALTO_MANCUERNA = 2.5      # por mancuerna; en "peso total" de dos, el doble
+
+_TOKENS_MANCUERNA = ('mancuerna', 'dumbbell', 'arnold', 'kettlebell', 'pesa rusa')
+_TOKENS_UNA_MANO = ('una mano', 'un brazo', 'unilateral', 'por lado', 'alterno')
+_TOKENS_DISCOS = (
+    'barra', 'barbell', 'disco', 'press banca', 'sentadilla', 'peso muerto',
+    'deadlift', 'squat', 'bench press', 'multipower', 'smith', 'prensa',
+    'leg press', 'hack', 'hip thrust', 'zancada',
+)
+_TOKENS_MAQUINA = (
+    'máquina', 'maquina', 'machine', 'polea', 'cable', 'pec deck', 'peck',
+    'jalón', 'jalon', 'pulldown', 'pallof', 'femoral', 'leg curl',
+    'extensión de cuádriceps', 'extension de cuadriceps', 'extensión de pierna',
+    'leg extension', 'aductor', 'abductor', 'contractora', 'gemelo',
+)
+
+
+def tipo_equipo_carga(nombre, equipo=None):
+    """'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
+    descriptor = f'{nombre or ""} {equipo or ""}'.casefold()
+    if any(t in descriptor for t in _TOKENS_MANCUERNA):
+        return 'mancuerna_una' if any(t in descriptor for t in _TOKENS_UNA_MANO) else 'mancuerna_dos'
+    if any(t in descriptor for t in _TOKENS_DISCOS):
+        return 'discos'
+    if any(t in descriptor for t in _TOKENS_MAQUINA):
+        return 'maquina'
+    return None
+
+
+def salto_fisico(nombre, equipo=None):
+    """Salto de la escala física del equipo, o None si no se reconoce."""
+    return {
+        'maquina': SALTO_MAQUINA,
+        'discos': SALTO_DISCOS,
+        'mancuerna_una': SALTO_MANCUERNA,
+        'mancuerna_dos': SALTO_MANCUERNA * 2,
+    }.get(tipo_equipo_carga(nombre, equipo))
+
+
+def salto_carga(cliente, nombre):
+    """El salto con el que se proponen y ajustan pesos de ese ejercicio."""
+    from rutinas.models import EjercicioBase
+
+    base = EjercicioBase.objects.filter(nombre__iexact=nombre or '').first()
+    fisico = salto_fisico(nombre, base.equipo if base else None)
+    if fisico:
+        return fisico
+    por_defecto = float(base.incremento_kg) if base and base.incremento_kg else 2.5
+    # Sin tipo reconocido: lo aprendido, pero nunca un salto absurdo.
+    return min(max(incremento_real(cliente, nombre, por_defecto), 1.0), SALTO_MAQUINA)
+
+
+def a_escala(peso, salto, hacia='cerca'):
+    """Lleva un peso a la escala real: 37,5 con salto 5 → 35 ('abajo') o 40 ('arriba').
+
+    'cerca' redondea al más próximo y, en empate, hacia abajo (más prudente).
+    """
+    import math
+    try:
+        peso, salto = float(peso), float(salto)
+    except (TypeError, ValueError):
+        return peso
+    if peso <= 0 or salto <= 0:
+        return peso
+    k = peso / salto
+    if hacia == 'abajo':
+        n = math.floor(k + 1e-9)
+    elif hacia == 'arriba':
+        n = math.ceil(k - 1e-9)
+    else:
+        n = math.floor(k) if k - math.floor(k) <= 0.5 + 1e-9 else math.ceil(k)
+    return round(max(n, 1) * salto, 2)

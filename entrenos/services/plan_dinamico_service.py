@@ -411,9 +411,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
             peso_actual = ej.get('peso_kg')
             if log.peso_anterior:
                 ej['peso_kg'] = log.peso_anterior
-            motivo_texto = (
-                f'Doble progresión: primero llega a {tope_hoy} reps con este peso '
-                f'(la última vez {log.reps_anteriores}); después sube la carga.'
+            from entrenos.services.ultima_sesion_service import rango_reps, texto_doble_progresion
+            motivo_texto = texto_doble_progresion(
+                log.reps_anteriores, rango_reps(rep_range_hoy) or (tope_hoy, tope_hoy),
             )
             ej['peso_kg_anterior'] = peso_actual
             ej['progresion_pospuesta'] = True
@@ -544,6 +544,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 cambio_tope = None
             if cambio_tope:
                 cambios.append(cambio_tope)
+            # 17-oct-2026: escala real del equipo y reps de hoy (regla C).
+            from entrenos.services.ultima_sesion_service import ajustar_escala_y_reps
+            try:
+                ajustar_escala_y_reps(cliente, ej, hoy)
+            except Exception:
+                logger.exception('[plan_dinamico] escala/reps de hoy falló')
 
         # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
         from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios

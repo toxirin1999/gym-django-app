@@ -72,6 +72,17 @@ _PROXIMA_VEZ_ACCION = {
 
 
 
+def _nombre_visible(nombre):
+    """El nombre tal como está en la rutina ("Jalón al Pecho", no "Jalón Al Pecho")."""
+    from rutinas.models import EjercicioBase
+    if not (nombre or '').strip():
+        return nombre
+    return (
+        EjercicioBase.objects.filter(nombre__iexact=nombre.strip()).values_list('nombre', flat=True).first()
+        or nombre
+    )
+
+
 def _kg_txt(valor):
     """-2.5 → '-2,5'; 13.9 → '13,9' (coma decimal, como el resto de la app)."""
     return f'{float(valor):g}'.replace('.', ',')
@@ -157,6 +168,12 @@ def _decisiones_entrenador(cliente, entreno):
     if not logs:
         return []
 
+    # 17-oct-2026: en el orden en que se hicieron, no en el de creación.
+    orden = {}
+    for i, ej in enumerate(entreno.ejercicios_realizados.order_by('orden', 'id')):
+        orden.setdefault(normalizar_ejercicio(ej.nombre_ejercicio), i)
+    logs = sorted(logs, key=lambda log: orden.get(normalizar_ejercicio(log.ejercicio), len(orden)))
+
     logs_omitidos = {}
     for log in logs:
         nombre = normalizar_ejercicio(log.ejercicio)
@@ -234,12 +251,13 @@ def _decisiones_entrenador(cliente, entreno):
             porque = hoy = None
         decisiones.append({
             # 17-oct-2026: el nombre tal como sale en la rutina, no el normalizado.
-            'ejercicio': (ejercicio_hoy.nombre_ejercicio if ejercicio_hoy else None) or log.ejercicio,
+            'ejercicio': _nombre_visible((ejercicio_hoy.nombre_ejercicio if ejercicio_hoy else None) or log.ejercicio),
             'accion': _accion_semantica(log, tipo_progresion),
             'motivo': motivo,
             'porque': porque,
             'hoy': hoy,
             'efecto': _efecto_decision(log, tipo_progresion),
+            'efecto_tipo': 'bajada' if log.accion in ('bajar_peso', 'deload') else 'subida',
             'evidencia': evidencia,
             'confianza': confianza,
         })
@@ -355,7 +373,7 @@ def calcular_metricas_unidades(entreno, ejercicios):
         series = series_por_nombre.get(clave)
         if series:
             item = {
-                'nombre': ejercicio.nombre_ejercicio,
+                'nombre': _nombre_visible(ejercicio.nombre_ejercicio),
                 'tipo': 'fuerza',
                 'series': len(series),
                 'repeticiones': 0,
@@ -538,6 +556,32 @@ def _metricas_comparables_por_unidad(entreno, nombre_ejercicio, tipo_progresion)
     return None
 
 
+def _comparar_referencias(entreno, entreno_anterior, nombre):
+    """{'tipo', 'detalle'} comparando la serie de referencia de hoy con la de la última vez."""
+    from entrenos.services.ultima_sesion_service import (
+        kg as _kg, rango_de_sesion, serie_referencia, series_de_trabajo,
+    )
+    rango = rango_de_sesion(entreno, nombre)
+    minimo = rango[0] if rango else None
+    hoy = serie_referencia(series_de_trabajo(entreno, nombre), minimo)
+    antes = serie_referencia(series_de_trabajo(entreno_anterior, nombre), minimo)
+    if not hoy or not antes or hoy['peso'] <= 0 or antes['peso'] <= 0:
+        return None
+    r_hoy, r_antes = int(round(float(hoy['reps']))), int(round(float(antes['reps'])))
+    texto = f"{_kg(antes['peso'])} × {r_antes} → {_kg(hoy['peso'])} × {r_hoy}"
+    if abs(hoy['peso'] - antes['peso']) < 0.25:
+        if r_hoy == r_antes:
+            return {'tipo': 'mantenida', 'detalle': f"igual que la última vez ({_kg(hoy['peso'])} kg × {r_hoy})"}
+        signo = '+' if r_hoy > r_antes else '−'
+        return {
+            'tipo': 'subida' if r_hoy > r_antes else 'bajada',
+            'detalle': f'{texto} ({signo}{abs(r_hoy - r_antes)} rep{"s" if abs(r_hoy - r_antes) > 1 else ""})',
+        }
+    sube = hoy['peso'] > antes['peso']
+    diff = _kg_txt(hoy['peso'] - antes['peso'])
+    return {'tipo': 'subida' if sube else 'bajada', 'detalle': f"{texto} ({'+' if sube else ''}{diff} kg)"}
+
+
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
     from rutinas.models import EjercicioBase
 
@@ -630,6 +674,14 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             })
             continue
 
+        # 17-oct-2026: serie de referencia contra serie de referencia, con
+        # reps (el Arnold salía "carga mantenida" con 40 → 30 kg, y el remo
+        # igual que la última vez también decía solo "carga mantenida").
+        comparacion = _comparar_referencias(entreno, anterior.entreno, ej.nombre_ejercicio)
+        if comparacion and not es_descarga_hoy:
+            cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
+            continue
+
         diff = round(peso_hoy - peso_anterior, 2)
 
         # Detectar cambio de variante: 0↔carga (cambio de unidad, no regresión real)
@@ -658,6 +710,8 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             })
         else:
             cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'bajada', 'detalle': f'{_kg_txt(diff)} kg'})
+    for cambio in cambios:
+        cambio['nombre'] = _nombre_visible(cambio['nombre'])
     return cambios
 
 

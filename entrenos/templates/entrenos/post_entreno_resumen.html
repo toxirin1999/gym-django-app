@@ -69,7 +69,7 @@
     pointer-events: none;
   }
   .bib-meta {
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 12px;
     font-family: var(--fm); font-size: 10px; color: var(--tdm);
     letter-spacing: .1em; text-transform: uppercase; margin-bottom: 14px;
   }
@@ -83,6 +83,7 @@
     font-family: var(--fd); font-size: 22px; line-height: 1.1;
     color: var(--ink); letter-spacing: -.01em;
   }
+  .bib-meta span { white-space: nowrap; }
   .bib-sub {
     font-family: var(--fm); font-size: 11px; color: var(--td);
     letter-spacing: .04em; margin-top: 6px;
@@ -430,7 +431,7 @@
         <div class="decision-exercise-list" style="margin-top:6px;">{{ decision.ejercicios|join:", " }}</div>
         {% endif %}
       </div>
-      {% if decision.efecto %}<span class="cambio-detalle subida">{{ decision.efecto }}</span>{% elif decision.efecto_semantico %}<span class="cambio-detalle subida">{{ decision.efecto_semantico }}</span>{% endif %}
+      {% if decision.efecto %}<span class="cambio-detalle {{ decision.efecto_tipo|default:'subida' }}">{{ decision.efecto }}</span>{% elif decision.efecto_semantico %}<span class="cambio-detalle subida">{{ decision.efecto_semantico }}</span>{% endif %}
     </div>
     {% endfor %}
   </div>

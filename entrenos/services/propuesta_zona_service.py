@@ -295,6 +295,11 @@ def aplicar_a_ejercicios(cliente, ejercicios, hoy, cambios, es_descarga=False):
     signo = '−' if p.direccion == 'bajar' else '+'
     for ej in de_la_zona:
         ej['propuesta_zona_id'] = p.pk
+        # 17-oct-2026: que se vea en el briefing (antes no salía en ninguna pantalla).
+        ej['propuesta_zona_texto'] = (
+            f'Cuenta para la propuesta: {signo}{SERIES_EXTRA} series semanales de '
+            f'{p.nombre_zona.lower()} hasta el {p.fin:%d/%m}.'
+        )
     cambios.append({
         'tipo': 'propuesta_zona',
         'ejercicio_original': de_la_zona[0].get('nombre'),

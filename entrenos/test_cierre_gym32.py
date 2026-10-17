@@ -157,7 +157,7 @@ class TestCierreGym32(TestCase):
 
         # Debe haber cambio +0.25 kg (en el límite, se muestra)
         self.assertEqual(len(cambios), 1, "Cambios >= 0.25 kg deben mostrarse")
-        self.assertIn('+0.25', cambios[0]['detalle'])
+        self.assertIn('+0,25', cambios[0]['detalle'])
 
     def test_cambio_variante_0_a_carga_no_muestra_regresion(self):
         """

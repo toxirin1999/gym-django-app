@@ -62,7 +62,8 @@ class Ciclo12MolestiaRecienteTests(TestCase):
         mod, cambios = aplicar_plan_dinamico(self.cliente, plan, hoy=date(2026, 8, 10))
         self.assertEqual(mod[0]['peso_kg'], 80)
         self.assertEqual(mod[0]['repeticiones'], '8')
-        self.assertEqual(mod[1], plan[1])
+        # 17-oct-2026: el plan añade escala y reps de hoy; lo demás, intacto.
+        self.assertEqual({k: mod[1][k] for k in plan[1]}, plan[1])
         self.assertTrue(any(c['tipo'] == 'molestia_reciente' for c in cambios))
         log = GymDecisionLog.objects.get(entreno_origen=origen)
         self.assertEqual(log.estado_aplicacion, 'aplicada')

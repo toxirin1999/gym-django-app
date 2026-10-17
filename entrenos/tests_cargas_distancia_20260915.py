@@ -152,7 +152,7 @@ class UiCargaTests(TestCase):
         self.assertIn("por mano", template)
         self.assertIn("Tope de peso", template)
         self.assertNotIn("pesoRaw / 2.5", template)
-        self.assertIn("calcularPesoSiguienteSerie(fid,", template)
+        self.assertIn("planSiguienteSerie(fid,", template)
 
     def test_resumen_separa_tonelaje_distancia_y_repeticiones(self):
         template = (Path(__file__).parent / "templates/entrenos/entrenamiento_activo.html").read_text()

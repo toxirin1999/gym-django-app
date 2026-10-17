@@ -29,6 +29,7 @@ def resolver_semantica_carga(tipo_carga, peso_kg, multiplicador_solicitado=None)
 
 _MANCUERNA = ("mancuerna", "mancuernas", "dumbbell", "db ", "db-")
 _UNILATERAL = ("unilateral", "una mano", "un brazo", "por lado", "alterno")
+_POR_LADO_SIN_MANCUERNA = ("pallof", "unilateral", "una mano", "un brazo")
 
 
 def normalizar_semantica_carga(ejercicio):
@@ -43,6 +44,10 @@ def normalizar_semantica_carga(ejercicio):
         return out
 
     if not any(token in nombre_normalizado for token in _MANCUERNA):
+        # 17-oct-2026: el Pallof se hace con cada lado (15 reps por lado).
+        if any(token in nombre_normalizado for token in _POR_LADO_SIN_MANCUERNA):
+            out["peso_formato"] = "por_lado"
+            return out
         out.setdefault("peso_formato", "total")
         return out
 
