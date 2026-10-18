@@ -183,8 +183,12 @@ def salto_carga(cliente, nombre):
     if fisico:
         return fisico
     por_defecto = float(base.incremento_kg) if base and base.incremento_kg else 2.5
-    # Sin tipo reconocido: lo aprendido, pero nunca un salto absurdo.
-    return min(max(incremento_real(cliente, nombre, por_defecto), 1.0), SALTO_MAQUINA)
+    # Sin tipo reconocido: lo aprendido solo si es un salto que existe en un
+    # gimnasio (1; 1,25; 2; 2,5; 5). Un 4,75 sale de pesos mal apuntados
+    # (18-oct-2026: el Curl Araña proponía 19 kg tras hacer 20 × 15).
+    aprendido = incremento_real(cliente, nombre, por_defecto)
+    validos = (1.0, 1.25, 2.0, 2.5, 5.0)
+    return next((v for v in validos if abs(aprendido - v) < 0.01), 2.5)
 
 
 def a_escala(peso, salto, hacia='cerca'):

@@ -425,9 +425,17 @@ def ajustar_escala_y_reps(cliente, ej, hoy):
     ref_peso = lectura['referencia']['peso'] if lectura else None
     # El mismo peso que usó la última vez no se toca: es el que hay en su gimnasio.
     mantiene = ej.get('progresion_motivo_local') == 'doble_progresion'
-    if peso > 0 and not mantiene and not (ref_peso and abs(peso - ref_peso) < 0.01):
+    # Solo se redondea a la escala de un equipo que se reconoce.
+    from entrenos.services.maquina_service import salto_fisico
+    from rutinas.models import EjercicioBase
+    _base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+    equipo_conocido = salto_fisico(nombre, _base.equipo if _base else None) is not None
+    if peso > 0 and equipo_conocido and not mantiene and not (ref_peso and abs(peso - ref_peso) < 0.01):
         hacia = 'abajo' if ej.get('progresion_motivo_local') == 'techo_ultima_sesion' else 'cerca'
         nuevo = a_escala(peso, salto, hacia)
+        # Nunca por debajo de la serie que sí entró si el plan proponía más.
+        if ref_peso and peso >= ref_peso and nuevo < ref_peso:
+            nuevo = ref_peso
         tope = tope_de(cliente, nombre)
         if tope:
             nuevo = min(nuevo, float(tope))

@@ -140,3 +140,27 @@ class DecisionCierre(Base):
         self.hacer(e, self.hack, [(60, 15, 8)] * 3)
         generar_decisiones_para_entreno(e)
         self.assertEqual(self.decision(self.hack).accion, 'subir_peso')
+
+
+class BriefingDia3(Base):
+    """18-oct-2026: Curl Araña a 19 kg tras 22,5 × 12 y 20 × 15."""
+
+    def test_salto_aprendido_raro_se_descarta(self):
+        from entrenos.services.maquina_service import salto_carga
+        from rutinas.models import EjercicioBase
+        arana = EjercicioBase.objects.create(nombre='Curl Araña', grupo_muscular='biceps')
+        e = self.entreno(AYER, {'Curl Araña': '15-20'})
+        self.hacer(e, arana, [(22.5, 12, 8), (17.75, 15, 8)])
+        self.assertEqual(salto_carga(self.cliente, 'Curl Araña'), 2.5)
+
+    def test_nunca_por_debajo_de_la_serie_que_entro(self):
+        from rutinas.models import EjercicioBase
+        arana = EjercicioBase.objects.create(nombre='Curl Araña', grupo_muscular='biceps')
+        e = self.entreno(AYER, {'Curl Araña': '15-20'})
+        self.hacer(e, arana, [(22.5, 12, 8), (20, 15, 8), (20, 15, 8)])
+        ej = {'nombre': 'Curl Araña', 'repeticiones': '15-20', 'peso_kg': 22.5,
+              'rpe_objetivo': 9, 'tipo_progresion': 'peso_reps'}
+        from entrenos.services.ultima_sesion_service import aplicar_techo
+        aplicar_techo(self.cliente, ej, HOY)
+        ajustar_escala_y_reps(self.cliente, ej, HOY)
+        self.assertGreaterEqual(ej['peso_kg'], 20)

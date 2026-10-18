@@ -350,7 +350,11 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 ej['reps_objetivo'] = reps_sugeridas
                 ej['progresion_aplicada'] = True
                 ej['progresion_accion'] = 'subir_reps'
-                ej['progresion_motivo'] = log.motivo
+                # 18-oct-2026: el objetivo, no el texto interno del log.
+                ej['progresion_motivo'] = (
+                    f'Una rep más: hoy a por {reps_sugeridas} reps (la última vez {log.reps_anteriores}).'
+                    if log.reps_anteriores else f'Hoy a por {reps_sugeridas} reps.'
+                )
                 cambios.append({
                     'tipo': 'progresion_aplicada',
                     'ejercicio_original': nombre,
@@ -627,6 +631,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     ej['nombre'] = alternativa
                     ej['sustituido'] = True
                     ej['motivo_sustitucion'] = 'molestia'
+                    ej['sustitucion_texto'] = f'Molestia con {nombre}: hoy {alternativa}, más seguro para esa zona.'
                     ej['intervencion_molestia_id'] = intervencion.pk
                     cambios.append({'tipo': 'sustitucion_molestia', 'ejercicio_original': nombre,
                                     'ejercicio_nuevo': alternativa, 'razon': 'Intervención leve acotada.'})
@@ -683,6 +688,10 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     ej['experimento_variante_id'] = experimento.pk
                     ej['motivo_sustitucion'] = 'estancamiento'
                     ej['razon_sustitucion']  = razon_alt or 'cambio de estímulo'
+                    ej['sustitucion_texto'] = (
+                        f'Cambio de estímulo: {nombre} lleva 3 sesiones sin progresar. '
+                        f'Unas sesiones con {alternativa}; luego compruebo si funcionó.'
+                    )
                     recientes.add(alternativa)
                     cambios.append({
                         'tipo': 'sustitucion_estancamiento',
@@ -704,6 +713,9 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     ej['sustituido']         = True
                     ej['motivo_sustitucion'] = 'molestia'
                     ej['razon_sustitucion']  = razon_alt or 'reducir carga en zona afectada'
+                    ej['sustitucion_texto'] = (
+                        f'Molestia repetida con {nombre}: hoy {alternativa}, que carga menos esa zona.'
+                    )
                     recientes.add(alternativa)
                     cambios.append({
                         'tipo': 'sustitucion_molestia',

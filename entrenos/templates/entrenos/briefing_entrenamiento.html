@@ -624,6 +624,9 @@
         </div>
       </div>
 
+      {% if ej.sustituido and ej.sustitucion_texto %}
+      <div class="plan-motivo">{{ ej.sustitucion_texto }}</div>
+      {% endif %}
       {% if ej.progresion_motivo %}
       <div class="plan-motivo">{{ ej.progresion_motivo }}</div>
       {% endif %}
