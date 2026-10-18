@@ -512,8 +512,9 @@ class TestCaracterizacionAvanzado6d(TestCase):
             ('Farmer Walk (Paseo del Granjero)',           'antebrazos',  4),
             ('Ab Wheel (Rueda Abdominal)',                 'core',        3),
             ('Plancha (Plank)',                            'core',        3),
-            ('Dominadas (con lastre)',                     'espalda',     4),
-            ('Remo en Polea Baja (Gironda)',               'espalda',     3),
+            # 18-oct-2026: el pull-over cuenta como tirón vertical (patrón del catálogo).
+            ('Remo en Polea Baja (Gironda)',               'espalda',     4),
+            ('Pull-over con Mancuerna',                    'espalda',     3),
             ('Salto al Cajón (Box Jump)',                  'gluteos',     3),
             ('Kettlebell Swing (Balanceo con Pesa Rusa)',  'gluteos',     3),
             ('Hiperextensiones Inversas',                  'isquios',     3),

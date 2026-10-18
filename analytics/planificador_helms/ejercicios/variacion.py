@@ -53,25 +53,52 @@ def _es_horizontal(nombre: str) -> bool:
     return any(k in nombre for k in KEYWORDS_HORIZONTAL)
 
 
+def _traccion(ej: Any) -> str | None:
+    """'vertical' | 'horizontal' | None.
+
+    18-oct-2026: manda el ``patron`` del catálogo. Por nombre, "Pull-over con
+    Mancuerna" contaba como remo (por "mancuerna") y un toque de espalda podía
+    quedar en brazos rectos + pull-over: cero remos ese día. Face Pulls no
+    cuenta como remo (es deltoides posterior).
+    """
+    nombre = _nombre_lower(ej)
+    if 'face pull' in nombre:
+        return None
+    patron = ej.get('patron') if isinstance(ej, dict) else None
+    if patron == 'traccion_vertical':
+        return 'vertical'
+    if patron == 'traccion_horizontal':
+        return 'horizontal'
+    if _es_vertical(nombre):
+        return 'vertical'
+    if _es_horizontal(nombre) and 'pull-over' not in nombre and 'pullover' not in nombre:
+        return 'horizontal'
+    return None
+
+
 def _asegurar_oposicion_espalda(seleccion: list, disponibles: list) -> list:
     """
     Garantiza que la selección de 2 ejercicios de espalda tenga 1 vertical
     y 1 horizontal. Si la selección natural ya lo cumple, la devuelve intacta.
-    Si no, busca una pareja válida en disponibles (ya filtrados por exclusión
-    de nombres). Si el pool no permite la oposición, devuelve la selección
-    tal cual — nunca lanza excepción.
+    Si falta un patrón, conserva el primer ejercicio y cambia el segundo por
+    el primero disponible del patrón que falta. Si el pool no lo permite,
+    devuelve la selección tal cual — nunca lanza excepción.
     """
-    vert = [e for e in seleccion if _es_vertical(_nombre_lower(e))]
-    horiz = [e for e in seleccion if _es_horizontal(_nombre_lower(e))]
-    if vert and horiz:
+    tipos = [_traccion(e) for e in seleccion]
+    if 'vertical' in tipos and 'horizontal' in tipos:
         return seleccion
 
-    all_vert = [e for e in disponibles if _es_vertical(_nombre_lower(e))]
-    all_horiz = [e for e in disponibles if _es_horizontal(_nombre_lower(e))]
-    if all_vert and all_horiz:
-        return [all_vert[0], all_horiz[0]]
-
-    return seleccion
+    usados = {_nombre_lower(e) for e in seleccion}
+    falta = 'horizontal' if 'horizontal' not in tipos else 'vertical'
+    candidato = next(
+        (e for e in disponibles if _traccion(e) == falta and _nombre_lower(e) not in usados),
+        None,
+    )
+    if candidato is None:
+        return seleccion
+    # Se queda el ejercicio que ya tiene el patrón presente (o el primero).
+    conservar = next((e for e in seleccion if _traccion(e) is not None and _traccion(e) != falta), seleccion[0])
+    return [conservar, candidato]
 
 
 def construir_variantes_por_toque(
