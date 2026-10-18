@@ -591,10 +591,10 @@ class TestX15FlujoPlanReal(TestCase):
         self.assertGreater(len(ejercicios), 0, "cuádriceps sin toque 2 en la semana 7")
 
         nombres = {e.get('nombre', '') for e in ejercicios}
-        # 'Zancadas con Mancuernas' o 'Sissy Squat' — al menos uno debe estar
+        # 'Zancadas con Kettlebell' o 'Sissy Squat' — al menos uno debe estar
         # (Sissy Squat puede estar o no dependiendo de futura decisión del usuario)
         tiene_toque2_cuadriceps = (
-            'Zancadas con Mancuernas' in nombres or
+            'Zancadas con Kettlebell' in nombres or
             'Sissy Squat' in nombres
         )
         self.assertTrue(

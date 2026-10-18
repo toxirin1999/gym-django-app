@@ -160,7 +160,7 @@ class CatalogLabelingTests(TestCase):
         'Sentadilla Hack',
         'Sentadilla Búlgara',
         'Prensa de Piernas',
-        'Zancadas con Mancuernas',
+        'Zancadas con Kettlebell',
         'Extensiones de Cuádriceps en Máquina',
         'Sissy Squat',
     )

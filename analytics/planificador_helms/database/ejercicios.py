@@ -160,7 +160,7 @@ EJERCICIOS_DATABASE = {
              'perfil': 'media',
              'posicion': 'tumbado', 'cadena': 'cerrada',
              'risk_tags': ['empuje_pierna', 'flexion_rodilla_profunda', 'carga_distal_pierna']},
-            {'nombre': 'Zancadas con Mancuernas', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
+            {'nombre': 'Zancadas con Kettlebell', 'tipo_progresion': 'peso_reps', 'patron': 'rodilla',
              'estabilidad': 'baja', 'perfil': 'estirado',
              'posicion': 'pie', 'cadena': 'cerrada',
              'risk_tags': ['estabilidad_tobillo', 'impacto_vertical', 'flexion_rodilla_profunda']},

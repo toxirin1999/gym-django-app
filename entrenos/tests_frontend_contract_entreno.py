@@ -102,7 +102,7 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn('data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
-        self.assertIn('🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m', self.source)
+        self.assertIn('{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}', self.source)
 
     def test_tiempo_no_se_suma_como_repeticiones_en_modal(self):
         self.assertIn("const usaTiempo = document.getElementById('card-'+fid)?.dataset.usaTiempo === '1';", self.source)
@@ -192,7 +192,7 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
     def test_distancia_no_se_presenta_ni_autoregula_como_repeticiones(self):
         # 13-oct-2026: con tope, la cabecera muestra el objetivo en metros (52 m), no el rango genérico.
         self.assertIn("{% elif ejercicio.usa_distancia %}<span class=\"chip-n\">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>", self.source)
-        self.assertIn("🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m", self.source)
+        self.assertIn("🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:\"-1\" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}", self.source)
         self.assertIn("const usaDistancia = panelSig.dataset.usaDistancia === '1';", self.source)
         self.assertIn("if (!usaPeso || usaDistancia) return;", self.source)
 

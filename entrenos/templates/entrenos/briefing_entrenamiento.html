@@ -601,7 +601,7 @@
       <div class="plan-spec-row">
         <div class="plan-spec-left">
           {{ ej.series|default:"3" }} series
-          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% if ej.peso_formato == 'por_lado' %} por lado{% endif %}{% endif %}{% endif %}
+          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% if ej.reps_unidad %} {{ ej.reps_unidad }}{% endif %}{% endif %}{% endif %}
           {% if ej.rpe_objetivo and not ej.usa_distancia and not ej.usa_tiempo %} · RPE {{ ej.rpe_objetivo }}{% endif %}
           {% if ej.tempo and not ej.usa_distancia and not ej.usa_tiempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>

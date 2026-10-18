@@ -328,7 +328,7 @@
     {% if resumen.carga_distancia_kg_m_total %}
     <div class="work-metric work-metric--wide work-loaded">
       <span class="work-label">Carga transportada</span>
-      <span class="work-value">{{ resumen.carga_distancia_kg_m_total|floatformat:0 }} kg·m</span>
+      <span class="work-value">{{ resumen.carga_distancia_kg_m_total|kg_miles }} kg·m</span>
       <span class="work-detail">carga × metros · no se mezcla con el tonelaje</span>
     </div>
     {% endif %}
@@ -345,12 +345,12 @@
         {% if trabajo.tipo == 'distancia_cargada' %}
           <span class="unit-piece">{{ trabajo.metros|floatformat:0 }} m</span>
           <span class="unit-piece">{{ trabajo.carga_total_kg|floatformat:0 }} kg total{% if trabajo.carga_por_mano_kg %} · {{ trabajo.carga_por_mano_kg|floatformat:0 }}/mano{% endif %}</span>
-          {% if trabajo.carga_distancia_kg_m %}<span class="unit-piece">{{ trabajo.carga_distancia_kg_m|floatformat:0 }} kg·m</span>{% endif %}
+          {% if trabajo.carga_distancia_kg_m %}<span class="unit-piece">{{ trabajo.carga_distancia_kg_m|kg_miles }} kg·m</span>{% endif %}
         {% elif trabajo.tipo == 'tiempo' %}
           <span class="unit-piece">{{ trabajo.segundos|floatformat:0 }} s</span>
         {% else %}
           <span class="unit-piece">{{ trabajo.repeticiones|floatformat:0 }} reps</span>
-          <span class="unit-piece">{{ trabajo.tonelaje_kg|kg_miles }} kg</span>
+          {% if trabajo.tonelaje_kg %}<span class="unit-piece">{{ trabajo.tonelaje_kg|kg_miles }} kg</span>{% endif %}
         {% endif %}
       </span>
     </div>
@@ -363,19 +363,19 @@
   <div class="sec-hdr"><span class="sec-tag">Récords</span><div class="sec-line"></div></div>
   <div class="card">
     {% for pr in resumen_records.individuales %}
-    <div class="pr-row">🏆 Nuevo récord de {{ pr.get_tipo_record_display|lower }} · {{ pr.ejercicio_nombre }}</div>
+    <div class="pr-row">🏆 Nuevo récord de {{ pr.get_tipo_record_display|lower }} · {{ pr.nombre_visible|default:pr.ejercicio_nombre }}</div>
     {% endfor %}
     {% if resumen_records.volumen_agrupado %}
     <div class="pr-volume-summary">🏆 {{ resumen_records.volumen|length }} nuevos récords de volumen</div>
     <details class="pr-details">
       <summary>Ver ejercicios</summary>
       {% for pr in resumen_records.volumen %}
-      <div class="pr-row">Nuevo récord de volumen total · {{ pr.ejercicio_nombre }}</div>
+      <div class="pr-row">Nuevo récord de volumen total · {{ pr.nombre_visible|default:pr.ejercicio_nombre }}</div>
       {% endfor %}
     </details>
     {% else %}
       {% for pr in resumen_records.volumen %}
-      <div class="pr-row">🏆 Nuevo récord de volumen total · {{ pr.ejercicio_nombre }}</div>
+      <div class="pr-row">🏆 Nuevo récord de volumen total · {{ pr.nombre_visible|default:pr.ejercicio_nombre }}</div>
       {% endfor %}
     {% endif %}
   </div>

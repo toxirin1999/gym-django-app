@@ -152,6 +152,56 @@ class RecordsService:
         return records_nuevos
     
     @staticmethod
+    def maximo_previo(cliente, ejercicio_nombre, entreno, tipo):
+        """Mejor marca anterior a ``entreno`` sacada de las series guardadas.
+
+        18-oct-2026: sin RecordPersonal previo (nombre nuevo, récords que no se
+        llegaron a registrar) todo salía como "primer récord" aunque el peso ya
+        se hubiera levantado. Devuelve (valor, entreno_donde_se_logró) o (None, None).
+        """
+        from entrenos.models import SerieRealizada
+        series = (
+            SerieRealizada.objects
+            .filter(
+                entreno__cliente=cliente, entreno__fecha__lte=entreno.fecha,
+                ejercicio__nombre__iexact=ejercicio_nombre, completado=True, es_aproximacion=False,
+            )
+            .exclude(entreno=entreno)
+            .select_related('entreno')
+        )
+        mejor, donde = None, None
+        if tipo == 'peso_maximo':
+            for serie in series:
+                if serie.peso_kg is None:
+                    continue
+                valor = Decimal(str(serie.peso_kg))
+                if mejor is None or valor > mejor:
+                    mejor, donde = valor, serie.entreno
+            return mejor, donde
+        por_entreno = {}
+        for serie in series:
+            vol, ent = por_entreno.get(serie.entreno_id, (Decimal('0'), serie.entreno))
+            por_entreno[serie.entreno_id] = (vol + serie.tonelaje_kg, ent)
+        for vol, ent in por_entreno.values():
+            if vol > 0 and (mejor is None or vol > mejor):
+                mejor, donde = vol, ent
+        return mejor, donde
+
+    @staticmethod
+    def _base_historica(cliente, ejercicio_nombre, valor_actual, entreno, tipo):
+        """Si la marca de hoy no supera el histórico, guarda el histórico como
+        récord vigente (ligado a su entreno) y devuelve True: hoy no hay récord."""
+        from entrenos.models import RecordPersonal
+        previo, donde = RecordsService.maximo_previo(cliente, ejercicio_nombre, entreno, tipo)
+        if previo is None or previo < valor_actual:
+            return False
+        RecordPersonal.objects.create(
+            cliente=cliente, ejercicio_nombre=ejercicio_nombre, tipo_record=tipo,
+            valor=previo, entreno=donde,
+        )
+        return True
+
+    @staticmethod
     def _verificar_record_peso(cliente, ejercicio_nombre, peso_actual, entreno):
         """
         Verifica si el peso levantado es un récord personal
@@ -167,8 +217,11 @@ class RecordsService:
             superado=False
         ).first()
         
-        # Si no hay récord previo, este es el primero
+        # Si no hay récord previo, este es el primero... salvo que el historial
+        # de series ya tenga una marca igual o mejor.
         if not record_actual:
+            if RecordsService._base_historica(cliente, ejercicio_nombre, peso_actual, entreno, 'peso_maximo'):
+                return None
             nuevo_record = RecordPersonal.objects.create(
                 cliente=cliente,
                 ejercicio_nombre=ejercicio_nombre,
@@ -181,6 +234,10 @@ class RecordsService:
         
         # Si el peso actual es mayor, es un nuevo récord
         if peso_actual > record_actual.valor:
+            previo, _ = RecordsService.maximo_previo(cliente, ejercicio_nombre, entreno, 'peso_maximo')
+            if previo is not None and previo >= peso_actual:
+                # El récord guardado se había quedado corto: no es un récord de hoy.
+                return None
             # Marcar el récord anterior como superado
             record_actual.superado = True
             record_actual.fecha_superado = entreno.fecha
@@ -220,8 +277,11 @@ class RecordsService:
             superado=False
         ).first()
         
-        # Si no hay récord previo, este es el primero
+        # Si no hay récord previo, este es el primero... salvo que el historial
+        # de series ya tenga una marca igual o mejor.
         if not record_actual:
+            if RecordsService._base_historica(cliente, ejercicio_nombre, volumen_actual, entreno, 'volumen_total'):
+                return None
             nuevo_record = RecordPersonal.objects.create(
                 cliente=cliente,
                 ejercicio_nombre=ejercicio_nombre,
@@ -234,6 +294,10 @@ class RecordsService:
         
         # Si el volumen actual es mayor, es un nuevo récord
         if volumen_actual > record_actual.valor:
+            previo, _ = RecordsService.maximo_previo(cliente, ejercicio_nombre, entreno, 'volumen_total')
+            if previo is not None and previo >= volumen_actual:
+                # El récord guardado se había quedado corto: no es un récord de hoy.
+                return None
             # Marcar el récord anterior como superado
             record_actual.superado = True
             record_actual.fecha_superado = entreno.fecha

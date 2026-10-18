@@ -28,7 +28,7 @@ CATALOGO_RIESGO_GYM_V2 = {
         'Sentadilla Hack',
         'Sentadilla Búlgara',
         'Prensa de Piernas',
-        'Zancadas con Mancuernas',
+        'Zancadas con Kettlebell',  # antes 'Zancadas con Mancuernas' (migración entrenos 0065)
         'Extensiones de Cuádriceps en Máquina',
         'Sissy Squat',
     ),

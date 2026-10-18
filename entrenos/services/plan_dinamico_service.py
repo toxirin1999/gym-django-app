@@ -487,6 +487,40 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
             _persistir_estado_aplicacion(log, 'aplicada', None)
 
 
+def _rehacer_peso_variante(cliente, ej, hoy):
+    """18-oct-2026: al cambiar de ejercicio, el peso sale del ejercicio NUEVO.
+
+    Antes el Curl Martillo heredaba los 30 kg y "la última vez 15" de la barra Z.
+    """
+    from entrenos.services.ultima_sesion_service import (
+        VENTANA_DIAS, kg, objetivo_reps_hoy, rango_reps, ultima_sesion,
+    )
+    for clave in ('progresion_aplicada', 'progresion_pospuesta', 'progresion_accion',
+                  'progresion_motivo', 'progresion_motivo_local', 'peso_kg_anterior', 'motivo_peso'):
+        ej.pop(clave, None)
+    rango = rango_reps(ej.get('repeticiones'))
+    lectura = ultima_sesion(cliente, ej.get('nombre') or '', hoy, reps_min=rango[0] if rango else None)
+    if lectura and (hoy - lectura['fecha']).days <= VENTANA_DIAS and lectura['referencia']['peso'] > 0:
+        ref = lectura['referencia']
+        ej['peso_kg'] = ref['peso']
+        ej['peso_recomendado_kg'] = ref['peso']
+        if rango:
+            ej['reps_objetivo_hoy'] = objetivo_reps_hoy(ref['reps'], rango, ref['en_rango'])
+            ej['progresion_motivo'] = (
+                f"Con {ej['nombre']} la última vez: {kg(ref['peso'])} kg × {int(round(float(ref['reps'])))}; "
+                f"hoy a por {ej['reps_objetivo_hoy']} reps."
+            )
+    else:
+        ej['peso_kg'] = 0
+        ej['peso_recomendado_kg'] = 0
+        if rango:
+            ej['reps_objetivo_hoy'] = rango[0]
+            ej['progresion_motivo'] = (
+                f"Sin datos recientes con {ej['nombre']}: elige un peso con el que hagas "
+                f"{rango[0]} reps a RPE {ej.get('rpe_objetivo') or 8}."
+            )
+
+
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     """
     Modifica la lista de ejercicios del plan basándose en señales del sistema.
@@ -633,6 +667,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     ej['motivo_sustitucion'] = 'molestia'
                     ej['sustitucion_texto'] = f'Molestia con {nombre}: hoy {alternativa}, más seguro para esa zona.'
                     ej['intervencion_molestia_id'] = intervencion.pk
+                    _rehacer_peso_variante(cliente, ej, hoy)
                     cambios.append({'tipo': 'sustitucion_molestia', 'ejercicio_original': nombre,
                                     'ejercicio_nuevo': alternativa, 'razon': 'Intervención leve acotada.'})
                     if intervencion.decision_origen_id:
@@ -693,6 +728,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                         f'Unas sesiones con {alternativa}; luego compruebo si funcionó.'
                     )
                     recientes.add(alternativa)
+                    _rehacer_peso_variante(cliente, ej, hoy)
                     cambios.append({
                         'tipo': 'sustitucion_estancamiento',
                         'ejercicio_original': nombre,
@@ -717,6 +753,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                         f'Molestia repetida con {nombre}: hoy {alternativa}, que carga menos esa zona.'
                     )
                     recientes.add(alternativa)
+                    _rehacer_peso_variante(cliente, ej, hoy)
                     cambios.append({
                         'tipo': 'sustitucion_molestia',
                         'ejercicio_original': nombre,

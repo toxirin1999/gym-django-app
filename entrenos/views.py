@@ -3903,6 +3903,18 @@ def vista_entrenamiento_activo(request, cliente_id):
                                 ejercicio['reps_objetivo'] = d_anterior + 1
                             else:
                                 ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
+                    # 18-oct-2026 (regla C) también en tiempo: el dead hang
+                    # arrancaba en 20 s (el mínimo) tras hacer 32 s.
+                    if ejercicio.get('usa_tiempo') and not reps_objetivo_materializado:
+                        t_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
+                        if t_anterior > 0:
+                            try:
+                                limites = [int(x.strip()) for x in str(ejercicio.get('repeticiones', '20')).split('-')]
+                                t_min, t_max = limites[0], limites[-1]
+                            except (ValueError, AttributeError):
+                                t_min = t_max = None
+                            if t_min is not None:
+                                ejercicio['reps_objetivo'] = max(t_min, min(t_max, t_anterior + 1))
                 else:
                     ejercicio.setdefault('peso_anterior_kg', 0.0)
                     ejercicio.setdefault('fecha_anterior', None)

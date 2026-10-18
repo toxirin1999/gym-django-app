@@ -274,7 +274,7 @@ def lo_que_viene(cliente, entreno):
     from entrenos.services.volumen_grupo_service import SERIES_POR_AJUSTE
     from entrenos.services.sesion_recomendada import (
         _build_planificador, _es_descanso, _etiqueta_dia, _normalizar_entrenamiento,
-        _siguiente_de_cola,
+        _marcar_completadas, _siguiente_de_cola,
     )
 
     fecha = entreno.fecha_ejecucion or entreno.fecha
@@ -286,6 +286,12 @@ def lo_que_viene(cliente, entreno):
 
     lineas = []
     manana = fecha + timedelta(days=1)
+    try:
+        # 18-oct-2026: recién guardado, la SesionProgramada del entreno de hoy
+        # seguía pendiente y "Lo que viene" volvía a proponer el mismo Día 3.
+        _marcar_completadas(cliente, fecha)
+    except Exception:
+        pass
     try:
         siguiente = _siguiente_de_cola(cliente, manana)
         if siguiente:

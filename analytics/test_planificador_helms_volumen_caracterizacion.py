@@ -144,7 +144,7 @@ class TestCaracterizacionDavid(TestCase):
         'dia_3': [
             ('Aguante en Barra (Dead Hang)',               'antebrazos',  3),
             ('Farmer Walk (Paseo del Granjero)',           'antebrazos',  2),
-            ('Zancadas con Mancuernas',                    'cuadriceps',  4),
+            ('Zancadas con Kettlebell',                    'cuadriceps',  4),
             ('Sissy Squat',                                'cuadriceps',  3),
             ('Elevación de Gemelos de Pie (Máquina)',      'gemelos',     3),
             ('Elevación de Gemelos Sentado (Máquina)',     'gemelos',     2),
@@ -301,7 +301,7 @@ class TestCaracterizacionNovato3d(TestCase):
         'dia_2': [
             ('Crunch en Polea (Cable Crunch)',         'core',        3),
             ('Pallof Press',                           'core',        3),
-            ('Zancadas con Mancuernas',                'cuadriceps',  3),
+            ('Zancadas con Kettlebell',                'cuadriceps',  3),
             ('Sissy Squat',                            'cuadriceps',  3),
             ('Hip Thrust con Barra',                   'gluteos',     4),
             ('Abducción de Cadera en Máquina',         'gluteos',     4),
@@ -474,7 +474,7 @@ class TestCaracterizacionAvanzado6d(TestCase):
             ('Curl Femoral Tumbado',            'isquios',     3),
         ],
         'dia_3': [
-            ('Zancadas con Mancuernas',                      'cuadriceps',  4),
+            ('Zancadas con Kettlebell',                      'cuadriceps',  4),
             ('Sissy Squat',                                  'cuadriceps',  4),
             ('Elevación de Gemelos en Multipower',           'gemelos',     4),
             ('Elevación de Gemelos Unilateral (Mancuerna)',  'gemelos',     3),

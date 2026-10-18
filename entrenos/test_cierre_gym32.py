@@ -10,7 +10,7 @@ Valida que el cierre post-sesión:
 
 from django.test import TestCase
 from django.contrib.auth.models import User
-from datetime import date
+from datetime import date, timedelta
 from clientes.models import Cliente
 from entrenos.models import EntrenoRealizado, EjercicioRealizado, RecordPersonal
 from rutinas.models import Rutina
@@ -83,7 +83,7 @@ class TestCierreGym32(TestCase):
         entreno_anterior = EntrenoRealizado.objects.create(
             cliente=self.cliente,
             rutina=self.rutina,
-            fecha=date(2026, 6, 10),
+            fecha=date.today() - timedelta(days=7),
             volumen_total_kg=500.0
         )
         EjercicioRealizado.objects.create(
@@ -126,7 +126,7 @@ class TestCierreGym32(TestCase):
         entreno_anterior = EntrenoRealizado.objects.create(
             cliente=self.cliente,
             rutina=self.rutina,
-            fecha=date(2026, 6, 10),
+            fecha=date.today() - timedelta(days=7),
             volumen_total_kg=500.0
         )
         EjercicioRealizado.objects.create(

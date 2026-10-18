@@ -106,7 +106,7 @@ def _efecto_decision(log, tipo_progresion):
             return f'Añadirá {valor} m'
         if tipo_progresion == 'progresion_tiempo':
             return f'Añadirá {valor} s'
-        return f'Añadirá {valor} repeticiones'
+        return f"Añadirá {valor} {'repetición' if str(valor) in ('1', '1.0') else 'repeticiones'}"
     return None
 
 
@@ -681,6 +681,10 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         if comparacion and not es_descarga_hoy:
             cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
             continue
+        # 18-oct-2026: sin series comparables y con una sesión de hace más de
+        # seis semanas, la media antigua no dice nada (curl martillo "+20,33 kg").
+        if comparacion is None and (entreno.fecha - anterior.entreno.fecha).days > 42:
+            continue
 
         diff = round(peso_hoy - peso_anterior, 2)
 
@@ -790,6 +794,9 @@ def construir_contexto_cierre(cliente, entreno):
         entreno.records_establecidos
         .filter(superado=False)
     )
+    for pr in prs:
+        # 18-oct-2026: el nombre de la rutina, no "Curl Martillo Con Mancuernas".
+        pr.nombre_visible = _nombre_visible(pr.ejercicio_nombre)
 
     joi_mensaje = _joi_mensaje_cierre(cliente, entreno)
 

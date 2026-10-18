@@ -623,7 +623,10 @@ def generar_decisiones_para_entreno(entreno):
 
         # Solo tras tres ejecuciones idénticas. No pisa señales protectoras:
         # fallo/RPE crítico ya ordenan bajar y técnica ya ordena consolidar.
-        if motivo_codigo == 'tope_maquina' and _tope_sin_margen(ej, historial):
+        # 18-oct-2026: en ejercicios por metros las reps valen 0 siempre; el
+        # estancamiento se mide en metros (lo cubre 'distancia_sin_margen').
+        if (motivo_codigo == 'tope_maquina' and tipo_progresion != 'progresion_distancia'
+                and _tope_sin_margen(ej, historial)):
             if _fatiga_intraserie(entreno, nombre):
                 accion = 'mantener'
                 valor_cambio = None

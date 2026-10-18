@@ -1235,6 +1235,10 @@ body{background:
 .ex-aprox-pill{position:absolute;right:10px;top:10px;padding:5px 8px;font-size:9px;background:rgba(5,10,11,.65);}
 /* 17-oct-2026: el título no se mete debajo de "Calentamiento · 3 pasos". */
 .ex-header-card:has(.ex-aprox-pill){padding-top:44px;}
+/* 18-oct-2026: los títulos de tres líneas pisaban "2 series · RPE 8 · …". */
+.ex-header-card{padding-bottom:52px !important;}
+.nav-ej .nav-btn{width:26px !important;height:26px !important;min-height:0 !important;}
+.exname-toprow{scroll-margin-top:96px;}
 .ex-header-combo .exname-meta{position:absolute;z-index:1;left:0;right:0;bottom:0;padding:8px 14px;border-top:1px solid rgba(255,255,255,.1);background:rgba(3,8,10,.45);}
 .exname-meta-line{font-size:10px;color:#d7e0e2;}
 .exname-meta .tipo-carga-select{font-size:9px;padding:3px 8px;background:rgba(0,0,0,.28);}
@@ -1570,14 +1574,14 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps{% if ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}</span>{% endif %}</span>
+        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>
         {% if ejercicio.sugerencia_tope %}
-        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 Tope · {{ ejercicio.reps_sugeridas_tope }} {% if ejercicio.usa_distancia %}m{% else %}reps{% endif %}</span>
+        <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
         {% endif %}
         {% if ejercicio.estancado %}
         <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
         {% endif %}
-        <select class="tipo-carga-select" name="{{ ejercicio.form_id }}_tipo_carga"
+        {% if ejercicio.usa_peso or ejercicio.usa_distancia %}<select class="tipo-carga-select" name="{{ ejercicio.form_id }}_tipo_carga"
                 id="tipo-carga-{{ ejercicio.form_id }}"
                 onchange="actualizarPreviewCarga('{{ ejercicio.form_id }}')"
                 aria-label="Cómo se interpreta el peso de {{ ejercicio.nombre }}">
@@ -1589,7 +1593,7 @@ body{background:
           {% else %}
           <option value="total" selected>Peso total</option><option value="por_mano">Por mano</option><option value="por_lado">Por lado</option>
           {% endif %}
-        </select>
+        </select>{% else %}<input type="hidden" name="{{ ejercicio.form_id }}_tipo_carga" id="tipo-carga-{{ ejercicio.form_id }}" value="total">{% endif %}
       </div>
     </div>
 
@@ -1763,6 +1767,7 @@ body{background:
                    name="{{ ejercicio.form_id }}_peso_{{ sn }}"
                    value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
+                   data-plan-weight="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-eq-name="{{ ejercicio.nombre|lower }}">
             <span class="peso-kg">kg</span>
           </div>
@@ -1819,7 +1824,7 @@ body{background:
         {# ── REPS (default — peso_reps, solo_reps, peso_corporal_lastre, variante) ── #}
         {% else %}
         <div class="slider-row">
-          <span class="sl-label">Repeticiones</span>
+          <span class="sl-label">Repeticiones{% if ejercicio.reps_unidad %} · {{ ejercicio.reps_unidad }}{% endif %}</span>
           <div class="picker-ctrl">
             <button type="button" class="picker-btn menos"
                     data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
@@ -2237,7 +2242,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 9H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2"/><path d="M18 9h2a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2h-2"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </span>
         <span class="mr-stat-val" id="modal-reps">0</span>
-        <span class="mr-stat-lbl">Reps totales</span>
+        <span class="mr-stat-lbl" id="modal-reps-lbl">Reps totales</span>
       </div>
       <div class="mr-stat-card">
         <span class="mr-stat-icon" style="color:#00C8FF">
@@ -2684,6 +2689,29 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   const usaPeso = panelSig.dataset.usaPeso === '1';
   const usaDistancia = panelSig.dataset.usaDistancia === '1';
   // Los metros no son reps: no se altera el peso del Farmer por esa métrica.
+  // 18-oct-2026: sin carga (sissy squat), la regla C pide más reps si sobró margen.
+  if (!usaPeso && !usaDistancia && panelSig.dataset.usaTiempo !== '1') {
+    const rMin = parseInt(panelSig.dataset.repsMin || repsObj) || repsObj;
+    const rMax = parseInt(panelSig.dataset.repsMax || repsObj) || repsObj;
+    const bannerSigR = document.getElementById('sugerencia-'+fid+'-'+snSig);
+    if (Number.isFinite(rpe) && rpe <= rpeObj - 1 && reps < rMax) {
+      const objetivo = Math.min(rMax, reps + Math.max(1, Math.round((rpeObj - rpe) * 2)));
+      const hid = document.getElementById('reps-hid-'+fid+'-'+snSig);
+      const disp = document.getElementById('reps-disp-'+fid+'-'+snSig);
+      if (hid) hid.value = objetivo;
+      if (disp) disp.textContent = objetivo;
+      const texto = `RPE ${rpe} con margen: a por ${objetivo} reps.`;
+      if (bannerSigR) { bannerSigR.innerHTML = `Siguiente serie: <strong>${objetivo} reps</strong><div style="font-size:10px;opacity:0.8;margin-top:3px;">${texto}</div>`; bannerSigR.style.display = 'block'; }
+      if (bannerDescanso) { bannerDescanso.innerHTML = `<div style="font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Siguiente serie</div><div style="font-size:13px;font-weight:700;color:var(--ok);">${objetivo} reps</div><div style="font-size:10px;color:var(--td);margin-top:2px;">${texto}</div>`; bannerDescanso.style.display = 'block'; }
+    } else if (rMin > 0) {
+      const hid = document.getElementById('reps-hid-'+fid+'-'+snSig);
+      const disp = document.getElementById('reps-disp-'+fid+'-'+snSig);
+      const mismas = Math.max(rMin, Math.min(rMax, reps));
+      if (hid) hid.value = mismas;
+      if (disp) disp.textContent = mismas;
+    }
+    return;
+  }
   if (!usaPeso || usaDistancia) return;
 
   // Tope activo: congelar peso, no sugerir subida
@@ -2808,6 +2836,20 @@ function guardarSeriePanel(fid,sn,total){
   const esEdicion = _serieEnEdicion[fid] === sn;
   const seriePrevia = STATE.seriesCompletadas[fid]?.[sn-1];
 
+  // 18-oct-2026: aviso si el peso se aleja mucho del plan (15 kg con 25 previstos).
+  // Se avisa una vez; pulsar Guardar otra vez lo confirma.
+  const pesoInpAviso = document.getElementById('peso-'+fid+'-'+sn);
+  const pesoPlan = parseFloat(pesoInpAviso?.dataset.planWeight || '0');
+  const esAproxAviso = Boolean(document.getElementById('aproximacion-'+fid+'-'+sn)?.checked);
+  if (!esEdicion && !esAproxAviso && pesoPlan > 0 && peso > 0 && Math.abs(peso - pesoPlan) / pesoPlan > 0.25) {
+    const clave = fid+'-'+sn+'-'+peso;
+    if (window._avisoPesoConfirmado !== clave) {
+      window._avisoPesoConfirmado = clave;
+      mostrarErrorSesion(`¿Seguro? El plan dice ${fmtKg(pesoPlan)} kg y vas a guardar ${fmtKg(peso)} kg. Pulsa Guardar otra vez para confirmarlo.`, pesoInpAviso);
+      return;
+    }
+  }
+
   // Marcar checkbox para que se envíe
   const cb=document.getElementById('check-'+fid+'-'+sn);
   if(cb)cb.checked=true;
@@ -2861,7 +2903,7 @@ function guardarSeriePanel(fid,sn,total){
       ? (peso > 0 ? fmtKg(peso)+' kg | '+reps+' m' : reps+' m')
       : usaTiempoLog
         ? reps+'s'
-        : fmtKg(peso)+' kg × '+reps+' reps';
+        : (peso > 0 ? fmtKg(peso)+' kg × '+reps+' reps' : reps+' reps');
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'
@@ -3361,7 +3403,11 @@ function saltarDescanso(fid){
       +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+resumenTrabajo.join(' · ')+'</div>'
       +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>'
       +(siguienteNombre?'<button type="button" class="ejercicio-continuar" onclick="navEjercicio(1)">Continuar con '+siguienteNombre+' →</button>':'');
-    if(card)card.appendChild(div);
+    if(card){
+      card.appendChild(div);
+      // 18-oct-2026: que se vea entera, con el botón de continuar.
+      setTimeout(()=>div.scrollIntoView({behavior:'smooth',block:'center'}),150);
+    }
   }else{
     // Mostrar panel de la siguiente serie
     const nextPanel=document.getElementById('reg-'+fid+'-'+snSiguiente);
@@ -3437,7 +3483,7 @@ function actualizarSticky(){
   const elV=document.getElementById('volumen-acumulado');
   const elE=document.getElementById('ejercicio-actual');
   if(elS)elS.textContent=comp+'/'+total;
-  if(elV)elV.textContent=textoMetricas(vol,cargaDistancia);
+  if(elV)elV.textContent=vol>0?textoMetricas(vol,0):textoMetricas(0,cargaDistancia);
   if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
   const btnFinal=document.getElementById('btn-mostrar-resumen');
   const puedeFinalizar=comp>=1;
@@ -3642,11 +3688,13 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   prepararRevisionDuracion(mins, comp);
   document.getElementById('modal-series').textContent=comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1).replace('.',','):'—';
-  const trabajo=[];
-  if(reps)trabajo.push(reps+' reps');
-  if(segundosTrabajo)trabajo.push(segundosTrabajo+' s');
-  if(distanciaTotal)trabajo.push(distanciaTotal+' m');
-  document.getElementById('modal-reps').textContent=trabajo.join(' · ')||'0';
+  // 18-oct-2026: la tarjeta muestra solo reps; segundos y metros van debajo.
+  const extra=[];
+  if(segundosTrabajo)extra.push(segundosTrabajo+' s');
+  if(distanciaTotal)extra.push(distanciaTotal+' m');
+  document.getElementById('modal-reps').textContent=String(reps||0);
+  const lblReps=document.getElementById('modal-reps-lbl');
+  if(lblReps)lblReps.textContent=extra.length?('Reps · '+extra.join(' · ')):'Reps totales';
 
   // Animar anillos SVG
   setTimeout(()=>{
@@ -3676,13 +3724,18 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const t=parseInt(card.dataset.totalSets)||0;
     const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent||'';
     const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]);
-    let volEj=0,cargaDistanciaEj=0;
-    scs.forEach(s=>{const m=metricasSerie(s);volEj+=m.tonelaje;cargaDistanciaEj+=m.cargaDistancia;});
+    let volEj=0,cargaDistanciaEj=0,repsEj=0,segEj=0,distEj=0;
+    scs.forEach(s=>{const m=metricasSerie(s);volEj+=m.tonelaje;cargaDistanciaEj+=m.cargaDistancia;repsEj+=m.reps;segEj+=m.segundos;distEj+=m.distancia;});
+    // 18-oct-2026: sin carga no se muestra "0 kg": se cuenta en reps, segundos o metros.
+    let metricasEj=textoMetricas(volEj,cargaDistanciaEj);
+    if(!volEj&&!cargaDistanciaEj){
+      metricasEj=segEj?(segEj+' s'):distEj?(distEj+' m'):(repsEj+' reps');
+    }
     const completo=scs.length>=t&&t>0;
     if(volEj>mejorVol){mejorVol=volEj;mejorNombre=nombre;}
     const icon=completo?'<span style="color:var(--ok);margin-right:4px;">✓</span>':'<span style="color:var(--td);margin-right:4px;">○</span>';
     html+='<div class="modal-ej">'+icon+'<span class="modal-ej-nombre">'+nombre+'</span>'
-      +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+textoMetricas(volEj,cargaDistanciaEj)+'</span></div>';
+      +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+metricasEj+'</span></div>';
   });
   document.getElementById('modal-ejercicios-lista').innerHTML=html;
   if(mejorNombre&&mejorVol>0){

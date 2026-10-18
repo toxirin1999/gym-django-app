@@ -32,7 +32,7 @@ _UNILATERAL = ("unilateral", "una mano", "un brazo", "por lado", "alterno")
 _POR_LADO_SIN_MANCUERNA = ("pallof", "unilateral", "una mano", "un brazo")
 
 
-def normalizar_semantica_carga(ejercicio):
+def _normalizar_base(ejercicio):
     """Añade metadatos de presentación sin alterar nombre ni peso contractual."""
     out = dict(ejercicio or {})
     nombre = str(out.get("nombre") or "")
@@ -61,4 +61,25 @@ def normalizar_semantica_carga(ejercicio):
         peso_total = out.get("peso_kg", out.get("peso_recomendado_kg"))
         if isinstance(peso_total, (int, float)):
             out["peso_por_mancuerna_kg"] = round(peso_total / 2.0, 1)
+    return out
+
+
+_POR_PIERNA = ("zancada", "lunge", "búlgara", "bulgara", "step up", "step-up", "subida al cajón", "a una pierna")
+
+
+def normalizar_semantica_carga(ejercicio):
+    """Añade metadatos de presentación (peso y reps) sin alterar nombre ni peso.
+
+    18-oct-2026: ``reps_unidad`` dice cómo se cuentan las reps: "por pierna"
+    (zancadas), "por brazo" (curl con dos mancuernas) o "por lado" (Pallof,
+    a una mano). Antes 15-20 reps se leía como el total (8 por brazo).
+    """
+    out = _normalizar_base(ejercicio)
+    nombre = str(out.get("nombre") or "").casefold()
+    if any(t in nombre for t in _POR_PIERNA):
+        out["reps_unidad"] = "por pierna"
+    elif out.get("peso_formato") in {"por_lado", "por_mano"}:
+        out["reps_unidad"] = "por lado"
+    elif "curl" in nombre and any(t in nombre for t in _MANCUERNA):
+        out["reps_unidad"] = "por brazo"
     return out

@@ -346,6 +346,36 @@ def aplicar_techo(cliente, ej, hoy):
     if not resultado:
         return None
     techo, frase, accion = resultado
+    ref_peso = lectura['referencia']['peso']
+    # 18-oct-2026 (regla C): si la última vez entró en el rango, hoy toca ese
+    # mismo peso; el plan no baja sin motivo (gemelos 100 → 95, hip thrust).
+    protegido = (
+        ej.get('_deload_aplicado') or ej.get('deload') or ej.get('progresion_bloqueada')
+        or ej.get('molestia_reciente_aplicada') or ej.get('postura_local') == 'sostener'
+        or (ej.get('progresion_aplicada') and ej.get('progresion_accion') == 'bajar_peso')
+        or str((ej.get('motivo_peso') or {}).get('tipo', '')).startswith('recalculado')
+    )
+    if (
+        not protegido and accion == 'mantener' and lectura['referencia']['en_rango']
+        and not lectura['referencia'].get('caida') and propuesto < ref_peso - 1e-6
+        and techo >= ref_peso - 1e-6
+    ):
+        ej['peso_kg_anterior'] = propuesto
+        ej['peso_kg'] = ref_peso
+        if 'peso_recomendado_kg' in ej:
+            ej['peso_recomendado_kg'] = ref_peso
+        ej['progresion_pospuesta'] = True
+        ej['progresion_aplicada'] = False
+        ej['progresion_accion'] = 'subir_peso'
+        ej['progresion_motivo'] = frase or texto_doble_progresion(
+            lectura['referencia']['reps'], rango_hoy,
+        )
+        ej['progresion_motivo_local'] = 'techo_ultima_sesion'
+        ej.pop('motivo_peso', None)
+        return {
+            'tipo': 'progresion_pospuesta', 'ejercicio_original': nombre, 'ejercicio_nuevo': None,
+            'accion': 'subir_peso', 'peso_sugerido': ref_peso, 'razon': ej['progresion_motivo'],
+        }
     if propuesto <= techo + 1e-6:
         # 17-oct-2026: si el plan ya propone justo ese peso, no hay que
         # corregir nada, pero el porqué sigue valiendo (curl femoral tras un
@@ -359,7 +389,6 @@ def aplicar_techo(cliente, ej, hoy):
     ej['peso_kg'] = techo
     if 'peso_recomendado_kg' in ej:
         ej['peso_recomendado_kg'] = techo
-    ref_peso = lectura['referencia']['peso']
     if accion == 'bajar' or techo < ref_peso:
         ej['progresion_aplicada'] = True
         ej['progresion_pospuesta'] = False

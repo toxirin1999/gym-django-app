@@ -136,8 +136,10 @@ def incremento_real(cliente, nombre, por_defecto=2.5):
 SALTO_MAQUINA = 5.0
 SALTO_DISCOS = 2.5
 SALTO_MANCUERNA = 2.5      # por mancuerna; en "peso total" de dos, el doble
+SALTO_KETTLEBELL = 4.0
 
-_TOKENS_MANCUERNA = ('mancuerna', 'dumbbell', 'arnold', 'kettlebell', 'pesa rusa')
+_TOKENS_KETTLEBELL = ('kettlebell', 'pesa rusa')
+_TOKENS_MANCUERNA = ('mancuerna', 'dumbbell', 'arnold')
 _TOKENS_UNA_MANO = ('una mano', 'un brazo', 'unilateral', 'por lado', 'alterno')
 _TOKENS_DISCOS = (
     'barra', 'barbell', 'disco', 'press banca', 'sentadilla', 'peso muerto',
@@ -153,8 +155,11 @@ _TOKENS_MAQUINA = (
 
 
 def tipo_equipo_carga(nombre, equipo=None):
-    """'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
+    """'kettlebell' | 'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
     descriptor = f'{nombre or ""} {equipo or ""}'.casefold()
+    # 18-oct-2026: una sola kettlebell, de 4 en 4 (8, 12, 16, 20…).
+    if any(t in descriptor for t in _TOKENS_KETTLEBELL):
+        return 'kettlebell'
     if any(t in descriptor for t in _TOKENS_MANCUERNA):
         return 'mancuerna_una' if any(t in descriptor for t in _TOKENS_UNA_MANO) else 'mancuerna_dos'
     if any(t in descriptor for t in _TOKENS_DISCOS):
@@ -171,6 +176,7 @@ def salto_fisico(nombre, equipo=None):
         'discos': SALTO_DISCOS,
         'mancuerna_una': SALTO_MANCUERNA,
         'mancuerna_dos': SALTO_MANCUERNA * 2,
+        'kettlebell': SALTO_KETTLEBELL,
     }.get(tipo_equipo_carga(nombre, equipo))
 
 
@@ -187,7 +193,7 @@ def salto_carga(cliente, nombre):
     # gimnasio (1; 1,25; 2; 2,5; 5). Un 4,75 sale de pesos mal apuntados
     # (18-oct-2026: el Curl Araña proponía 19 kg tras hacer 20 × 15).
     aprendido = incremento_real(cliente, nombre, por_defecto)
-    validos = (1.0, 1.25, 2.0, 2.5, 5.0)
+    validos = (1.0, 1.25, 2.0, 2.5, 4.0, 5.0)
     return next((v for v in validos if abs(aprendido - v) < 0.01), 2.5)
 
 
