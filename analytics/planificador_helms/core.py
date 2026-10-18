@@ -548,6 +548,9 @@ class PlanificadorHelms:
                     # X.14: contraste por toque (toque 1 = identidad; toque ≥2 = reps más altas, RPE −1).
                     # Se aplica DESPUÉS del ajuste por tamaño de músculo para componer sin contradicción.
                     rep_range_ej, rpe_objetivo_toque = derivar_rep_rpe_toque(rep_range_ej, rpe_objetivo, toque)
+                    # 18-oct-2026: zancadas y similares, por pierna y con tope de 12.
+                    from entrenos.services.peso_semantica_service import rango_unilateral_pierna
+                    rep_range_ej = rango_unilateral_pierna(nombre, rep_range_ej)
 
                     es_pesado = (int((rep_range_ej or '8-12').split('-')[0]) <= 6 or rpe_objetivo_toque >= 9)
                     # Decisión 12-oct-2026: RPE por tipo (multiarticular 7–8,

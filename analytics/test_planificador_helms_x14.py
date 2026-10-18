@@ -315,7 +315,14 @@ class TestX14VariacionToque2David(TestCase):
         cuádriceps es grande: toque-1 usa '10-12', toque-2 debe usar '12-15'.
         dia_1=toque1, dia_4=toque2.
         """
-        t2_ranges = self._rep_ranges.get(_dia_toque(self._semana, 'cuadriceps', 2), {}).get('cuadriceps', [])
+        # 18-oct-2026: zancadas/búlgaras van por pierna con tope 8-12 (rango propio).
+        from entrenos.services.peso_semantica_service import rango_unilateral_pierna
+        dia = _dia_toque(self._semana, 'cuadriceps', 2)
+        t2_ranges = [
+            ej['repeticiones'] for ej in self._semana.get(dia, [])
+            if ej['grupo_muscular'] == 'cuadriceps'
+            and rango_unilateral_pierna(ej['nombre'], '15-20') == '15-20'
+        ]
         self.assertTrue(
             all(r in ('12-15', '15-20') for r in t2_ranges),
             f"cuádriceps toque-2 debería tener rep_range '12-15' o '15-20', got {t2_ranges}",

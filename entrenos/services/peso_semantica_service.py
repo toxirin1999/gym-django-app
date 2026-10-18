@@ -67,6 +67,26 @@ def _normalizar_base(ejercicio):
 _POR_PIERNA = ("zancada", "lunge", "búlgara", "bulgara", "step up", "step-up", "subida al cajón", "a una pierna")
 
 
+# 18-oct-2026: zancadas, búlgaras y subidas al cajón se cuentan por pierna y
+# su rango no pasa de 12. Con cargas que permiten más de 12 por pierna, la
+# serie la corta el equilibrio y el ahogo antes que el músculo; la hipertrofia
+# es similar en rangos amplios cerca del fallo (Schoenfeld et al., 2021).
+_UNILATERAL_PIERNA_COMPUESTO = ("zancada", "lunge", "búlgara", "bulgara", "step up", "step-up", "subida al cajón")
+RANGO_UNILATERAL_PIERNA = "8-12"
+
+
+def rango_unilateral_pierna(nombre, rango):
+    """'15-20' → '8-12' para zancadas y similares; el resto, sin tocar."""
+    nombre = str(nombre or "").casefold()
+    if not any(t in nombre for t in _UNILATERAL_PIERNA_COMPUESTO):
+        return rango
+    try:
+        bajo, alto = (int(x) for x in str(rango).split("-"))
+    except (TypeError, ValueError):
+        return rango
+    return RANGO_UNILATERAL_PIERNA if alto > 12 else rango
+
+
 def normalizar_semantica_carga(ejercicio):
     """Añade metadatos de presentación (peso y reps) sin alterar nombre ni peso.
 

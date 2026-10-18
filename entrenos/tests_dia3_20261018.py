@@ -88,3 +88,36 @@ class Records(Base):
         record = RecordsService._verificar_record_peso(self.cliente, self.gemelos.nombre, 100, hoy)
         self.assertIsNotNone(record)
         self.assertEqual(record.entreno_id, hoy.id)
+
+
+class RangoPorPierna(SimpleTestCase):
+    def test_zancadas_y_bulgaras_hasta_12_por_pierna(self):
+        from entrenos.services.peso_semantica_service import rango_unilateral_pierna
+        self.assertEqual(rango_unilateral_pierna('Zancadas con Kettlebell', '15-20'), '8-12')
+        self.assertEqual(rango_unilateral_pierna('Sentadilla Búlgara', '12-15'), '8-12')
+        self.assertEqual(rango_unilateral_pierna('Sentadilla Búlgara', '6-8'), '6-8')
+        # Los unilaterales de máquina o aislamiento conservan el rango del programa.
+        self.assertEqual(rango_unilateral_pierna('Elevación de Gemelos Unilateral (Mancuerna)', '15-20'), '15-20')
+        self.assertEqual(rango_unilateral_pierna('Prensa de Piernas', '15-20'), '15-20')
+
+
+class MigracionCurlMartilloTotal(Base):
+    def test_historial_por_mancuerna_pasa_a_total_y_rehace_records(self):
+        import importlib
+        from datetime import date
+        from django.apps import apps
+        from rutinas.models import EjercicioBase
+        mig = importlib.import_module('entrenos.migrations.0066_farmer_zancadas_y_curl_martillo_total')
+        curl = EjercicioBase.objects.create(nombre='Curl Martillo con Mancuernas', grupo_muscular='biceps')
+        self.cliente.pk  # noqa
+        antes = self.entreno(date(2026, 10, 8), {curl.nombre: '10-12'})
+        self.hacer(antes, curl, [(17.5, 6, 9)])
+        hoy = self.entreno(date(2026, 10, 18), {curl.nombre: '10-12'})
+        self.hacer(hoy, curl, [(30, 8, 7)])
+        RecordPersonal.objects.create(cliente=self.cliente, ejercicio_nombre=curl.nombre,
+                                      tipo_record='peso_maximo', valor=30, entreno=hoy)
+        mig.CLIENTE = self.cliente.id
+        mig.curl_a_total(apps, None)
+        vigente = RecordPersonal.objects.get(cliente=self.cliente, tipo_record='peso_maximo', superado=False)
+        self.assertEqual((float(vigente.valor), vigente.entreno_id), (35.0, antes.id))
+        self.assertFalse(RecordPersonal.objects.filter(entreno=hoy, tipo_record='peso_maximo').exists())
