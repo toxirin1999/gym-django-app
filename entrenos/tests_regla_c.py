@@ -78,6 +78,21 @@ class ReglaC(SimpleTestCase):
         self.assertIn('pero después 55,5 kg × 8', frase)
 
 
+class SeriesPesadasCortas(SimpleTestCase):
+    def test_extensiones_polea_no_sube_por_encima_de_una_serie_que_se_quedo_corta(self):
+        # 19-oct-2026: 40 × 10 @9, 35 × 10 @8, 30 × 11 @8, 25 × 12 @8, 20 × 15 @7 (15-20).
+        series = [s(40, 10, 9), s(35, 10, 8), s(30, 11, 8), s(25, 12, 8), s(20, 15, 7)]
+        techo, frase, accion = techo_peso(lectura(series, 15), (15, 20), 9, 5)
+        self.assertEqual((techo, accion), (20, 'mantener'))
+        self.assertIn('a por 16 reps', frase)
+
+    def test_back_off_sigue_subiendo_si_ninguna_pesada_se_quedo_corta(self):
+        # Pesada 30 × 15 @7 y back-off 25 × 15: la de 30 ya entró en el rango.
+        series = [s(30, 15, 7), s(25, 15, 7)]
+        ref = serie_referencia(series, 15)
+        self.assertEqual(ref['peso'], 30)
+
+
 class PesoContractual(SimpleTestCase):
     def test_con_bajada_arranca_en_el_peso_del_briefing(self):
         ej = {'peso_kg': 37.5, 'peso_recomendado_kg': 40, 'progresion_aplicada': True,
@@ -164,3 +179,29 @@ class BriefingDia3(Base):
         aplicar_techo(self.cliente, ej, HOY)
         ajustar_escala_y_reps(self.cliente, ej, HOY)
         self.assertGreaterEqual(ej['peso_kg'], 20)
+
+
+class UltimaVezEnElBriefing(Base):
+    """19-oct-2026: la propuesta con su dato al lado, y aviso solo si no cuadra."""
+
+    def preparar(self):
+        e = self.entreno(AYER, {'Sentadilla Hack': '15-20'})
+        self.hacer(e, self.hack, [(40, 10, 9), (30, 11, 8), (25, 12, 8), (20, 15, 7)])
+
+    def test_linea_de_la_ultima_vez(self):
+        from entrenos.services.ultima_sesion_service import anotar_ultima_vez
+        self.preparar()
+        ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '15-20', 'peso_kg': 20.0, 'tipo_progresion': 'peso_reps'}
+        anotar_ultima_vez(self.cliente, ej, HOY)
+        self.assertEqual(
+            ej['ultima_vez_texto'],
+            f'{AYER:%d/%m}: 40 kg × 10 @9 · 30 kg × 11 @8 · 25 kg × 12 @8 · 20 kg × 15 @7',
+        )
+        self.assertNotIn('aviso_coherencia', ej)
+
+    def test_aviso_si_el_peso_ya_se_quedo_corto(self):
+        from entrenos.services.ultima_sesion_service import anotar_ultima_vez
+        self.preparar()
+        ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '15-20', 'peso_kg': 30.0, 'tipo_progresion': 'peso_reps'}
+        anotar_ultima_vez(self.cliente, ej, HOY)
+        self.assertIn('con 25 kg hiciste 12 reps, por debajo de 15', ej['aviso_coherencia'])

@@ -180,6 +180,12 @@ def _redondear_abajo(valor, incremento):
     return round(math.floor(valor / incremento + 0.02) * incremento, 2)
 
 
+def _a_por(reps, rango):
+    """', a por 16 reps' cuando aún no se llega al tope del rango (regla C)."""
+    objetivo = objetivo_reps_hoy(reps, rango)
+    return f', a por {objetivo} reps' if objetivo and objetivo > int(round(float(reps))) else ''
+
+
 def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
     """Peso máximo razonable para hoy según la última sesión real.
 
@@ -247,10 +253,24 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
         # nunca de esa serie pesada (menos un salto) ni bajar de la que entró.
         # Solo si esa serie pesada no fue al fallo (RPE conocido y < 10): una
         # serie a RPE 10 por encima no debe tirar del peso (gemelos 79 × 8 @10).
-        rpe_sup = superior.get('rpe')
-        estimado = peso_para_reps(
-            superior['peso'], int(superior['reps']), rpe_sup, minimo, rpe_objetivo,
-        ) if superior['reps'] > 0 and rpe_sup is not None and rpe_sup < 10 else None
+        # 19-oct-2026: se estima con TODAS las series por encima de la que
+        # entró y manda la más prudente. Extensiones en polea: 40 × 10 @9,
+        # 35 × 10, 30 × 11 @8, 25 × 12 @8 y 20 × 15 @7 — con solo la de 40
+        # salía 35 kg para 15-20, cuando 30 ya se quedó en 11.
+        pesadas = [
+            s for s in (ref.get('validas') or [superior])
+            if s['peso'] > peso and s['reps'] > 0 and s.get('rpe') is not None and s['rpe'] < 10
+        ]
+        estimaciones = [
+            e for e in (
+                peso_para_reps(s['peso'], int(s['reps']), s['rpe'], minimo, rpe_objetivo) for s in pesadas
+            ) if e
+        ]
+        estimado = min(estimaciones) if estimaciones else None
+        cortas = [s for s in (ref.get('validas') or []) if s['peso'] > peso and s['reps'] < minimo]
+        if estimado and cortas:
+            # Nunca a la altura de una serie que ya se quedó corta del rango.
+            estimado = min(estimado, min(s['peso'] for s in cortas) - 0.01)
         if estimado:
             # El salto de máquina se deduce de los pesos usados; con solo una
             # serie pesada y una ligera saldría enorme (45 − 26 = 19 kg).
@@ -266,7 +286,8 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
         return (
             peso,
             f'La última vez {kg(superior["peso"])} kg se quedó en {superior["reps"]} reps '
-            f'y {kg(peso)} kg × {reps_txt(reps)} sí entró en {rango_txt}: hoy {kg(peso)} kg.',
+            f'y {kg(peso)} kg × {reps_txt(reps)} sí entró en {rango_txt}: hoy {kg(peso)} kg'
+            f'{_a_por(reps, rango_hoy)}.',
             'mantener',
         )
     if reps <= minimo and rpe is not None and rpe >= RPE_ALTO:
@@ -485,6 +506,48 @@ def ajustar_escala_y_reps(cliente, ej, hoy):
     ref = lectura['referencia']
     mismo_peso = peso > 0 and abs(peso - ref['peso']) < salto / 2
     ej['reps_objetivo_hoy'] = objetivo_reps_hoy(ref['reps'], rango, mismo_peso and ref['en_rango'])
+
+
+def anotar_ultima_vez(cliente, ej, hoy):
+    """19-oct-2026: el dato al lado de la propuesta, y un aviso solo si no cuadra.
+
+    - ``ultima_vez_texto``: '13/10: 40 kg × 10 @9 · 35 kg × 10 @8 · …' para que
+      la propuesta se vea junto a lo que la justifica.
+    - ``aviso_coherencia``: solo cuando el peso de hoy es igual o mayor que uno
+      con el que la última vez no se llegó al mínimo del rango. En silencio
+      cuando todo cuadra (es una red de seguridad, no un visto bueno).
+    """
+    from entrenos.services.cierre_porque_service import texto_series
+
+    nombre = ej.get('nombre') or ''
+    tipo = ej.get('tipo_progresion') or 'peso_reps'
+    rango = rango_reps(ej.get('repeticiones'))
+    lectura = ultima_sesion(cliente, nombre, hoy, reps_min=rango[0] if rango else None)
+    if not lectura or (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS):
+        return
+    texto = texto_series(lectura['entreno'], nombre, tipo)
+    if texto:
+        ej['ultima_vez_texto'] = f"{lectura['fecha']:%d/%m}: {texto}"
+
+    if tipo not in ('peso_reps', 'peso_corporal_lastre') or not rango or ej.get('sugerencia_tope'):
+        return
+    try:
+        peso = float(ej.get('peso_kg') or 0)
+    except (TypeError, ValueError):
+        return
+    if peso <= 0:
+        return
+    cortas = [
+        s for s in lectura['series']
+        if 0 < s['peso'] <= peso + 1e-6 and 0 < s['reps'] < rango[0] and s.get('metros') is None
+    ]
+    if not cortas:
+        return
+    ligera = min(cortas, key=lambda s: s['peso'])
+    ej['aviso_coherencia'] = (
+        f"Ojo: hoy {kg(peso)} kg, pero la última vez con {kg(ligera['peso'])} kg hiciste "
+        f"{ligera['reps']} reps, por debajo de {rango[0]}. Si no llegas, baja el peso."
+    )
 
 
 def peso_contractual(ej):

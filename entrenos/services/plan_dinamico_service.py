@@ -764,5 +764,13 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     except Exception as e:
         logger.error(f"[plan_dinamico] cliente={cliente.id}: excepción: {e}", exc_info=True)
 
+    # 19-oct-2026: "La última vez" junto a cada propuesta y aviso si no cuadra.
+    from entrenos.services.ultima_sesion_service import anotar_ultima_vez
+    for ej in ejercicios_mod:
+        try:
+            anotar_ultima_vez(cliente, ej, hoy)
+        except Exception:
+            logger.exception('[plan_dinamico] última vez falló')
+
     logger.debug(f"[plan_dinamico] cliente={cliente.id}: retorna {len(cambios)} cambios")
     return ejercicios_mod, cambios

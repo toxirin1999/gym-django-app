@@ -265,6 +265,14 @@
     font-family: var(--fm); font-size: 9.5px; color: var(--accent);
     margin-top: 6px; line-height: 1.4;
   }
+  .plan-ultima {
+    font-family: var(--fm); font-size: 9.5px; color: var(--td);
+    margin-top: 5px; line-height: 1.4;
+  }
+  .plan-aviso {
+    font-family: var(--fm); font-size: 9.5px; color: #F59E0B;
+    margin-top: 6px; line-height: 1.4;
+  }
   .plan-warmup {
     display: flex; align-items: center; gap: 6px;
     font-family: var(--fm); font-size: 10.5px; color: var(--td);
@@ -632,6 +640,12 @@
       {% endif %}
       {% if ej.propuesta_zona_texto %}
       <div class="plan-motivo">{{ ej.propuesta_zona_texto }}</div>
+      {% endif %}
+      {% if ej.aviso_coherencia %}
+      <div class="plan-aviso">⚠ {{ ej.aviso_coherencia }}</div>
+      {% endif %}
+      {% if ej.ultima_vez_texto %}
+      <div class="plan-ultima">La última vez · {{ ej.ultima_vez_texto }}</div>
       {% endif %}
 
       {% if ej.aproximaciones %}

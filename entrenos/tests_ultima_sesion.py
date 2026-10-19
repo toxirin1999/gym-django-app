@@ -91,7 +91,7 @@ class TechoPeso(TestCase):
         )
         self.assertEqual(techo, 110)
         self.assertEqual(
-            frase, 'La última vez 114 kg se quedó en 10 reps y 110 kg × 15 sí entró en 15-20: hoy 110 kg.',
+            frase, 'La última vez 114 kg se quedó en 10 reps y 110 kg × 15 sí entró en 15-20: hoy 110 kg, a por 16 reps.',
         )
 
 
