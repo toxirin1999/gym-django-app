@@ -110,6 +110,19 @@ def _efecto_decision(log, tipo_progresion):
     return None
 
 
+def _efecto_visible(log, tipo_progresion):
+    """19-oct-2026: con un peso concreto ("Subirá a 30 kg"), no "un 5 %" que no existe."""
+    if log.accion == 'subir_peso':
+        try:
+            from entrenos.services.cierre_porque_service import subida_por_encima
+            dato = subida_por_encima(log)
+        except Exception:
+            dato = None
+        if dato:
+            return f'Subirá a {_kg_txt(dato[3])} kg'
+    return _efecto_decision(log, tipo_progresion)
+
+
 def _accion_semantica(log, tipo_progresion):
     """No presentar metros o segundos como si fueran repeticiones."""
     if log.accion != 'subir_reps':
@@ -256,7 +269,7 @@ def _decisiones_entrenador(cliente, entreno):
             'motivo': motivo,
             'porque': porque,
             'hoy': hoy,
-            'efecto': _efecto_decision(log, tipo_progresion),
+            'efecto': _efecto_visible(log, tipo_progresion),
             'efecto_tipo': 'bajada' if log.accion in ('bajar_peso', 'deload') else 'subida',
             'evidencia': evidencia,
             'confianza': confianza,
@@ -637,6 +650,28 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 anterior = candidato
                 peso_anterior = peso_candidato
                 break
+        if anterior is None and tipo_progresion in ('peso_reps', 'peso_corporal_lastre'):
+            # 19-oct-2026: la media "representativa" de hoy (25 × 25) no se
+            # parecía a la de la vez anterior (40 × 10 en pirámide) y el
+            # ejercicio desaparecía. Se compara la última sesión reciente por
+            # su serie de referencia (la que entra en el rango).
+            reciente = (
+                EjercicioRealizado.objects
+                .filter(entreno__cliente=cliente, nombre_ejercicio=ej.nombre_ejercicio, completado=True,
+                        entreno__fecha__lte=entreno.fecha, entreno__fecha__gte=entreno.fecha - timedelta(days=42))
+                .exclude(entreno_id=entreno.id)
+                .order_by('-entreno__fecha', '-id').first()
+            )
+            # Solo con el mismo rango prescrito: un ejercicio en dos días con
+            # rangos distintos (fondos a 8 y a 15) no se compara entre hilos.
+            from entrenos.services.ultima_sesion_service import rango_de_sesion
+            if reciente is not None:
+                rango_hoy = rango_de_sesion(entreno, ej.nombre_ejercicio)
+                if not rango_hoy or rango_de_sesion(reciente.entreno, ej.nombre_ejercicio) != rango_hoy:
+                    reciente = None
+            if reciente is not None:
+                anterior = reciente
+                peso_anterior = float(reciente.peso_kg or 0)
         if anterior is None:
             continue
 

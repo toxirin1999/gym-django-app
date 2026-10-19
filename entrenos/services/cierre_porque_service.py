@@ -124,6 +124,30 @@ def _porque_distancia(entreno, nombre, rpe_txt):
     return None
 
 
+def subida_por_encima(log):
+    """19-oct-2026: (peso, reps, rango, siguiente_kg) si se subió por pasarse del rango.
+
+    Extensiones: 20 × 16 y 25 × 25 en 15-20 → (25, 25, (15, 20), 30). None si no aplica.
+    """
+    if log.accion != 'subir_peso' or not log.entreno_origen_id:
+        return None
+    from entrenos.services.maquina_service import a_escala, salto_carga
+    from entrenos.services.ultima_sesion_service import rango_de_sesion, series_de_trabajo
+
+    rango = rango_de_sesion(log.entreno_origen, log.ejercicio)
+    series = [s for s in series_de_trabajo(log.entreno_origen, log.ejercicio) if s['peso'] > 0]
+    if not rango or not series:
+        return None
+    pesada = max(series, key=lambda s: (s['peso'], s['reps']))
+    if pesada['reps'] < rango[1]:
+        return None
+    salto = salto_carga(log.cliente, log.ejercicio)
+    siguiente = a_escala(pesada['peso'] + salto, salto, 'cerca')
+    if siguiente <= pesada['peso']:
+        siguiente = pesada['peso'] + salto
+    return pesada['peso'], pesada['reps'], rango, siguiente
+
+
 def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
     """Una frase con el dato que sostiene la decisión, o None si no lo hay."""
     motivo = log.motivo or ''
@@ -157,6 +181,15 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
             f'RPE {rpe_txt} hoy, por encima del objetivo: mantengo {peso_txt} y las mismas reps. '
             'Si sigue en 9 o más tres sesiones seguidas, lo bajo.'
         )
+
+    if 'objetivo superado' in motivo and log.accion == 'subir_peso':
+        dato = subida_por_encima(log)
+        if dato:
+            peso, reps, rango, siguiente = dato
+            return (
+                f'{reps} reps con {_kg(peso)} kg, por encima de {rango[1]}: '
+                f'subo a {_kg(siguiente)} kg y vuelvo a {rango[0]} reps.'
+            )
 
     if motivo.startswith('Completado con éxito en 2 sesiones'):
         if rpe_txt is None:

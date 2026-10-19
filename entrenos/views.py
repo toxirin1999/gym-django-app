@@ -4468,6 +4468,17 @@ def vista_entrenamiento_activo(request, cliente_id):
         if _anterior > 0:
             _ej['diferencia_peso'] = round(_propuesto - _anterior, 2)
 
+    # 19-oct-2026: la sugerencia entre series necesita el rango real
+    # (data-reps-min/max). Sin él, el template caía en reps_objetivo ("a por
+    # 13") como mínimo y máximo, y al hacer 13 reps proponía subir el peso.
+    from entrenos.services.ultima_sesion_service import rango_reps as _rango_reps
+    for _ej in ejercicios_planificados:
+        if _ej.get('sugerencia_tope') or _ej.get('reps_min'):
+            continue
+        _rango = _rango_reps(_ej.get('repeticiones'))
+        if _rango:
+            _ej['reps_min'], _ej['reps_max'] = _rango
+
     # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
     _sep = ' - ' if ' - ' in rutina_nombre else (' · ' if ' · ' in rutina_nombre else None)
     if _sep:

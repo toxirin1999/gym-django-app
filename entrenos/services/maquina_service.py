@@ -137,8 +137,11 @@ SALTO_MAQUINA = 5.0
 SALTO_DISCOS = 2.5
 SALTO_MANCUERNA = 2.5      # por mancuerna; en "peso total" de dos, el doble
 SALTO_KETTLEBELL = 4.0
+# 19-oct-2026: barra Z con discos de 2,5 → se cargan de dos en dos (uno por lado).
+SALTO_BARRA_Z = 5.0
 
 _TOKENS_KETTLEBELL = ('kettlebell', 'pesa rusa')
+_TOKENS_BARRA_Z = ('barra z', 'barra ez', 'ez bar', 'z-bar')
 _TOKENS_MANCUERNA = ('mancuerna', 'dumbbell', 'arnold')
 _TOKENS_UNA_MANO = ('una mano', 'un brazo', 'unilateral', 'por lado', 'alterno')
 _TOKENS_DISCOS = (
@@ -155,11 +158,13 @@ _TOKENS_MAQUINA = (
 
 
 def tipo_equipo_carga(nombre, equipo=None):
-    """'kettlebell' | 'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
+    """'kettlebell' | 'barra_z' | 'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
     descriptor = f'{nombre or ""} {equipo or ""}'.casefold()
     # 18-oct-2026: una sola kettlebell, de 4 en 4 (8, 12, 16, 20…).
     if any(t in descriptor for t in _TOKENS_KETTLEBELL):
         return 'kettlebell'
+    if any(t in descriptor for t in _TOKENS_BARRA_Z):
+        return 'barra_z'
     if any(t in descriptor for t in _TOKENS_MANCUERNA):
         return 'mancuerna_una' if any(t in descriptor for t in _TOKENS_UNA_MANO) else 'mancuerna_dos'
     if any(t in descriptor for t in _TOKENS_DISCOS):
@@ -177,6 +182,7 @@ def salto_fisico(nombre, equipo=None):
         'mancuerna_una': SALTO_MANCUERNA,
         'mancuerna_dos': SALTO_MANCUERNA * 2,
         'kettlebell': SALTO_KETTLEBELL,
+        'barra_z': SALTO_BARRA_Z,
     }.get(tipo_equipo_carga(nombre, equipo))
 
 

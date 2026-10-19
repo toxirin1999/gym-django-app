@@ -112,7 +112,8 @@ document.addEventListener("click", (e) => {
 
 // Bloqueo de teclado en móvil para inputs numéricos
 document.addEventListener('DOMContentLoaded', () => {
-    const inputs = document.querySelectorAll('.weight-input, .reps-input, .rpe-input');
+    // 19-oct-2026: el peso sí se puede teclear (ver entrenamiento_activo.html).
+    const inputs = document.querySelectorAll('.reps-input, .rpe-input');
     inputs.forEach(inp => {
         inp.setAttribute('readonly', true);
         inp.addEventListener('focus', function () {

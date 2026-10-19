@@ -148,7 +148,7 @@ class UiCargaTests(TestCase):
         template = (Path(__file__).parent / "templates/entrenos/entrenamiento_activo.html").read_text()
         self.assertNotIn("ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-2.5)", template)
         self.assertIn("data-inc-kg", template)
-        self.assertIn("step=\"any\"", template)
+        self.assertIn('inputmode="decimal"', template)  # 19-oct-2026: peso tecleable con decimales
         self.assertIn("por mano", template)
         self.assertIn("Tope de peso", template)
         self.assertNotIn("pesoRaw / 2.5", template)
