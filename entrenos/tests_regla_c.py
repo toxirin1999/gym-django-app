@@ -205,3 +205,13 @@ class UltimaVezEnElBriefing(Base):
         ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '15-20', 'peso_kg': 30.0, 'tipo_progresion': 'peso_reps'}
         anotar_ultima_vez(self.cliente, ej, HOY)
         self.assertIn('con 25 kg hiciste 12 reps, por debajo de 15', ej['aviso_coherencia'])
+
+    def test_sin_aviso_cuando_hoy_se_pide_una_rep_mas(self):
+        # Gemelos de pie en tope: 100,5 × 15 y hoy 3 × 16 con el mismo peso.
+        from entrenos.services.ultima_sesion_service import anotar_ultima_vez
+        e = self.entreno(AYER, {'Sentadilla Hack': '16'})
+        self.hacer(e, self.hack, [(100.5, 15, 7)] * 3)
+        ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '16', 'peso_kg': 100.5, 'tipo_progresion': 'peso_reps'}
+        anotar_ultima_vez(self.cliente, ej, HOY)
+        self.assertNotIn('aviso_coherencia', ej)
+        self.assertIn('100,5 kg × 15 @7, 15 @7, 15 @7', ej['ultima_vez_texto'])

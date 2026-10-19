@@ -539,7 +539,9 @@ def anotar_ultima_vez(cliente, ej, hoy):
         return
     cortas = [
         s for s in lectura['series']
-        if 0 < s['peso'] <= peso + 1e-6 and 0 < s['reps'] < rango[0] and s.get('metros') is None
+        # Una rep menos es justo la progresión que se pide hoy (regla C: 15 → 16
+        # con el mismo peso); el aviso es para faltas de 2 o más.
+        if 0 < s['peso'] <= peso + 1e-6 and 0 < s['reps'] <= rango[0] - 2 and s.get('metros') is None
     ]
     if not cortas:
         return
