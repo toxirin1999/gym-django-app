@@ -7,27 +7,39 @@ y le añade una explicación legible (label/motivo) para mostrar en sesión.
 """
 
 
-def get_descanso_sugerido(tipo_ejercicio=None, rpe_objetivo=None, es_principal=False):
+# 20-oct-2026: descansos según la evidencia (Singer et al., 2024: más de 60 s
+# ayuda a la hipertrofia; pasados ~90 s apenas añade). Los básicos piden algo
+# más para llegar enteros a la siguiente serie; 4 min en un crunch sobraba.
+_AISLAMIENTO = (
+    'crunch', 'pallof', 'plancha', 'plank', 'dead bug', 'ab wheel', 'elevaciones de piernas',
+    'curl', 'extension', 'extensión', 'elevación', 'elevacion', 'lateral', 'gemelo',
+    'abducci', 'aducci', 'patada', 'fly', 'apertura', 'face pull', 'encogimiento',
+    'y-raise', 'pec deck', 'pull-over', 'pullover', 'brazos rectos', 'aguante', 'muñeca',
+)
+
+
+def _rep_max(reps):
+    try:
+        return int(str(reps).split('-')[-1])
+    except (TypeError, ValueError):
+        return None
+
+
+def get_descanso_sugerido(tipo_ejercicio=None, rpe_objetivo=None, es_principal=False, nombre=None, reps=None):
     """
     Minutos de descanso recomendados y su explicación.
 
-    Reproduce exactamente la fórmula original de Helms:
-      - principal (tipo_ejercicio == 'compuesto_principal' o es_principal=True)
-        con RPE >= 8 → 4 min; si no, 3 min.
-      - resto (compuesto_secundario / aislamiento) con RPE >= 8 → 2 min;
-        si no, 1 min.
+      - Fuerza (rango que no pasa de 6 reps): 3 min.
+      - Aislamiento y core (por tipo o por nombre): 1:30.
+      - Resto (básicos: prensa, rumano, jalón, remo, press…): 2:30.
 
-    Devuelve {'minutos': int, 'label': str, 'motivo': str, 'fuente': 'helms'}.
+    Devuelve {'minutos': float, 'label': str, 'motivo': str, 'fuente': 'evidencia'}.
     """
-    rpe = rpe_objetivo if rpe_objetivo is not None else 0
-    if tipo_ejercicio is not None:
-        es_principal = tipo_ejercicio == 'compuesto_principal'
-
-    if es_principal:
-        if rpe >= 8:
-            return {'minutos': 4, 'label': '3-4 min', 'motivo': 'principal con RPE alto', 'fuente': 'helms'}
-        return {'minutos': 3, 'label': '3-4 min', 'motivo': 'principal', 'fuente': 'helms'}
-
-    if rpe >= 8:
-        return {'minutos': 2, 'label': '1-2 min', 'motivo': 'accesorio con RPE alto', 'fuente': 'helms'}
-    return {'minutos': 1, 'label': '1-2 min', 'motivo': 'accesorio', 'fuente': 'helms'}
+    tope = _rep_max(reps)
+    if tope is not None and tope <= 6:
+        return {'minutos': 3, 'label': '3 min', 'motivo': 'series pesadas de fuerza', 'fuente': 'evidencia'}
+    texto = (nombre or '').casefold()
+    aislamiento = tipo_ejercicio == 'aislamiento' or any(t in texto for t in _AISLAMIENTO)
+    if aislamiento and not es_principal:
+        return {'minutos': 1.5, 'label': '1:30', 'motivo': 'aislamiento o core', 'fuente': 'evidencia'}
+    return {'minutos': 2.5, 'label': '2:30', 'motivo': 'ejercicio básico', 'fuente': 'evidencia'}

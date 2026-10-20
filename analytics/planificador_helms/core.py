@@ -623,7 +623,7 @@ class PlanificadorHelms:
                         motivo_peso_tipo = 'carga_por_tipo'
 
                     tempo = TEMPOS.get(fase, TEMPOS['hipertrofia'])
-                    descanso = self._calcular_descanso_pormenorizado(nombre, rpe_objetivo, tipo_ej)
+                    descanso = self._calcular_descanso_pormenorizado(nombre, rpe_objetivo, tipo_ej, rep_range_ej)
 
                     motivo_peso_texto = self._construir_motivo_peso(motivo_peso_tipo, nombre)
 
@@ -784,5 +784,5 @@ class PlanificadorHelms:
         }
         return textos.get(motivo_tipo, 'Peso determinado por el plan.')
 
-    def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str) -> int:
-        return get_descanso_sugerido(tipo_ejercicio=tipo, rpe_objetivo=rpe)['minutos']
+    def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str, reps=None) -> float:
+        return get_descanso_sugerido(tipo_ejercicio=tipo, rpe_objetivo=rpe, nombre=nombre, reps=reps)['minutos']

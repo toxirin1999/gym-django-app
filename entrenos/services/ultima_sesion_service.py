@@ -214,7 +214,14 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
             estimaciones = [e for e in estimaciones if e]
             if estimaciones:
                 from entrenos.services.maquina_service import a_escala
-                techo = a_escala(min(estimaciones), incremento)
+                # 20-oct-2026: al bajar se redondea hacia abajo y nunca a la
+                # altura de una serie que ya se quedó corta (Arnold: 40 × 9 y
+                # 30 × 12 en 15-20 → 25, no 30).
+                tope_corta = min([peso] + [s['peso'] for s in otras if s['reps'] < minimo])
+                techo = min(
+                    a_escala(min(estimaciones), incremento),
+                    a_escala(tope_corta - 0.01, incremento, 'abajo'),
+                )
                 if techo >= peso:
                     techo = a_escala(peso - incremento, incremento, 'abajo')
                 if techo > 0:
@@ -290,7 +297,9 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
             f'{_a_por(reps, rango_hoy)}.',
             'mantener',
         )
-    if reps <= minimo and rpe is not None and rpe >= RPE_ALTO:
+    # 20-oct-2026: solo si el RPE superó el objetivo. Llegar al RPE pedido
+    # (crunch 75 × 15 @9 con objetivo 9) es lo previsto: toca una rep más.
+    if reps <= minimo and rpe is not None and rpe >= RPE_ALTO and rpe > float(rpe_objetivo or 0):
         return (
             peso,
             f'La última vez {kg(peso)} kg × {reps_txt(reps)} a RPE {kg(rpe)}: '
@@ -397,6 +406,24 @@ def aplicar_techo(cliente, ej, hoy):
             'tipo': 'progresion_pospuesta', 'ejercicio_original': nombre, 'ejercicio_nuevo': None,
             'accion': 'subir_peso', 'peso_sugerido': ref_peso, 'razon': ej['progresion_motivo'],
         }
+    caida = lectura['referencia'].get('caida')
+    if not protegido and caida and accion == 'bajar' and propuesto < techo - 1e-6:
+        # 20-oct-2026: el plan traía la primera serie de la última vez (jalón
+        # 50,5) y la regla de la caída daba 55: manda la regla.
+        ej['peso_kg_anterior'] = propuesto
+        ej['peso_kg'] = techo
+        if 'peso_recomendado_kg' in ej:
+            ej['peso_recomendado_kg'] = techo
+        ej['progresion_aplicada'] = True
+        ej['progresion_pospuesta'] = False
+        ej['progresion_accion'] = 'bajar_peso'
+        ej['progresion_motivo'] = frase
+        ej['progresion_motivo_local'] = 'techo_ultima_sesion'
+        ej.pop('motivo_peso', None)
+        return {
+            'tipo': 'progresion_aplicada', 'ejercicio_original': nombre, 'ejercicio_nuevo': None,
+            'accion': 'bajar_peso', 'peso_sugerido': techo, 'razon': frase,
+        }
     if propuesto <= techo + 1e-6:
         # 17-oct-2026: si el plan ya propone justo ese peso, no hay que
         # corregir nada, pero el porqué sigue valiendo (curl femoral tras un
@@ -480,12 +507,22 @@ def ajustar_escala_y_reps(cliente, ej, hoy):
     from rutinas.models import EjercicioBase
     _base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
     equipo_conocido = salto_fisico(nombre, _base.equipo if _base else None) is not None
-    if peso > 0 and equipo_conocido and not mantiene and not (ref_peso and abs(peso - ref_peso) < 0.01):
+    # 20-oct-2026: un peso que no existe en el equipo (50,5 · 39 · 59,5 · 39,9
+    # en máquinas de 5 en 5) se redondea aunque sea "el de la última vez".
+    fuera_de_escala = peso > 0 and abs(a_escala(peso, salto, 'cerca') - peso) > 0.01
+    if peso > 0 and equipo_conocido and (fuera_de_escala or not (mantiene or (ref_peso and abs(peso - ref_peso) < 0.01))):
         hacia = 'abajo' if ej.get('progresion_motivo_local') == 'techo_ultima_sesion' else 'cerca'
-        nuevo = a_escala(peso, salto, hacia)
+        if mantiene or (ref_peso and abs(peso - ref_peso) < 0.01):
+            # El mismo peso de la última vez, llevado al más cercano que existe;
+            # en empate, hacia arriba (lo que se movió sigue cabiendo).
+            abajo, arriba = a_escala(peso, salto, 'abajo'), a_escala(peso, salto, 'arriba')
+            nuevo = arriba if (arriba - peso) <= (peso - abajo) + 1e-9 else abajo
+        else:
+            nuevo = a_escala(peso, salto, hacia)
         # Nunca por debajo de la serie que sí entró si el plan proponía más.
-        if ref_peso and peso >= ref_peso and nuevo < ref_peso:
-            nuevo = ref_peso
+        ref_escala = a_escala(ref_peso, salto, 'cerca') if ref_peso else None
+        if ref_escala and peso >= ref_peso and nuevo < ref_escala and hacia != 'abajo':
+            nuevo = ref_escala
         tope = tope_de(cliente, nombre)
         if tope:
             nuevo = min(nuevo, float(tope))

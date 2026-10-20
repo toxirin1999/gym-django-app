@@ -67,7 +67,8 @@ class ReglaC(SimpleTestCase):
             lectura([s(40, 9, 8), s(30, 12, 8), s(30, 12, 8)], 15), (15, 20), 8, 5,
         )
         self.assertEqual(accion, 'bajar')
-        self.assertEqual(techo, 30)
+        # 20-oct-2026: por debajo de la serie que se quedó corta (30 × 12), hacia abajo.
+        self.assertEqual(techo, 25)
         self.assertIn('40 kg × 9 y 30 kg × 12', frase)
 
     def test_la_ultima_serie_se_hunde(self):

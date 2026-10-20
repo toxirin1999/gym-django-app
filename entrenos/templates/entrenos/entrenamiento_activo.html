@@ -1201,6 +1201,8 @@ body{background:
 /* 19-oct-2026: la barra de progreso se pegaba en top:0, debajo de la cabecera, y el
    contenido se transparentaba ("Ejercicio actual" y el % a medias). */
 .tb-progress-wrap{top:46px;padding:2px 18px 8px;background:#050708;gap:10px;}
+/* 20-oct-2026: degradado bajo la cabecera fija; lo que pasa por debajo se funde en vez de cortarse. */
+.tb-progress-wrap::after{content:'';position:absolute;left:0;right:0;top:100%;height:16px;background:linear-gradient(#050708,rgba(5,7,8,0));pointer-events:none;}
 .tb-track{height:5px;background:#1b2730;}
 .tb-fill{background:linear-gradient(90deg,#00e2aa,#14c9a2);}
 .tb-pct{font-size:11px;color:#c4cbd1;font-weight:700;}
@@ -1935,10 +1937,11 @@ body{background:
       <div class="pd-calc-txt" id="calc-inline-txt-{{ ejercicio.form_id }}-{{ sn }}"></div>
     </div>
     {% endif %}
-    <button type="button" class="btn-guardar"
+    <button type="button" class="btn-guardar" data-fid="{{ ejercicio.form_id }}" data-sn="{{ sn }}"
+            data-unidad="{% if ejercicio.usa_tiempo %}s{% elif ejercicio.usa_distancia %}m{% else %}reps{% endif %}"
             onclick="guardarSeriePanel('{{ ejercicio.form_id }}',{{ sn }},{{ ejercicio.series }})">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-      <span>Guardar serie</span>
+      <span class="btn-guardar-txt">Guardar serie</span>
     </button>
 
     {% if ejercicio.usa_peso %}
@@ -2705,7 +2708,7 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     const rMax = parseInt(panelSig.dataset.repsMax || repsObj) || repsObj;
     const bannerSigR = document.getElementById('sugerencia-'+fid+'-'+snSig);
     if (Number.isFinite(rpe) && rpe <= rpeObj - 1 && reps < rMax) {
-      const objetivo = Math.min(rMax, reps + Math.max(1, Math.round((rpeObj - rpe) * 2)));
+      const objetivo = Math.min(rMax, reps + Math.max(1, Math.round(rpeObj - rpe)));  // 20-oct-2026: 1 rep por punto de RPE
       const hid = document.getElementById('reps-hid-'+fid+'-'+snSig);
       const disp = document.getElementById('reps-disp-'+fid+'-'+snSig);
       if (hid) hid.value = objetivo;
@@ -2816,7 +2819,8 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
   if (rpe >= 10 || rpe >= rpeObj + 2) return bajar();
   if (rpe <= rpeObj - 1) {
     if (reps < repsMax) {
-      const extra = Math.max(1, Math.round((rpeObj - rpe) * 2));
+      // 20-oct-2026: una rep por cada punto de RPE de margen (RPE 7 con objetivo 8 = 1 rep en reserva).
+      const extra = Math.max(1, Math.round(rpeObj - rpe));
       const objetivo = Math.min(repsMax, reps + extra);
       return { peso, reps: objetivo, tipo: 'reps',
                texto: `RPE ${rpe} con margen: mismo peso, a por ${objetivo} reps.` };
@@ -3598,6 +3602,31 @@ document.addEventListener('visibilitychange',()=>{
     }
   });
 });
+
+// 20-oct-2026: el botón dice lo que se va a guardar ("Guardar · 25 kg × 16 @8"),
+// para ver antes de pulsar si se quedó sin cambiar un número rellenado.
+function textoBotonGuardar(btn){
+  const fid=btn.dataset.fid, sn=btn.dataset.sn;
+  const peso=parseFloat((document.getElementById('peso-'+fid+'-'+sn)?.value||'').replace(',','.'));
+  const reps=parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value||'');
+  const rpe=document.getElementById('rpe-hid-'+fid+'-'+sn)?.value||'';
+  const unidad=btn.dataset.unidad||'reps';
+  if(!Number.isFinite(reps))return 'Guardar serie';
+  const partes=[];
+  if(peso>0)partes.push(fmtKg(peso)+' kg ×');
+  partes.push(reps+(unidad==='reps'?'':' '+unidad));
+  if(rpe)partes.push('@'+rpe);
+  return 'Guardar · '+partes.join(' ');
+}
+function refrescarBotonesGuardar(){
+  document.querySelectorAll('.btn-guardar[data-fid]').forEach(btn=>{
+    const txt=btn.querySelector('.btn-guardar-txt');
+    if(txt)txt.textContent=textoBotonGuardar(btn);
+  });
+}
+['click','input','change'].forEach(ev=>document.addEventListener(ev,()=>requestAnimationFrame(refrescarBotonesGuardar)));
+document.addEventListener('DOMContentLoaded',refrescarBotonesGuardar);
+setTimeout(refrescarBotonesGuardar,300);
 
 // 19-oct-2026: el peso se puede teclear (antes el toque se bloqueaba y solo
 // valían − y +). Coma o punto; lo que se teclea se respeta tal cual.

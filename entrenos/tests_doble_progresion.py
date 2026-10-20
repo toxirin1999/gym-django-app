@@ -36,7 +36,8 @@ class DobleProgresionTests(ProgresionEjecutivaBase):
 
     def test_sin_llegar_al_tope_no_sube_peso(self):
         ej, cambios, log = self._aplicar(11, '15-20')
-        self.assertEqual(ej['peso_kg'], 72.5)
+        # 20-oct-2026: 72,5 no existe en una máquina de 5 en 5; empate → hacia arriba.
+        self.assertEqual(ej['peso_kg'], 75)
         self.assertTrue(ej['progresion_pospuesta'])
         self.assertIn('Mismo peso', ej['progresion_motivo'])  # regla C (17-oct-2026)
         self.assertIn('con 20 en todas las series', ej['progresion_motivo'])

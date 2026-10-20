@@ -18,70 +18,29 @@ from analytics.planificador_helms.core import PlanificadorHelms
 from entrenos.services.descanso_service import get_descanso_sugerido
 
 
-class TestGetDescansoSugeridoReproduceValores(TestCase):
-    """Reproduce los 4 valores de la fórmula original de
-    _calcular_descanso_pormenorizado (1/2/3/4 min)."""
+class TestDescansosSegunEvidencia(TestCase):
+    """20-oct-2026: 2:30 básicos, 1:30 aislamiento/core, 3:00 fuerza (antes 4 min en un crunch)."""
 
-    def test_compuesto_principal_rpe_alto(self):
-        self.assertEqual(
-            get_descanso_sugerido('compuesto_principal', rpe_objetivo=8)['minutos'], 4
-        )
+    def test_basico(self):
+        self.assertEqual(get_descanso_sugerido('compuesto_principal', 8, nombre='Jalón al Pecho', reps='12-15')['minutos'], 2.5)
 
-    def test_compuesto_principal_rpe_bajo(self):
-        self.assertEqual(
-            get_descanso_sugerido('compuesto_principal', rpe_objetivo=7)['minutos'], 3
-        )
+    def test_core_aunque_cuente_como_principal(self):
+        self.assertEqual(get_descanso_sugerido('compuesto_principal', 9, nombre='Crunch en Polea (Cable Crunch)', reps='15-20')['minutos'], 1.5)
 
-    def test_aislamiento_rpe_alto(self):
-        self.assertEqual(
-            get_descanso_sugerido('aislamiento', rpe_objetivo=8)['minutos'], 2
-        )
+    def test_aislamiento(self):
+        self.assertEqual(get_descanso_sugerido('aislamiento', 9)['label'], '1:30')
 
-    def test_aislamiento_rpe_bajo(self):
-        self.assertEqual(
-            get_descanso_sugerido('aislamiento', rpe_objetivo=7)['minutos'], 1
-        )
+    def test_fuerza(self):
+        self.assertEqual(get_descanso_sugerido('compuesto_principal', 8, nombre='Sentadilla Hack', reps='4-6')['minutos'], 3)
 
 
 class TestPlanificadorHelmsDelega(TestCase):
-    """_calcular_descanso_pormenorizado delega en descanso_service y
-    produce los mismos valores que antes."""
-
     def setUp(self):
         self.planificador = PlanificadorHelms.__new__(PlanificadorHelms)
 
-    def test_compuesto_principal_rpe_alto(self):
-        self.assertEqual(
-            self.planificador._calcular_descanso_pormenorizado('Cualquiera', 8, 'compuesto_principal'),
-            4,
-        )
-
-    def test_aislamiento_rpe_bajo(self):
-        self.assertEqual(
-            self.planificador._calcular_descanso_pormenorizado('Cualquiera', 5, 'aislamiento'),
-            1,
-        )
-
-
-class TestCompuestoPrincipalRpeAltoDevuelve3a4Min(TestCase):
-    def test_label_y_motivo(self):
-        info = get_descanso_sugerido('compuesto_principal', rpe_objetivo=9)
-        self.assertEqual(info, {
-            'minutos': 4,
-            'label': '3-4 min',
-            'motivo': 'principal con RPE alto',
-            'fuente': 'helms',
-        })
-
-
-class TestAccesoriosRestoDevuelven1a2Min(TestCase):
-    def test_compuesto_secundario(self):
-        info = get_descanso_sugerido('compuesto_secundario', rpe_objetivo=6)
-        self.assertEqual(info['label'], '1-2 min')
-
-    def test_aislamiento(self):
-        info = get_descanso_sugerido('aislamiento', rpe_objetivo=9)
-        self.assertEqual(info['label'], '1-2 min')
+    def test_delega_con_nombre_y_reps(self):
+        self.assertEqual(self.planificador._calcular_descanso_pormenorizado('Prensa de Piernas', 8, 'compuesto_principal', '12-15'), 2.5)
+        self.assertEqual(self.planificador._calcular_descanso_pormenorizado('Curl Araña', 9, 'aislamiento', '15-20'), 1.5)
 
 
 _OBTENER_PROXIMO_PATH = 'clientes.views.obtener_proximo_entrenamiento'
@@ -128,12 +87,13 @@ class TestPortalSesionMuestranLabelMotivo(PortalSesionBase):
         self.assertEqual(response.status_code, 200)
 
         ej = response.context['rutina_ajustada']['ejercicios'][0]
-        self.assertEqual(ej['descanso_label'], '3-4 min')
-        self.assertEqual(ej['descanso_motivo'], 'principal con RPE alto')
+        # 20-oct-2026: básico → 2:30.
+        self.assertEqual(ej['descanso_label'], '2:30')
+        self.assertEqual(ej['descanso_motivo'], 'ejercicio básico')
 
         html = response.content.decode()
-        self.assertIn('3-4 min', html)
-        self.assertIn('Principal con RPE alto', html)
+        self.assertIn('2:30', html)
+        self.assertIn('Ejercicio básico', html)
 
 
 class TestPortalSesionFallbackSinDescansoEnJson(PortalSesionBase):
@@ -152,5 +112,5 @@ class TestPortalSesionFallbackSinDescansoEnJson(PortalSesionBase):
 
         ej = response.context['rutina_ajustada']['ejercicios'][0]
         self.assertEqual(ej['descanso_minutos'], 2)
-        self.assertEqual(ej['descanso_label'], '1-2 min')
-        self.assertEqual(ej['descanso_motivo'], 'accesorio')
+        self.assertEqual(ej['descanso_label'], '1:30')
+        self.assertEqual(ej['descanso_motivo'], 'aislamiento o core')

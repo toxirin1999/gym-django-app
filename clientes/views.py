@@ -4992,6 +4992,7 @@ def portal_sesion_unificado(request, cliente_id):
                 _descanso_info = get_descanso_sugerido(
                     tipo_ejercicio=ejercicio.get('tipo_ejercicio'),
                     rpe_objetivo=ejercicio.get('rpe_objetivo'),
+                    nombre=ejercicio.get('nombre'), reps=ejercicio.get('repeticiones'),
                 )
                 ejercicio['descanso_label'] = _descanso_info['label']
                 ejercicio['descanso_motivo'] = _descanso_info['motivo']

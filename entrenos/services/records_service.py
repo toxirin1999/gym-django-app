@@ -346,8 +346,21 @@ class RecordsService:
         El objeto retornado tiene .peso_kg y .repeticiones, compatibles con estimar_1rm().
         Retorna None si no hay historial.
         """
-        from entrenos.models import EjercicioRealizado
+        from entrenos.models import EjercicioRealizado, SerieRealizada
 
+        # 20-oct-2026: la serie más pesada, no el peso medio del ejercicio
+        # (el crunch salía "nuevo PR 75 kg, antes 73,75" con 75 kg ya hechos).
+        serie = (
+            SerieRealizada.objects
+            .filter(
+                entreno__cliente=cliente, ejercicio__nombre__iexact=nombre_ejercicio,
+                completado=True, es_aproximacion=False, peso_kg__gt=0,
+            )
+            .order_by('-peso_kg', '-entreno__fecha')
+            .first()
+        )
+        if serie is not None:
+            return serie
         return (
             EjercicioRealizado.objects
             .filter(

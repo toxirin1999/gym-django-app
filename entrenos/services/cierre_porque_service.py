@@ -228,6 +228,30 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
     return None
 
 
+def _hundimiento(log, rango):
+    """Texto de la próxima vez cuando la serie de referencia no se sostuvo, o None."""
+    from entrenos.services.maquina_service import salto_carga
+    from entrenos.services.ultima_sesion_service import serie_referencia, series_de_trabajo, techo_peso
+
+    series = series_de_trabajo(log.entreno_origen, log.ejercicio)
+    ref = serie_referencia(series, rango[0])
+    if not ref or not ref.get('caida'):
+        return None
+    resultado = techo_peso(
+        {'referencia': ref, 'fecha': log.entreno_origen.fecha}, rango, 8, salto_carga(log.cliente, log.ejercicio),
+    )
+    if not resultado or resultado[2] != 'bajar':
+        return None
+    cortas = [s for s in series if 0 < s['reps'] < rango[0]]
+    detalle = ', '.join(f"{_kg(s['peso'])} × {s['reps']}" for s in cortas)
+    n = len(cortas)
+    sujeto = 'una serie se quedó' if n == 1 else f'{n} series se quedaron'
+    return (
+        f'{_kg(ref["peso"])} kg entró, pero después {sujeto} por debajo de {rango[0]} ({detalle}): '
+        f'la próxima vez {_kg(resultado[0])} kg para que entren todas.'
+    )
+
+
 def _doble_progresion(log, tipo_progresion):
     """'Mantengo 60 kg: la próxima vez a por 13 reps. Con 15 en todas, subo.' o None."""
     if tipo_progresion not in ('peso_reps', 'peso_corporal_lastre') or log.accion != 'mantener':
@@ -238,6 +262,11 @@ def _doble_progresion(log, tipo_progresion):
     rango = rango_de_sesion(log.entreno_origen, log.ejercicio)
     if not rango or log.reps_anteriores < rango[0] or log.reps_anteriores >= rango[1]:
         return None
+    # 20-oct-2026: si después se hundieron series (crunch 75 × 16, 16, 11 y
+    # 70 × 11), el cierre dice lo mismo que dirá el próximo briefing.
+    hundida = _hundimiento(log, rango)
+    if hundida:
+        return hundida
     siguiente = objetivo_reps_hoy(log.reps_anteriores, rango)
     return (
         f'Mantengo {_kg(log.peso_anterior)} kg: la próxima vez a por {siguiente} reps. '

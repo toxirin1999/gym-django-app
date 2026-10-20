@@ -72,9 +72,12 @@ class TechoPeso(TestCase):
 
     def test_minimo_con_rpe_alto_mantiene(self):
         # Fly: 14 × 12 a RPE 9 con rango 12-15 → 14, no 17,5.
-        techo, frase, _ = techo_peso(lectura([s(14, 12, 9)], 12), (12, 15), 9, 5)
+        # 20-oct-2026: RPE 9 por encima de un objetivo 8 → mantiene; igual al objetivo → una rep más.
+        techo, frase, _ = techo_peso(lectura([s(14, 12, 9)], 12), (12, 15), 8, 5)
         self.assertEqual(techo, 14)
         self.assertIn('a RPE 9', frase)
+        _, frase, _ = techo_peso(lectura([s(14, 12, 9)], 12), (12, 15), 9, 5)
+        self.assertIn('hoy a por 13 reps', frase)
 
     def test_bien_permite_un_salto(self):
         # 17-oct-2026 (regla C): el salto llega al completar el rango (15).
