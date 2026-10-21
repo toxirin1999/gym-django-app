@@ -1740,16 +1740,19 @@ body{background:
         <span class="sa-num">SERIE {{ sn }} DE {{ ejercicio.series }}</span>
         <div class="sa-obj-wrap">
           {% if ejercicio.usa_peso or ejercicio.usa_distancia %}
-            <span class="sa-obj-plan">🎯 {{ ejercicio.peso_recomendado_kg }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
+            {# 21-oct-2026: el objetivo enseña el mismo peso que la casilla (gemelos 22,5 arriba y 25 abajo). #}
+            {% with peso_obj=ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg %}
+            <span class="sa-obj-plan">🎯 {{ peso_obj }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
-              {% if ejercicio.peso_recomendado_kg > ejercicio.peso_anterior_kg %}
-                <span class="sa-obj-diff mas">▲ +{{ ejercicio.peso_recomendado_kg|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
-              {% elif ejercicio.peso_recomendado_kg < ejercicio.peso_anterior_kg %}
+              {% if peso_obj > ejercicio.peso_anterior_kg %}
+                <span class="sa-obj-diff mas">▲ +{{ peso_obj|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
+              {% elif peso_obj < ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff menos">▼ vs última {{ ejercicio.peso_anterior_kg }}kg</span>
               {% else %}
                 <span class="sa-obj-diff igual">= mismo peso</span>
               {% endif %}
             {% endif %}
+            {% endwith %}
           {% elif ejercicio.usa_tiempo %}
             <span class="sa-obj-plan">🎯 {{ ejercicio.reps_objetivo }}s</span>
           {% elif ejercicio.usa_distancia %}

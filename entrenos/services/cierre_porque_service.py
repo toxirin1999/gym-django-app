@@ -248,8 +248,16 @@ def _hundimiento(log, rango):
     sujeto = 'una serie se quedó' if n == 1 else f'{n} series se quedaron'
     return (
         f'{_kg(ref["peso"])} kg entró, pero después {sujeto} por debajo de {rango[0]} ({detalle}): '
-        f'la próxima vez {_kg(resultado[0])} kg para que entren todas.'
+        f'la próxima vez {_kg(resultado[0])} kg{SUFIJO_HUNDIMIENTO}'
     )
+
+
+# 21-oct-2026: el cierre decía "Mantener" encima de "la próxima vez 70 kg".
+SUFIJO_HUNDIMIENTO = ' para que entren todas.'
+
+
+def es_bajada_por_hundimiento(porque):
+    return bool(porque) and porque.endswith(SUFIJO_HUNDIMIENTO) and ' entró, pero después ' in porque
 
 
 def _doble_progresion(log, tipo_progresion):

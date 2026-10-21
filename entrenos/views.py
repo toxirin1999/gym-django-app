@@ -3685,6 +3685,19 @@ def vista_entrenamiento_activo(request, cliente_id):
                 cliente, sesion_programada_id, fecha_obj,
             )
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_planificada)
+            # 21-oct-2026: el enlace directo (sin check-in) enseñaba el plan en
+            # bruto, sin la última sesión ni la escala: curl araña 22,5 kg tras
+            # 20 × 16 en 15-20. Mismo ajuste que el briefing.
+            if ejercicios_planificados and not all(
+                e.get('_autoridad_gym_materializada') is True for e in ejercicios_planificados
+            ):
+                from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
+                try:
+                    ejercicios_planificados, _ = aplicar_plan_dinamico(
+                        cliente, ejercicios_planificados, fecha_planificada,
+                    )
+                except Exception:
+                    logger.exception('[entrenamiento_activo] plan dinámico en el enlace directo falló')
 
         # Un ejercicio sin ninguna serie no forma parte del plan ejecutable:
         # no debe recibir form_id ni viajar al template como una tarjeta vacía.
@@ -3886,9 +3899,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                                 reps_max = limites[-1]
                             except (ValueError, AttributeError):
                                 reps_min = reps_max = 8
-                            ejercicio['reps_objetivo'] = min(
-                                reps_max,
-                                max(reps_min, reps_anteriores),
+                            # 21-oct-2026: por debajo del rango, tu marca + 1
+                            # (sissy 8 → 9), no saltar al mínimo (15).
+                            ejercicio['reps_objetivo'] = (
+                                reps_anteriores + 1 if reps_anteriores < reps_min
+                                else min(reps_max, reps_anteriores)
                             )
                     if ejercicio.get('usa_distancia'):
                         d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
@@ -3902,7 +3917,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                             if d_anterior >= reps_min:
                                 ejercicio['reps_objetivo'] = d_anterior + 1
                             else:
-                                ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
+                                ejercicio['reps_objetivo'] = d_anterior + 1  # 21-oct-2026: tu marca + 1, sin saltar al mínimo (sissy 8 → 9, no 15)
                     # 18-oct-2026 (regla C) también en tiempo: el dead hang
                     # arrancaba en 20 s (el mínimo) tras hacer 32 s.
                     if ejercicio.get('usa_tiempo') and not reps_objetivo_materializado:
@@ -3914,7 +3929,10 @@ def vista_entrenamiento_activo(request, cliente_id):
                             except (ValueError, AttributeError):
                                 t_min = t_max = None
                             if t_min is not None:
-                                ejercicio['reps_objetivo'] = max(t_min, min(t_max, t_anterior + 1))
+                                ejercicio['reps_objetivo'] = (
+                                    t_anterior + 1 if t_anterior < t_min
+                                    else max(t_min, min(t_max, t_anterior + 1))
+                                )
                 else:
                     ejercicio.setdefault('peso_anterior_kg', 0.0)
                     ejercicio.setdefault('fecha_anterior', None)
@@ -3979,7 +3997,9 @@ def vista_entrenamiento_activo(request, cliente_id):
                     peso_trabajo = 0
                 ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
                     peso_trabajo, ejercicio.get('usa_peso', True),
+                    incremento=ejercicio.get('incremento_kg'),
                 )
+                _motivo_peso_coherente(ejercicio)
                 from entrenos.services.peso_semantica_service import normalizar_semantica_carga
                 ejercicio.update(normalizar_semantica_carga(ejercicio))
                 continue
@@ -4144,6 +4164,15 @@ def vista_entrenamiento_activo(request, cliente_id):
             if ejercicio['tipo_progresion'] == 'peso_corporal_lastre':
                 ejercicio['tipo_equipo'] = 'peso_corporal'
                 ejercicio['barra_kg'] = 0
+            elif ejercicio['tipo_progresion'] in ('progresion_reps', 'progresion_tiempo', 'progresion_variante'):
+                # 21-oct-2026: sin carga no hay calculadora de discos (dead hang,
+                # sissy squat salían con "barra 20 kg").
+                ejercicio['tipo_equipo'] = 'peso_corporal'
+                ejercicio['barra_kg'] = 0
+            elif any(k in _nombre_lower for k in ('barra z', 'barra ez', 'ez bar', 'z-bar')):
+                # 21-oct-2026: la barra Z de David pesa 10 kg (no 20).
+                ejercicio['tipo_equipo'] = 'barra'
+                ejercicio['barra_kg'] = 10
             elif any(k in _nombre_lower for k in _KEYWORDS_MAQUINA_DISCOS):
                 ejercicio['tipo_equipo'] = 'maquina_discos'
                 ejercicio['barra_kg'] = 0
@@ -4352,7 +4381,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     if t_anterior >= reps_min:
                         ejercicio['reps_objetivo'] = t_anterior + 1
                     else:
-                        ejercicio['reps_objetivo'] = max(reps_min, t_anterior - 1)
+                        ejercicio['reps_objetivo'] = t_anterior + 1  # 21-oct-2026: tu marca + 1, sin saltar al mínimo (sissy 8 → 9, no 15)
 
             # --- PROGRESIÓN PARA EJERCICIOS DE DISTANCIA ---
             # Si hay dato anterior: propone anterior+1m (éxito) o anterior-1m (no completado).
@@ -4369,7 +4398,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     if d_anterior >= reps_min:
                         ejercicio['reps_objetivo'] = d_anterior + 1
                     else:
-                        ejercicio['reps_objetivo'] = max(reps_min, d_anterior - 1)
+                        ejercicio['reps_objetivo'] = d_anterior + 1  # 21-oct-2026: tu marca + 1, sin saltar al mínimo (sissy 8 → 9, no 15)
 
             # --- PROGRESIÓN PARA EJERCICIOS DE SOLO REPS (peso corporal) ---
             # Si hay dato anterior: propone anterior+1 rep (éxito) o anterior-1 (no completado).
@@ -4386,12 +4415,14 @@ def vista_entrenamiento_activo(request, cliente_id):
                     if r_anterior >= reps_min:
                         ejercicio['reps_objetivo'] = r_anterior + 1
                     else:
-                        ejercicio['reps_objetivo'] = max(reps_min, r_anterior - 1)
+                        ejercicio['reps_objetivo'] = r_anterior + 1  # 21-oct-2026: tu marca + 1, sin saltar al mínimo (sissy 8 → 9, no 15)
 
             # Detectar estancamiento previo (GymDecisionLog activo)
             ejercicio['estancado'] = detectar_estancamiento(
                 cliente, ejercicio.get('nombre', ''), fecha_obj
             )
+
+            _motivo_peso_coherente(ejercicio)
 
             # Calcular aproximaciones basadas en el peso de trabajo
             try:
@@ -4399,7 +4430,8 @@ def vista_entrenamiento_activo(request, cliente_id):
             except (TypeError, ValueError):
                 peso_trabajo = 0
             ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
-                peso_trabajo, ejercicio.get('usa_peso', True)
+                peso_trabajo, ejercicio.get('usa_peso', True),
+                incremento=ejercicio.get('incremento_kg'),
             )
 
     except Exception as e:
@@ -9870,7 +9902,12 @@ def briefing_entrenamiento(request, cliente_id):
             peso_trabajo = float(ej.get('peso_recomendado_kg') or ej.get('peso_kg') or 0)
         except (TypeError, ValueError):
             peso_trabajo = 0
-        ej['aproximaciones'] = get_aproximaciones_calentamiento(peso_trabajo, ej['usa_peso'])
+        try:
+            from entrenos.services.maquina_service import salto_carga as _salto
+            _inc = ej.get('incremento_kg') or _salto(cliente, ej.get('nombre', ''))
+        except Exception:
+            _inc = None
+        ej['aproximaciones'] = get_aproximaciones_calentamiento(peso_trabajo, ej['usa_peso'], incremento=_inc)
 
     # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
     # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.
@@ -10038,3 +10075,29 @@ def guardar_motivo_pausa(request, pausa_id):
     if request.headers.get('X-CSRFToken'):
         return JsonResponse({'ok': True})
     return redirect(request.META.get('HTTP_REFERER') or 'panel_cliente')
+
+
+def _fmt_kg_corto(valor):
+    """130.0 → '130'; 22.5 → '22,5'."""
+    v = round(float(valor), 2)
+    return str(int(v)) if v == int(v) else f'{v:g}'.replace('.', ',')
+
+
+def _motivo_peso_coherente(ejercicio):
+    """21-oct-2026: "Sube por…" con el mismo peso que la última vez (hip thrust
+    130 = 130) se contradice; el porqué dice lo que hay hoy."""
+    motivo = ejercicio.get('motivo_peso') or {}
+    if not isinstance(motivo, dict) or motivo.get('tipo') != 'sube':
+        return
+    try:
+        hoy_kg = float(ejercicio.get('peso_inicial_kg') or ejercicio.get('peso_recomendado_kg') or 0)
+        antes_kg = float(ejercicio.get('peso_anterior_kg') or 0)
+    except (TypeError, ValueError):
+        return
+    if antes_kg > 0 and hoy_kg < antes_kg - 1e-6:
+        ejercicio.pop('motivo_peso', None)
+    elif antes_kg > 0 and abs(hoy_kg - antes_kg) <= 1e-6:
+        ejercicio['motivo_peso'] = dict(
+            motivo, tipo='mantiene',
+            texto=f'Mismo peso que la última vez ({_fmt_kg_corto(antes_kg)} kg): toca sumar repeticiones.',
+        )

@@ -123,6 +123,14 @@ def _efecto_visible(log, tipo_progresion):
     return _efecto_decision(log, tipo_progresion)
 
 
+def _bajada_visible(porque):
+    """21-oct-2026: si el porqué baja el peso (hundimiento), la etiqueta también."""
+    from entrenos.services.cierre_porque_service import es_bajada_por_hundimiento
+    if es_bajada_por_hundimiento(porque):
+        return {'accion': 'Bajar peso', 'efecto_tipo': 'bajada'}
+    return {}
+
+
 def _accion_semantica(log, tipo_progresion):
     """No presentar metros o segundos como si fueran repeticiones."""
     if log.accion != 'subir_reps':
@@ -271,6 +279,7 @@ def _decisiones_entrenador(cliente, entreno):
             'hoy': hoy,
             'efecto': _efecto_visible(log, tipo_progresion),
             'efecto_tipo': 'bajada' if log.accion in ('bajar_peso', 'deload') else 'subida',
+            **_bajada_visible(porque),
             'evidencia': evidencia,
             'confianza': confianza,
         })

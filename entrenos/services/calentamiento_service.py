@@ -8,7 +8,7 @@ sin cambiar sus valores: 50% / 70% / 85% del peso de trabajo, redondeados al
 """
 
 
-def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True):
+def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=None):
     """
     Series de aproximación (calentamiento) antes del peso de trabajo.
 
@@ -28,6 +28,18 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True):
 
     def _redondear(p):
         return round(round(p / 2.5) * 2.5, 1)
+
+    try:
+        incremento = float(incremento or 0)
+    except (TypeError, ValueError):
+        incremento = 0
+    if incremento > 0 and abs(incremento - 2.5) > 1e-9:
+        # 21-oct-2026: en la escala real del equipo, hacia abajo (kettlebell de
+        # 4 en 4: 8/12/16 y no 10/15/17,5; máquina de 5 en 5: 40 y no 42,5).
+        from entrenos.services.maquina_service import a_escala
+
+        def _redondear(p):  # noqa: F811
+            return round(a_escala(p, incremento, 'abajo'), 1)
 
     return {
         'peso1': _redondear(peso_trabajo * 0.50),
