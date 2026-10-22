@@ -208,3 +208,13 @@ class RutinaHechaCuentaLasSeries(RutinaPreview):
                          (2, 'mejor 22,5 kg × 10'))
         self.assertEqual(por_nombre['Farmer Walk']['reps'], 'mejor 51 m')
         self.assertEqual(por_nombre['Farmer Walk']['unidad'], '')
+
+
+class SesionAdelantada(RutinaPreview):
+    """22-oct-2026: el jueves David abrió la del sábado y el briefing salió con 0 ejercicios."""
+
+    def test_el_briefing_se_pide_con_la_fecha_del_plan(self):
+        c = self.contexto()
+        sabado = next(d for d in c['semana'] if d['fecha'] == LUNES + timedelta(days=5))['preview']
+        self.assertEqual(sabado['titulo'], 'Dia 5 - Hipertrofia — Metabólica')
+        self.assertIn(f"fecha={(LUNES + timedelta(days=4)).isoformat()}", sabado['url'])

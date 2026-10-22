@@ -3684,6 +3684,18 @@ def vista_entrenamiento_activo(request, cliente_id):
             fecha_planificada = _fecha_planificada_para_sesion(
                 cliente, sesion_programada_id, fecha_obj,
             )
+            # 22-oct-2026: el enlace directo de hoy, sin sesión ni fecha, abre lo
+            # mismo que Ahora (la sesión aplazada si la hay), no el calendario:
+            # el jueves enseñaba el Día 4 con el Día 3 aplazado.
+            if not sesion_programada_id and not request.GET.get('fecha') and not rutina_nombre:
+                try:
+                    from entrenos.services.sesion_recomendada import _siguiente_de_cola
+                    _sig = _siguiente_de_cola(cliente, fecha_obj)
+                except Exception:
+                    _sig = None
+                if _sig and _sig.get('fecha'):
+                    fecha_planificada = _sig['fecha']
+                    rutina_nombre = _sig.get('nombre') or rutina_nombre
             ejercicios_planificados = _calcular_ejercicios_dia(cliente_id, fecha_planificada)
             # 21-oct-2026: el enlace directo (sin check-in) enseñaba el plan en
             # bruto, sin la última sesión ni la escala: curl araña 22,5 kg tras
@@ -4249,6 +4261,12 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicio['reps_objetivo'] = reps_sugeridas_tope
                     ejercicio['reps_min'] = reps_sugeridas_tope
                     ejercicio['reps_max'] = reps_sugeridas_tope
+                elif 'reps_objetivo_hoy' in ejercicio:
+                    # 22-oct-2026: el plan ya pasó por la última sesión (techo,
+                    # escala, regla C): manda su peso, como en el briefing. Con
+                    # el de la última vez salía remo 60 kg "a por 15" tras 60 × 8.
+                    from entrenos.services.ultima_sesion_service import peso_contractual
+                    ejercicio['peso_inicial_kg'] = peso_contractual(ejercicio) or peso_ant or peso_rec
                 elif peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
                 else:
@@ -4292,6 +4310,16 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['pr_peso'] = 0.0
                 ejercicio['pr_reps'] = 0
                 ejercicio['peso_inicial_kg'] = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
+
+            # 22-oct-2026 (regla C): las reps de hoy que calculó el plan, como
+            # en el briefing (laterales 16 × 15 → a por 16, no 15).
+            if (
+                ejercicio.get('reps_objetivo_hoy')
+                and not ejercicio.get('sugerencia_tope')
+                and not ejercicio.get('usa_distancia')
+                and not ejercicio.get('usa_tiempo')
+            ):
+                ejercicio['reps_objetivo'] = int(ejercicio['reps_objetivo_hoy'])
 
             # 13-oct-2026: tope de máquina guardado (nunca por encima).
             from entrenos.services.maquina_service import tope_de as _tope_de
@@ -5739,7 +5767,14 @@ def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
                         ejercicios_origen = _calcular_ejercicios_dia(cliente.id, sp.fecha_prevista)
                     except Exception:
                         ejercicios_origen = []
-                params = {'fecha': f.isoformat(), 'rutina_nombre': d['nombre']}
+                # 22-oct-2026: una sesión adelantada (la del sábado elegida el
+                # jueves) se reconstruye desde su fecha del plan; con la fecha
+                # del hueco (un día de descanso del plan) salía con 0 ejercicios.
+                fecha_plan = d.get('fecha_origen') or f
+                if f != hoy and fecha_plan != f:
+                    params = {'fecha': fecha_plan.isoformat(), 'rutina_nombre': d['nombre']}
+                else:
+                    params = {'fecha': f.isoformat(), 'rutina_nombre': d['nombre']}
                 if sp is not None and f == hoy:
                     params['sesion_programada_id'] = sp.pk
                 ejercicios = []

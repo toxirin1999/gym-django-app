@@ -41,8 +41,19 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
         def _redondear(p):  # noqa: F811
             return round(a_escala(p, incremento, 'abajo'), 1)
 
-    return {
-        'peso1': _redondear(peso_trabajo * 0.50),
-        'peso2': _redondear(peso_trabajo * 0.70),
-        'peso3': _redondear(peso_trabajo * 0.85),
-    }
+    p1 = _redondear(peso_trabajo * 0.50)
+    p2 = _redondear(peso_trabajo * 0.70)
+    p3 = _redondear(peso_trabajo * 0.85)
+    if incremento > 0:
+        # 22-oct-2026: sin escalones repetidos (laterales 5/10/10 → 5/10/15;
+        # kettlebell 8/8/12 → 4/8/12), siempre por debajo del peso de trabajo.
+        if p2 <= p1 and p1 + incremento < peso_trabajo - 1e-9:
+            p2 = round(p1 + incremento, 1)
+        if p3 <= p2 and p2 + incremento < peso_trabajo - 1e-9:
+            p3 = round(p2 + incremento, 1)
+        if p2 <= p1 or p3 <= p2:
+            p2 = min(p2, round(p3 - incremento, 1))
+            p1 = min(p1, round(p2 - incremento, 1))
+            if p1 <= 0 or p2 <= 0:
+                p1, p2 = _redondear(peso_trabajo * 0.50), _redondear(peso_trabajo * 0.70)
+    return {'peso1': p1, 'peso2': p2, 'peso3': p3}
