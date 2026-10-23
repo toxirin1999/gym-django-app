@@ -101,7 +101,10 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
     def test_objetivo_tope_no_mezcla_rango_original_en_superficies(self):
         self.assertIn('data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
         self.assertIn('data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}', self.source)
-        self.assertIn('Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps', self.source)
+        # 23-oct-2026: con tope la cabecera no repite el objetivo (iba cortado);
+        # lo dice la etiqueta "Tope · N reps".
+        self.assertNotIn('Objetivo de tope:', self.source)
+        self.assertIn('{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %}', self.source)
         self.assertIn('{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}', self.source)
 
     def test_tiempo_no_se_suma_como_repeticiones_en_modal(self):
@@ -190,8 +193,9 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertIn("kg · {{ ejercicio.repeticiones_anterior }} m", self.source)
 
     def test_distancia_no_se_presenta_ni_autoregula_como_repeticiones(self):
-        # 13-oct-2026: con tope, la cabecera muestra el objetivo en metros (52 m), no el rango genérico.
-        self.assertIn("{% elif ejercicio.usa_distancia %}<span class=\"chip-n\">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>", self.source)
+        # 23-oct-2026: con tope el objetivo en metros va solo en la etiqueta (antes
+        # se repetía y se cortaba en la cabecera); sin tope, el rango en metros.
+        self.assertIn("{% elif ejercicio.usa_distancia %} · <span class=\"chip-n\">{{ rango_vis }} m</span>", self.source)
         self.assertIn("🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:\"-1\" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}", self.source)
         self.assertIn("const usaDistancia = panelSig.dataset.usaDistancia === '1';", self.source)
         self.assertIn("if (!usaPeso || usaDistancia) return;", self.source)

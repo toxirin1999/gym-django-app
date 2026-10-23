@@ -89,6 +89,13 @@ def serie_referencia(series, reps_min=None):
     if en_rango and reps_min is not None:
         ultima_ref = max(i for i, s in enumerate(validas) if s['peso'] == peso_ref and s['reps'] >= reps_min)
         caidas = [s for s in validas[ultima_ref + 1:] if s['peso'] < peso_ref and s['reps'] < reps_min]
+        # 23-oct-2026: también al mismo peso, si se hundió de verdad (curl
+        # martillo 30 × 15, 13 y 8 en 15-20). Una rep corta es fatiga normal.
+        caidas += [
+            s for s in validas[ultima_ref + 1:]
+            if s['peso'] == peso_ref and s['reps'] <= reps_min - DEFICIT_PARA_BAJAR
+        ]
+        caidas.sort(key=lambda s: validas.index(s))
         caida = caidas[-1] if caidas else None
     return {
         'peso': peso_ref,

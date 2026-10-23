@@ -32,6 +32,41 @@ def calcular_sugerencia_tope(datos_anterior):
     return False, None
 
 
+MAX_REPS_TOPE = 25
+
+
+def reps_tope_con_margen(cliente, nombre, fecha, reps_sugeridas):
+    """23-oct-2026: objetivo de reps con tope de máquina.
+
+    Mejor serie de la última vez + los puntos de RPE que sobraron respecto al
+    objetivo (abducción 60 × 21 a RPE 8, 6 y 6 con objetivo 9 → 24). Con más
+    de ``MAX_REPS_TOPE`` reps el estímulo pierde valor: se queda en ese número
+    y se propone endurecer la serie. Devuelve (reps, aviso o None).
+    """
+    try:
+        from entrenos.services.decision_log_service import (
+            _rpe_objetivo_snapshot, normalizar_ejercicio,
+        )
+        from entrenos.services.ultima_sesion_service import ultima_sesion
+        lectura = ultima_sesion(cliente, nombre, fecha)
+    except Exception:
+        lectura = None
+    reps = reps_sugeridas
+    if lectura:
+        series = [s for s in lectura['series'] if s['reps'] > 0]
+        rpes = [s['rpe'] for s in series if s.get('rpe') is not None]
+        objetivo_rpe = _rpe_objetivo_snapshot(lectura['entreno'], normalizar_ejercicio(nombre))
+        if series and rpes and objetivo_rpe:
+            margen = max(1, round(float(objetivo_rpe) - float(min(rpes))))
+            reps = max(reps_sugeridas or 0, int(max(s['reps'] for s in series)) + margen)
+    aviso = None
+    if reps and reps > MAX_REPS_TOPE:
+        reps = MAX_REPS_TOPE
+        aviso = (f'Ya pasas de {MAX_REPS_TOPE} reps con el máximo de la máquina: '
+                 'baja en 3 s y aguanta 2 s arriba en cada rep, en vez de sumar más.')
+    return reps, aviso
+
+
 def detectar_estancamiento(cliente, nombre_ejercicio, fecha_actual):
     """
     Réplica de la detección de estancamiento de vista_entrenamiento_activo:

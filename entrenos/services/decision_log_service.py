@@ -493,9 +493,19 @@ def generar_decisiones_para_entreno(entreno):
                 rpe = float(referencia['rpe'])
 
         rpe_objetivo_sesion = _rpe_objetivo_snapshot(entreno, nombre)
+        series_reps = None
+        objetivo_sesion = None
+        if tipo_progresion in ('progresion_reps', 'progresion_tiempo'):
+            try:
+                from entrenos.services.ultima_sesion_service import series_de_trabajo
+                series_reps = [s['reps'] for s in series_de_trabajo(entreno, ej.nombre_ejercicio) if s['reps'] > 0]
+            except Exception:
+                series_reps = None
+            objetivo_sesion = _objetivo_repeticiones_snapshot(entreno, nombre)
         accion, valor_cambio, motivo = _decidir_accion(
             ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion,
             rpe_objetivo=rpe_objetivo_sesion,
+            series_reps=series_reps, objetivo_sesion=objetivo_sesion,
         )
         motivo_codigo = ''
 
@@ -700,7 +710,7 @@ def generar_decisiones_para_entreno(entreno):
 
 
 def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion='peso_reps',
-                    rpe_objetivo=None):
+                    rpe_objetivo=None, series_reps=None, objetivo_sesion=None):
     """Devuelve (accion, valor_cambio, motivo) para un ejercicio dado.
 
     17-oct-2026: ``rpe_objetivo`` es el que pidió la sesión. Un RPE 9 en un
@@ -772,6 +782,32 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
             'mantener',
             None,
             'Sesión intensa — consolidar antes de progresar',
+        )
+
+    # 23-oct-2026 (regla C sin carga): en peso corporal o tiempo, llegar al RPE
+    # que pedía la sesión ya es progresar: una repetición (o un segundo) más.
+    # Sissy squat 9 × 3 a RPE 8 con objetivo 8 decía "mantener" mientras la
+    # sesión siguiente ya proponía 10.
+    if (
+        tipo_progresion in ('progresion_reps', 'progresion_tiempo')
+        and series_reps and objetivo_sesion
+        and min(series_reps) < float(objetivo_sesion)
+    ):
+        # Dead hang 36 s y 31 s con objetivo 36: no se sube, se repite.
+        uni = ' s' if tipo_progresion == 'progresion_tiempo' else ' reps'
+        return (
+            'mantener',
+            None,
+            f'Objetivo no alcanzado en todas las series ({int(objetivo_sesion)}{uni}) — repetir',
+        )
+    if (
+        tipo_progresion in ('progresion_reps', 'progresion_tiempo')
+        and rpe is not None and rpe <= rpe_objetivo
+    ):
+        return (
+            'subir_reps',
+            1,
+            'RPE dentro del objetivo — una repetición más',
         )
 
     # 4. RPE controlado + 2 sesiones exitosas → subir peso (o reps, si el

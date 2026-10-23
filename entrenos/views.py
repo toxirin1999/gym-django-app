@@ -3874,6 +3874,15 @@ def vista_entrenamiento_activo(request, cliente_id):
                         2,
                     )
                     sugerencia_tope, reps_sugeridas_tope = calcular_sugerencia_tope(datos_anterior)
+                    if sugerencia_tope and not ejercicio.get('usa_distancia'):
+                        # 23-oct-2026: con tope, la próxima vez suma el margen de RPE (abducción
+                        # 21 a RPE 6 con objetivo 9 → 24) y, pasadas 25 reps, se endurece la serie.
+                        from entrenos.services.progreso_service import reps_tope_con_margen
+                        reps_sugeridas_tope, _aviso_tempo = reps_tope_con_margen(
+                            cliente, ejercicio.get('nombre', ''), fecha_obj, reps_sugeridas_tope,
+                        )
+                        if _aviso_tempo:
+                            ejercicio['aviso_tope_tempo'] = _aviso_tempo
                     # El snapshot canónico es la autoridad del briefing. Si
                     # éste ya materializó una subida/bajada de carga, no puede
                     # volver a imponerse un tope antiguo al entrar en la
@@ -4012,6 +4021,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     incremento=ejercicio.get('incremento_kg'),
                 )
                 _motivo_peso_coherente(ejercicio)
+                _anotar_series_sin_carga(cliente, ejercicio, fecha_obj)
                 from entrenos.services.peso_semantica_service import normalizar_semantica_carga
                 ejercicio.update(normalizar_semantica_carga(ejercicio))
                 continue
@@ -4251,6 +4261,15 @@ def vista_entrenamiento_activo(request, cliente_id):
 
                 # Tope de máquina: mismo peso, una rep más
                 sugerencia_tope, reps_sugeridas_tope = calcular_sugerencia_tope(datos_anterior)
+                if sugerencia_tope and not ejercicio.get('usa_distancia'):
+                    # 23-oct-2026: con tope, la próxima vez suma el margen de RPE (abducción
+                    # 21 a RPE 6 con objetivo 9 → 24) y, pasadas 25 reps, se endurece la serie.
+                    from entrenos.services.progreso_service import reps_tope_con_margen
+                    reps_sugeridas_tope, _aviso_tempo = reps_tope_con_margen(
+                        cliente, ejercicio.get('nombre', ''), fecha_obj, reps_sugeridas_tope,
+                    )
+                    if _aviso_tempo:
+                        ejercicio['aviso_tope_tempo'] = _aviso_tempo
                 if sugerencia_tope and peso_ant > 0:
                     ejercicio['peso_inicial_kg'] = peso_ant
                     ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
@@ -4451,6 +4470,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             )
 
             _motivo_peso_coherente(ejercicio)
+            _anotar_series_sin_carga(cliente, ejercicio, fecha_obj)
 
             # Calcular aproximaciones basadas en el peso de trabajo
             try:
@@ -10136,3 +10156,50 @@ def _motivo_peso_coherente(ejercicio):
             motivo, tipo='mantiene',
             texto=f'Mismo peso que la última vez ({_fmt_kg_corto(antes_kg)} kg): toca sumar repeticiones.',
         )
+
+
+def _anotar_series_sin_carga(cliente, ejercicio, fecha):
+    """23-oct-2026: en tiempo y peso corporal, "Última vez" enseña todas las
+    series (dead hang "40 s · 30 s", no solo 40) y de dónde sale el objetivo
+    de hoy ("media 35 s + 1")."""
+    if ejercicio.get('usa_peso') or not (ejercicio.get('usa_tiempo') or ejercicio.get('solo_reps')):
+        return
+    try:
+        from entrenos.services.ultima_sesion_service import ultima_sesion
+        lectura = ultima_sesion(cliente, ejercicio.get('nombre') or '', fecha)
+    except Exception:
+        lectura = None
+    if not lectura:
+        return
+    reps = [int(s['reps']) for s in lectura['series'] if s['reps'] > 0]
+    if not reps:
+        return
+    uni = ' s' if ejercicio.get('usa_tiempo') else ''
+    ejercicio['ultima_vez_series'] = ' · '.join(f'{r}{uni}' for r in reps)
+    try:
+        objetivo = int(ejercicio.get('reps_objetivo') or 0)
+    except (TypeError, ValueError):
+        objetivo = 0
+    # Si la última vez no todas las series llegaron a su objetivo, se repite
+    # ese objetivo (dead hang 36 s y 31 s con objetivo 36: hoy otra vez 36).
+    try:
+        from entrenos.services.decision_log_service import (
+            _objetivo_repeticiones_snapshot, normalizar_ejercicio,
+        )
+        previo = _objetivo_repeticiones_snapshot(
+            lectura['entreno'], normalizar_ejercicio(ejercicio.get('nombre') or ''),
+        )
+        previo = int(previo) if previo else 0
+    except Exception:
+        previo = 0
+    if previo and min(reps) < previo and objetivo < previo:
+        objetivo = previo
+        ejercicio['reps_objetivo'] = previo
+        ejercicio['objetivo_explicado'] = 'repetir: no todas las series llegaron'
+        return
+    if len(reps) > 1 and objetivo:
+        media = round(sum(reps) / len(reps))
+        if objetivo == media + 1:
+            ejercicio['objetivo_explicado'] = f'media {media}{uni} + 1'
+        elif objetivo == max(reps) + 1:
+            ejercicio['objetivo_explicado'] = 'tu mejor serie + 1'

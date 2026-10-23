@@ -611,6 +611,7 @@ input{background:transparent!important;border:none!important;outline:none!import
 .msg-moti-sub{font-family:var(--fm);font-size:10px;color:var(--td);letter-spacing:0.5px;}
 
 /* ── MODAL MEJORADO ── */
+#modal-save-status:empty{display:none;}
 .modal-resumen-secondary{
   margin:0 16px 12px;border:1px solid var(--bdm);border-radius:12px;overflow:hidden;
 }
@@ -1217,6 +1218,8 @@ body{background:
 .nav-ej .nav-btn::after{font-size:19px;line-height:1;color:#eaf3f2;}.nav-ej .btn-ej-prev::after{content:'‹';}.nav-ej .btn-ej-next::after{content:'›';}
 .exname{padding:0 18px 7px;background:transparent;}
 .exname-toprow{margin:0 0 5px;min-height:14px;}
+/* 23-oct-2026: las flechas ‹ › van encima a la derecha; la etiqueta OPCIONAL se aparta. */
+.exname-toprow{padding-right:96px;}
 .exname-counter{font-size:11px;color:#aeb7c3;font-weight:700;}
 .ex-header-combo{
   position:relative;isolation:isolate;min-height:132px;margin:0;
@@ -1253,6 +1256,8 @@ body{background:
 .exname-chip{font-size:9px!important;padding:3px 7px!important;}
 
 .contingencia-grid{margin:0 18px 7px;gap:6px;}
+/* 23-oct-2026: sin "Tope kg" (tiempo, peso corporal) tres botones a todo el ancho. */
+.contingencia-grid.sin-tope{grid-template-columns:repeat(3,1fr);}
 .contingencia-grid .btn-swap-maquina,
 .contingencia-grid .btn-molestia,
 .contingencia-grid .btn-tope-maquina,
@@ -1264,6 +1269,17 @@ body{background:
 .contingencia-grid .btn-tope-maquina svg,.contingencia-grid .btn-fallo svg{width:15px;height:15px;}
 .contingencia-grid .btn-tope-maquina.activo,
 .contingencia-grid .btn-tope-maquina:hover{background:rgba(0,203,154,.12);border-color:#00d6a4;color:#00e1aa;box-shadow:0 0 13px rgba(0,218,166,.14);}
+/* 23-oct-2026: en el móvil el toque en "Continuar con…" dejaba el :hover pegado
+   al botón que aparece debajo del dedo ("Tope kg" en verde sin tope). En
+   pantallas táctiles solo se resalta lo que está activo de verdad. */
+@media (hover:none){
+  .contingencia-grid .btn-swap-maquina:hover:not(.activo),
+  .contingencia-grid .btn-molestia:hover:not(.activa),
+  .contingencia-grid .btn-fallo:hover:not(.activo),
+  .contingencia-grid .btn-tope-maquina:hover:not(.activo){
+    background:#0d1418;border-color:#263842;color:#d5dce0;box-shadow:none;
+  }
+}
 
 /* Separate, calm input rows avoid the dense two-column widget that obscured
    the hierarchy in the earlier implementation. */
@@ -1574,7 +1590,7 @@ body{background:
           <i class="fas fa-dumbbell"></i>
         </div>
         <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre }}</h2>
-        {% if ejercicio.aproximaciones %}
+        {% if ejercicio.aproximaciones and not ejercicio.usa_distancia %}
         <button type="button" class="ex-aprox-pill" aria-controls="aprox-body-{{ ejercicio.form_id }}" aria-expanded="false" onclick="toggleCalentamiento(this, '{{ ejercicio.form_id }}')">
           <span>Calentamiento · 3 pasos</span><span aria-hidden="true">›</span>
         </button>
@@ -1582,9 +1598,12 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        <span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span> · {% if ejercicio.usa_tiempo %}<span class="chip-n">{{ ejercicio.repeticiones }} seg</span>{% elif ejercicio.usa_distancia %}<span class="chip-n">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}Objetivo: {{ ejercicio.reps_sugeridas_tope }} m{% else %}{{ ejercicio.repeticiones }} m{% endif %}</span>{% elif ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}<span class="chip-n">Objetivo de tope: {{ ejercicio.reps_sugeridas_tope }} reps</span>{% else %}<span class="chip-n">{{ ejercicio.repeticiones }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>
+        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{{ rango_vis }} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
+        {% endif %}
+        {% if ejercicio.aviso_tope_tempo %}
+        <span class="exname-chip" style="background:rgba(245,158,11,0.12);color:#f5b544;border:1px solid rgba(245,158,11,0.3);white-space:normal;">⏱ {{ ejercicio.aviso_tope_tempo }}</span>
         {% endif %}
         {% if ejercicio.estancado %}
         <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
@@ -1669,7 +1688,7 @@ body{background:
 
 
   <!-- CONTINGENCIA -->
-  <div class="contingencia-grid">
+  <div class="contingencia-grid{% if not ejercicio.usa_peso %} sin-tope{% endif %}">
     <button type="button" class="btn-swap-maquina"
             onclick="abrirSwapMaquina('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}','{{ ejercicio.grupo_muscular|escapejs }}')"
             title="Máquina ocupada - buscar alternativa">
@@ -1697,7 +1716,7 @@ body{background:
     {% endif %}
   </div>
 
-  {% if ejercicio.aproximaciones %}
+  {% if ejercicio.aproximaciones and not ejercicio.usa_distancia %}
   <div class="aprox-body" id="aprox-body-{{ ejercicio.form_id }}" data-aprox>
     <div class="aprox-row serie-row serie-aproximacion">
       <div class="sd-check" style="width:28px;height:28px;background:rgba(255,255,255,0.06);color:var(--td);font-size:11px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">A1</div>
@@ -1776,7 +1795,7 @@ body{background:
                    class="peso-input weight-input"
                    id="peso-{{ ejercicio.form_id }}-{{ sn }}"
                    name="{{ ejercicio.form_id }}_peso_{{ sn }}"
-                   value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
+                   value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|floatformat:'-2u' }}"
                    data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-plan-weight="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-eq-name="{{ ejercicio.nombre|lower }}">
@@ -1856,7 +1875,7 @@ body{background:
         <span class="peso-ultima-vez__label">Última vez</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
         <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
-        {% if ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+        {% if sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} m objetivo</span>
         {% endif %}
       </div>
@@ -1868,7 +1887,8 @@ body{background:
         {% if ejercicio.rpe_anterior %}<span class="peso-ultima-vez__rpe" aria-label="RPE de la última vez">RPE {{ ejercicio.rpe_anterior|floatformat:"-1" }}</span>{% endif %}
         {% if ejercicio.diferencia_peso > 0 %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
-        {% elif ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+        {% elif sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
+          {# 23-oct-2026: solo en la S1; desde la S2 manda la propuesta entre series. #}
           <span class="peso-ultima-vez__cue">Hoy a por {{ ejercicio.reps_objetivo }} reps</span>
         {% endif %}
       </div>
@@ -1921,6 +1941,9 @@ body{background:
           <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }}m</span>
         {% elif ejercicio.usa_peso %}
           <span>{{ ejercicio.peso_anterior_kg }}kg × {{ ejercicio.repeticiones_anterior }} reps</span>
+        {% elif ejercicio.ultima_vez_series %}
+          {# 23-oct-2026: todas las series y de dónde sale el objetivo de hoy. #}
+          <span>{{ ejercicio.ultima_vez_series }}</span>{% if sn == 1 and ejercicio.objetivo_explicado %} · hoy {{ ejercicio.reps_objetivo }}{% if ejercicio.usa_tiempo %} s{% endif %} ({{ ejercicio.objetivo_explicado }}){% endif %}
         {% elif ejercicio.usa_tiempo %}
           <span>{{ ejercicio.repeticiones_anterior }}s</span>
         {% elif ejercicio.usa_distancia %}
@@ -2737,7 +2760,7 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     if (bannerDescanso) bannerDescanso.style.display = 'none';
     const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
     if (pesoInput) {
-      pesoInput.value = peso.toFixed(1);
+      pesoInput.value = String(Number((peso).toFixed(2)));  // 23-oct-2026: 30, no 30.0
       calcularDiscosInline(fid, snSig, peso);
       detectarPR(fid, snSig, peso);
     }
@@ -2753,7 +2776,7 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   // ── Peso y reps de la siguiente serie ────────────────────────────────────
   const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
   if (pesoInput) {
-    pesoInput.value = plan.peso.toFixed(1);
+    pesoInput.value = String(Number((plan.peso).toFixed(2)));  // 23-oct-2026: 30, no 30.0
     calcularDiscosInline(fid, snSig, plan.peso);
     detectarPR(fid, snSig, plan.peso);
   }
@@ -2833,6 +2856,13 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
     if (p > peso) {
       return { peso: p, reps: repsMin, tipo: 'subir',
                texto: `${reps} reps a RPE ${rpe}, arriba del rango: subes a ${fmtKg(p)} kg.` };
+    }
+    // 23-oct-2026: en el tope de la máquina no se puede subir peso; el margen
+    // de RPE se suma en reps (abducción 21 a RPE 6 con objetivo 9 → 24).
+    if (Number.isFinite(tope) && peso >= tope - 1e-6) {
+      const extra = Math.max(1, Math.round(rpeObj - rpe));
+      return { peso, reps: reps + extra, tipo: 'reps',
+               texto: `Tope de la máquina y RPE ${rpe} con margen: a por ${reps + extra} reps.` };
     }
   }
   return mismo;
@@ -2917,7 +2947,7 @@ function guardarSeriePanel(fid,sn,total){
     const usaDistLog = _regEl?.dataset.usaDistancia === '1';
     const usaTiempoLog = _regEl?.dataset.usaTiempo === '1';
     const resumenSerie = usaDistLog
-      ? (peso > 0 ? fmtKg(peso)+' kg | '+reps+' m' : reps+' m')
+      ? (peso > 0 ? fmtKg(peso)+' kg × '+reps+' m' : reps+' m')
       : usaTiempoLog
         ? reps+'s'
         : (peso > 0 ? fmtKg(peso)+' kg × '+reps+' reps' : reps+' reps');
@@ -2982,10 +3012,11 @@ function guardarSeriePanel(fid,sn,total){
     const recPeso = document.getElementById('peso-'+fid+'-'+snFlujo)?.value || peso;
     const recReps = document.getElementById('reps-hid-'+fid+'-'+snFlujo)?.value || reps;
     const proxResumen = usaDistProx
-      ? (recPeso > 0 ? '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> | '+recReps+' m' : recReps+' m')
+      ? (parseFloat(recPeso) > 0 ? '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> × '+recReps+' m' : recReps+' m')
       : usaTiempoProx
         ? recReps+'s'
-        : '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> × '+recReps+' reps';
+        // 23-oct-2026: sin carga no hay "0 kg" (sissy: "Serie 2 de 3 — 9 reps").
+        : (parseFloat(recPeso) > 0 ? '<span class="pd-prox-kg">'+fmtKg(recPeso)+' kg</span> × ' : '')+recReps+' reps';
     proxEl.innerHTML=snFlujo>total
       ?'<span style="color:var(--ok)">✓ Ejercicio completado</span>'
       :'Serie <span class="pd-prox-kg">'+snFlujo+'</span> de '+total+' — '+proxResumen;
@@ -3072,6 +3103,19 @@ function resumenDeEjercicio(fid){
   const resultados=scs.map((s,index)=>resultadoPlanSerie(fid,index+1,s.reps,false)).filter(Boolean);
   const fueraDeRango=resultados.some(resultado=>resultado.clase!=='en-rango');
   const enRango=resultados.filter(resultado=>resultado.clase==='en-rango').length;
+  // 23-oct-2026: tiempo y distancia también dan veredicto (farmer: "2/2 en
+  // objetivo: la próxima vez 55 m"; dead hang 36 s y 31 s: repetir 36 s).
+  const regUno=document.getElementById('reg-'+fid+'-1');
+  const unidadTD=regUno?.dataset.usaDistancia==='1'?'m':(regUno?.dataset.usaTiempo==='1'?'s':'');
+  const objTD=parseInt(regUno?.dataset.repsObj||'0',10)||0;
+  if(!resultados.length && unidadTD && objTD>0){
+    const llegan=scs.filter(s=>(s.reps||0)>=objTD).length;
+    const uni=unidadTD==='m'?' m':' s';
+    if(llegan===scs.length && !rpeAlto){
+      return {e:'✓',t:'Ejercicio en objetivo',s:`${llegan}/${scs.length} series en objetivo. La próxima vez, a por ${objTD+1}${uni}.`};
+    }
+    return {e:'!',t:'Objetivo a medias',s:`${llegan}/${scs.length} series llegaron a ${objTD}${uni}. La próxima vez, otra vez a por ${objTD}${uni}.`};
+  }
   if(!resultados.length){
     const lectura=rpeAlto
       ? 'El esfuerzo fue alto; el plan conservará margen antes de progresar.'
@@ -3102,6 +3146,11 @@ function resumenDeEjercicio(fid){
       return {e:'!',t:'Series fuera del rango',s:lectura+' La próxima vez ajusto el peso para que entren todas.'};
     }
     return {e:'✓',t:'En rango, con esfuerzo alto',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y mismas reps.`};
+  }
+  // 23-oct-2026: sin carga no hay "mismo peso" (sissy: "la próxima vez, a por 10").
+  if(scs.every(s=>!(s.peso>0))){
+    const mejor=Math.max(...scs.map(s=>s.reps||0));
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, a por ${mejor+1}.`};
   }
   return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por una rep más.`};
 }
@@ -3817,6 +3866,12 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('modal-moti-sub').textContent=frase.s;
 
   abrirResumen();
+  // 23-oct-2026: sin contenido visible, el recuadro secundario se veía como una
+  // raya vacía bajo las tarjetas de "Revisar entrenamiento".
+  requestAnimationFrame(()=>{
+    const sec=document.querySelector('.modal-resumen-secondary');
+    if(sec && sec.offsetHeight<8) sec.style.display='none';
+  });
 });
 
 document.getElementById('btn-volver-editar').addEventListener('click',cerrarResumen);
@@ -4431,7 +4486,7 @@ function usarAlternativa(nombreAlt, pesoAnterior) {
     // Actualizar inputs de peso con el histórico del sustituto
     if (pesoAnterior > 0) {
       card.querySelectorAll('.weight-input').forEach(inp => {
-        inp.value = pesoAnterior.toFixed(1);
+        inp.value = String(Number((pesoAnterior).toFixed(2)));  // 23-oct-2026: 30, no 30.0
       });
       // Actualizar también el chip de "Última vez"
       const chip = card.querySelector('.chip-n');

@@ -346,6 +346,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 })
                 _persistir_estado_aplicacion(log, 'pospuesta', motivo_texto)
             else:
+                # 23-oct-2026: el rango del ejercicio se sigue enseñando tal cual
+                # (sissy 15-20, no "9-20"); el objetivo de hoy va aparte.
+                ej.setdefault('repeticiones_plan', ej.get('repeticiones'))
                 ej['repeticiones'] = _bump_rango_reps(ej.get('repeticiones', reps_sugeridas), reps_sugeridas)
                 ej['reps_objetivo'] = reps_sugeridas
                 ej['progresion_aplicada'] = True

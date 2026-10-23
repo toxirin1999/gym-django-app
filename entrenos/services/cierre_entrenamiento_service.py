@@ -674,13 +674,28 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             # Solo con el mismo rango prescrito: un ejercicio en dos días con
             # rangos distintos (fondos a 8 y a 15) no se compara entre hilos.
             from entrenos.services.ultima_sesion_service import rango_de_sesion
+            rango_distinto = False
             if reciente is not None:
                 rango_hoy = rango_de_sesion(entreno, ej.nombre_ejercicio)
-                if not rango_hoy or rango_de_sesion(reciente.entreno, ej.nombre_ejercicio) != rango_hoy:
-                    reciente = None
+                rango_antes = rango_de_sesion(reciente.entreno, ej.nombre_ejercicio)
+                if not rango_hoy or rango_antes != rango_hoy:
+                    # 23-oct-2026: un rango nuevo no borra el ejercicio del cierre
+                    # (curl martillo 30 × 8 → 30 × 15): se compara y se avisa.
+                    # Dos hilos del mismo ejercicio en la misma semana (fondos a
+                    # 8 y a 15) siguen sin mezclarse.
+                    if rango_antes and rango_hoy and (entreno.fecha - reciente.entreno.fecha).days >= 7:
+                        rango_distinto = True
+                    else:
+                        reciente = None
             if reciente is not None:
                 anterior = reciente
                 peso_anterior = float(reciente.peso_kg or 0)
+                if rango_distinto:
+                    comparacion = _comparar_referencias(entreno, anterior.entreno, ej.nombre_ejercicio)
+                    if comparacion:
+                        comparacion = dict(comparacion, detalle=f"{comparacion['detalle']} · rango nuevo")
+                        cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
+                    continue
         if anterior is None:
             continue
 
@@ -717,6 +732,26 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 'detalle': detalle,
             })
             continue
+
+        # 23-oct-2026: sin carga, lo que cambia son las reps (sissy "8 → 9 reps
+        # (+1 rep)", no "carga mantenida").
+        if tipo_progresion == 'progresion_reps':
+            from entrenos.services.ultima_sesion_service import series_de_trabajo
+            hoy_r = [s['reps'] for s in series_de_trabajo(entreno, ej.nombre_ejercicio) if s['reps'] > 0]
+            antes_r = [s['reps'] for s in series_de_trabajo(anterior.entreno, ej.nombre_ejercicio) if s['reps'] > 0]
+            if hoy_r and antes_r:
+                r_hoy = round(sum(hoy_r) / len(hoy_r))
+                r_antes = round(sum(antes_r) / len(antes_r))
+                diferencia = r_hoy - r_antes
+                detalle = f'{r_antes} → {r_hoy} reps'
+                if diferencia:
+                    detalle += f" ({'+' if diferencia > 0 else ''}{diferencia} rep{'s' if abs(diferencia) != 1 else ''})"
+                cambios.append({
+                    'nombre': ej.nombre_ejercicio,
+                    'tipo': 'subida' if diferencia > 0 else ('mantenida' if diferencia == 0 else 'bajada'),
+                    'detalle': detalle,
+                })
+                continue
 
         # 17-oct-2026: serie de referencia contra serie de referencia, con
         # reps (el Arnold salía "carga mantenida" con 40 → 30 kg, y el remo

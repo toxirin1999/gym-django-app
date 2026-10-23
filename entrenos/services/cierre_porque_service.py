@@ -191,6 +191,18 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
                 f'subo a {_kg(siguiente)} kg y vuelvo a {rango[0]} reps.'
             )
 
+    if motivo.startswith('Objetivo no alcanzado en todas las series'):
+        import re
+        m = re.search(r'\((\d+ (?:s|reps))\)', motivo)
+        objetivo = m.group(1) if m else 'el mismo objetivo'
+        return f'No todas las series llegaron a {objetivo}: la próxima vez, otra vez a por {objetivo}.'
+
+    if motivo.startswith('RPE dentro del objetivo'):
+        if rpe_txt is None:
+            return None
+        mas = 'un segundo más' if tipo_progresion == 'progresion_tiempo' else 'una repetición más'
+        return f'RPE {rpe_txt} hoy, el que pedía la sesión: la próxima vez {mas}.'
+
     if motivo.startswith('Completado con éxito en 2 sesiones'):
         if rpe_txt is None:
             return None
