@@ -226,6 +226,10 @@ class LeerAtajo(SimpleTestCase):
         self.assertEqual(leer_atajo({'sueno': 27000}, HOY)[HOY]['horas_sueno'], 7.5)
         self.assertEqual(leer_atajo({'sueno_minutos': 90}, HOY)[HOY]['horas_sueno'], 1.5)
 
+    def test_sueno_en_formato_reloj(self):
+        self.assertEqual(leer_atajo({'sueno': '7:12:00'}, HOY)[HOY]['horas_sueno'], 7.2)
+        self.assertEqual(leer_atajo({'sueno': '6:30'}, HOY)[HOY]['horas_sueno'], 6.5)
+
     def test_valores_absurdos_o_vacios(self):
         self.assertEqual(leer_atajo({'hrv': '', 'pulso_reposo': 5, 'sueno': 0}, HOY), {})
         self.assertEqual(leer_atajo({}, HOY), {})

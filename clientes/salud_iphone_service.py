@@ -84,7 +84,16 @@ def _numeros(valor):
     return [float(t.replace(',', '.')) for t in _NUMERO.findall(str(valor))]
 
 
+_HMS = re.compile(r'(\d+):(\d{1,2})(?::(\d{1,2}))?')
+
+
 def _horas_sueno_atajo(clave, valor):
+    # "7:12:00" o "7:12" (duración en formato reloj) → horas.
+    if isinstance(valor, str) and _HMS.search(valor):
+        total = 0.0
+        for h, m, seg in _HMS.findall(valor):
+            total += int(h) + int(m) / 60 + (int(seg) / 3600 if seg else 0)
+        return total or None
     ns = [n for n in _numeros(valor) if n > 0]
     if not ns:
         return None
