@@ -8,6 +8,9 @@ def recalcular_perfil_en_nuevo_peso(sender, instance, created, **kwargs):
     Cada vez que se registra un nuevo peso, recalcula la masa magra
     del PerfilNutricional del cliente.
     """
+    from django.conf import settings as _s
+    if not getattr(_s, 'NUTRICION_ACTIVA', False):
+        return  # 24-oct-2026 (poda): nutrición por bloques apagada
     if not created:
         return
     try:
@@ -23,6 +26,9 @@ def recalcular_perfil_en_cambio_medidas(sender, instance, **kwargs):
     Si cambian cintura, cuello o caderas en el perfil del cliente,
     recalcula la composición corporal.
     """
+    from django.conf import settings as _s
+    if not getattr(_s, 'NUTRICION_ACTIVA', False):
+        return  # 24-oct-2026 (poda): nutrición por bloques apagada
     try:
         perfil = instance.perfil_nutricional
         perfil.save()
@@ -36,6 +42,9 @@ def regenerar_target_tras_entreno(sender, instance, created, **kwargs):
     Cuando se registra un nuevo entrenamiento, regenera el target nutricional
     del día para reflejar el tipo correcto (carga/moderado/descarga).
     """
+    from django.conf import settings as _s
+    if not getattr(_s, 'NUTRICION_ACTIVA', False):
+        return  # 24-oct-2026 (poda): nutrición por bloques apagada
     if not created:
         return
     from .services import generar_target_diario

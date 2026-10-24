@@ -98,6 +98,11 @@ CELERY_TIMEZONE = 'Europe/Madrid'  # Alineado con TIME_ZONE — antes desalinead
 
 # Voz de JOI congelada (rumbo 12-oct-2026). Para reactivarla: JOI_VOZ_ACTIVA=True.
 JOI_VOZ_ACTIVA = os.environ.get('JOI_VOZ_ACTIVA', 'False') == 'True'
+# Poda del 24-oct-2026 (apagar, no borrar): puntos, ligas, logros y desafíos
+# al guardar un entreno, y el recálculo de la nutrición por bloques. Los datos
+# y las pantallas siguen ahí. Para reactivar: variable de entorno a 'True'.
+GAMIFICACION_ACTIVA = os.environ.get('GAMIFICACION_ACTIVA', 'False') == 'True'
+NUTRICION_ACTIVA = os.environ.get('NUTRICION_ACTIVA', 'False') == 'True'
 
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {

@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import override_settings, TestCase
 from django.urls import reverse
 
 from clientes.models import Cliente
@@ -159,6 +159,7 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
             resp = self.client.get(self._url())
         self.assertNotContains(resp, '"joi-card"')
 
+    @override_settings(JOI_VOZ_ACTIVA=True)  # 24-oct-2026: JOI apagada por defecto
     def test_con_joi_mensaje_muestra_card_joi(self):
         from datetime import datetime, time
         from django.utils import timezone

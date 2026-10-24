@@ -107,11 +107,17 @@ def _get_mensaje_hyrox(user):
 def joi_context(request):
     if not request.user.is_authenticated:
         return {}
+    from django.conf import settings
+    if not getattr(settings, 'JOI_VOZ_ACTIVA', False):
+        # 24-oct-2026: con la voz congelada, ni botón flotante ni consultas en
+        # cada página. La habitación sigue en /joi/habitacion/.
+        return {'joi_activa': False, 'joi_mensaje_pendiente': None, 'joi_mensaje_hyrox': None}
 
     user = request.user
     cache_key = f'joi_ctx_{user.id}'
     cached = cache.get(cache_key)
     if cached is not None:
+        cached['joi_activa'] = True
         cached['joi_mensaje_pendiente'] = _get_mensaje_gym(user)
         cached['joi_mensaje_hyrox']     = _get_mensaje_hyrox(user)
         return cached
@@ -135,6 +141,7 @@ def joi_context(request):
         'frase_extra_joi': None,
         'frase_recaida':   None,
         'recuerdo':        recuerdo,
+        'joi_activa':      True,
     }
     cache.set(cache_key, result, 300)
     result['joi_mensaje_pendiente'] = _get_mensaje_gym(user)

@@ -7,6 +7,7 @@ Descartar el banner solo lo oculta en esta sesión (sessionStorage).
 El mensaje sigue sin leer hasta que el usuario entra en la habitación.
 La habitación es el único lugar donde una lectura se considera recibida.
 {% endcomment %}
+{% if joi_activa %}
 <style>
 .joi-fab{position:fixed;top:72px;left:20px;width:42px;height:42px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
@@ -65,3 +66,4 @@ function joiFabOcultar(id) {
 </script>
 {% endif %}
 {% endwith %}
+{% endif %}

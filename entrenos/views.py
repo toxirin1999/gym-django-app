@@ -5259,7 +5259,10 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 except Exception as _joi_err:
                     logger.warning("Error generando JOI post-entreno: %s", _joi_err)
 
-                # 2. Verificar Logros
+                # 2. Verificar Logros (24-oct-2026: apagado con GAMIFICACION_ACTIVA)
+                from django.conf import settings as _settings_gam
+                if not getattr(_settings_gam, 'GAMIFICACION_ACTIVA', False):
+                    raise _GamificacionApagada()
                 logros_nuevos = LogrosService.verificar_logros_sesion(sesion_gam)
                 for logro in logros_nuevos:
                     messages.success(request, f"🌟 ¡LOGRO DESBLOQUEADO: {logro.nombre}! {logro.icono}")
@@ -5294,6 +5297,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             messages.success(request,
                                              f"🎯 ¡HAS COMPLETADO EL DESAFÍO: {desafio.nombre}! +{desafio.recompensa_puntos} pts")
 
+        except _GamificacionApagada:
+            pass
         except Exception as e:
             logger.warning("Error en sistema de gamificación: %s", e)
             # No bloqueamos el flujo principal si falla algo de gamificación
@@ -10245,3 +10250,8 @@ def _entrada_directa_entrenamiento(request, cliente):
         return redirect(f"{reverse('entrenos:entrenamiento_activo', args=[cliente.id])}?{params.urlencode()}")
     messages.info(request, 'Empieza el entreno desde Ahora: así usa la decisión de hoy.')
     return redirect('/')
+
+
+
+class _GamificacionApagada(Exception):
+    """24-oct-2026: corta logros y desafíos al guardar cuando la gamificación está apagada."""

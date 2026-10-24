@@ -11,6 +11,7 @@ from logros.models import HistorialPuntos, Notificacion, PerfilGamificacion
 from rutinas.models import Rutina
 
 
+@override_settings(GAMIFICACION_ACTIVA=True)  # 24-oct-2026: apagada por defecto
 class FinalizarGamificacionEntrenoTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(username="finalizador", password="x")
@@ -103,6 +104,7 @@ class FinalizarGamificacionEntrenoTests(TestCase):
         )
 
 
+@override_settings(GAMIFICACION_ACTIVA=True)  # 24-oct-2026: apagada por defecto
 class SuperficiesGamificacionSegurasTests(TestCase):
     def setUp(self):
         self.owner = User.objects.create_user(username="owner-gam", password="x")
@@ -203,3 +205,27 @@ class SuperficiesGamificacionSegurasTests(TestCase):
         )
         self.assertTrue(entreno.procesado_gamificacion)
         self.assertEqual(HistorialPuntos.objects.filter(entreno=entreno).count(), 1)
+
+
+
+class GamificacionApagada(TestCase):
+    """24-oct-2026: con la gamificación apagada no hay puntos, pero sí la sesión del panel."""
+
+    def test_sin_puntos_y_latch_cerrado(self):
+        from datetime import date
+        from django.contrib.auth.models import User
+        from clientes.models import Cliente
+        from entrenos.models import EntrenoRealizado
+        from entrenos.services.finalizacion_gamificacion_service import finalizar_gamificacion_entreno
+        from logros.models import PerfilGamificacion
+
+        user = User.objects.create_user(username='sin_gamificacion', password='x')
+        cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'S'})
+        from rutinas.models import Rutina
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1 - Prueba')
+        entreno = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha=date.today())
+        r = finalizar_gamificacion_entreno(entreno)
+        self.assertTrue(r.get('gamificacion_apagada'))
+        entreno.refresh_from_db()
+        self.assertTrue(entreno.procesado_gamificacion)
+        self.assertEqual(PerfilGamificacion.objects.filter(cliente=cliente, puntos_totales__gt=0).count(), 0)

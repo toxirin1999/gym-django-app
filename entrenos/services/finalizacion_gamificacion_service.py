@@ -25,7 +25,23 @@ def finalizar_gamificacion_entreno(entreno):
     if bloqueado.procesado_gamificacion:
         return {"already_processed": True}
 
+    from django.conf import settings
     from logros.services import CodiceService
+
+    if not getattr(settings, 'GAMIFICACION_ACTIVA', False):
+        # 24-oct-2026 (poda): sin puntos, pruebas, misiones ni notificaciones.
+        # Se conserva lo que usan otras pantallas: la sesión del panel y los
+        # récords personales.
+        bloqueado._defer_cierre_aprendizaje_gym = True
+        CodiceService._asegurar_sesion_entrenamiento(bloqueado)
+        try:
+            from entrenos.services.records_service import RecordsService
+            RecordsService.detectar_records_sesion(bloqueado)
+        except Exception:
+            pass
+        bloqueado.procesado_gamificacion = True
+        bloqueado.save(update_fields=["procesado_gamificacion"])
+        return {"already_processed": False, "gamificacion_apagada": True}
 
     # Codice actualiza métricas del padre y el latch. Esos saves internos no
     # constituyen otro cierre causal de aprendizaje.
