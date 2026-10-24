@@ -153,6 +153,12 @@ def generar_propuesta_si_procede(cliente, hoy=None):
     if en_curso.exists():
         return None
     deteccion = detectar_zona_en_retroceso(cliente, hoy)
+    if deteccion is not None:
+        # 24-oct-2026: no subir volumen a una zona que la última vez dolió o
+        # dejó agujetas fuertes, aunque retroceda.
+        from entrenos.services.sensacion_zona_service import frena_subir
+        if frena_subir(cliente, deteccion['zona'], hoy):
+            deteccion = None
     if deteccion is None:
         return _generar_propuesta_bajar(cliente, hoy)
     reciente = PropuestaZonaGym.objects.filter(
@@ -192,7 +198,7 @@ def _generar_propuesta_bajar(cliente, hoy):
 
     deteccion = detectar_zona_con_fatiga(cliente, hoy)
     if deteccion is None:
-        return None
+        return _generar_propuesta_bajar_por_sensaciones(cliente, hoy)
     if PropuestaZonaGym.objects.filter(
         cliente=cliente, zona=deteccion['zona'],
         estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
@@ -208,6 +214,46 @@ def _generar_propuesta_bajar(cliente, hoy):
         semanas=SEMANAS,
         deteccion={'ejercicios_fatiga': deteccion['ejercicios_fatiga']},
         texto=_texto_propuesta_bajar(deteccion),
+    )
+
+
+def _generar_propuesta_bajar_por_sensaciones(cliente, hoy):
+    """24-oct-2026: molestia o agujetas fuertes repetidas en una zona → −2 series."""
+    from entrenos.models import EjercicioRealizado, PropuestaZonaGym
+    from entrenos.services.evolucion_muscular_service import normalizar_zona
+    from entrenos.services.sensacion_zona_service import zona_para_bajar
+
+    deteccion = zona_para_bajar(cliente, hoy)
+    if deteccion is None:
+        return None
+    if PropuestaZonaGym.objects.filter(
+        cliente=cliente, zona=deteccion['zona'],
+        estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
+        creada_en__date__gte=hoy - timedelta(days=ENFRIAMIENTO_DIAS),
+    ).exists():
+        return None
+    ejercicios = []
+    for ej in EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente, completado=True,
+        entreno__fecha__gte=hoy - timedelta(days=14),
+    ).order_by('-entreno__fecha'):
+        if normalizar_zona(getattr(ej, 'grupo_muscular', None), ej.nombre_ejercicio) == deteccion['zona']:
+            if ej.nombre_ejercicio not in ejercicios:
+                ejercicios.append(ej.nombre_ejercicio)
+    fechas = ', '.join(f.strftime('%d/%m') for f in deteccion['fechas'])
+    return PropuestaZonaGym.objects.create(
+        cliente=cliente,
+        zona=deteccion['zona'],
+        ejercicios=ejercicios[:MAX_EJERCICIOS],
+        series_extra=SERIES_EXTRA,
+        direccion=PropuestaZonaGym.DIRECCION_BAJAR,
+        semanas=SEMANAS,
+        deteccion={'sensaciones': deteccion['sesiones'], 'fechas': [f.isoformat() for f in deteccion['fechas']]},
+        texto=(
+            f"{deteccion['nombre_zona']}: molestia articular o agujetas fuertes en {deteccion['sesiones']} "
+            f"sesiones en 14 días ({fechas}). Te propongo −{SERIES_EXTRA} series semanales de "
+            f"{deteccion['nombre_zona']} durante {SEMANAS} semanas para recuperar margen."
+        ),
     )
 
 

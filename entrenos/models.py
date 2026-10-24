@@ -2700,3 +2700,33 @@ class TopeMaquinaGym(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} · {self.ejercicio} · {self.peso_max_kg} kg'
+
+
+class SensacionZonaGym(models.Model):
+    """24-oct-2026 (paso 3): cómo respondió cada zona en una sesión.
+
+    Tres respuestas rápidas en el cierre, por zona trabajada: bombeo, agujetas
+    de la vez anterior y molestia articular (0 = poco/ninguna/no, 1 = medio/
+    leves/leve, 2 = mucho/fuertes/sí). Alimentan las propuestas de volumen por
+    zona: molestias o agujetas fuertes repetidas piden bajar, y frenan subir.
+    """
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='sensaciones_zona_gym',
+    )
+    entreno = models.ForeignKey(
+        'entrenos.EntrenoRealizado', on_delete=models.CASCADE, related_name='sensaciones_zona',
+    )
+    zona = models.CharField(max_length=30)
+    bombeo = models.PositiveSmallIntegerField(null=True, blank=True)
+    agujetas = models.PositiveSmallIntegerField(null=True, blank=True)
+    molestia = models.PositiveSmallIntegerField(null=True, blank=True)
+    creado = models.DateTimeField(auto_now_add=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('entreno', 'zona')
+        ordering = ['-entreno__fecha', 'zona']
+
+    def __str__(self):
+        return f'{self.cliente_id} {self.zona} {self.entreno_id}'

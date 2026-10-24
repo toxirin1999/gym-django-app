@@ -250,6 +250,21 @@
     .unit-breakdown-row { display: block; }
     .unit-breakdown-row .cambio-detalle { display: block; max-width: none; margin-top: 4px; text-align: left; }
   }
+
+  /* ── SENSACIONES POR ZONA (24-oct-2026) ────────── */
+  .sens-zona + .sens-zona { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--bd); }
+  .sens-zona-nombre { font-size: 13px; color: var(--ink); margin-bottom: 6px; }
+  .sens-fila { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin: 4px 0; }
+  .sens-pregunta { flex: 1 1 150px; font-size: 11px; color: var(--td); }
+  .sens-chip {
+    font: inherit; font-family: var(--fm); font-size: 11px; letter-spacing: .03em;
+    padding: 5px 10px; min-height: 30px; border-radius: 999px; cursor: pointer;
+    background: transparent; color: var(--td); border: 1px solid var(--bd);
+  }
+  .sens-chip.on { background: var(--ok); color: #0E0E0F; border-color: var(--ok); }
+  .sens-chip.on.alerta { background: var(--warn); border-color: var(--warn); }
+  .sens-estado { font-size: 11px; color: var(--tdm); margin-top: 8px; min-height: 1em; }
+  .sens-estado:empty { display: none; }
 </style>
 </head>
 <body>
@@ -443,6 +458,60 @@
   <div class="card">
     <p>{{ proxima_vez }}</p>
   </div>
+  {% endif %}
+
+  {% if sensaciones %}
+  <!-- SENSACIONES POR ZONA -->
+  <div class="sec-hdr"><span class="sec-tag">¿Cómo respondió el músculo?</span><div class="sec-line"></div></div>
+  <p class="section-note">Si una zona duele o deja agujetas fuertes dos veces en dos semanas, te propongo bajarle volumen.</p>
+  <div class="card" id="sensaciones-zona"
+       data-url="{% url 'entrenos:guardar_sensacion_zona' cliente_id=cliente.id entreno_id=entreno.id %}"
+       data-csrf="{{ csrf_token }}">
+    {% for fila in sensaciones %}
+    <div class="sens-zona" data-zona="{{ fila.zona }}">
+      <div class="sens-zona-nombre">{{ fila.nombre }}</div>
+      {% for p in fila.preguntas %}
+      <div class="sens-fila" data-campo="{{ p.campo }}">
+        <span class="sens-pregunta">{{ p.texto }}</span>
+        {% for i, etiqueta in p.opciones %}
+        <button type="button" class="sens-chip{% if p.valor == i %} on{% if p.campo != 'bombeo' and i > 0 %} alerta{% endif %}{% endif %}"
+                data-valor="{{ i }}" aria-pressed="{% if p.valor == i %}true{% else %}false{% endif %}">{{ etiqueta }}</button>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    {% endfor %}
+    <div class="sens-estado" id="sens-estado"></div>
+  </div>
+  <script>
+  (function () {
+    var caja = document.getElementById('sensaciones-zona');
+    if (!caja) return;
+    var estado = document.getElementById('sens-estado');
+    caja.addEventListener('click', function (ev) {
+      var chip = ev.target.closest('.sens-chip');
+      if (!chip) return;
+      var fila = chip.closest('.sens-fila');
+      var zona = chip.closest('.sens-zona').dataset.zona;
+      var campo = fila.dataset.campo;
+      var valor = chip.dataset.valor;
+      fila.querySelectorAll('.sens-chip').forEach(function (c) {
+        c.classList.remove('on', 'alerta'); c.setAttribute('aria-pressed', 'false');
+      });
+      chip.classList.add('on');
+      if (campo !== 'bombeo' && valor !== '0') chip.classList.add('alerta');
+      chip.setAttribute('aria-pressed', 'true');
+      var datos = new FormData();
+      datos.append('zona', zona); datos.append('campo', campo); datos.append('valor', valor);
+      fetch(caja.dataset.url, {
+        method: 'POST', body: datos, credentials: 'same-origin',
+        headers: {'X-CSRFToken': caja.dataset.csrf}
+      }).then(function (r) { return r.json(); }).then(function (j) {
+        estado.textContent = !j.ok ? 'No se pudo guardar.' : (j.propuesta ? 'Guardado. Nueva propuesta: ' + j.propuesta : 'Guardado.');
+      }).catch(function () { estado.textContent = 'No se pudo guardar.'; });
+    });
+  })();
+  </script>
   {% endif %}
 
   {% if que_viene %}

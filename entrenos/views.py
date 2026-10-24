@@ -8353,12 +8353,55 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
     entreno = get_object_or_404(EntrenoRealizado, id=entreno_id, cliente=cliente)
 
     contexto = construir_contexto_cierre(cliente, entreno)
+    try:
+        from .services.sensacion_zona_service import contexto_cierre as _sensaciones_cierre
+        sensaciones = _sensaciones_cierre(entreno)
+    except Exception:  # noqa: BLE001 — el cierre no se cae por esto
+        logger.exception('sensaciones por zona: no se pudo construir el contexto')
+        sensaciones = []
 
     return render(request, 'entrenos/post_entreno_resumen.html', {
         'cliente': cliente,
         'entreno': entreno,
+        'sensaciones': sensaciones,
         **contexto,
     })
+
+
+@login_required
+@require_POST
+def guardar_sensacion_zona(request, cliente_id, entreno_id):
+    """Guarda una respuesta (bombeo / agujetas / molestia) de una zona del cierre.
+
+    Tras guardar, mira si las sensaciones acumuladas justifican una propuesta
+    de volumen por zona (``propuesta_zona_service``).
+    """
+    from .services import sensacion_zona_service
+
+    clientes = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        clientes = clientes.filter(user=request.user)
+    cliente = get_object_or_404(clientes, id=cliente_id)
+    entreno = get_object_or_404(EntrenoRealizado, id=entreno_id, cliente=cliente)
+    try:
+        valor = int(request.POST.get('valor', ''))
+    except (TypeError, ValueError):
+        return JsonResponse({'ok': False, 'error': 'respuesta no válida'}, status=400)
+    try:
+        sensacion_zona_service.guardar(
+            cliente, entreno, request.POST.get('zona', ''), request.POST.get('campo', ''), valor,
+        )
+    except ValueError as exc:
+        return JsonResponse({'ok': False, 'error': str(exc)}, status=400)
+    propuesta = None
+    try:
+        from .services.propuesta_zona_service import generar_propuesta_si_procede
+        nueva = generar_propuesta_si_procede(cliente)
+        if nueva is not None:
+            propuesta = getattr(nueva, 'texto', None) or str(nueva)
+    except Exception:  # noqa: BLE001 — la respuesta ya está guardada
+        logger.exception('sensaciones por zona: fallo al revisar propuestas')
+    return JsonResponse({'ok': True, 'propuesta': propuesta})
 
 
 # ============================================================================

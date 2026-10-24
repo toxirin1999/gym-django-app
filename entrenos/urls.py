@@ -150,6 +150,7 @@ urlpatterns = [
     # ============================================================================
     path('cliente/<int:cliente_id>/dashboard-evolucion/', views.dashboard_evolucion, name='dashboard_evolucion'),
     path('cliente/<int:cliente_id>/entreno/<int:entreno_id>/cierre/', views.post_entreno_resumen, name='post_entreno_resumen'),
+    path('cliente/<int:cliente_id>/entreno/<int:entreno_id>/sensaciones/', views.guardar_sensacion_zona, name='guardar_sensacion_zona'),
     path('cliente/<int:cliente_id>/actualizar-fase/', views.actualizar_fase_cliente, name='actualizar_fase_cliente'),
     path('cliente/<int:cliente_id>/evaluacion-profesional/', evaluacion_profesional_view,
          name='evaluacion_profesional'),
