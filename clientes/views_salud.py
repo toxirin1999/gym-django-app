@@ -1,6 +1,8 @@
 """Check-in automático desde la app Salud del iPhone (Atajo de iOS o Health Auto Export)."""
 
 import json
+import logging
+import re
 
 from django.contrib.auth.decorators import login_required
 from django.core.cache import cache
@@ -13,29 +15,54 @@ from django.views.decorators.http import require_POST
 from clientes.models import Cliente
 from clientes.salud_iphone_service import guardar_checkin_iphone
 
+logger = logging.getLogger(__name__)
 
-def _token_de(request):
-    """Cabecera ``Authorization: Bearer <token>`` (o ``X-Api-Token``)."""
-    auth = request.headers.get('Authorization', '')
-    if auth.lower().startswith('bearer '):
-        return auth[7:].strip()
-    return (request.headers.get('X-Api-Token') or '').strip()
+
+_BEARER = re.compile(r'^\s*bearer\s+', re.IGNORECASE)
+_HEX = re.compile(r'[0-9a-f]{64}')
+
+
+def _limpiar_token(texto):
+    """'Bearer <token>' (con espacio, salto de línea o guion de corte) o el token solo → token."""
+    texto = _BEARER.sub('', str(texto or ''))
+    compacto = re.sub(r'[\s\-\u00ad]', '', texto).lower()
+    m = _HEX.search(compacto)
+    return m.group(0) if m else compacto
+
+
+def _token_de(request, payload=None):
+    """Cabecera ``Authorization``, ``X-Api-Token`` o, si iOS quita la cabecera, ``token`` en el JSON."""
+    for valor in (request.headers.get('Authorization'), request.headers.get('X-Api-Token'),
+                  (payload or {}).get('token') if isinstance(payload, dict) else None):
+        token = _limpiar_token(valor)
+        if token:
+            return token
+    return ''
 
 
 @csrf_exempt
 @require_POST
 def api_salud_iphone(request):
-    token = _token_de(request)
-    if not token:
-        return JsonResponse({'ok': False, 'error': 'Falta la cabecera Authorization: Bearer <token>.'}, status=401)
-    cliente = Cliente.objects.filter(api_token=token).first()
-    if cliente is None:
-        return JsonResponse({'ok': False, 'error': 'Token no válido.'}, status=401)
     try:
         payload = json.loads(request.body or b'{}')
     except (ValueError, UnicodeDecodeError):
+        payload = None
+    token = _token_de(request, payload)
+    if not token:
+        # 24-oct-2026: qué llegó (sin valores) para no ir a ciegas.
+        logger.warning('salud-iphone 401 sin token: cabeceras=%s claves_json=%s',
+                       sorted(request.headers.keys()),
+                       sorted(payload.keys()) if isinstance(payload, dict) else type(payload).__name__)
+        return JsonResponse({'ok': False, 'error': 'Falta la cabecera Authorization: Bearer <token>.'}, status=401)
+    cliente = Cliente.objects.filter(api_token=token).first()
+    if cliente is None:
+        logger.warning('salud-iphone 401 token no válido (longitud %s)', len(token))
+        return JsonResponse({'ok': False, 'error': 'Token no válido.'}, status=401)
+    if payload is None:
         return JsonResponse({'ok': False, 'error': 'El cuerpo no es JSON.'}, status=400)
     guardado = guardar_checkin_iphone(cliente, payload)
+    if not guardado:
+        logger.warning('salud-iphone: llegó sin datos útiles: %s', str(payload)[:300])
     return JsonResponse({'ok': True, 'dias': guardado})
 
 

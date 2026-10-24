@@ -249,6 +249,28 @@ class EndpointAtajo(ConCliente):
         b = BitacoraDiaria.objects.get(cliente=self.cliente, fecha=HOY)
         self.assertEqual((b.hrv_ms, b.fc_reposo, float(b.horas_sueno)), (48, 51, 7.2))
 
+    def _post(self, cuerpo, **cabeceras):
+        return self.client.post(reverse('clientes:api_salud_iphone'), data=json.dumps(cuerpo),
+                                content_type='application/json', **cabeceras)
+
+    def test_token_con_salto_de_linea_o_sin_bearer(self):
+        token = self.cliente.get_or_create_api_token()
+        for cabecera in (f'Bearer\n{token}', f'bearer   {token} ', token, f'Bearer {token[:31]}-\n{token[31:]}'):
+            r = self._post({'pulso_reposo': 60}, HTTP_AUTHORIZATION=cabecera)
+            self.assertEqual(r.status_code, 200, cabecera)
+
+    def test_token_en_el_cuerpo_si_ios_quita_la_cabecera(self):
+        token = self.cliente.get_or_create_api_token()
+        r = self._post({'token': f'Bearer {token}', 'hrv': 48})
+        self.assertEqual(r.status_code, 200)
+        self.assertEqual(BitacoraDiaria.objects.get(cliente=self.cliente, fecha=HOY).hrv_ms, 48)
+
+    def test_sin_token_o_token_malo_sigue_siendo_401(self):
+        self.cliente.get_or_create_api_token()
+        self.assertEqual(self._post({'hrv': 48}).status_code, 401)
+        self.assertEqual(self._post({'hrv': 48}, HTTP_AUTHORIZATION='Bearer ' + 'a' * 64).status_code, 401)
+        self.assertFalse(BitacoraDiaria.objects.exists())
+
     def test_el_formato_de_health_auto_export_sigue_valiendo(self):
         guardado = guardar_checkin_iphone(self.cliente, {'data': {'metrics': [
             {'name': 'resting_heart_rate', 'units': 'count/min', 'data': [{'date': HOY.isoformat(), 'qty': 50}]},
