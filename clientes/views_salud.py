@@ -1,4 +1,4 @@
-"""Check-in automático desde la app Salud del iPhone (Health Auto Export)."""
+"""Check-in automático desde la app Salud del iPhone (Atajo de iOS o Health Auto Export)."""
 
 import json
 
@@ -41,7 +41,7 @@ def api_salud_iphone(request):
 
 @login_required
 def salud_iphone(request):
-    """Cómo configurar Health Auto Export y qué ha llegado por última vez."""
+    """Cómo configurar el Atajo y qué ha llegado por última vez."""
     cliente = get_object_or_404(Cliente, user=request.user)
     return render(request, 'clientes/salud_iphone.html', {
         'cliente': cliente,

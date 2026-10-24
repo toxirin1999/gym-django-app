@@ -16,19 +16,19 @@ def _decision(causa='sesion_hoy', estado='entrenar', **contexto):
 class ConstruirPorqueTests(SimpleTestCase):
     def test_carga_alta_cita_acwr_y_porcentaje(self):
         texto = construir_porque(_decision('carga_alta', 'version_reducida', acwr_valor=1.62))
-        self.assertEqual(texto, 'ACWR 1,62: esta semana llevas un 62 % más de carga que tu media. Hoy, versión reducida.')
+        self.assertEqual(texto, 'Esta semana llevas un 62 % más de carga que en tus semanas normales. Hoy, versión reducida para no pasarnos.')
 
     def test_dia_normal_explica_el_margen_con_el_dato(self):
         texto = construir_porque(_decision(acwr_valor=0.84))
-        self.assertEqual(texto, 'ACWR 0,84: esta semana llevas un 16 % menos de carga que tu media. Carga estable: hay margen.')
+        self.assertEqual(texto, 'Esta semana llevas un 16 % menos de carga que en tus semanas normales. Carga estable: hay margen.')
 
     def test_energia_y_readiness_citan_su_valor(self):
-        self.assertIn('Energía 3/10', construir_porque(_decision('energia_baja', 'version_reducida', energia_valor=3)))
-        self.assertIn('Readiness 40/100', construir_porque(_decision('fatiga_alta', 'recuperar', readiness_valor=40)))
+        self.assertIn('energía en 3 de 10', construir_porque(_decision('energia_baja', 'version_reducida', energia_valor=3)))
+        self.assertIn('(40 de 100)', construir_porque(_decision('fatiga_alta', 'recuperar', readiness_valor=40)))
 
     def test_pico_dudoso_lo_dice_sin_frenar(self):
         texto = construir_porque(_decision(acwr_valor=2.32, acwr_dudoso=True))
-        self.assertIn('2,32', texto)
+        self.assertNotIn('ACWR', texto)
         self.assertIn('parece un error', texto)
 
     def test_sin_dato_no_inventa(self):
@@ -56,7 +56,7 @@ class PorqueEnAhoraTests(TestCase):
 
     def test_ahora_muestra_el_porque(self):
         response = self._get('EN_MARGEN', _decision(acwr_valor=0.84))
-        self.assertIn('ACWR 0,84', response.context['quiet_decision']['porque'])
+        self.assertIn('16 % menos de carga', response.context['quiet_decision']['porque'])
         self.assertContains(response, 'class="decision-why"')
 
     def test_en_descanso_no_hay_porque_de_carga(self):
@@ -69,7 +69,7 @@ class PorqueEnBriefingTests(SimpleTestCase):
     def test_briefing_usa_la_autoridad_vigente(self):
         from entrenos.views import _porque_briefing
         self.assertIsNone(_porque_briefing(None))
-        self.assertIn('ACWR 1,62', _porque_briefing(_decision('carga_alta', 'version_reducida', acwr_valor=1.62)))
+        self.assertIn('62 % más de carga', _porque_briefing(_decision('carga_alta', 'version_reducida', acwr_valor=1.62)))
 
     def test_plantilla_del_briefing_lo_muestra(self):
         from pathlib import Path

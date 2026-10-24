@@ -331,6 +331,7 @@ _MENSAJES_POR_CAUSA = {
     'futbol_reciente':    'Tus piernas ya recibieron carga del fútbol. Hoy conviene no confundir esfuerzo con progreso.',
     'hyrox_reciente':     'El Hyrox reciente dejó carga real — hoy conviene priorizar los principales y dejar los accesorios como opcionales.',
     'carga_alta':         'Esta semana llevas bastante más carga de la habitual. Hoy, los principales y sin forzar: los accesorios quedan como opcionales.',
+    'recuperacion_baja':  'Hoy vas justo de recuperación: conviene hacer los principales sin apretar y dejar los accesorios para otro día.',
     'pendiente_prioritaria': 'Esta sesión sostiene el bloque. Sigue siendo la siguiente pieza útil.',
     'pendiente_normal':   'Esta sesión quedó pendiente. El plan conserva el hilo.',
     'sesion_hoy':         'Esta es la sesión prevista para hoy.',
@@ -373,6 +374,8 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
         'acwr_alto': False,
         'acwr_dudoso': False,
         'preferencias_activas': [],
+        'recuperacion': None,
+        'futbol_esfuerzo': None,
     }
     if snapshot_inyectado:
         ctx['_cliente'] = cliente
@@ -461,6 +464,15 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
             ).exists()
         ctx['futbol_reciente'] = hay_futbol
         ctx['hyrox_reciente'] = hay_hyrox_intenso
+    except Exception:
+        pass
+
+    # 2b. 24-oct-2026: cuánto pesó ese fútbol (Strava) y cómo llegas hoy (reloj).
+    try:
+        from entrenos.services.recuperacion_service import esfuerzo_futbol, lectura_recuperacion
+        if ctx['futbol_reciente']:
+            ctx['futbol_esfuerzo'] = esfuerzo_futbol(cliente, fecha_hoy)
+        ctx['recuperacion'] = lectura_recuperacion(cliente, fecha_hoy)
     except Exception:
         pass
 
@@ -595,13 +607,22 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     elif contexto['readiness_bajo']:
         causa = 'fatiga_alta'
         estado = 'recuperar'
+    elif (contexto.get('recuperacion') or {}).get('nivel') == 'rojo':
+        # 24-oct-2026: el reloj dice que llegas cansado (variabilidad, pulso en
+        # reposo y sueño frente a tu media de 28 días).
+        causa = 'recuperacion_baja'
+        estado = 'version_reducida'
     elif contexto.get('acwr_alto'):
         causa = 'carga_alta'
         estado = 'version_reducida'
     elif contexto['energia_baja']:
         causa = 'energia_baja'
         estado = 'version_reducida'
-    elif contexto['futbol_reciente'] and _es_sesion_pierna(entrenamiento):
+    elif (
+        contexto['futbol_reciente'] and _es_sesion_pierna(entrenamiento)
+        # 24-oct-2026: un partido suave (Strava) no rebaja la pierna.
+        and (contexto.get('futbol_esfuerzo') or {}).get('nivel') != 'suave'
+    ):
         # Mismo principio que el fix Phase 28 de arriba: el fútbol fatiga piernas,
         # no debe rebajar una sesión de tren superior. Antes se aplicaba sin
         # comprobar el grupo muscular de hoy — _es_sesion_pierna ya existía y se
@@ -632,6 +653,11 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         mensaje = decision_base.get('mensaje') or _MENSAJES_POR_CAUSA.get(causa, '')
     else:
         mensaje = _MENSAJES_POR_CAUSA.get(causa, decision.get('mensaje', ''))
+    # 24-oct-2026: con dato del reloj o de Strava, la frase del entrenador.
+    if causa == 'recuperacion_baja' and (contexto.get('recuperacion') or {}).get('frase'):
+        mensaje = contexto['recuperacion']['frase']
+    elif causa == 'futbol_reciente' and (contexto.get('futbol_esfuerzo') or {}).get('frase'):
+        mensaje = contexto['futbol_esfuerzo']['frase']
 
     decision.update({
         'estado': estado,

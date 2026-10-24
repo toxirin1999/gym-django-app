@@ -16,13 +16,13 @@ def _num(valor, decimales=2):
 
 
 def _frase_acwr(acwr):
-    """Lectura del ACWR con su porcentaje respecto a la carga habitual."""
+    """La carga de esta semana frente a la habitual, en palabras (24-oct-2026: sin siglas)."""
     diferencia = round((float(acwr) - 1) * 100)
     if diferencia > 0:
-        return f'ACWR {_num(acwr)}: esta semana llevas un {diferencia} % más de carga que tu media.'
+        return f'Esta semana llevas un {diferencia} % más de carga que en tus semanas normales.'
     if diferencia < 0:
-        return f'ACWR {_num(acwr)}: esta semana llevas un {-diferencia} % menos de carga que tu media.'
-    return f'ACWR {_num(acwr)}: esta semana llevas la misma carga que tu media.'
+        return f'Esta semana llevas un {-diferencia} % menos de carga que en tus semanas normales.'
+    return 'Esta semana llevas la misma carga que en tus semanas normales.'
 
 
 # Paso 4: decisiones de la periodización que cambian la semana y se explican.
@@ -50,14 +50,21 @@ def construir_porque(decision_gym):
     causa = decision_gym.get('causa_principal') or ''
     acwr = contexto.get('acwr_valor')
 
+    recuperacion = contexto.get('recuperacion') or {}
+    futbol = contexto.get('futbol_esfuerzo') or {}
+
+    if causa == 'recuperacion_baja' and recuperacion.get('frase'):
+        return recuperacion['frase']
     if causa == 'carga_alta' and acwr:
-        return _frase_acwr(acwr) + ' Hoy, versión reducida.'
+        return _frase_acwr(acwr) + ' Hoy, versión reducida para no pasarnos.'
     if causa == 'fatiga_alta' and contexto.get('readiness_valor') is not None:
-        return f"Readiness {contexto['readiness_valor']}/100 hoy (por debajo de 45): toca recuperar."
+        return (f"Tu preparación de hoy está baja ({contexto['readiness_valor']} de 100): "
+                f"hoy toca recuperar, no apretar.")
     if causa == 'energia_baja' and contexto.get('energia_valor') is not None:
-        return f"Energía {contexto['energia_valor']}/10 en el check-in de hoy: versión mínima."
+        return (f"Me has dicho que tienes la energía en {contexto['energia_valor']} de 10: "
+                f"hoy lo mínimo y bien hecho.")
     if causa == 'futbol_reciente':
-        return 'Fútbol en las últimas 48 h y hoy toca pierna: versión reducida.'
+        return futbol.get('frase') or 'Jugaste al fútbol hace poco y hoy toca pierna: versión suave.'
     if causa == 'hyrox_reciente':
         return 'Hyrox intenso (RPE 7 o más) en las últimas 48 h y hoy toca pierna: versión reducida.'
     if causa == 'lesion' and contexto.get('lesion_fase'):
@@ -71,11 +78,10 @@ def construir_porque(decision_gym):
     periodizacion = (decision_gym.get('entrenamiento') or {}).get('periodizacion') or {}
     if periodizacion.get('origen') in _ORIGENES_CON_PORQUE and periodizacion.get('motivo'):
         return periodizacion['motivo']
+    if recuperacion.get('nivel') in ('ambar', 'verde') and recuperacion.get('frase'):
+        return recuperacion['frase']
     if contexto.get('acwr_dudoso') and acwr:
-        return (
-            f'El ACWR marca {_num(acwr)}, pero una actividad reciente parece un error: '
-            'no la tengo en cuenta para decidir.'
-        )
+        return 'Una actividad reciente parece un error en los datos: no la tengo en cuenta para decidir.'
     if decision_gym.get('estado') in ('entrenar', 'version_reducida') and acwr:
         if 0.8 <= float(acwr) <= 1.3:
             return _frase_acwr(acwr) + ' Carga estable: hay margen.'

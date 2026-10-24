@@ -452,6 +452,14 @@
   </div>
   {% endif %}
 
+  {% if comprobacion_rebaja %}
+  <!-- ¿ACERTÉ AL BAJARTE LA SESIÓN? (24-oct-2026) -->
+  <div class="sec-hdr"><span class="sec-tag">Cómo llegabas hoy</span><div class="sec-line"></div></div>
+  <div class="card">
+    <p>{{ comprobacion_rebaja }}</p>
+  </div>
+  {% endif %}
+
   {% if proxima_vez %}
   <!-- PRÓXIMA VEZ -->
   <div class="sec-hdr"><span class="sec-tag">Próxima vez</span><div class="sec-line"></div></div>

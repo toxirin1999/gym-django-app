@@ -19,7 +19,19 @@ Si llega el peso (``weight_body_mass``), va a ``PesoDiario``.
 
 Solo se aceptan los últimos ``DIAS_VENTANA`` días: es un check-in, no una
 importación de histórico.
+
+24-oct-2026: también acepta el formato sencillo del Atajo de iOS (gratis,
+sin Health Auto Export), un diccionario plano del día de hoy:
+
+    {"hrv": 48, "pulso_reposo": 52, "sueno": 432, "fecha": "2026-10-25"}
+
+Los valores pueden llegar como número o como texto ("48,3", "52 lpm", o
+varios números si el Atajo manda la lista de muestras): se hace la media
+para la variabilidad y el pulso, y la suma para el sueño. El sueño se
+interpreta por tamaño: hasta 24 son horas, hasta 1440 minutos y más,
+segundos. ``fecha`` es opcional (por defecto, hoy).
 """
+import re
 
 from collections import defaultdict
 from datetime import date, timedelta
@@ -51,6 +63,66 @@ def _horas(valor, unidades):
     if n is None:
         return None
     return n / 60 if (unidades or '').lower().startswith('min') else n
+
+
+_NUMERO = re.compile(r'-?\d+(?:[.,]\d+)?')
+CLAVES_ATAJO = {
+    'hrv_ms': ('hrv', 'hrv_ms', 'variabilidad'),
+    'fc_reposo': ('pulso_reposo', 'fc_reposo', 'resting_heart_rate', 'pulso'),
+    'horas_sueno': ('sueno', 'sueno_horas', 'sueno_minutos', 'horas_sueno', 'sleep'),
+}
+
+
+def _numeros(valor):
+    """48 / '48,3' / '52 lpm' / '41\n55' / [41, 55] → [floats]."""
+    if valor is None or isinstance(valor, bool):
+        return []
+    if isinstance(valor, (int, float)):
+        return [float(valor)] if valor == valor else []
+    if isinstance(valor, (list, tuple)):
+        return [n for v in valor for n in _numeros(v)]
+    return [float(t.replace(',', '.')) for t in _NUMERO.findall(str(valor))]
+
+
+def _horas_sueno_atajo(clave, valor):
+    ns = [n for n in _numeros(valor) if n > 0]
+    if not ns:
+        return None
+    total = sum(ns)
+    if clave == 'sueno_minutos':
+        return total / 60
+    if total <= 24:
+        return total
+    if total <= 1440:
+        return total / 60
+    return total / 3600
+
+
+def leer_atajo(payload, hoy):
+    """Formato plano del Atajo → {fecha: {...}} (mismo formato que ``leer_metricas``)."""
+    if not isinstance(payload, dict):
+        return {}
+    dia = _fecha(payload.get('fecha')) if payload.get('fecha') else hoy
+    if dia is None:
+        return {}
+    valores = {}
+    for campo, claves in CLAVES_ATAJO.items():
+        for clave in claves:
+            if clave not in payload:
+                continue
+            if campo == 'horas_sueno':
+                horas = _horas_sueno_atajo(clave, payload[clave])
+                if horas and 0 < horas <= 16:
+                    valores[campo] = round(horas, 2)
+            else:
+                ns = [n for n in _numeros(payload[clave]) if n > 0]
+                if ns:
+                    media = round(sum(ns) / len(ns))
+                    rango = (1, 300) if campo == 'hrv_ms' else (30, 200)
+                    if rango[0] <= media <= rango[1]:
+                        valores[campo] = media
+            break
+    return {dia: valores} if valores else {}
 
 
 def leer_metricas(payload):
@@ -148,7 +220,8 @@ def guardar_checkin_iphone(cliente, payload, hoy=None):
 
     hoy = hoy or timezone.localdate()
     guardado = {}
-    for dia, valores in sorted(leer_metricas(payload).items()):
+    metricas = leer_metricas(payload) or leer_atajo(payload, hoy)
+    for dia, valores in sorted(metricas.items()):
         if not valores or dia > hoy or dia < hoy - timedelta(days=DIAS_VENTANA):
             continue
         peso = valores.pop('peso_kg', None)

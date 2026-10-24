@@ -8359,11 +8359,18 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
     except Exception:  # noqa: BLE001 — el cierre no se cae por esto
         logger.exception('sensaciones por zona: no se pudo construir el contexto')
         sensaciones = []
+    try:
+        from .services.recuperacion_service import comprobacion_cierre
+        comprobacion_rebaja = comprobacion_cierre(cliente, entreno)
+    except Exception:  # noqa: BLE001
+        logger.exception('recuperación: no se pudo comprobar la rebaja en el cierre')
+        comprobacion_rebaja = None
 
     return render(request, 'entrenos/post_entreno_resumen.html', {
         'cliente': cliente,
         'entreno': entreno,
         'sensaciones': sensaciones,
+        'comprobacion_rebaja': comprobacion_rebaja,
         **contexto,
     })
 

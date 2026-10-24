@@ -31,16 +31,16 @@
   <main>
     <a class="back mono" href="{% url 'clientes:dashboard_silencioso_preview' %}">← Ahora</a>
     <h1>Check-in desde Salud</h1>
-    <p class="intro">Tu iPhone manda cada mañana las horas de sueño, la FC en reposo y la HRV. Con eso el check-in se rellena solo; la energía te la sigo preguntando al empezar el entreno.</p>
+    <p class="intro">Un Atajo del iPhone me manda cada mañana lo que tu reloj midió por la noche: cuánto dormiste, tu pulso en reposo y tu variabilidad cardiaca. Lo comparo con lo normal en ti y te digo cómo llegas al entreno; si vas justo, te bajo la sesión. La energía te la sigo preguntando al empezar.</p>
 
     <section class="card" aria-labelledby="estado-titulo">
       <span class="mono label" id="estado-titulo">Último envío</span>
       {% if ultimo %}
         <p class="estado">Recibido el <strong>{{ ultimo.cuando|slice:":10" }} a las {{ ultimo.cuando|slice:"11:16" }}</strong> (hora UTC).</p>
         {% for dia, valores in ultimo.guardado.items %}
-          <p class="nota">{{ dia }} · {% if valores.horas_sueno %}sueño {{ valores.horas_sueno }} h{% endif %}{% if valores.fc_reposo %} · FC reposo {{ valores.fc_reposo }}{% endif %}{% if valores.hrv_ms %} · HRV {{ valores.hrv_ms }} ms{% endif %}{% if valores.peso_kg %} · peso {{ valores.peso_kg }} kg{% endif %}</p>
+          <p class="nota">{{ dia }} · {% if valores.horas_sueno %}sueño {{ valores.horas_sueno }} h{% endif %}{% if valores.fc_reposo %} · pulso en reposo {{ valores.fc_reposo }}{% endif %}{% if valores.hrv_ms %} · variabilidad {{ valores.hrv_ms }} ms{% endif %}{% if valores.peso_kg %} · peso {{ valores.peso_kg }} kg{% endif %}</p>
         {% empty %}
-          <p class="nota">Llegó, pero sin sueño, FC en reposo ni HRV de los últimos 7 días. Revisa qué métricas exporta la automatización.</p>
+          <p class="nota">Llegó, pero sin sueño, pulso en reposo ni variabilidad. Revisa los pasos del Atajo.</p>
         {% endfor %}
       {% else %}
         <p class="estado">Todavía no ha llegado nada.</p>
@@ -48,7 +48,7 @@
     </section>
 
     <section class="card" aria-labelledby="datos-titulo">
-      <span class="mono label" id="datos-titulo">Datos para la automatización</span>
+      <span class="mono label" id="datos-titulo">Datos para el Atajo</span>
       <div class="campo"><span>URL</span><div class="valor"><code id="url">{{ endpoint }}</code><button type="button" data-copiar="url">Copiar</button></div></div>
       <div class="campo"><span>Cabecera · nombre</span><div class="valor"><code id="cabecera">Authorization</code><button type="button" data-copiar="cabecera">Copiar</button></div></div>
       <div class="campo"><span>Cabecera · valor</span><div class="valor"><code id="token">Bearer {{ token }}</code><button type="button" data-copiar="token">Copiar</button></div></div>
@@ -56,14 +56,21 @@
     </section>
 
     <section class="card" aria-labelledby="pasos-titulo">
-      <span class="mono label" id="pasos-titulo">En Health Auto Export</span>
+      <span class="mono label" id="pasos-titulo">Crear el Atajo (una vez)</span>
+      <p class="nota">App <strong>Atajos</strong> → <strong>+</strong> → llámalo «Mi recuperación». Añade estas acciones en orden:</p>
       <ol>
-        <li>Automations → nueva → tipo <strong>REST API</strong>.</li>
-        <li>Pega la URL. En <strong>Headers</strong> añade la cabecera de arriba.</li>
-        <li>Data Type: <strong>Health Metrics</strong>. Elige <strong>Sleep Analysis</strong>, <strong>Resting Heart Rate</strong> y <strong>Heart Rate Variability</strong> (y <strong>Weight &amp; Body Mass</strong> si te pesas con una báscula conectada a Salud).</li>
-        <li>Export Format: <strong>JSON</strong>. Date Range: <strong>últimos 2 días</strong>. Agrupa por <strong>día</strong> (Summarize data activado).</li>
-        <li>Frecuencia: cada mañana, después de despertarte (por ejemplo, cada hora entre las 7 y las 11). Pulsa <strong>Manual Export</strong> para probar y vuelve aquí.</li>
+        <li><strong>Buscar muestras de salud</strong>: tipo <strong>Variabilidad de la frecuencia cardiaca</strong>, fecha de inicio <strong>en las últimas 12 horas</strong>. Debajo, <strong>Calcular estadísticas</strong> → <strong>Promedio</strong>. Renombra el resultado a <em>HRV</em>.</li>
+        <li><strong>Buscar muestras de salud</strong>: tipo <strong>Frecuencia cardiaca en reposo</strong>, fecha de inicio <strong>en el último día</strong>, ordenar por <strong>fecha de inicio, de más reciente a más antigua</strong>, límite <strong>1</strong>. Renombra a <em>Pulso</em>.</li>
+        <li><strong>Buscar muestras de salud</strong>: tipo <strong>Análisis del sueño</strong>, fecha de inicio <strong>en las últimas 16 horas</strong>, <strong>Valor no es En cama</strong> y <strong>Valor no es Despierto</strong>, <strong>Fuente es</strong> tu Apple Watch. Luego <strong>Obtener detalles de muestras de salud</strong> → <strong>Duración</strong>, y <strong>Calcular estadísticas</strong> → <strong>Suma</strong>. Renombra a <em>Sueño</em>.</li>
+        <li><strong>Obtener contenido de la URL</strong>: pega la URL de arriba. Método <strong>POST</strong>. En <strong>Cabeceras</strong>, añade <code>Authorization</code> con el valor de arriba. Cuerpo de la solicitud <strong>JSON</strong> con tres campos de tipo número: <code>hrv</code> → <em>HRV</em>, <code>pulso_reposo</code> → <em>Pulso</em>, <code>sueno</code> → <em>Sueño</em>.</li>
+        <li>Ejecútalo a mano una vez: la primera vez te pide permiso para leer Salud (dale a todo) y aquí arriba debería aparecer «Último envío».</li>
       </ol>
+      <span class="mono label" style="display:block;margin-top:14px;">Que vaya solo cada mañana</span>
+      <ol>
+        <li>Atajos → <strong>Automatización</strong> → <strong>+</strong> → <strong>Alarma</strong> → <strong>Se detiene</strong> (o <strong>Hora del día</strong>, por ejemplo 8:30).</li>
+        <li>Marca <strong>Ejecutar inmediatamente</strong> y elige el atajo «Mi recuperación».</li>
+      </ol>
+      <p class="nota">Para que funcione, duerme con el reloj puesto. Si una mañana no llega nada, el plan decide como siempre: no inventa.</p>
     </section>
   </main>
   {% include 'includes/bottom_nav.html' with activo='ahora' %}
