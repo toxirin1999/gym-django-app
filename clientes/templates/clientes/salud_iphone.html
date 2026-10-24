@@ -34,17 +34,12 @@
     <p class="intro">Un Atajo del iPhone me manda cada mañana lo que tu reloj midió por la noche: cuánto dormiste, tu pulso en reposo y tu variabilidad cardiaca. Lo comparo con lo normal en ti y te digo cómo llegas al entreno; si vas justo, te bajo la sesión. La energía te la sigo preguntando al empezar.</p>
 
     <section class="card" aria-labelledby="estado-titulo">
-      <span class="mono label" id="estado-titulo">Último envío</span>
-      {% if ultimo %}
-        <p class="estado">Recibido el <strong>{{ ultimo.cuando|slice:":10" }} a las {{ ultimo.cuando|slice:"11:16" }}</strong> (hora UTC).</p>
-        {% for dia, valores in ultimo.guardado.items %}
-          <p class="nota">{{ dia }} · {% if valores.horas_sueno %}sueño {{ valores.horas_sueno }} h{% endif %}{% if valores.fc_reposo %} · pulso en reposo {{ valores.fc_reposo }}{% endif %}{% if valores.hrv_ms %} · variabilidad {{ valores.hrv_ms }} ms{% endif %}{% if valores.peso_kg %} · peso {{ valores.peso_kg }} kg{% endif %}</p>
-        {% empty %}
-          <p class="nota">Llegó, pero sin sueño, pulso en reposo ni variabilidad. Revisa los pasos del Atajo.</p>
-        {% endfor %}
-      {% else %}
+      <span class="mono label" id="estado-titulo">Lo que tengo de tu reloj (7 días)</span>
+      {% for b in recibidos %}
+        <p class="nota">{{ b.fecha|date:"D d/m" }} · {% if b.horas_sueno %}sueño {{ b.horas_sueno|floatformat:"-2" }} h{% else %}sin sueño{% endif %}{% if b.fc_reposo %} · pulso en reposo {{ b.fc_reposo }}{% endif %}{% if b.hrv_ms %} · variabilidad {{ b.hrv_ms }} ms{% endif %}</p>
+      {% empty %}
         <p class="estado">Todavía no ha llegado nada.</p>
-      {% endif %}
+      {% endfor %}
     </section>
 
     <section class="card" aria-labelledby="datos-titulo">

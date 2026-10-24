@@ -255,6 +255,16 @@ class EndpointAtajo(ConCliente):
         ]}}, hoy=HOY)
         self.assertEqual(guardado, {HOY.isoformat(): {'fc_reposo': 50}})
 
+    def test_la_pagina_lee_la_base_de_datos_no_la_cache(self):
+        token = self.cliente.get_or_create_api_token()
+        self.client.post(reverse('clientes:api_salud_iphone'), data=json.dumps({'pulso_reposo': 60}),
+                         content_type='application/json', HTTP_AUTHORIZATION=f'Bearer {token}')
+        cache.clear()  # en producción la caché es por proceso y se borra al recargar
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('clientes:salud_iphone'))
+        self.assertContains(r, 'pulso en reposo 60')
+        self.assertNotContains(r, 'Todavía no ha llegado nada')
+
     def test_la_pagina_explica_el_atajo(self):
         self.client.force_login(self.user)
         r = self.client.get(reverse('clientes:salud_iphone'))

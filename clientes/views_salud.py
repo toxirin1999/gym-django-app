@@ -42,10 +42,26 @@ def api_salud_iphone(request):
 @login_required
 def salud_iphone(request):
     """Cómo configurar el Atajo y qué ha llegado por última vez."""
+    from datetime import timedelta
+
+    from django.db.models import Q
+    from django.utils import timezone
+
+    from clientes.models import BitacoraDiaria
+
     cliente = get_object_or_404(Cliente, user=request.user)
+    # 24-oct-2026: se lee de la base de datos, no de la caché (en producción la
+    # caché es por proceso y se borra al recargar: decía "no ha llegado nada"
+    # aunque los datos estuvieran guardados).
+    hoy = timezone.localdate()
+    recibidos = (
+        BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hoy - timedelta(days=6))
+        .filter(Q(hrv_ms__isnull=False) | Q(fc_reposo__isnull=False) | Q(horas_sueno__isnull=False))
+        .order_by('-fecha', '-pk')
+    )
     return render(request, 'clientes/salud_iphone.html', {
         'cliente': cliente,
         'token': cliente.get_or_create_api_token(),
         'endpoint': request.build_absolute_uri(reverse('clientes:api_salud_iphone')),
-        'ultimo': cache.get(f'salud_iphone_ultimo_{cliente.id}'),
+        'recibidos': list(recibidos),
     })
