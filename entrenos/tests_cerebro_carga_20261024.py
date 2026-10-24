@@ -41,6 +41,22 @@ class ReglaUnica(Base):
         self.assertLess(d['peso'], 60)
 
 
+class AjustesDel24(Base):
+    def _ej(self, nombre, rango, tipo='peso_reps'):
+        return {'nombre': nombre, 'repeticiones': rango, 'rpe_objetivo': 7, 'tipo_progresion': tipo}
+
+    def test_historial_antiguo_se_estima(self):
+        e = self.entreno(HOY - timedelta(days=60), {'Sentadilla Hack': '6-8'})
+        self.hacer(e, self.hack, [(60, 8, 8)])
+        d = decidir_carga(self.cliente, self._ej('Sentadilla Hack', '15-20'), HOY)
+        self.assertEqual(d['regla'], 'antigua')
+        self.assertLess(d['peso'], 60)
+
+    def test_convergent_va_de_discos(self):
+        from entrenos.services.maquina_service import salto_fisico
+        self.assertEqual(salto_fisico('Convergent Machine Press'), 2.5)
+
+
 class ComandoSoloLectura(Base):
     def test_no_guarda_nada_y_compara(self):
         e = self.entreno(HOY - timedelta(days=3), {'Sentadilla Hack': '12-15'})

@@ -148,6 +148,8 @@ _TOKENS_DISCOS = (
     'barra', 'barbell', 'disco', 'press banca', 'sentadilla', 'peso muerto',
     'deadlift', 'squat', 'bench press', 'multipower', 'smith', 'prensa',
     'leg press', 'hack', 'hip thrust', 'zancada',
+    # 24-oct-2026: la Convergent de David es de discos (62,5 existe).
+    'convergent',
 )
 _TOKENS_MAQUINA = (
     'máquina', 'maquina', 'machine', 'polea', 'cable', 'pec deck', 'peck',

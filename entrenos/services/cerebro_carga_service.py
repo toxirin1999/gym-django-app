@@ -26,6 +26,13 @@ def _kg(valor):
     return str(int(v)) if v == int(v) else f'{v:g}'.replace('.', ',')
 
 
+def _a_escala_empate_arriba(peso, salto):
+    """Al peso más cercano que existe; justo en medio, hacia arriba (como la app)."""
+    from entrenos.services.maquina_service import a_escala
+    abajo, arriba = a_escala(peso, salto, 'abajo'), a_escala(peso, salto, 'arriba')
+    return arriba if (arriba - peso) <= (peso - abajo) + 1e-9 else abajo
+
+
 def decidir_carga(cliente, ej, hoy):
     """{'peso', 'reps', 'regla', 'frase'} para un ejercicio del plan de hoy, o None."""
     from analytics.planificador_helms.calculo.compatibilidad_fase import son_rangos_compatibles
@@ -44,8 +51,9 @@ def decidir_carga(cliente, ej, hoy):
         return None
     nombre = ej.get('nombre') or ''
     lectura = ultima_sesion(cliente, nombre, hoy, reps_min=rango[0])
-    if not lectura or (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS):
+    if not lectura:
         return None
+    antigua = (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS)
 
     minimo, maximo = rango
     salto = salto_carga(cliente, nombre)
@@ -67,17 +75,20 @@ def decidir_carga(cliente, ej, hoy):
             frase += ' ' + aviso
         return {'peso': peso, 'reps': reps, 'regla': 'tope', 'frase': frase}
 
-    # 3. Cambio de familia de rango: se estima, no se arrastra el peso.
-    if not son_rangos_compatibles(reps_ref, rango_txt):
+    # 3. Cambio de familia de rango, o última vez de hace más de 6 semanas:
+    # se estima para el rango de hoy, no se arrastra el peso (remo en polea
+    # 60 × 8 hace dos meses → no "60 a por 15").
+    if antigua or not son_rangos_compatibles(reps_ref, rango_txt):
         estimado = peso_para_reps(peso_ref, reps_ref, ref['rpe'], minimo, rpe_obj)
         if not estimado:
             return None
         peso = a_escala(estimado, salto, 'abajo')
         if tope:
             peso = min(peso, float(tope))
+        cuando = f"El {lectura['fecha'].strftime('%d/%m')}" if antigua else 'La última vez'
         return {
-            'peso': peso, 'reps': minimo, 'regla': 'recalcular',
-            'frase': f'La última vez {_kg(peso_ref)} kg × {reps_ref}; para {minimo}-{maximo}, hoy {_kg(peso)} kg.',
+            'peso': peso, 'reps': minimo, 'regla': 'antigua' if antigua else 'recalcular',
+            'frase': f'{cuando} {_kg(peso_ref)} kg × {reps_ref}; para {minimo}-{maximo}, hoy {_kg(peso)} kg.',
         }
 
     # 4. Techo de la última sesión + regla C.
@@ -97,7 +108,7 @@ def decidir_carga(cliente, ej, hoy):
             'frase': (f'{reps_ref} reps con {_kg(peso_ref)} kg, arriba del rango: '
                       f'hoy {_kg(peso)} kg y vuelta a {minimo}.'),
         }
-    peso = a_escala(float(techo), salto, 'cerca')
+    peso = _a_escala_empate_arriba(float(techo), salto)
     mismo = abs(peso - peso_ref) < salto / 2
     reps = objetivo_reps_hoy(ref['reps'], rango, mismo and ref['en_rango'])
     return {'peso': peso, 'reps': reps, 'regla': 'mantener' if mismo else 'ajustar', 'frase': frase}
