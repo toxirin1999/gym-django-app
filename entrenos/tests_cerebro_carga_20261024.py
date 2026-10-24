@@ -91,3 +91,29 @@ class ReglaConectadaAlPlan(Base):
         self.assertFalse(aplicar_decision_carga(ej, {'peso': 40, 'reps': 12, 'regla': 'mantener', 'frase': 'x'}))
         self.assertTrue(aplicar_decision_carga(ej, {'peso': 45, 'reps': 10, 'regla': 'subir', 'frase': 'sube'}))
         self.assertEqual((ej['peso_kg'], ej['reps_objetivo_hoy'], ej['progresion_motivo']), (45, 10, 'sube'))
+
+
+class CierreConLaRegla(Base):
+    def test_hundimiento_baja_en_el_cierre(self):
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        e = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '15-20'})
+        self.hacer(e, self.hack, [(60, 15, 7), (60, 13, 9), (60, 8, 9)])
+        texto, accion = proxima_vez_texto(self.cliente, e, 'Sentadilla Hack', 'peso_reps')
+        self.assertEqual(accion, 'Bajar peso')
+        self.assertIn('La próxima vez', texto)
+
+    def test_regla_c_en_el_cierre(self):
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        e = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '12-15'})
+        self.hacer(e, self.hack, [(60, 13, 8), (60, 13, 8)])
+        texto, accion = proxima_vez_texto(self.cliente, e, 'Sentadilla Hack', 'peso_reps')
+        self.assertEqual(accion, 'Mantener')
+        self.assertEqual(texto, 'Mantengo 60 kg: la próxima vez a por 14 reps. Con 15 en todas las series, subo el peso.')
+
+    def test_cierre_antiguo_no_se_reescribe(self):
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        e1 = self.entreno(HOY - timedelta(days=5), {'Sentadilla Hack': '12-15'})
+        self.hacer(e1, self.hack, [(60, 13, 8)])
+        e2 = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '12-15'})
+        self.hacer(e2, self.hack, [(60, 14, 8)])
+        self.assertIsNone(proxima_vez_texto(self.cliente, e1, 'Sentadilla Hack', 'peso_reps'))

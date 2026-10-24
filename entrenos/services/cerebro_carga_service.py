@@ -143,3 +143,60 @@ def aplicar_decision_carga(ej, decision):
         ej['progresion_motivo_local'] = 'regla_unica'
         ej.pop('motivo_peso', None)
     return True
+
+
+def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=None):
+    """(texto, acción) de "la próxima vez" para el cierre, según la regla única.
+
+    Usa el rango y el RPE que tuvo la sesión y lee esta sesión como "la última
+    vez". Si el texto que ya había dice el mismo peso y las mismas reps, se
+    queda (no se cambia por cambiar). Devuelve None si la regla no decide.
+    """
+    from datetime import timedelta as _td
+    from entrenos.services.decision_log_service import _rpe_objetivo_snapshot, normalizar_ejercicio
+    from entrenos.services.ultima_sesion_service import rango_de_sesion, ultima_sesion
+
+    if tipo_progresion not in ('peso_reps', 'peso_corporal_lastre'):
+        return None
+    rango = rango_de_sesion(entreno, nombre)
+    if not rango:
+        return None
+    ej = {
+        'nombre': nombre,
+        'repeticiones': f'{rango[0]}-{rango[1]}' if rango[1] != rango[0] else str(rango[0]),
+        'rpe_objetivo': _rpe_objetivo_snapshot(entreno, normalizar_ejercicio(nombre)) or 8,
+        'tipo_progresion': tipo_progresion,
+    }
+    siguiente = entreno.fecha + _td(days=1)
+    lectura = ultima_sesion(cliente, nombre, siguiente, reps_min=rango[0])
+    if not lectura or lectura['entreno'].pk != entreno.pk:
+        return None
+    from entrenos.models import EjercicioRealizado
+    if EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
+        entreno__fecha__gt=entreno.fecha,
+    ).exists():
+        return None  # ya hay una sesión posterior: este cierre es historia
+    decision = decidir_carga(cliente, ej, siguiente)
+    if not decision:
+        return None
+    peso, reps, regla = decision['peso'], decision['reps'], decision['regla']
+    peso_hoy = float(lectura['referencia']['peso'])
+    if regla == 'tope':
+        texto = f'{_kg(peso)} kg es el máximo de la máquina: la próxima vez a por {reps} reps.'
+        accion = 'Subir repeticiones'
+    elif peso < peso_hoy - 1e-6:
+        texto = f'La próxima vez {_kg(peso)} kg a por {reps} reps, para que entren todas las series en {ej["repeticiones"]}.'
+        accion = 'Bajar peso'
+    elif peso > peso_hoy + 1e-6:
+        texto = f'Subo a {_kg(peso)} kg y vuelvo a {reps} reps.'
+        accion = 'Subir peso'
+    else:
+        texto = (f'Mantengo {_kg(peso)} kg: la próxima vez a por {reps} reps. '
+                 f'Con {rango[1]} en todas las series, subo el peso.')
+        accion = 'Mantener'
+    if porque_actual and f'{_kg(peso)} kg' in porque_actual and (
+        f'{reps} reps' in porque_actual or regla in ('bajar', 'subir')
+    ):
+        return porque_actual, accion
+    return texto, accion
