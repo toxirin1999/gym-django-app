@@ -92,7 +92,7 @@ class PlantillaDia3b(SimpleTestCase):
         for trozo in (
             '.contingencia-grid.sin-tope{grid-template-columns:repeat(3,1fr);}',   # 7
             '@media (hover:none){',                                               # 3
-            "floatformat:'-2u'",                                                  # 4
+            "|stringformat:'g' }}",                                               # 4
             "{% elif sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}",  # 12
             'ejercicio.aviso_tope_tempo',                                         # 21
             'Tope de la máquina y RPE',                                           # 18

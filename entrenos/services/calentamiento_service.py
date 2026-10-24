@@ -33,6 +33,10 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
         incremento = float(incremento or 0)
     except (TypeError, ValueError):
         incremento = 0
+    if incremento > 0 and peso_trabajo < 3 * incremento - 1e-9:
+        # 24-oct-2026: con muy poco peso no caben tres escalones distintos
+        # (curl inclinado 10 kg con mancuernas de 5 en 5 salía 5, 5 y 5).
+        return None
     if incremento > 0 and abs(incremento - 2.5) > 1e-9:
         # 21-oct-2026: en la escala real del equipo, hacia abajo (kettlebell de
         # 4 en 4: 8/12/16 y no 10/15/17,5; máquina de 5 en 5: 40 y no 42,5).

@@ -3584,6 +3584,14 @@ def vista_entrenamiento_activo(request, cliente_id):
     """
     cliente = get_object_or_404(Cliente, id=cliente_id, user=request.user)
 
+    # 24-oct-2026 (un solo camino): el enlace directo, sin decisión ni plan
+    # transportado, abre la decisión de hoy si ya existe; si no, lleva a Ahora
+    # para el check-in. Antes calculaba el plan por su cuenta y podía enseñar
+    # otra cosa que el briefing (el Día 4 con el Día 3 aplazado).
+    _redireccion = _entrada_directa_entrenamiento(request, cliente)
+    if _redireccion is not None:
+        return _redireccion
+
     try:
         fecha_str = request.GET.get('fecha')
         if not fecha_str:
@@ -10203,3 +10211,37 @@ def _anotar_series_sin_carga(cliente, ejercicio, fecha):
             ejercicio['objetivo_explicado'] = f'media {media}{uni} + 1'
         elif objetivo == max(reps) + 1:
             ejercicio['objetivo_explicado'] = 'tu mejor serie + 1'
+
+
+_PARAMS_PLAN_TRANSPORTADO = ('decision_id', 'ejercicios_token', 'ejercicios', 'fecha', 'sesion_programada_id')
+
+
+def _entrada_directa_entrenamiento(request, cliente):
+    """24-oct-2026: la pantalla del entreno tiene un solo camino de entrada.
+
+    Con plan transportado (decisión, token, fecha…) no hace nada. Sin él:
+    - si hoy ya hay una decisión vigente, redirige a ella (lo mismo que el briefing);
+    - si no, lleva a Ahora, que hace el check-in y prepara la decisión.
+    Solo lee: no calcula ni guarda decisiones.
+    """
+    if any(request.GET.get(clave) for clave in _PARAMS_PLAN_TRANSPORTADO):
+        return None
+    from django.utils import timezone
+    from entrenos.models import GymDecisionVersion
+
+    hoy = timezone.localdate()
+    vigente = (
+        GymDecisionVersion.objects
+        .filter(cliente=cliente, fecha=hoy, vigente=True)
+        .order_by('-version').first()
+    )
+    if vigente is not None and vigente.decision_id:
+        params = request.GET.copy()
+        params['decision_id'] = vigente.decision_id
+        params['fecha'] = hoy.isoformat()
+        nombre = ((vigente.snapshot or {}).get('entrenamiento') or {}).get('rutina_nombre')
+        if nombre and not params.get('rutina_nombre'):
+            params['rutina_nombre'] = nombre
+        return redirect(f"{reverse('entrenos:entrenamiento_activo', args=[cliente.id])}?{params.urlencode()}")
+    messages.info(request, 'Empieza el entreno desde Ahora: así usa la decisión de hoy.')
+    return redirect('/')

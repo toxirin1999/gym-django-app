@@ -1795,7 +1795,7 @@ body{background:
                    class="peso-input weight-input"
                    id="peso-{{ ejercicio.form_id }}-{{ sn }}"
                    name="{{ ejercicio.form_id }}_peso_{{ sn }}"
-                   value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|floatformat:'-2u' }}"
+                   value="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'g' }}"
                    data-rec-weight="{{ ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-plan-weight="{{ ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg|stringformat:'.1f' }}"
                    data-eq-name="{{ ejercicio.nombre|lower }}">
