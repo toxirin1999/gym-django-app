@@ -591,6 +591,23 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 ajustar_escala_y_reps(cliente, ej, hoy)
             except Exception:
                 logger.exception('[plan_dinamico] escala/reps de hoy falló')
+            # 24-oct-2026 (paso 1): la regla única tiene la última palabra sobre
+            # peso y reps. Probada a la sombra con comparar_cerebro_carga: 31 de
+            # 36 iguales y las 5 diferencias, a su favor (abducción 22 → 24 con
+            # tope, remo 60 → 50 tras dos meses sin hacerlo).
+            _protegido = (
+                ej.get('_deload_aplicado') or ej.get('deload') or ej.get('molestia_reciente_aplicada')
+                or ej.get('progresion_bloqueada') or ej.get('postura_local') == 'sostener'
+                or str((ej.get('motivo_peso') or {}).get('tipo', '')) == 'recalculado_descarga'
+            )
+            if not _protegido:
+                from entrenos.services.cerebro_carga_service import aplicar_decision_carga, decidir_carga
+                try:
+                    _decision = decidir_carga(cliente, ej, hoy)
+                    if _decision:
+                        aplicar_decision_carga(ej, _decision)
+                except Exception:
+                    logger.exception('[plan_dinamico] regla única de carga falló')
 
         # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
         from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios

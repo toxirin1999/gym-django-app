@@ -70,3 +70,24 @@ class ComandoSoloLectura(Base):
         self.assertIn('hecho 60×12@8', texto)
         self.assertIn('No se ha guardado nada', texto)
         self.assertEqual(GymDecisionVersion.objects.count(), antes)
+
+
+class ReglaConectadaAlPlan(Base):
+    def test_el_plan_usa_la_regla_unica(self):
+        from entrenos.services.plan_dinamico_service import aplicar_plan_dinamico
+        e = self.entreno(HOY - timedelta(days=70), {'Sentadilla Hack': '6-8'})
+        self.hacer(e, self.hack, [(60, 8, 8)])
+        plan = [{'nombre': 'Sentadilla Hack', 'series': 3, 'repeticiones': '15-20', 'peso_kg': 60,
+                 'rpe_objetivo': 7, 'tipo_progresion': 'peso_reps', 'grupo_muscular': 'cuadriceps'}]
+        ejercicios, _ = aplicar_plan_dinamico(self.cliente, plan, HOY)
+        decision = decidir_carga(self.cliente, plan[0], HOY)
+        self.assertEqual(ejercicios[0]['peso_kg'], decision['peso'])
+        self.assertEqual(ejercicios[0]['reps_objetivo_hoy'], 15)
+        self.assertLess(ejercicios[0]['peso_kg'], 60)
+
+    def test_solo_cambia_lo_que_difiere(self):
+        from entrenos.services.cerebro_carga_service import aplicar_decision_carga
+        ej = {'peso_kg': 40, 'reps_objetivo_hoy': 12}
+        self.assertFalse(aplicar_decision_carga(ej, {'peso': 40, 'reps': 12, 'regla': 'mantener', 'frase': 'x'}))
+        self.assertTrue(aplicar_decision_carga(ej, {'peso': 45, 'reps': 10, 'regla': 'subir', 'frase': 'sube'}))
+        self.assertEqual((ej['peso_kg'], ej['reps_objetivo_hoy'], ej['progresion_motivo']), (45, 10, 'sube'))

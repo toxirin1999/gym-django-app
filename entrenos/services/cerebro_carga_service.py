@@ -82,7 +82,9 @@ def decidir_carga(cliente, ej, hoy):
         estimado = peso_para_reps(peso_ref, reps_ref, ref['rpe'], minimo, rpe_obj)
         if not estimado:
             return None
-        peso = a_escala(estimado, salto, 'abajo')
+        # 24-oct-2026: al más cercano; hacia abajo, con pesos pequeños y saltos
+        # de 5 kg, se quedaba en la mitad (curl inclinado 10 → 5 kg).
+        peso = a_escala(estimado, salto, 'cerca')
         if tope:
             peso = min(peso, float(tope))
         cuando = f"El {lectura['fecha'].strftime('%d/%m')}" if antigua else 'La última vez'
@@ -112,3 +114,32 @@ def decidir_carga(cliente, ej, hoy):
     mismo = abs(peso - peso_ref) < salto / 2
     reps = objetivo_reps_hoy(ref['reps'], rango, mismo and ref['en_rango'])
     return {'peso': peso, 'reps': reps, 'regla': 'mantener' if mismo else 'ajustar', 'frase': frase}
+
+
+def aplicar_decision_carga(ej, decision):
+    """Impone la decisión de la regla única en un ejercicio del plan de hoy.
+
+    Solo toca lo que cambia: si el plan ya decía ese peso y esas reps, se
+    queda con su texto. Devuelve True si cambió algo.
+    """
+    try:
+        peso_actual = float(ej.get('peso_kg') or 0)
+    except (TypeError, ValueError):
+        peso_actual = 0.0
+    reps_actuales = ej.get('reps_objetivo_hoy')
+    if decision['regla'] == 'tope':
+        reps_actuales = ej.get('reps_sugeridas_tope') or reps_actuales
+    if abs(peso_actual - decision['peso']) < 0.01 and str(reps_actuales) == str(decision['reps']):
+        return False
+    ej['peso_kg'] = decision['peso']
+    if 'peso_recomendado_kg' in ej:
+        ej['peso_recomendado_kg'] = decision['peso']
+    ej['reps_objetivo_hoy'] = decision['reps']
+    if decision['regla'] == 'tope':
+        ej['sugerencia_tope'] = True
+        ej['reps_sugeridas_tope'] = decision['reps']
+    if decision.get('frase'):
+        ej['progresion_motivo'] = decision['frase']
+        ej['progresion_motivo_local'] = 'regla_unica'
+        ej.pop('motivo_peso', None)
+    return True
