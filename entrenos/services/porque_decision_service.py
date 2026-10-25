@@ -78,7 +78,7 @@ def construir_porque(decision_gym):
     periodizacion = (decision_gym.get('entrenamiento') or {}).get('periodizacion') or {}
     if periodizacion.get('origen') in _ORIGENES_CON_PORQUE and periodizacion.get('motivo'):
         return periodizacion['motivo']
-    if recuperacion.get('nivel') in ('ambar', 'verde') and recuperacion.get('frase'):
+    if recuperacion.get('nivel') in ('ambar', 'verde', 'normal') and recuperacion.get('frase'):
         return recuperacion['frase']
     if contexto.get('acwr_dudoso') and acwr:
         return 'Una actividad reciente parece un error en los datos: no la tengo en cuenta para decidir.'

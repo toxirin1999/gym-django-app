@@ -95,9 +95,30 @@ def salud_iphone(request):
         .filter(Q(hrv_ms__isnull=False) | Q(fc_reposo__isnull=False) | Q(horas_sueno__isnull=False))
         .order_by('-fecha', '-pk')
     )
+    from entrenos.services.estado_carga_service import parada_en
     return render(request, 'clientes/salud_iphone.html', {
+        'parada': parada_en(cliente, hoy),
         'cliente': cliente,
         'token': cliente.get_or_create_api_token(),
         'endpoint': request.build_absolute_uri(reverse('clientes:api_salud_iphone')),
         'recibidos': [_con_sueno_texto(b) for b in recibidos],
     })
+
+
+@login_required
+@require_POST
+def parada_declarada(request):
+    """25-oct-2026: «estoy enfermo» / «estoy de parada» / «ya he vuelto»."""
+    from django.shortcuts import redirect
+    from django.utils import timezone
+
+    from entrenos.services.estado_carga_service import declarar_parada, terminar_parada
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+    accion = request.POST.get('accion', '')
+    if accion == 'terminar':
+        terminar_parada(cliente, hoy)
+    elif accion in ('enfermo', 'parada'):
+        declarar_parada(cliente, accion, hoy)
+    return redirect('clientes:salud_iphone')

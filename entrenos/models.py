@@ -2730,3 +2730,31 @@ class SensacionZonaGym(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} {self.zona} {self.entreno_id}'
+
+
+class ParadaDeclarada(models.Model):
+    """25-oct-2026: «estoy enfermo» o «estoy de parada», declarado por David al momento.
+
+    Distinto de ``PausaEntrenamiento`` (la que la app detecta a posteriori tras
+    6+ días sin gimnasio). Mientras dura, esos días no cuentan como mala
+    recuperación ni como falta de constancia en el estado de carga.
+    ``fin`` vacío = sigue en curso.
+    """
+
+    TIPO_ENFERMO = 'enfermo'
+    TIPO_PARADA = 'parada'
+    TIPOS = [(TIPO_ENFERMO, 'Estoy enfermo'), (TIPO_PARADA, 'Estoy de parada')]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='paradas_declaradas',
+    )
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    inicio = models.DateField()
+    fin = models.DateField(null=True, blank=True)
+    creada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-inicio', '-id']
+
+    def __str__(self):
+        return f'{self.cliente_id} {self.tipo} {self.inicio}–{self.fin or "…"}'

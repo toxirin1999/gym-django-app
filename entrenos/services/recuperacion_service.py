@@ -142,6 +142,8 @@ def lectura_recuperacion(cliente, hoy):
         nivel = 'ambar'
     elif buenas:
         nivel = 'verde'
+    elif medias:
+        nivel = 'normal'  # 25-oct-2026: hay media y nada se sale de lo normal en ti
     else:
         nivel = 'sin_referencia'  # hay datos, pero aún no hay media para compararlos
 
@@ -170,6 +172,8 @@ def _frase_recuperacion(nivel, senales, buenas, datos):
                 f'notas que no tira, quita una repetición y no pasa nada.')
     if nivel == 'verde':
         return f'Hoy estás fresco: {_unir(buenas)}. Día para apretar.'
+    if nivel == 'normal':
+        return 'Llegas como siempre: ni el sueño, ni el pulso, ni la variabilidad se salen de lo normal en ti.'
     if datos.get('horas_sueno'):
         return (f'Has dormido {horas_texto(datos["horas_sueno"])}. En unos días tendré tu media '
                 f'y te podré decir cómo llegas comparado con lo normal en ti.')

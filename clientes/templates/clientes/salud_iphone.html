@@ -42,6 +42,22 @@
       {% endfor %}
     </section>
 
+    <section class="card" aria-labelledby="parada-titulo">
+      <span class="mono label" id="parada-titulo">¿Enfermo o de parada?</span>
+      {% if parada %}
+        <p class="estado">Estás <strong>{% if parada.tipo == 'enfermo' %}enfermo{% else %}de parada{% endif %}</strong> desde el {{ parada.inicio|date:"d/m" }}. Estos días no cuentan como mala recuperación ni como falta de constancia.</p>
+        <form method="post" action="{% url 'clientes:parada_declarada' %}" class="valor" style="margin-top:12px">{% csrf_token %}
+          <button type="submit" name="accion" value="terminar">Ya he vuelto</button>
+        </form>
+      {% else %}
+        <p class="nota">Si estás malo o vas a parar unos días, márcalo: así esos días no cuentan como mala recuperación ni como falta de constancia.</p>
+        <form method="post" action="{% url 'clientes:parada_declarada' %}" class="valor" style="margin-top:12px">{% csrf_token %}
+          <button type="submit" name="accion" value="enfermo">Estoy enfermo</button>
+          <button type="submit" name="accion" value="parada">Estoy de parada</button>
+        </form>
+      {% endif %}
+    </section>
+
     <section class="card" aria-labelledby="datos-titulo">
       <span class="mono label" id="datos-titulo">Datos para el Atajo</span>
       <div class="campo"><span>URL</span><div class="valor"><code id="url">{{ endpoint }}</code><button type="button" data-copiar="url">Copiar</button></div></div>
