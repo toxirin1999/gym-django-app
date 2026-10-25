@@ -272,14 +272,14 @@ def _decisiones_entrenador(cliente, entreno):
             porque = hoy = None
         # 24-oct-2026 (paso 1): la próxima vez la decide la regla única, la
         # misma que usará el briefing; el cierre ya no puede decir otra cosa.
-        accion_regla = None
+        accion_regla = efecto_regla = None
         try:
             from entrenos.services.cerebro_carga_service import proxima_vez_texto
-            regla = proxima_vez_texto(cliente, entreno, log.ejercicio, tipo_progresion, porque)
+            regla = proxima_vez_texto(cliente, entreno, log.ejercicio, tipo_progresion, porque, con_efecto=True)
         except Exception:
             regla = None
         if regla:
-            porque, accion_regla = regla
+            porque, accion_regla, efecto_regla = regla
         decisiones.append({
             # 17-oct-2026: el nombre tal como sale en la rutina, no el normalizado.
             'ejercicio': _nombre_visible((ejercicio_hoy.nombre_ejercicio if ejercicio_hoy else None) or log.ejercicio),
@@ -290,7 +290,8 @@ def _decisiones_entrenador(cliente, entreno):
             'efecto': _efecto_visible(log, tipo_progresion),
             'efecto_tipo': 'bajada' if log.accion in ('bajar_peso', 'deload') else 'subida',
             **_bajada_visible(porque),
-            **({'accion': accion_regla, 'efecto_tipo': 'bajada' if accion_regla == 'Bajar peso' else 'subida'}
+            **({'accion': accion_regla, 'efecto': efecto_regla,
+                'efecto_tipo': 'bajada' if accion_regla == 'Bajar peso' else 'subida'}
                if accion_regla else {}),
             'evidencia': evidencia,
             'confianza': confianza,

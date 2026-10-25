@@ -110,6 +110,24 @@ class CierreConLaRegla(Base):
         self.assertEqual(accion, 'Mantener')
         self.assertEqual(texto, 'Mantengo 60 kg: la próxima vez a por 14 reps. Con 15 en todas las series, subo el peso.')
 
+    def test_la_etiqueta_sale_de_la_misma_decision(self):
+        # 25-oct-2026: el curl femoral bajaba de 50 a 35 kg y la etiqueta decía "un 10 %".
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        e = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '15-20'})
+        self.hacer(e, self.hack, [(60, 15, 7), (60, 13, 9), (60, 8, 9)])
+        texto, accion, efecto = proxima_vez_texto(self.cliente, e, 'Sentadilla Hack', 'peso_reps', con_efecto=True)
+        self.assertEqual(accion, 'Bajar peso')
+        self.assertTrue(efecto.startswith('Bajará a '))
+        self.assertIn(efecto.replace('Bajará a ', ''), texto)
+        self.assertNotIn('%', efecto)
+
+    def test_la_etiqueta_al_mantener_son_las_reps(self):
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        e = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '12-15'})
+        self.hacer(e, self.hack, [(60, 13, 8), (60, 13, 8)])
+        _, _, efecto = proxima_vez_texto(self.cliente, e, 'Sentadilla Hack', 'peso_reps', con_efecto=True)
+        self.assertEqual(efecto, 'A por 14 reps')
+
     def test_cierre_antiguo_no_se_reescribe(self):
         from entrenos.services.cerebro_carga_service import proxima_vez_texto
         e1 = self.entreno(HOY - timedelta(days=5), {'Sentadilla Hack': '12-15'})

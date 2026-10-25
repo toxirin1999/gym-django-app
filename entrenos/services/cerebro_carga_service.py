@@ -145,7 +145,7 @@ def aplicar_decision_carga(ej, decision):
     return True
 
 
-def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=None):
+def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=None, con_efecto=False):
     """(texto, acción) de "la próxima vez" para el cierre, según la regla única.
 
     Usa el rango y el RPE que tuvo la sesión y lee esta sesión como "la última
@@ -185,18 +185,24 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
     if regla == 'tope':
         texto = f'{_kg(peso)} kg es el máximo de la máquina: la próxima vez a por {reps} reps.'
         accion = 'Subir repeticiones'
+        efecto = f'A por {reps} reps'
     elif peso < peso_hoy - 1e-6:
         texto = f'La próxima vez {_kg(peso)} kg a por {reps} reps, para que entren todas las series en {ej["repeticiones"]}.'
         accion = 'Bajar peso'
+        efecto = f'Bajará a {_kg(peso)} kg'
     elif peso > peso_hoy + 1e-6:
         texto = f'Subo a {_kg(peso)} kg y vuelvo a {reps} reps.'
         accion = 'Subir peso'
+        efecto = f'Subirá a {_kg(peso)} kg'
     else:
         texto = (f'Mantengo {_kg(peso)} kg: la próxima vez a por {reps} reps. '
                  f'Con {rango[1]} en todas las series, subo el peso.')
         accion = 'Mantener'
+        efecto = f'A por {reps} reps'
     if porque_actual and f'{_kg(peso)} kg' in porque_actual and (
         f'{reps} reps' in porque_actual or regla in ('bajar', 'subir')
     ):
-        return porque_actual, accion
-    return texto, accion
+        texto = porque_actual
+    # 25-oct-2026: la etiqueta sale de la misma decisión (antes, "Reducirá la
+    # carga un 10 %" del registro antiguo cuando bajaba de 50 a 35 kg).
+    return (texto, accion, efecto) if con_efecto else (texto, accion)
