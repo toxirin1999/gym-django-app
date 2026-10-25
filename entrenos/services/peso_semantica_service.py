@@ -56,6 +56,13 @@ def _normalizar_base(ejercicio):
         out.pop("peso_por_mancuerna_kg", None)
         return out
 
+    # 25-oct-2026: "con Mancuerna" (una sola): el peso es esa mancuerna, no "total de ambas".
+    from entrenos.services.maquina_service import es_una_mancuerna
+    if es_una_mancuerna(nombre):
+        out["peso_formato"] = "una_mancuerna"
+        out.pop("peso_por_mancuerna_kg", None)
+        return out
+
     out["peso_formato"] = "total_ambas"
     if "peso_por_mancuerna_kg" not in out:
         peso_total = out.get("peso_kg", out.get("peso_recomendado_kg"))
@@ -64,7 +71,11 @@ def _normalizar_base(ejercicio):
     return out
 
 
-_POR_PIERNA = ("zancada", "lunge", "búlgara", "bulgara", "step up", "step-up", "subida al cajón", "a una pierna")
+_POR_PIERNA = ("zancada", "lunge", "búlgara", "bulgara", "step up", "step-up", "subida al cajón", "a una pierna",
+               # 25-oct-2026: la patada de glúteo en polea se hace pierna a pierna.
+               "patada de glúteo", "patada de gluteo", "kickback")
+# 25-oct-2026: curls en polea a un brazo (Bayesian: 15 reps por brazo).
+_POR_BRAZO_SIN_MANCUERNA = ("bayesian",)
 
 
 # 18-oct-2026: zancadas, búlgaras y subidas al cajón se cuentan por pierna y
@@ -100,6 +111,6 @@ def normalizar_semantica_carga(ejercicio):
         out["reps_unidad"] = "por pierna"
     elif out.get("peso_formato") in {"por_lado", "por_mano"}:
         out["reps_unidad"] = "por lado"
-    elif "curl" in nombre and any(t in nombre for t in _MANCUERNA):
+    elif ("curl" in nombre and any(t in nombre for t in _MANCUERNA)) or any(t in nombre for t in _POR_BRAZO_SIN_MANCUERNA):
         out["reps_unidad"] = "por brazo"
     return out

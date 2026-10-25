@@ -4,6 +4,13 @@ register = template.Library()
 
 
 @register.filter
+def nombre_visible(nombre):
+    """25-oct-2026: el nombre con el que se enseña el ejercicio (ver services/nombres_visibles)."""
+    from entrenos.services.nombres_visibles import nombre_visible as _nv
+    return _nv(nombre)
+
+
+@register.filter
 def kg_miles(valor):
     """14914.3 → '14.914' (17-oct-2026: separador de miles español)."""
     try:

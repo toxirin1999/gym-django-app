@@ -1589,7 +1589,7 @@ body{background:
         <div class="ex-header-icon">
           <i class="fas fa-dumbbell"></i>
         </div>
-        <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre }}</h2>
+        <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|nombre_visible }}</h2>
         {% if ejercicio.aproximaciones and not ejercicio.usa_distancia %}
         <button type="button" class="ex-aprox-pill" aria-controls="aprox-body-{{ ejercicio.form_id }}" aria-expanded="false" onclick="toggleCalentamiento(this, '{{ ejercicio.form_id }}')">
           <span>Calentamiento · 3 pasos</span><span aria-hidden="true">›</span>
@@ -1761,7 +1761,7 @@ body{background:
           {% if ejercicio.usa_peso or ejercicio.usa_distancia %}
             {# 21-oct-2026: el objetivo enseña el mismo peso que la casilla (gemelos 22,5 arriba y 25 abajo). #}
             {% with peso_obj=ejercicio.peso_inicial_kg|default:ejercicio.peso_recomendado_kg %}
-            <span class="sa-obj-plan">🎯 {{ peso_obj }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
+            <span class="sa-obj-plan">🎯 {{ peso_obj }}kg{% if ejercicio.peso_formato == 'total_ambas' %} total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} por mano{% elif ejercicio.peso_formato == 'por_lado' %} por lado{% elif ejercicio.peso_formato == 'una_mancuerna' %} una mancuerna{% endif %}{% if ejercicio.usa_distancia %} · {{ ejercicio.reps_objetivo }}m{% else %} × {{ ejercicio.reps_objetivo }} reps{% endif %}</span>
             {% if ejercicio.peso_anterior_kg > 0 %}
               {% if peso_obj > ejercicio.peso_anterior_kg %}
                 <span class="sa-obj-diff mas">▲ +{{ peso_obj|subtract:ejercicio.peso_anterior_kg }}kg vs última</span>
@@ -1786,7 +1786,7 @@ body{background:
       {# ── PESO (solo si el ejercicio usa peso externo) ── #}
       {% if ejercicio.usa_peso or ejercicio.usa_distancia %}
       <div class="peso-zona">
-        <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} · por mano{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% endif %}</div>
+        <div class="peso-label">Peso de trabajo{% if ejercicio.peso_formato == 'total_ambas' %} · total de ambas{% elif ejercicio.peso_formato == 'por_mano' %} · por mano{% elif ejercicio.peso_formato == 'por_lado' %} · por lado{% elif ejercicio.peso_formato == 'una_mancuerna' %} · una mancuerna{% endif %}</div>
         <div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">
           <button type="button" class="peso-btn menos"
                   onclick="ajustarPesoPanel('{{ ejercicio.form_id }}',{{ sn }},-incrementoPeso('{{ ejercicio.form_id }}'))">−</button>
@@ -1891,6 +1891,13 @@ body{background:
           {# 23-oct-2026: solo en la S1; desde la S2 manda la propuesta entre series. #}
           <span class="peso-ultima-vez__cue">Hoy a por {{ ejercicio.reps_objetivo }} reps</span>
         {% endif %}
+      </div>
+      {% elif ejercicio.usa_peso and ejercicio.repeticiones_anterior %}
+      {# 25-oct-2026: si la última vez no se apuntó el peso, al menos las reps (patada de glúteo). #}
+      <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
+        <span class="peso-ultima-vez__label">Última vez</span>
+        <span class="peso-ultima-vez__value">{{ ejercicio.repeticiones_anterior }} reps · sin peso apuntado</span>
+        {% if ejercicio.rpe_anterior %}<span class="peso-ultima-vez__rpe" aria-label="RPE de la última vez">RPE {{ ejercicio.rpe_anterior|floatformat:"-1" }}</span>{% endif %}
       </div>
       {% endif %}
       </div>

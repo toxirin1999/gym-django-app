@@ -18,6 +18,12 @@ _AISLAMIENTO = (
 )
 
 
+_COMPUESTOS_PIERNA = (
+    'sentadilla', 'búlgara', 'bulgara', 'zancada', 'lunge', 'hack', 'prensa', 'peso muerto',
+    'hip thrust', 'step up', 'subida al cajón',
+)
+
+
 def _rep_max(reps):
     try:
         return int(str(reps).split('-')[-1])
@@ -39,6 +45,10 @@ def get_descanso_sugerido(tipo_ejercicio=None, rpe_objetivo=None, es_principal=F
     if tope is not None and tope <= 6:
         return {'minutos': 3, 'label': '3 min', 'motivo': 'series pesadas de fuerza', 'fuente': 'evidencia'}
     texto = (nombre or '').casefold()
+    if any(t in texto for t in _COMPUESTOS_PIERNA):
+        # 25-oct-2026: la búlgara salía con 1:30 (marcada como aislamiento en
+        # la base); un básico de pierna, y además a una pierna, pide 2:30.
+        return {'minutos': 2.5, 'label': '2:30', 'motivo': 'ejercicio básico', 'fuente': 'evidencia'}
     aislamiento = tipo_ejercicio == 'aislamiento' or any(t in texto for t in _AISLAMIENTO)
     if aislamiento and not es_principal:
         return {'minutos': 1.5, 'label': '1:30', 'motivo': 'aislamiento o core', 'fuente': 'evidencia'}

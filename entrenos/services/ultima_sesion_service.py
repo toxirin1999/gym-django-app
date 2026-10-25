@@ -108,6 +108,39 @@ def serie_referencia(series, reps_min=None):
     }
 
 
+FATIGA_FRACCION = 0.6      # 25-oct-2026: menos del 60 % de las reps de la vez anterior = día de fatiga
+FATIGA_DIAS = 21
+
+
+def dia_de_fatiga(cliente, nombre, entreno, reps_min=None):
+    """¿Se hundió el ejercicio en ese entreno frente a la sesión anterior, al mismo peso?
+
+    25-oct-2026: extensiones 15 kg × 15 a RPE 7 y, una semana después, 15 × 4
+    con el tríceps agotado. Eso es un mal día, no una pérdida de fuerza: no
+    hay que bajar el peso por él. Devuelve None o
+    {'peso', 'reps_antes', 'reps_hoy', 'fecha_antes'}.
+    """
+    series = series_de_trabajo(entreno, nombre)
+    if not series:
+        return None
+    previa = ultima_sesion(cliente, nombre, entreno.fecha, reps_min=reps_min)
+    if not previa or (entreno.fecha - previa['fecha']).days > FATIGA_DIAS:
+        return None
+    ref = previa['referencia']
+    if not ref['en_rango'] or ref['peso'] <= 0:
+        return None
+    al_peso = [s['reps'] for s in series if s['peso'] >= ref['peso'] - 1e-6 and s['reps'] > 0]
+    if not al_peso:
+        return None
+    mejor = max(al_peso)
+    if mejor >= float(ref['reps']) * FATIGA_FRACCION:
+        return None
+    return {
+        'peso': ref['peso'], 'reps_antes': int(round(float(ref['reps']))),
+        'reps_hoy': mejor, 'fecha_antes': previa['fecha'],
+    }
+
+
 def rango_de_sesion(entreno, nombre):
     """Rango de reps que se prescribió en esa sesión (snapshot), o None."""
     from entrenos.services.decision_log_service import normalizar_ejercicio
@@ -586,6 +619,15 @@ def anotar_ultima_vez(cliente, ej, hoy):
         # Una rep menos es justo la progresión que se pide hoy (regla C: 15 → 16
         # con el mismo peso); el aviso es para faltas de 2 o más.
         if 0 < s['peso'] <= peso + 1e-6 and 0 < s['reps'] <= rango[0] - 2 and s.get('metros') is None
+    ]
+    # 25-oct-2026: una primera serie de tanteo corta (press 45 × 10) no cuenta
+    # si después, con ese peso o más, las series entraron en el rango (46 × 15).
+    cortas = [
+        c for c in cortas
+        if not any(
+            s['peso'] >= c['peso'] - 1e-6 and s['reps'] >= rango[0]
+            for s in lectura['series'][lectura['series'].index(c) + 1:]
+        )
     ]
     if not cortas:
         return

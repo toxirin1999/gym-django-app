@@ -355,7 +355,7 @@
   <div class="card">
     {% for trabajo in resumen.trabajo_por_tipo %}
     <div class="cambio-row unit-breakdown-row">
-      <span class="cambio-nombre">{{ trabajo.nombre }}</span>
+      <span class="cambio-nombre">{{ trabajo.nombre|nombre_visible }}</span>
       <span class="cambio-detalle {% if trabajo.tipo == 'distancia_cargada' %}tope{% else %}mantenida{% endif %}">
         {% if trabajo.tipo == 'distancia_cargada' %}
           <span class="unit-piece">{{ trabajo.metros|floatformat:0 }} m</span>

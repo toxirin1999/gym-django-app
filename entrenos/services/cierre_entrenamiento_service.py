@@ -75,9 +75,10 @@ _PROXIMA_VEZ_ACCION = {
 def _nombre_visible(nombre):
     """El nombre tal como está en la rutina ("Jalón al Pecho", no "Jalón Al Pecho")."""
     from rutinas.models import EjercicioBase
+    from entrenos.services.nombres_visibles import nombre_visible
     if not (nombre or '').strip():
         return nombre
-    return (
+    return nombre_visible(
         EjercicioBase.objects.filter(nombre__iexact=nombre.strip()).values_list('nombre', flat=True).first()
         or nombre
     )
@@ -658,12 +659,15 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         )
         anterior = None
         peso_anterior = None
+        mas_reciente = None
         for candidato in (
             EjercicioRealizado.objects
-            .filter(entreno__cliente=cliente, nombre_ejercicio=ej.nombre_ejercicio, completado=True)
+            .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True)
             .exclude(entreno_id=entreno.id)
             .order_by('-entreno__fecha', '-id')
         ):
+            if mas_reciente is None:
+                mas_reciente = candidato
             peso_candidato, reps_candidato = _rendimiento_representativo(
                 candidato.entreno, candidato.nombre_ejercicio,
                 candidato.peso_kg, candidato.repeticiones,
@@ -679,7 +683,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             # su serie de referencia (la que entra en el rango).
             reciente = (
                 EjercicioRealizado.objects
-                .filter(entreno__cliente=cliente, nombre_ejercicio=ej.nombre_ejercicio, completado=True,
+                .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
                         entreno__fecha__lte=entreno.fecha, entreno__fecha__gte=entreno.fecha - timedelta(days=42))
                 .exclude(entreno_id=entreno.id)
                 .order_by('-entreno__fecha', '-id').first()
@@ -771,6 +775,19 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # igual que la última vez también decía solo "carga mantenida").
         comparacion = _comparar_referencias(entreno, anterior.entreno, ej.nombre_ejercicio)
         if comparacion and not es_descarga_hoy:
+            # 25-oct-2026: lo que explica la comparación, para no leer como
+            # retroceso lo que no lo es.
+            from entrenos.services.ultima_sesion_service import dia_de_fatiga, rango_de_sesion
+            rango_hoy = rango_de_sesion(entreno, ej.nombre_ejercicio)
+            if dia_de_fatiga(cliente, ej.nombre_ejercicio, entreno, rango_hoy[0] if rango_hoy else None):
+                comparacion = dict(comparacion, tipo='mantenida',
+                                   detalle=f"{comparacion['detalle']} · día de cansancio, se repite")
+            elif (comparacion['tipo'] == 'bajada' and mas_reciente is not None
+                    and mas_reciente.pk != anterior.pk):
+                # Fondos 92,5 × 8 la última vez; hoy vuelven a 15-20 y se comparan con
+                # la última vez en ese rango (80 × 15): un regreso, no una bajada.
+                comparacion = dict(comparacion, tipo='mantenida',
+                                   detalle=f"{comparacion['detalle']} · vuelves a este rango")
             cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
             continue
         # 18-oct-2026: sin series comparables y con una sesión de hace más de
@@ -786,6 +803,10 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             or (peso_hoy > 0 and peso_anterior == 0)
         )
         if es_cambio_variante:
+            if peso_hoy > 0 and peso_anterior == 0 and reps_hoy:
+                # 25-oct-2026: la patada de glúteo desaparecía porque la última vez no tenía peso apuntado.
+                cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'mantenida',
+                                'detalle': f'{_kg_txt(peso_hoy)} kg × {reps_hoy} · la última vez sin peso apuntado'})
             continue  # No mostrar cambios de variante como cambios de carga
 
         # Ocultar cambios irrelevantes (pero no la carga exactamente igual,

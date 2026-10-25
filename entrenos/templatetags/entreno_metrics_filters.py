@@ -53,3 +53,10 @@ def tipo_icono(tipo):
         'estiramientos': '🤸', 'movilidad': '🔄', 'otro': '🎯',
     }
     return iconos.get(tipo, '🎯')
+
+
+@register.filter
+def nombre_visible(nombre):
+    """25-oct-2026: el nombre con el que se enseña el ejercicio (ver services/nombres_visibles)."""
+    from entrenos.services.nombres_visibles import nombre_visible as _nv
+    return _nv(nombre)

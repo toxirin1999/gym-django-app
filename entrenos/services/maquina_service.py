@@ -136,11 +136,15 @@ def incremento_real(cliente, nombre, por_defecto=2.5):
 SALTO_MAQUINA = 5.0
 SALTO_DISCOS = 2.5
 SALTO_MANCUERNA = 2.5      # por mancuerna; en "peso total" de dos, el doble
-SALTO_KETTLEBELL = 4.0
+# 25-oct-2026: en su gimnasio hay kettlebells sueltas (8, 10…) y, si falta un
+# peso, usa una mancuerna: de 2 en 2, no de 4 en 4.
+SALTO_KETTLEBELL = 2.0
 # 19-oct-2026: barra Z con discos de 2,5 → se cargan de dos en dos (uno por lado).
 SALTO_BARRA_Z = 5.0
 
-_TOKENS_KETTLEBELL = ('kettlebell', 'pesa rusa')
+_TOKENS_KETTLEBELL = ('kettlebell', 'pesa rusa',
+                      # 25-oct-2026: David hace la búlgara con una kettlebell (8 → 10 kg).
+                      'búlgara', 'bulgara')
 _TOKENS_BARRA_Z = ('barra z', 'barra ez', 'ez bar', 'z-bar')
 _TOKENS_MANCUERNA = ('mancuerna', 'dumbbell', 'arnold')
 _TOKENS_UNA_MANO = ('una mano', 'un brazo', 'unilateral', 'por lado', 'alterno')
@@ -150,6 +154,9 @@ _TOKENS_DISCOS = (
     'leg press', 'hack', 'hip thrust', 'zancada',
     # 24-oct-2026: la Convergent de David es de discos (62,5 existe).
     'convergent',
+    # 25-oct-2026: sus fondos son en máquina sentada de discos (calentamiento
+    # 40 · 56 · 68 salía con el salto de 1 kg aprendido de pesos mal apuntados).
+    'fondos', 'dips',
 )
 _TOKENS_MAQUINA = (
     'máquina', 'maquina', 'machine', 'polea', 'cable', 'pec deck', 'peck',
@@ -159,16 +166,26 @@ _TOKENS_MAQUINA = (
 )
 
 
+def es_una_mancuerna(nombre):
+    """25-oct-2026: 'con Mancuerna' (singular) es una sola mancuerna, cogida con las dos manos
+    (extensiones sobre la cabeza) o con una (remo). 'con Mancuernas' son dos."""
+    import re
+    texto = (nombre or '').casefold()
+    return bool(re.search(r'\bmancuerna\b', texto)) and not re.search(r'\bmancuernas\b', texto)
+
+
 def tipo_equipo_carga(nombre, equipo=None):
     """'kettlebell' | 'barra_z' | 'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
     descriptor = f'{nombre or ""} {equipo or ""}'.casefold()
-    # 18-oct-2026: una sola kettlebell, de 4 en 4 (8, 12, 16, 20…).
+    # Una sola kettlebell (de 2 en 2 desde el 25-oct-2026).
     if any(t in descriptor for t in _TOKENS_KETTLEBELL):
         return 'kettlebell'
     if any(t in descriptor for t in _TOKENS_BARRA_Z):
         return 'barra_z'
     if any(t in descriptor for t in _TOKENS_MANCUERNA):
-        return 'mancuerna_una' if any(t in descriptor for t in _TOKENS_UNA_MANO) else 'mancuerna_dos'
+        if any(t in descriptor for t in _TOKENS_UNA_MANO) or es_una_mancuerna(nombre):
+            return 'mancuerna_una'
+        return 'mancuerna_dos'
     if any(t in descriptor for t in _TOKENS_DISCOS):
         return 'discos'
     if any(t in descriptor for t in _TOKENS_MAQUINA):

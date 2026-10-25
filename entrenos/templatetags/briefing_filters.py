@@ -38,3 +38,10 @@ def sin_campo(items, spec):
         return [it for it in items if isinstance(it, dict) and it.get(campo) not in valores_set]
     except Exception:
         return []
+
+
+@register.filter
+def nombre_visible(nombre):
+    """25-oct-2026: el nombre con el que se enseña el ejercicio (ver services/nombres_visibles)."""
+    from entrenos.services.nombres_visibles import nombre_visible as _nv
+    return _nv(nombre)

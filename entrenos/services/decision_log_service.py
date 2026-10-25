@@ -998,6 +998,20 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         _persistir_evaluacion_final(log, resultado, notas)
         return
 
+    # 25-oct-2026: un día de fatiga (extensiones 15 × 15 y luego 15 × 4 con el
+    # tríceps agotado) no da por fallido un cambio: se vuelve a comprobar.
+    try:
+        from entrenos.services.ultima_sesion_service import dia_de_fatiga, kg
+        fatiga = dia_de_fatiga(nueva_sesion.entreno.cliente, nueva_sesion.nombre_ejercicio, nueva_sesion.entreno)
+    except Exception:  # noqa: BLE001
+        fatiga = None
+    if fatiga:
+        _persistir_evaluacion_final(log, 'neutra', (
+            f"Ese día llegabas muy cansado ({kg(fatiga['peso'])} kg × {fatiga['reps_hoy']}; antes "
+            f"{kg(fatiga['peso'])} × {fatiga['reps_antes']}): lo vuelvo a comprobar antes de darlo por bueno o malo"
+        ))
+        return
+
     if log.motivo_codigo in ('progresion_peso', 'progresion_reps'):
         tecnicas = _tecnicas_sesion(
             nueva_sesion.entreno,
@@ -1130,7 +1144,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
 
     if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
         resultado = 'fallida'
-        notas = 'Carga excesiva: fallo o RPE extremo en la sesión posterior'
+        notas = 'La sesión siguiente acabó al fallo o con RPE 10'
     elif log.accion == 'subir_peso' and peso_nuevo > peso_anterior:
         corta = _subida_sin_reps(log, nueva_sesion, reps_nuevas)
         if corta:

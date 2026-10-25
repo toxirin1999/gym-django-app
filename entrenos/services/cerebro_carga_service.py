@@ -75,6 +75,20 @@ def decidir_carga(cliente, ej, hoy):
             frase += ' ' + aviso
         return {'peso': peso, 'reps': reps, 'regla': 'tope', 'frase': frase}
 
+    # 2b. 25-oct-2026: un día de fatiga (15 × 15 y luego 15 × 4) no baja el peso:
+    # se repite con el objetivo de la vez anterior.
+    from entrenos.services.ultima_sesion_service import dia_de_fatiga
+    fatiga = dia_de_fatiga(cliente, nombre, lectura['entreno'], reps_min=minimo)
+    if fatiga and not antigua:
+        reps = max(minimo, min(maximo, fatiga['reps_antes']))
+        return {
+            'peso': float(fatiga['peso']), 'reps': reps, 'regla': 'fatiga',
+            'reps_hoy': fatiga['reps_hoy'], 'reps_antes': fatiga['reps_antes'],
+            'frase': (f"La última vez llegaste muy cansado ({_kg(fatiga['peso'])} kg × {fatiga['reps_hoy']}; "
+                      f"antes hacías {_kg(fatiga['peso'])} × {fatiga['reps_antes']}). "
+                      f"Repetimos {_kg(fatiga['peso'])} kg a por {reps}."),
+        }
+
     # 3. Cambio de familia de rango, o última vez de hace más de 6 semanas:
     # se estima para el rango de hoy, no se arrastra el peso (remo en polea
     # 60 × 8 hace dos meses → no "60 a por 15").
@@ -110,9 +124,29 @@ def decidir_carga(cliente, ej, hoy):
             'frase': (f'{reps_ref} reps con {_kg(peso_ref)} kg, arriba del rango: '
                       f'hoy {_kg(peso)} kg y vuelta a {minimo}.'),
         }
-    peso = _a_escala_empate_arriba(float(techo), salto)
+    from entrenos.services.maquina_service import tipo_equipo_carga
+    if abs(float(techo) - peso_ref) < 1e-6 and tipo_equipo_carga(nombre) not in (
+        'mancuerna_una', 'mancuerna_dos', 'kettlebell',
+    ):
+        # 25-oct-2026: el peso real que usaste se respeta aunque no esté en la
+        # escala (Bayesian con una placa de 2 kg encima: 22,5). Antes se
+        # redondeaba a 25, dejaba de ser "el mismo peso" y las reps no subían.
+        # Las mancuernas y kettlebells sí van a su escala (46 kg no existe).
+        peso = peso_ref
+    else:
+        peso = _a_escala_empate_arriba(float(techo), salto)
     mismo = abs(peso - peso_ref) < salto / 2
     reps = objetivo_reps_hoy(ref['reps'], rango, mismo and ref['en_rango'])
+    if mismo and ref['en_rango'] and reps < maximo:
+        al_peso = [x for x in lectura['series'] if abs(x['peso'] - peso_ref) < 1e-6 and x['reps'] > 0]
+        rpes = [x['rpe'] for x in al_peso]
+        if al_peso and None not in rpes and all(x['reps'] >= minimo for x in al_peso) \
+                and max(rpes) <= rpe_obj - 1:
+            # 25-oct-2026: con margen de sobra (fondos 75 × 15 y 16 a RPE 6 con
+            # objetivo 7), dos reps más en vez de una.
+            reps = min(maximo, reps + 1)
+            frase = (f'La última vez RPE {_kg(max(rpes))}, por debajo del {_kg(rpe_obj)} que pide: '
+                     f'hoy {_kg(peso)} kg a por {reps} reps.')
     return {'peso': peso, 'reps': reps, 'regla': 'mantener' if mismo else 'ajustar', 'frase': frase}
 
 
@@ -122,6 +156,9 @@ def aplicar_decision_carga(ej, decision):
     Solo toca lo que cambia: si el plan ya decía ese peso y esas reps, se
     queda con su texto. Devuelve True si cambió algo.
     """
+    # 25-oct-2026: la etiqueta del briefing sabe por qué cambia el peso
+    # (un cambio de rango no es "bajar"; un día de fatiga se repite).
+    ej['regla_carga'] = decision['regla']
     try:
         peso_actual = float(ej.get('peso_kg') or 0)
     except (TypeError, ValueError):
@@ -182,6 +219,10 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         return None
     peso, reps, regla = decision['peso'], decision['reps'], decision['regla']
     peso_hoy = float(lectura['referencia']['peso'])
+    if regla == 'fatiga':
+        texto = (f"La próxima vez repetimos {_kg(peso)} kg a por {reps} reps: hoy llegabas muy cansado "
+                 f"(antes hacías {_kg(peso)} × {decision['reps_antes']}).")
+        return (texto, 'Mantener', f'Repite {_kg(peso)} kg') if con_efecto else (texto, 'Mantener')
     if regla == 'tope':
         texto = f'{_kg(peso)} kg es el máximo de la máquina: la próxima vez a por {reps} reps.'
         accion = 'Subir repeticiones'

@@ -33,6 +33,9 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
         incremento = float(incremento or 0)
     except (TypeError, ValueError):
         incremento = 0
+    if incremento > 0 and peso_trabajo <= 3 * incremento + 1e-9:
+        # 25-oct-2026: con 15 kg y saltos de 5 solo caben 5 y 10 por debajo (salía 5 · 10 · 10).
+        return None
     if incremento > 0 and peso_trabajo < 3 * incremento - 1e-9:
         # 24-oct-2026: con muy poco peso no caben tres escalones distintos
         # (curl inclinado 10 kg con mancuernas de 5 en 5 salía 5, 5 y 5).
@@ -60,4 +63,6 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
             p1 = min(p1, round(p2 - incremento, 1))
             if p1 <= 0 or p2 <= 0:
                 p1, p2 = _redondear(peso_trabajo * 0.50), _redondear(peso_trabajo * 0.70)
+        if not (0 < p1 < p2 < p3 < peso_trabajo):
+            return None  # 25-oct-2026: nunca escalones repetidos
     return {'peso1': p1, 'peso2': p2, 'peso3': p3}

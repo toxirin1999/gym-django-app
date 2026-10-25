@@ -418,7 +418,7 @@
 
   <!-- ESTADO FÍSICO / READINESS -->
   <div class="sec-hdr">
-    <span class="sec-tag">Readiness</span>
+    <span class="sec-tag">Cómo vienes</span>
     <div class="sec-line"></div>
   </div>
   <div class="estado-grid">
@@ -430,7 +430,7 @@
       {% else %}
         <div class="estado-val na">—</div>
       {% endif %}
-      <div class="estado-lbl">RPE medio</div>
+      <div class="estado-lbl">Esfuerzo medio</div>
     </div>
     <div class="estado-card">
       {% if briefing.energia_media %}
@@ -446,7 +446,7 @@
       <div class="estado-val {% if briefing.num_sesiones_recientes >= 4 %}ok{% endif %}">
         {{ briefing.num_sesiones_recientes }}
       </div>
-      <div class="estado-lbl">Sesiones · 2 sem</div>
+      <div class="estado-lbl">Sesiones en 2 semanas</div>
     </div>
   </div>
 
@@ -581,7 +581,7 @@
         <div class="plan-name-wrap">
           <span class="plan-num">{{ forloop.counter|stringformat:"02d" }}</span>
           <div>
-            <div class="plan-name">{{ ej.nombre|default:"Ejercicio" }}</div>
+            <div class="plan-name">{{ ej.nombre|nombre_visible|default:"Ejercicio" }}</div>
             {% if ej.sustituido and ej.nombre_original %}
             <div class="plan-name-original"><s>{{ ej.nombre_original }}</s></div>
             {% endif %}
@@ -590,6 +590,9 @@
         <div class="plan-badge-group">
           {% if ej.sustituido %}<span class="tag tag-subtle accent">↔ CAMBIADO</span>
           {% elif ej.deload %}<span class="tag tag-subtle accent">↓ DELOAD</span>
+          {% elif ej.regla_carga == 'recalcular' %}<span class="tag tag-subtle accent">↔ NUEVO RANGO</span>
+          {% elif ej.regla_carga == 'antigua' %}<span class="tag tag-subtle accent">↻ RECALCULADO</span>
+          {% elif ej.regla_carga == 'fatiga' %}<span class="tag tag-subtle joi">= REPITE</span>
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span class="tag tag-subtle ok">↑ SUBIR</span>
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span class="tag tag-subtle warn">↓ BAJAR</span>
           {% elif ej.progresion_pospuesta %}<span class="tag tag-subtle joi">= MANTENER</span>
@@ -625,9 +628,9 @@
           {% elif ej.progresion_bloqueada and ej.peso_kg_propuesto %}
           <span class="plan-objetivo-prev">{{ ej.peso_kg_propuesto|floatformat:"-1" }} kg</span><span class="plan-objetivo-val {% if ej.motivo_bloqueo == 'lesion_activa' %}plan-objetivo-lock-lesion{% elif ej.motivo_bloqueo == 'lesion_retorno' %}plan-objetivo-lock-retorno-lesion{% elif ej.motivo_bloqueo == 'retorno_pausa' %}plan-objetivo-lock-pausa{% else %}plan-objetivo-hold{% endif %}">{{ ej.peso_kg|floatformat:"-1" }} kg</span>
           {% elif ej.peso_recomendado_kg and ej.peso_recomendado_kg > 0 %}
-          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_recomendado_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_recomendado_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% elif ej.peso_formato == 'una_mancuerna' %} <span class="plan-objetivo-lbl">una mancuerna</span>{% endif %}
           {% elif ej.peso_kg and ej.peso_kg > 0 %}
-          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% endif %}
+          <span class="plan-objetivo-lbl">objetivo</span><span class="plan-objetivo-val">{{ ej.peso_kg|floatformat:"-1" }} kg</span>{% if ej.peso_formato == 'total_ambas' %} <span class="plan-objetivo-lbl">total de ambas</span>{% elif ej.peso_formato == 'por_lado' %} <span class="plan-objetivo-lbl">por lado</span>{% elif ej.peso_formato == 'una_mancuerna' %} <span class="plan-objetivo-lbl">una mancuerna</span>{% endif %}
           {% endif %}
         </div>
       </div>

@@ -30,9 +30,10 @@ class Unidades(SimpleTestCase):
         self.assertEqual(self.unidad('Pallof Press'), 'por lado')
         self.assertEqual(self.unidad('Jalón al Pecho'), '')
 
-    def test_kettlebell_de_4_en_4(self):
+    def test_kettlebell_de_2_en_2(self):
+        # 25-oct-2026: kettlebells sueltas (8, 10…) o una mancuerna si falta el peso.
         self.assertEqual(tipo_equipo_carga('Zancadas con Kettlebell'), 'kettlebell')
-        self.assertEqual(salto_fisico('Zancadas con Kettlebell'), 4)
+        self.assertEqual(salto_fisico('Zancadas con Kettlebell'), 2)
 
     def test_plural_del_cierre(self):
         uno = SimpleNamespace(accion='subir_reps', valor_cambio=1)
