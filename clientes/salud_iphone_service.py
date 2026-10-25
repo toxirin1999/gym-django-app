@@ -147,6 +147,52 @@ def _horas_sueno_atajo(clave, valor):
     return total / 3600
 
 
+FASES_NO_SUENO = ('despierto', 'awake', 'en cama', 'in bed', 'inbed')
+
+
+def _lineas(valor):
+    if isinstance(valor, (list, tuple)):
+        return [str(v).strip() for v in valor if str(v).strip()]
+    return [t.strip() for t in str(valor or '').splitlines() if t.strip()]
+
+
+def _segundos_reloj(texto):
+    """Duración de un tramo como la da Atajos: '16:24' (min:s), '1:13:06' (h:min:s), '59' (s)."""
+    partes = texto.replace(',', '.').split(':')
+    try:
+        numeros = [float(p) for p in partes]
+    except ValueError:
+        return None
+    if len(numeros) == 3:
+        return numeros[0] * 3600 + numeros[1] * 60 + numeros[2]
+    if len(numeros) == 2:
+        return numeros[0] * 60 + numeros[1]
+    if len(numeros) == 1:
+        return numeros[0]
+    return None
+
+
+def _horas_por_tramos(duraciones, fases=None):
+    """Suma los tramos de sueño (formato reloj), quitando los 'Despierto' / 'En cama' si llega la fase.
+
+    Devuelve None si no es una lista de tramos en formato reloj.
+    """
+    lineas = _lineas(duraciones)
+    if len(lineas) < 2 or not any(':' in l for l in lineas):
+        return None
+    fases_l = _lineas(fases) if fases is not None else []
+    usar_fases = len(fases_l) == len(lineas)
+    total = 0.0
+    for i, linea in enumerate(lineas):
+        if usar_fases and any(f in fases_l[i].lower() for f in FASES_NO_SUENO):
+            continue
+        seg = _segundos_reloj(linea)
+        if seg is None:
+            return None
+        total += seg
+    return total / 3600
+
+
 def leer_atajo(payload, hoy):
     """Formato plano del Atajo → {fecha: {...}} (mismo formato que ``leer_metricas``)."""
     if not isinstance(payload, dict):
@@ -160,7 +206,9 @@ def leer_atajo(payload, hoy):
             if clave not in payload:
                 continue
             if campo == 'horas_sueno':
-                horas = _horas_sueno_atajo(clave, payload[clave])
+                horas = _horas_por_tramos(payload[clave], payload.get('fases'))
+                if horas is None:
+                    horas = _horas_sueno_atajo(clave, payload[clave])
                 if horas and 0 < horas <= 16:
                     valores[campo] = round(horas, 2)
             else:
