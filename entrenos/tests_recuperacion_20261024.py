@@ -230,6 +230,22 @@ class LeerAtajo(SimpleTestCase):
         self.assertEqual(leer_atajo({'sueno': '7:12:00'}, HOY)[HOY]['horas_sueno'], 7.2)
         self.assertEqual(leer_atajo({'sueno': '6:30'}, HOY)[HOY]['horas_sueno'], 6.5)
 
+    def test_muestras_tal_cual_del_atajo(self):
+        r = leer_atajo({
+            'hrv': '41 ms\n55 ms\n48 ms',
+            'pulso_reposo': '59 lpm',
+            'sueno': ['1 h 32 min', '2 h 10 min', '45 min', '1 h 3 min'],
+        }, HOY)[HOY]
+        self.assertEqual(r, {'hrv_ms': 48, 'fc_reposo': 59, 'horas_sueno': 5.5})
+
+    def test_muestras_con_fecha_no_mezclan_numeros(self):
+        r = leer_atajo({'hrv': '25 oct 2026, 3:02 · 46 ms\n25 oct 2026, 5:40 · 50 ms'}, HOY)[HOY]
+        self.assertEqual(r['hrv_ms'], 48)
+
+    def test_sueno_en_minutos_o_segundos_con_unidad(self):
+        self.assertEqual(leer_atajo({'sueno': '450 min'}, HOY)[HOY]['horas_sueno'], 7.5)
+        self.assertEqual(leer_atajo({'sueno': '27000 s'}, HOY)[HOY]['horas_sueno'], 7.5)
+
     def test_valores_absurdos_o_vacios(self):
         self.assertEqual(leer_atajo({'hrv': '', 'pulso_reposo': 5, 'sueno': 0}, HOY), {})
         self.assertEqual(leer_atajo({}, HOY), {})
@@ -276,6 +292,13 @@ class EndpointAtajo(ConCliente):
             {'name': 'resting_heart_rate', 'units': 'count/min', 'data': [{'date': HOY.isoformat(), 'qty': 50}]},
         ]}}, hoy=HOY)
         self.assertEqual(guardado, {HOY.isoformat(): {'fc_reposo': 50}})
+
+    def test_el_aviso_del_registro_no_guarda_el_token(self):
+        token = self.cliente.get_or_create_api_token()
+        with self.assertLogs('clientes.views_salud', level='WARNING') as logs:
+            self._post({'token': f'Bearer {token}', 'hrv': ''})
+        self.assertNotIn(token, '\n'.join(logs.output))
+        self.assertIn("'hrv': ''", '\n'.join(logs.output))
 
     def test_la_pagina_lee_la_base_de_datos_no_la_cache(self):
         token = self.cliente.get_or_create_api_token()

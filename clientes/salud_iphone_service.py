@@ -87,13 +87,53 @@ def _numeros(valor):
 _HMS = re.compile(r'(\d+):(\d{1,2})(?::(\d{1,2}))?')
 
 
+_CON_UNIDAD = re.compile(
+    r'(\d+(?:[.,]\d+)?)\s*(horas?|hrs?|h|minutos?|mins?|m|segundos?|segs?|s)\b', re.IGNORECASE)
+_MS = re.compile(r'(\d+(?:[.,]\d+)?)\s*ms\b', re.IGNORECASE)
+_PULSO = re.compile(r'(\d+(?:[.,]\d+)?)\s*(?:lpm|bpm|ppm|latidos|count/min|cpm)', re.IGNORECASE)
+
+
+def _valores_con_unidad(valor, patron):
+    """Si el texto trae la unidad ("45 ms", "59 lpm"), solo esos números (no fechas ni horas)."""
+    if isinstance(valor, (list, tuple)):
+        valor = '\n'.join(str(v) for v in valor)
+    if not isinstance(valor, str):
+        return None
+    encontrados = [float(n.replace(',', '.')) for n in patron.findall(valor)]
+    return encontrados or None
+
+
+def _horas_con_unidades(valor):
+    """'1 h 23 min', '83 min', '7 hr', '3600 s' (uno o varios tramos) → horas, o None."""
+    if isinstance(valor, (list, tuple)):
+        valor = '\n'.join(str(v) for v in valor)
+    if not isinstance(valor, str):
+        return None
+    total = 0.0
+    for numero, unidad in _CON_UNIDAD.findall(valor):
+        n = float(numero.replace(',', '.'))
+        u = unidad.lower()
+        if u.startswith('h'):
+            total += n
+        elif u.startswith('m'):
+            total += n / 60
+        else:
+            total += n / 3600
+    return total or None
+
+
 def _horas_sueno_atajo(clave, valor):
+    if isinstance(valor, (list, tuple)) and all(isinstance(v, str) for v in valor):
+        valor = '\n'.join(valor)
     # "7:12:00" o "7:12" (duración en formato reloj) → horas.
     if isinstance(valor, str) and _HMS.search(valor):
         total = 0.0
         for h, m, seg in _HMS.findall(valor):
             total += int(h) + int(m) / 60 + (int(seg) / 3600 if seg else 0)
         return total or None
+    con_unidades = _horas_con_unidades(valor)
+    if con_unidades:
+        return con_unidades
     ns = [n for n in _numeros(valor) if n > 0]
     if not ns:
         return None
@@ -124,7 +164,8 @@ def leer_atajo(payload, hoy):
                 if horas and 0 < horas <= 16:
                     valores[campo] = round(horas, 2)
             else:
-                ns = [n for n in _numeros(payload[clave]) if n > 0]
+                patron = _MS if campo == 'hrv_ms' else _PULSO
+                ns = _valores_con_unidad(payload[clave], patron) or [n for n in _numeros(payload[clave]) if n > 0]
                 if ns:
                     media = round(sum(ns) / len(ns))
                     rango = (1, 300) if campo == 'hrv_ms' else (30, 200)

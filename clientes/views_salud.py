@@ -62,7 +62,8 @@ def api_salud_iphone(request):
         return JsonResponse({'ok': False, 'error': 'El cuerpo no es JSON.'}, status=400)
     guardado = guardar_checkin_iphone(cliente, payload)
     if not guardado:
-        logger.warning('salud-iphone: llegó sin datos útiles: %s', str(payload)[:300])
+        sin_token = {k: v for k, v in payload.items() if k != 'token'} if isinstance(payload, dict) else payload
+        logger.warning('salud-iphone: llegó sin datos útiles: %s', str(sin_token)[:500])
     return JsonResponse({'ok': True, 'dias': guardado})
 
 
