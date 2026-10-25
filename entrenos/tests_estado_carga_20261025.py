@@ -241,3 +241,47 @@ class Panel(Base):
         from pathlib import Path
         plantilla = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text(encoding='utf-8')
         self.assertIn("{% url 'clientes:cuerpo' %}", plantilla)
+
+
+class FraseCamino(Base):
+    def _act(self, dias_atras, carga, rpe):
+        a = self.actividad(dias_atras, carga)
+        a.rpe_medio = rpe
+        a.save(update_fields=['rpe_medio'])
+
+    def test_mas_sesiones_y_mas_intensas(self):
+        from entrenos.services.panel_cuerpo_service import frase_camino
+        for semana in range(4):
+            for d in (0, 2, 4, 6):
+                self._act(7 + semana * 7 + d, 400, 7.3)     # 4 sesiones, 1600 por semana
+        for d in range(6):
+            self._act(d, 466.7, 7.9)                        # 6 sesiones, 2800: +75 %
+        self.assertEqual(
+            frase_camino(self.cliente, HOY),
+            'Esta semana has acumulado un 75 % más de esfuerzo que en una semana normal tuya: '
+            'más sesiones (6 frente a 4) y más intensas (esfuerzo medio 7,9 frente a 7,3).')
+
+    def test_semana_parecida(self):
+        from entrenos.services.panel_cuerpo_service import frase_camino
+        for semana in range(5):
+            for d in (0, 2, 4, 6):
+                self._act(semana * 7 + d, 400, 7.5)
+        self.assertEqual(
+            frase_camino(self.cliente, HOY),
+            'Esta semana llevas un esfuerzo parecido al de una semana normal tuya: '
+            'las mismas sesiones (4), con la intensidad de siempre (esfuerzo medio 7,5).')
+
+    def test_sin_historial_no_dice_nada(self):
+        from entrenos.services.panel_cuerpo_service import frase_camino
+        self._act(1, 400, 8)
+        self.assertIsNone(frase_camino(self.cliente, HOY))
+
+    def test_el_panel_ya_no_muestra_puntos_sueltos(self):
+        for semana in range(4):
+            for d in (0, 2, 4, 6):
+                self._act(7 + semana * 7 + d, 400, 7.3)
+        self._act(1, 400, 7.3)
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('clientes:cuerpo'))
+        self.assertNotContains(r, 'de carga; una semana normal tuya ronda')
+        self.assertContains(r, 'menos de esfuerzo que en una semana normal tuya')

@@ -60,6 +60,70 @@ def camino(cliente, hoy, dias=DIAS_CAMINO):
     }
 
 
+def _sesiones_y_rpe(cliente, desde, hasta):
+    """(nº de sesiones, esfuerzo medio) de las actividades con carga en ese tramo."""
+    from django.db.models.functions import Coalesce
+    from entrenos.models import ActividadRealizada
+    from entrenos.services.estado_carga_service import DURACION_MAX_MIN
+
+    filas = [
+        a for a in ActividadRealizada.objects.filter(cliente=cliente, carga_ua__isnull=False)
+        .annotate(fecha_carga=Coalesce('fecha_realizado', 'fecha'))
+        .filter(fecha_carga__gte=desde, fecha_carga__lte=hasta)
+        .values('rpe_medio', 'duracion_minutos')
+        if (a['duracion_minutos'] or 0) <= DURACION_MAX_MIN
+    ]
+    rpes = [float(a['rpe_medio']) for a in filas if a['rpe_medio']]
+    return len(filas), (sum(rpes) / len(rpes) if rpes else None)
+
+
+def _n1(x):
+    return f'{x:.1f}'.replace('.', ',')
+
+
+def frase_camino(cliente, hoy):
+    """25-oct-2026: la carga de la semana contada con sesiones e intensidad, no con puntos.
+
+    'Esta semana has acumulado un 75 % más de esfuerzo que en una semana normal tuya:
+    más sesiones (6 frente a 4) y más intensas (esfuerzo medio 7,9 frente a 7,3).'
+    """
+    from entrenos.services.estado_carga_service import DIAS_AGUDA, SEMANAS_NORMAL, lectura_carga
+
+    carga = lectura_carga(cliente, hoy)
+    if not carga['normal']:
+        return None
+    corte = hoy - timedelta(days=DIAS_AGUDA - 1)
+    n_sem, rpe_sem = _sesiones_y_rpe(cliente, corte, hoy)
+    n_ant, rpe_ant = _sesiones_y_rpe(cliente, hoy - timedelta(days=DIAS_AGUDA * (SEMANAS_NORMAL + 1) - 1),
+                                     corte - timedelta(days=1))
+    n_normal = round(n_ant / SEMANAS_NORMAL)
+    pct = round((carga['ratio'] - 1) * 100)
+
+    if abs(pct) < 10:
+        cabeza = 'Esta semana llevas un esfuerzo parecido al de una semana normal tuya'
+    elif pct > 0:
+        cabeza = f'Esta semana has acumulado un {pct} % más de esfuerzo que en una semana normal tuya'
+    else:
+        cabeza = f'Esta semana llevas un {-pct} % menos de esfuerzo que en una semana normal tuya'
+
+    partes = []
+    if n_sem != n_normal:
+        partes.append(f'{"más" if n_sem > n_normal else "menos"} sesiones ({n_sem} frente a {n_normal})')
+    else:
+        partes.append(f'las mismas sesiones ({n_sem})')
+    if rpe_sem is not None and rpe_ant is not None:
+        if rpe_sem >= rpe_ant + 0.3:
+            partes.append(f'más intensas (esfuerzo medio {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
+        elif rpe_sem <= rpe_ant - 0.3:
+            partes.append(f'más suaves (esfuerzo medio {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
+        else:
+            partes.append(f'con la intensidad de siempre (esfuerzo medio {_n1(rpe_sem)})')
+    unidas = partes[0] if len(partes) == 1 else f'{partes[0]} y {partes[1]}'
+    if partes[0].startswith('las mismas') and len(partes) == 2:
+        unidas = f'{partes[0]}, {partes[1]}'
+    return f'{cabeza}: {unidas}.'
+
+
 def variabilidad(cliente, hoy, dias=DIAS_CAMINO):
     """Puntos de variabilidad de cada mañana y tu franja normal (±15 % de tu media)."""
     from clientes.models import BitacoraDiaria
@@ -193,6 +257,7 @@ def contexto_panel(cliente, hoy):
         'preguntas': tres_preguntas(estado),
         'camino': camino(cliente, hoy),
         'variabilidad': variabilidad(cliente, hoy),
+        'frase_camino': frase_camino(cliente, hoy),
         'dias': dias_recientes(estado),
         'parada': parada_en(cliente, hoy),
         'fecha_texto': fecha_texto(hoy),
