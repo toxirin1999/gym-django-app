@@ -121,4 +121,20 @@ def parada_declarada(request):
         terminar_parada(cliente, hoy)
     elif accion in ('enfermo', 'parada'):
         declarar_parada(cliente, accion, hoy)
+    if request.POST.get('volver') == 'cuerpo':
+        return redirect('clientes:cuerpo')
     return redirect('clientes:salud_iphone')
+
+
+@login_required
+def cuerpo(request):
+    """25-oct-2026: panel «Cómo responde tu cuerpo» (paso 2; solo muestra, no decide)."""
+    from django.utils import timezone
+
+    from entrenos.services.panel_cuerpo_service import contexto_panel
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+    return render(request, 'clientes/cuerpo.html', {
+        'cliente': cliente, 'hoy': hoy, **contexto_panel(cliente, hoy),
+    })

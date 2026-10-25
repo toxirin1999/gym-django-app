@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#030604">
+  <title>Cómo responde tu cuerpo · {{ cliente.nombre|default:request.user.username }}</title>
+  <style>
+    :root{--ink:#030604;--panel:#08110d;--line:#284238;--paper:#f3f0e8;--muted:#a3ada7;--green:#42e4a0;--blue:#65caff;--amber:#f6c35b;--red:#ff7f6e}
+    *{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:var(--paper);font-family:"Avenir Next",Avenir,"Segoe UI",sans-serif}
+    .mono{font-family:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
+    main{width:min(100%,520px);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
+    .back{color:var(--blue);font-size:10px;text-decoration:none}
+    h1{margin:18px 0 4px;font-size:30px;line-height:1;letter-spacing:-.05em}
+    .fecha{margin:0 0 14px;color:var(--muted);font-size:12px}
+    .card{margin-top:12px;padding:16px;border:1px solid var(--line);border-radius:14px;background:var(--panel)}
+    .label{color:var(--green);font-size:9px}
+    .titulo{margin:8px 0 6px;font-size:26px;font-weight:800;letter-spacing:-.04em}
+    .titulo.descansa,.titulo.te_pasas{color:var(--red)}.titulo.dar_mas{color:var(--green)}.titulo.vas_bien{color:var(--paper)}.titulo.conociendote,.titulo.parada{color:var(--blue)}
+    .frase{margin:0;font-size:15px;line-height:1.45}
+    .nota{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
+    svg{display:block;width:100%;height:auto;margin-top:10px}
+    .leyenda{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;color:var(--muted);font-size:11px}
+    .leyenda i{display:inline-block;width:14px;height:8px;margin-right:5px;border-radius:2px;vertical-align:middle}
+    .pregunta{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 0;border-top:1px solid var(--line)}
+    .pregunta:first-of-type{border-top:0}
+    .pregunta h3{margin:0;font-size:15px;font-weight:600}
+    .pregunta .resp{font-weight:800;font-size:14px}
+    .pregunta p{grid-column:1/-1;margin:0;color:var(--muted);font-size:12.5px;line-height:1.4}
+    .bien{color:var(--green)}.alerta{color:var(--red)}.aviso{color:var(--amber)}.neutro{color:var(--blue)}
+    .dias{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-top:12px}
+    .dia{text-align:center;font-size:10px;color:var(--muted)}
+    .punto{display:block;height:22px;margin-bottom:4px;border-radius:6px;background:#17231d;border:1px solid var(--line)}
+    .punto.rojo{background:var(--red);border-color:var(--red)}.punto.ambar{background:var(--amber);border-color:var(--amber)}
+    .punto.verde{background:var(--green);border-color:var(--green)}.punto.normal{background:#2f7d5c;border-color:#2f7d5c}
+    .punto.parada{background:none;border:1px dashed var(--blue)}.punto.sin_referencia{background:#1f3a2e}
+    form.botones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+    form.botones button{min-height:40px;padding:0 14px;border:1px solid var(--green);border-radius:999px;color:var(--green);background:transparent;font:700 10px/1 "SF Mono",monospace;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+  </style>
+</head>
+<body>
+  <main>
+    <a class="back mono" href="{% url 'clientes:dashboard_silencioso_preview' %}">← Ahora</a>
+    <h1>Cómo responde tu cuerpo</h1>
+    <p class="fecha">{{ fecha_texto|capfirst }}</p>
+
+    <section class="card" aria-labelledby="hoy-titulo">
+      <span class="mono label" id="hoy-titulo">Hoy</span>
+      <p class="titulo {{ estado.respuesta }}">{{ titulo }}</p>
+      <p class="frase">{{ estado.frase }}</p>
+    </section>
+
+    <section class="card" aria-labelledby="preguntas-titulo">
+      <span class="mono label" id="preguntas-titulo">Tus tres preguntas</span>
+      {% for p in preguntas %}
+        <div class="pregunta">
+          <h3>{{ p.pregunta }}</h3>
+          <span class="resp {{ p.tono }}">{{ p.respuesta }}</span>
+          <p>{{ p.porque }}</p>
+        </div>
+      {% endfor %}
+    </section>
+
+    <section class="card" aria-labelledby="camino-titulo">
+      <span class="mono label" id="camino-titulo">Tu camino · 30 días</span>
+      <p class="nota" style="margin-top:8px">Esta semana llevas <strong style="color:var(--paper)">{{ camino.semana }}</strong> de carga; una semana normal tuya ronda <strong style="color:var(--paper)">{{ camino.normal }}</strong>.</p>
+      {% if camino.hay_carga %}
+      <svg viewBox="0 0 {{ camino.ancho }} {{ camino.alto }}" role="img" aria-label="Carga de los últimos 7 días frente a tu zona normal, 30 días">
+        <polygon points="{{ camino.franja }}" fill="#42e4a0" fill-opacity="0.12" stroke="none"/>
+        <polyline points="{{ camino.linea }}" fill="none" stroke="#f3f0e8" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="{{ camino.hoy_x }}" cy="{{ camino.hoy_y }}" r="4" fill="#42e4a0"/>
+        <line x1="8" x2="332" y1="{{ camino.base_y }}" y2="{{ camino.base_y }}" stroke="#284238"/>
+        {% for m in camino.marcas %}<text x="{{ m.x }}" y="{{ camino.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+      </svg>
+      <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#f3f0e8;height:2px"></i>Tu carga de los últimos 7 días</span></div>
+      <p class="nota">Por encima de la franja vas más cargado de lo habitual; por debajo, más suave. Lo que importa es cómo responde tu cuerpo a eso.</p>
+      {% else %}
+      <p class="nota">Aún no hay actividades con carga en estos 30 días.</p>
+      {% endif %}
+    </section>
+
+    <section class="card" aria-labelledby="cuerpo-titulo">
+      <span class="mono label" id="cuerpo-titulo">Cómo amaneces · 14 días</span>
+      <div class="dias" role="list">
+        {% for d in dias %}
+          <div class="dia" role="listitem" title="{{ d.fecha }} · {{ d.nombre }}"><span class="punto {{ d.nivel }}"></span>{{ d.letra }}</div>
+        {% endfor %}
+      </div>
+      <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#17231d;border:1px solid var(--line)"></i>Sin dato</span></div>
+
+      {% if variabilidad.puntos %}
+      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms{% endif %}</p>
+      <svg viewBox="0 0 {{ variabilidad.ancho }} {{ variabilidad.alto }}" role="img" aria-label="Variabilidad cardiaca de cada mañana, 30 días">
+        {% if variabilidad.media %}<rect x="8" y="{{ variabilidad.franja_y1 }}" width="324" height="{{ variabilidad.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
+        <line x1="8" x2="332" y1="{{ variabilidad.media_y }}" y2="{{ variabilidad.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}
+        {% for p in variabilidad.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"><title>{{ p.fecha }}: {{ p.valor }} ms</title></circle>{% endfor %}
+        <line x1="8" x2="332" y1="{{ variabilidad.base_y }}" y2="{{ variabilidad.base_y }}" stroke="#284238"/>
+        {% for m in variabilidad.marcas %}<text x="{{ m.x }}" y="{{ variabilidad.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+      </svg>
+      <p class="nota">Cuanto más alta, mejor recuperado. Un punto rojo es una mañana claramente por debajo de lo normal en ti.</p>
+      {% else %}
+      <p class="nota">Aún no ha llegado ninguna medida de variabilidad del reloj.</p>
+      {% endif %}
+    </section>
+
+    <section class="card" aria-labelledby="parada-titulo">
+      <span class="mono label" id="parada-titulo">¿Enfermo o de parada?</span>
+      <form method="post" action="{% url 'clientes:parada_declarada' %}" class="botones">{% csrf_token %}
+        <input type="hidden" name="volver" value="cuerpo">
+        {% if parada %}
+          <p class="nota" style="width:100%;margin:0 0 4px">Estás {% if parada.tipo == 'enfermo' %}enfermo{% else %}de parada{% endif %} desde el {{ parada.inicio|date:"d/m" }}.</p>
+          <button type="submit" name="accion" value="terminar">Ya he vuelto</button>
+        {% else %}
+          <button type="submit" name="accion" value="enfermo">Estoy enfermo</button>
+          <button type="submit" name="accion" value="parada">Estoy de parada</button>
+        {% endif %}
+      </form>
+    </section>
+
+    <p class="nota">De momento este panel solo te cuenta lo que ve: no cambia tu plan. Los datos del reloj llegan cada mañana con el Atajo (<a class="back" href="{% url 'clientes:salud_iphone' %}">Salud del iPhone</a>).</p>
+  </main>
+  {% include 'includes/bottom_nav.html' with activo='ahora' %}
+</body>
+</html>

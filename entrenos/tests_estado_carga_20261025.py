@@ -188,3 +188,56 @@ class Comando(Base):
         self.assertIn('(No se ha guardado nada.)', out.getvalue())
         self.assertIn('Carga: semana', out.getvalue())
         self.assertEqual(antes, ActividadRealizada.objects.count())
+
+
+class Panel(Base):
+    def _get(self):
+        self.client.force_login(self.user)
+        return self.client.get(reverse('clientes:cuerpo'))
+
+    def test_panel_sin_datos(self):
+        r = self._get()
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'Cómo responde tu cuerpo')
+        self.assertContains(r, 'Te estoy conociendo')
+        self.assertContains(r, 'Aún no hay actividades con carga')
+        self.assertContains(r, 'Aún no ha llegado ninguna medida de variabilidad')
+
+    def test_panel_con_datos(self):
+        import os
+        self.semanas_normales(400)
+        for d in (0, 1, 2, 3):
+            self.actividad(d, 600)
+        self.cuerpo(['bien', 'mal', 'bien', 'bien', 'bien', 'bien'])
+        r = self._get()
+        self.assertContains(r, 'Tus tres preguntas')
+        self.assertContains(r, '¿Me estoy pasando?')
+        self.assertContains(r, 'Carga alta')           # +50 % y el cuerpo aguanta
+        self.assertContains(r, '<polyline')
+        self.assertContains(r, 'lo normal en ti, unos 50 ms')
+        self.assertContains(r, 'class="punto rojo"')
+        from entrenos.services.panel_cuerpo_service import fecha_texto
+        self.assertContains(r, fecha_texto(HOY).capitalize())
+        if os.environ.get('VOLCAR_PANEL'):
+            open(os.environ['VOLCAR_PANEL'], 'w').write(r.content.decode())
+
+    def test_preguntas_dar_mas(self):
+        from entrenos.services.panel_cuerpo_service import tres_preguntas
+        self.semanas_normales(400)
+        for d in (0, 2, 4, 6):
+            self.actividad(d, 400)
+        self.cuerpo(['bien'] * 14)
+        p = tres_preguntas(ec.estado_carga(self.cliente, HOY))
+        self.assertEqual([x['respuesta'] for x in p], ['No', 'No', 'Sí'])
+
+    def test_parada_desde_el_panel_vuelve_al_panel(self):
+        self.client.force_login(self.user)
+        r = self.client.post(reverse('clientes:parada_declarada'), {'accion': 'parada', 'volver': 'cuerpo'})
+        self.assertRedirects(r, reverse('clientes:cuerpo'), fetch_redirect_response=False)
+        self.assertContains(self._get(), 'Ya he vuelto')
+        self.assertContains(self._get(), 'En pausa')
+
+    def test_enlace_desde_ahora(self):
+        from pathlib import Path
+        plantilla = Path('clientes/templates/clientes/dashboard_silencioso_preview.html').read_text(encoding='utf-8')
+        self.assertIn("{% url 'clientes:cuerpo' %}", plantilla)
