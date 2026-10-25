@@ -258,6 +258,12 @@ class LeerAtajo(SimpleTestCase):
         }, HOY)[HOY]
         self.assertEqual(r['horas_sueno'], 5.0)
 
+    def test_vigilia_como_la_llama_salud_en_espanol(self):
+        # 25-oct: Salud marcó 7 h 51 dormido + 32 min de "Vigilia"; se guardaron 8 h 22.
+        r = leer_atajo({'sueno': '5:14:00\n2:02:00\n35:00\n32:00',
+                        'fases': 'Esencial\nREM\nProfundo\nVigilia'}, HOY)[HOY]
+        self.assertEqual(r['horas_sueno'], 7.85)
+
     def test_fases_desalineadas_se_ignoran(self):
         r = leer_atajo({'sueno': '2:00:00\n3:00:00', 'fases': 'Núcleo'}, HOY)[HOY]
         self.assertEqual(r['horas_sueno'], 5.0)

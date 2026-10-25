@@ -67,6 +67,14 @@ def api_salud_iphone(request):
     return JsonResponse({'ok': True, 'dias': guardado})
 
 
+def _con_sueno_texto(fila):
+    """7.85 → '7 h 51' para la página."""
+    if fila.horas_sueno:
+        from entrenos.services.recuperacion_service import horas_texto
+        fila.sueno_texto = horas_texto(fila.horas_sueno)
+    return fila
+
+
 @login_required
 def salud_iphone(request):
     """Cómo configurar el Atajo y qué ha llegado por última vez."""
@@ -91,5 +99,5 @@ def salud_iphone(request):
         'cliente': cliente,
         'token': cliente.get_or_create_api_token(),
         'endpoint': request.build_absolute_uri(reverse('clientes:api_salud_iphone')),
-        'recibidos': list(recibidos),
+        'recibidos': [_con_sueno_texto(b) for b in recibidos],
     })

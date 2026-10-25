@@ -98,7 +98,7 @@ class Endpoint(TestCase):
         r = self.client.get(reverse('clientes:salud_iphone'))
         self.assertContains(r, f'Bearer {self.token}')
         self.assertContains(r, '/clientes/api/salud-iphone/')
-        self.assertContains(r, 'sueño 7.25 h')
+        self.assertContains(r, 'sueño 7 h 15')
 
     def test_sin_energia_en_el_checkin_se_ve_la_del_ultimo_entreno(self):
         from entrenos.models import EntrenoRealizado

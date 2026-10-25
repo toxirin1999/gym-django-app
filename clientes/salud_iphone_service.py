@@ -147,7 +147,7 @@ def _horas_sueno_atajo(clave, valor):
     return total / 3600
 
 
-FASES_NO_SUENO = ('despierto', 'awake', 'en cama', 'in bed', 'inbed')
+FASES_NO_SUENO = ('vigilia', 'despierto', 'awake', 'en cama', 'en la cama', 'in bed', 'inbed')
 
 
 def _lineas(valor):

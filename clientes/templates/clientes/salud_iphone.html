@@ -36,7 +36,7 @@
     <section class="card" aria-labelledby="estado-titulo">
       <span class="mono label" id="estado-titulo">Lo que tengo de tu reloj (7 días)</span>
       {% for b in recibidos %}
-        <p class="nota">{{ b.fecha|date:"D d/m" }} · {% if b.horas_sueno %}sueño {{ b.horas_sueno|floatformat:"-2" }} h{% else %}sin sueño{% endif %}{% if b.fc_reposo %} · pulso en reposo {{ b.fc_reposo }}{% endif %}{% if b.hrv_ms %} · variabilidad {{ b.hrv_ms }} ms{% endif %}</p>
+        <p class="nota">{{ b.fecha|date:"D d/m" }} · {% if b.horas_sueno %}sueño {{ b.sueno_texto }}{% else %}sin sueño{% endif %}{% if b.fc_reposo %} · pulso en reposo {{ b.fc_reposo }}{% endif %}{% if b.hrv_ms %} · variabilidad {{ b.hrv_ms }} ms{% endif %}</p>
       {% empty %}
         <p class="estado">Todavía no ha llegado nada.</p>
       {% endfor %}
