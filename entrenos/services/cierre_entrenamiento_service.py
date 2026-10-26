@@ -603,7 +603,12 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
     antes = serie_referencia(series_de_trabajo(entreno_anterior, nombre), minimo)
     if not hoy or not antes or hoy['peso'] <= 0 or antes['peso'] <= 0:
         return None
-    r_hoy, r_antes = int(round(float(hoy['reps']))), int(round(float(antes['reps'])))
+    # 26-oct-2026: la mejor serie a ese peso, en todos los ejercicios (press
+    # francés 17, 19 y 19 salía "× 18", la media; los gemelos, la mejor).
+    def _mejor(ref):
+        al_peso = [s['reps'] for s in (ref.get('validas') or []) if abs(s['peso'] - ref['peso']) < 1e-6]
+        return max(al_peso) if al_peso else int(round(float(ref['reps'])))
+    r_hoy, r_antes = _mejor(hoy), _mejor(antes)
     texto = f"{_kg(antes['peso'])} × {r_antes} → {_kg(hoy['peso'])} × {r_hoy}"
     if abs(hoy['peso'] - antes['peso']) < 0.25:
         if r_hoy == r_antes:
@@ -676,6 +681,20 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 anterior = candidato
                 peso_anterior = peso_candidato
                 break
+        if (anterior is not None and mas_reciente is not None and mas_reciente.pk != anterior.pk
+                and tipo_progresion in ('peso_reps', 'peso_corporal_lastre')):
+            # 26-oct-2026: si la última vez fue en el MISMO rango prescrito, se
+            # compara con ella aunque sus reps se salieran (extensiones 25 × 25
+            # en 15-20): no con una sesión antigua de 35 × 15 que convertía la
+            # subida de hoy en "−5 kg".
+            from entrenos.services.ultima_sesion_service import rango_de_sesion as _rango_s
+            rango_hoy_c = _rango_s(entreno, ej.nombre_ejercicio)
+            if rango_hoy_c and _rango_s(mas_reciente.entreno, ej.nombre_ejercicio) == rango_hoy_c:
+                anterior = mas_reciente
+                peso_anterior, _ = _rendimiento_representativo(
+                    mas_reciente.entreno, mas_reciente.nombre_ejercicio,
+                    mas_reciente.peso_kg, mas_reciente.repeticiones,
+                )
         if anterior is None and tipo_progresion in ('peso_reps', 'peso_corporal_lastre'):
             # 19-oct-2026: la media "representativa" de hoy (25 × 25) no se
             # parecía a la de la vez anterior (40 × 10 en pirámide) y el

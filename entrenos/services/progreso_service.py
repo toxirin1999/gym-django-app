@@ -58,6 +58,11 @@ def reps_tope_con_margen(cliente, nombre, fecha, reps_sugeridas):
         objetivo_rpe = _rpe_objetivo_snapshot(lectura['entreno'], normalizar_ejercicio(nombre))
         if series and rpes and objetivo_rpe:
             margen = max(1, round(float(objetivo_rpe) - float(min(rpes))))
+            # 26-oct-2026: igual que sin tope, si TODAS las series quedaron al
+            # menos un punto por debajo del objetivo, dos reps más (gemelos de
+            # pie 100 × 17 a RPE 8 en las tres, objetivo 9 → 19, no 18).
+            if len(rpes) == len(series) and max(rpes) <= float(objetivo_rpe) - 1:
+                margen = max(margen, 2)
             reps = max(reps_sugeridas or 0, int(max(s['reps'] for s in series)) + margen)
     aviso = None
     if reps and reps > MAX_REPS_TOPE:

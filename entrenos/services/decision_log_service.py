@@ -94,8 +94,11 @@ def _rpe_objetivo_snapshot(entreno, ejercicio_normalizado):
     for ejercicio in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
         if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
             continue
+        # 26-oct-2026: si un criterio de entrenador bajó el esfuerzo ese día
+        # (pecho trabajado la víspera), las decisiones siguientes se juzgan
+        # con el RPE del plan, no con el rebajado.
         try:
-            return float(ejercicio.get('rpe_objetivo'))
+            return float(ejercicio.get('rpe_objetivo_plan') or ejercicio.get('rpe_objetivo'))
         except (TypeError, ValueError):
             return None
     return None
@@ -956,6 +959,14 @@ def _subida_sin_reps(log, nueva_sesion, reps_nuevas):
     return None
 
 
+def _rpe_pedido(entreno, nombre):
+    """RPE objetivo que tenía el ejercicio en esa sesión (8 si no se sabe)."""
+    try:
+        return float(_rpe_objetivo_snapshot(entreno, nombre) or 8)
+    except Exception:  # noqa: BLE001
+        return 8.0
+
+
 def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
@@ -1026,9 +1037,12 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         elif rpe_nuevo is None:
             resultado = 'neutra'
             notas = 'Falta el RPE para confirmar que el objetivo fue sostenible'
-        elif rpe_nuevo > 8:
+        elif rpe_nuevo > _rpe_pedido(nueva_sesion.entreno, nombre):
+            # 26-oct-2026: con el RPE que pedía el plan, no con 8 fijo. Extensiones
+            # en polea a 30 × 15 con RPE 9 y objetivo 9 es justo lo previsto.
             resultado = 'fallida'
-            notas = f'El objetivo exigió un RPE {float(rpe_nuevo):g}, sin margen sostenible'
+            notas = (f'El objetivo exigió un RPE {float(rpe_nuevo):g}, por encima del '
+                     f'{_rpe_pedido(nueva_sesion.entreno, nombre):g} que pedía el plan')
         elif log.motivo_codigo == 'progresion_peso':
             objetivo = log.peso_sugerido
             if objetivo is None:

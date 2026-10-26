@@ -396,7 +396,8 @@
   {% endif %}
 
   <!-- Phase Organismo 3: Continuidad de postura -->
-  {% if estado_sistema and estado_sistema.estado != 'SILENCIO' %}
+  {# 26-oct-2026: "En margen · hay margen para seguir el plan" no añade nada en el propio briefing y chocaba con "hoy no estás al cien". Solo se enseña cuando el sistema protege u observa algo. #}
+  {% if estado_sistema and estado_sistema.estado != 'SILENCIO' and estado_sistema.estado != 'EN_MARGEN' %}
   <div class="aviso-card" style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.22);">
     <div class="aviso-label" style="color:var(--td);">
       SISTEMA HOY · {{ estado_sistema.estado_label|upper }}
@@ -440,7 +441,8 @@
       {% else %}
         <div class="estado-val na">—</div>
       {% endif %}
-      <div class="estado-lbl">Energía</div>
+      {# 26-oct-2026: es la media de lo que marcaste al empezar en las últimas dos semanas, no la de hoy (salía 6,9 antes de tocar "¿Cómo llegas hoy?"). #}
+      <div class="estado-lbl">Tu energía al empezar · 2 semanas</div>
     </div>
     <div class="estado-card">
       <div class="estado-val {% if briefing.num_sesiones_recientes >= 4 %}ok{% endif %}">
@@ -612,7 +614,7 @@
       <div class="plan-spec-row">
         <div class="plan-spec-left">
           {{ ej.series|default:"3" }} series
-          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones }} reps{% if ej.reps_unidad %} {{ ej.reps_unidad }}{% endif %}{% endif %}{% endif %}
+          {% if ej.repeticiones %}{% if ej.usa_tiempo %} × {{ ej.repeticiones }} s{% elif ej.usa_distancia %} × {{ ej.repeticiones }} m{% else %} × {{ ej.repeticiones_plan|default:ej.repeticiones }} reps{% if ej.reps_unidad %} {{ ej.reps_unidad }}{% endif %}{% endif %}{% endif %}
           {% if ej.rpe_objetivo and not ej.usa_distancia and not ej.usa_tiempo %} · RPE {{ ej.rpe_objetivo }}{% endif %}
           {% if ej.tempo and not ej.usa_distancia and not ej.usa_tiempo %} · <span class="plan-tempo">tempo {{ ej.tempo }}</span>{% endif %}
         </div>
@@ -637,6 +639,9 @@
 
       {% if ej.sustituido and ej.sustitucion_texto %}
       <div class="plan-motivo">{{ ej.sustitucion_texto }}</div>
+      {% endif %}
+      {% if ej.criterio_entrenador %}
+      <div class="plan-motivo" style="color:var(--jds-warning, #f6c35b);">{{ ej.criterio_entrenador }}</div>
       {% endif %}
       {% if ej.progresion_motivo %}
       <div class="plan-motivo">{{ ej.progresion_motivo }}</div>

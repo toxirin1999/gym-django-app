@@ -79,6 +79,12 @@ def serie_referencia(series, reps_min=None):
     peso_ref = max(s['peso'] for s in base)
     a_ese_peso = [s for s in base if s['peso'] == peso_ref]
     reps = sum(Decimal(s['reps']) for s in a_ese_peso) / Decimal(len(a_ese_peso))
+    # 26-oct-2026: para la regla de "una rep más", la mediana. Press francés
+    # 30 × 17 (RPE 7), 19 y 19: la media (18,3) pedía "a por 19", lo que ya se
+    # había hecho; la mediana (19) pide 20. Con dos series iguala a la media.
+    ordenadas = sorted(Decimal(s['reps']) for s in a_ese_peso)
+    mitad = len(ordenadas) // 2
+    mediana = ordenadas[mitad] if len(ordenadas) % 2 else (ordenadas[mitad - 1] + ordenadas[mitad]) / 2
     rpes = [s['rpe'] for s in a_ese_peso if s['rpe'] is not None]
     superiores = [s for s in validas if s['peso'] > peso_ref]
     superior = max(superiores, key=lambda s: s['peso']) if superiores else None
@@ -100,6 +106,7 @@ def serie_referencia(series, reps_min=None):
     return {
         'peso': peso_ref,
         'reps': reps,
+        'reps_mediana': mediana,
         'rpe': max(rpes) if rpes else None,
         'en_rango': bool(en_rango),
         'superior': superior,

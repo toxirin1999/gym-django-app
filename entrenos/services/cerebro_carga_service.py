@@ -33,6 +33,29 @@ def _a_escala_empate_arriba(peso, salto):
     return arriba if (arriba - peso) <= (peso - abajo) + 1e-9 else abajo
 
 
+HUNDIMIENTO_REPS = 5  # caída de golpe entre dos series seguidas al mismo peso
+
+
+def hundimiento_en_sesion(series, minimo, rpe_obj):
+    """(primera, siguiente) si la primera serie entró con el esfuerzo pedido y la
+    siguiente, al mismo peso, cayó de golpe por debajo del rango; si no, None.
+
+    Un descenso gradual (curl martillo 15, 13 y 8) no cuenta: eso sí dice que
+    el peso es demasiado.
+    """
+    validas = [s for s in series if s['reps'] > 0 and s['peso'] > 0]
+    if len(validas) < 2:
+        return None
+    primera, siguiente = validas[0], validas[1]
+    if primera['reps'] < minimo or primera.get('rpe') is None or primera['rpe'] > rpe_obj:
+        return None
+    if abs(siguiente['peso'] - primera['peso']) > 1e-6 or siguiente['reps'] >= minimo:
+        return None
+    if primera['reps'] - siguiente['reps'] < HUNDIMIENTO_REPS:
+        return None
+    return primera, siguiente
+
+
 def decidir_carga(cliente, ej, hoy):
     """{'peso', 'reps', 'regla', 'frase'} para un ejercicio del plan de hoy, o None."""
     from analytics.planificador_helms.calculo.compatibilidad_fase import son_rangos_compatibles
@@ -62,6 +85,9 @@ def decidir_carga(cliente, ej, hoy):
         rpe_obj = float(ej.get('rpe_objetivo') or 8)
     except (TypeError, ValueError):
         rpe_obj = 8.0
+    # 26-oct-2026: la regla trabaja con la mediana de las series a ese peso.
+    if lectura['referencia'].get('reps_mediana') is not None:
+        lectura = dict(lectura, referencia=dict(lectura['referencia'], reps=lectura['referencia']['reps_mediana']))
     ref = lectura['referencia']
     peso_ref = float(ref['peso'])
     reps_ref = int(round(float(ref['reps'])))
@@ -87,6 +113,22 @@ def decidir_carga(cliente, ej, hoy):
             'frase': (f"La última vez llegaste muy cansado ({_kg(fatiga['peso'])} kg × {fatiga['reps_hoy']}; "
                       f"antes hacías {_kg(fatiga['peso'])} × {fatiga['reps_antes']}). "
                       f"Repetimos {_kg(fatiga['peso'])} kg a por {reps}."),
+        }
+
+    # 2c. 26-oct-2026: cansancio dentro de la sesión. La primera serie entró con
+    # el esfuerzo pedido y la siguiente se hundió de golpe (Convergent 62,5 × 14
+    # a RPE 8 y luego 62,5 × 8 a RPE 10, después de un cable fly al fallo): el
+    # peso es el bueno; no se baja por ese día.
+    hundida = hundimiento_en_sesion(lectura['series'], minimo, rpe_obj)
+    if hundida and not antigua:
+        primera, siguiente = hundida
+        reps = max(minimo, min(maximo, primera['reps']))
+        return {
+            'peso': float(primera['peso']), 'reps': reps, 'regla': 'fatiga', 'tipo_fatiga': 'sesion',
+            'reps_hoy': siguiente['reps'], 'reps_antes': primera['reps'],
+            'frase': (f"La última vez la primera serie entró ({_kg(primera['peso'])} kg × {primera['reps']} "
+                      f"a RPE {_kg(primera['rpe'])}) y la siguiente se hundió a {siguiente['reps']}: "
+                      f"fue cansancio, no el peso. Repetimos {_kg(primera['peso'])} kg a por {reps}."),
         }
 
     # 3. Cambio de familia de rango, o última vez de hace más de 6 semanas:
@@ -167,6 +209,14 @@ def aplicar_decision_carga(ej, decision):
     if decision['regla'] == 'tope':
         reps_actuales = ej.get('reps_sugeridas_tope') or reps_actuales
     if abs(peso_actual - decision['peso']) < 0.01 and str(reps_actuales) == str(decision['reps']):
+        # 26-oct-2026: mismos números, pero el texto venía de otra capa y podía
+        # contradecirlos (prensa: "hoy a por 13 reps (la última vez 12)" cuando
+        # la última vez fueron 13 y la regla pedía 14). El texto sigue a la regla.
+        motivo = str(ej.get('progresion_motivo') or '')
+        if decision.get('frase') and f"a por {decision['reps']}" not in motivo:
+            ej['progresion_motivo'] = decision['frase']
+            ej['progresion_motivo_local'] = 'regla_unica'
+            ej.pop('motivo_peso', None)
         return False
     ej['peso_kg'] = decision['peso']
     if 'peso_recomendado_kg' in ej:
@@ -219,6 +269,11 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         return None
     peso, reps, regla = decision['peso'], decision['reps'], decision['regla']
     peso_hoy = float(lectura['referencia']['peso'])
+    if regla == 'fatiga' and decision.get('tipo_fatiga') == 'sesion':
+        texto = (f"La próxima vez repetimos {_kg(peso)} kg a por {reps} reps: la primera serie entró "
+                 f"({_kg(peso)} × {decision['reps_antes']}) y luego se hundió a {decision['reps_hoy']}; "
+                 f"fue cansancio, no el peso.")
+        return (texto, 'Mantener', f'Repite {_kg(peso)} kg') if con_efecto else (texto, 'Mantener')
     if regla == 'fatiga':
         texto = (f"La próxima vez repetimos {_kg(peso)} kg a por {reps} reps: hoy llegabas muy cansado "
                  f"(antes hacías {_kg(peso)} × {decision['reps_antes']}).")

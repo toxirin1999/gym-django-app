@@ -15,6 +15,8 @@ _AISLAMIENTO = (
     'curl', 'extension', 'extensión', 'elevación', 'elevacion', 'lateral', 'gemelo',
     'abducci', 'aducci', 'patada', 'fly', 'apertura', 'face pull', 'encogimiento',
     'y-raise', 'pec deck', 'pull-over', 'pullover', 'brazos rectos', 'aguante', 'muñeca',
+    # 26-oct-2026: el press francés trabaja solo el tríceps (salía 2:30 por "press").
+    'press francés', 'press frances', 'rompecráneos', 'rompecraneos', 'skull',
 )
 
 

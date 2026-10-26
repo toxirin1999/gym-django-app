@@ -609,6 +609,17 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 except Exception:
                     logger.exception('[plan_dinamico] regla única de carga falló')
 
+        # ── Criterios de entrenador (26-oct-2026): esfuerzo del día ─────────
+        # Un punto menos de RPE si el grupo se trabajó ayer, o si has dormido
+        # poco con la carga alta. Lo dice en una frase con el dato.
+        try:
+            from entrenos.services.criterios_entrenador_service import aplicar_criterios
+            for _c in aplicar_criterios(cliente, ejercicios_mod, hoy):
+                cambios.append({'tipo': 'criterio_entrenador', 'ejercicio_original': _c['ejercicio'],
+                                'ejercicio_nuevo': None, 'razon': _c['frase']})
+        except Exception:
+            logger.exception('[plan_dinamico] criterios de entrenador fallaron')
+
         # ── Propuesta aceptada para una zona que retrocede (+series) ─────────
         from entrenos.services.propuesta_zona_service import aplicar_a_ejercicios
         aplicar_a_ejercicios(cliente, ejercicios_mod, hoy, cambios, es_descarga=deload)

@@ -66,6 +66,12 @@ def _medias_base(cliente, hoy):
     ).values('fecha', 'hrv_ms', 'fc_reposo', 'horas_sueno')
     por_campo = {'hrv_ms': {}, 'fc_reposo': {}, 'horas_sueno': {}}
     for fila in filas:  # una por día (si hubiera dos, vale la última)
+        # 26-oct-2026: solo los días con datos del reloj (variabilidad o pulso).
+        # El sueño apuntado a mano en check-ins antiguos daba una "media" de
+        # 8 h 07 cuando el reloj solo llevaba dos noches; el panel decía a la
+        # vez "te estoy conociendo".
+        if not (_f(fila['hrv_ms']) or _f(fila['fc_reposo'])):
+            continue
         for campo in por_campo:
             v = _f(fila[campo])
             if v:
@@ -168,7 +174,10 @@ def _frase_recuperacion(nivel, senales, buenas, datos):
         return (f'Hoy vas justo: {_unir(textos)}. Entrenamos, pero los principales sin apretar '
                 f'y los accesorios quedan para otro día. Hoy sumar es descansar bien.')
     if nivel == 'ambar':
-        return (f'Hoy no estás al cien: {textos[0]}. Entrenamos normal; si en la primera serie '
+        # 26-oct-2026: también lo bueno (el 26 dormiste poco, pero la variabilidad
+        # era la mejor de la semana y la frase solo hablaba del sueño).
+        bueno = f' Lo bueno: {_unir(buenas)}.' if buenas else ''
+        return (f'Hoy no estás al cien: {textos[0]}.{bueno} Entrenamos normal; si en la primera serie '
                 f'notas que no tira, quita una repetición y no pasa nada.')
     if nivel == 'verde':
         return f'Hoy estás fresco: {_unir(buenas)}. Día para apretar.'

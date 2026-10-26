@@ -10003,6 +10003,9 @@ def briefing_entrenamiento(request, cliente_id):
             # anual no conoce el límite físico de una máquina concreta.
             ej['peso_recomendado_kg'] = alerta_tope['peso_kg']
             ej['peso_kg'] = alerta_tope['peso_kg']
+            # 26-oct-2026: el rango del ejercicio se sigue enseñando (gemelos 15-20,
+            # no "3 × 17"); el objetivo de hoy va aparte.
+            ej.setdefault('repeticiones_plan', ej.get('repeticiones'))
             ej['repeticiones'] = alerta_tope['reps_objetivo']
             ej['reps_objetivo'] = alerta_tope['reps_objetivo']
             ej['reps_min'] = alerta_tope['reps_objetivo']

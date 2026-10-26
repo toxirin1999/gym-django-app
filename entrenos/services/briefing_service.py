@@ -194,6 +194,14 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             if 'farmer' in nombre_normalizado or 'granjero' in nombre_normalizado:
                 carga_legible += ' por mano'
             objetivo = reps_tope + 1  # +1 rep o +1 m, como el entrenamiento activo
+            if not usa_distancia:
+                # 26-oct-2026: el mismo número que la regla única (con margen de
+                # esfuerzo: gemelos 100 × 17 a RPE 8 con objetivo 9 → 19).
+                try:
+                    from entrenos.services.progreso_service import reps_tope_con_margen
+                    objetivo = reps_tope_con_margen(cliente, nombre, hoy, objetivo)[0] or objetivo
+                except Exception:  # noqa: BLE001
+                    pass
             texto_tope = (
                 f'Tope de peso — conserva {carga_legible} y apunta a '
                 f'{objetivo} {"m" if usa_distancia else "reps"}'

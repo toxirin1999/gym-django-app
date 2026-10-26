@@ -2201,11 +2201,26 @@ def dashboard_silencioso_preview(request):
     # Es una lectura de carga, no un marcador de salud. Solo se enseña una
     # cifra cuando el sistema ha podido calcularla; la ausencia de historial
     # nunca se disfraza de una puntuación.
+    # 26-oct-2026: un solo número y en palabras. La portada y el panel "Cómo
+    # responde tu cuerpo" decían lo mismo con dos nombres ("ACWR 1,41" en
+    # naranja y "un 41 % más"). Manda la lectura del panel (7 días frente a tus
+    # 4 semanas anteriores); si no la hay, el ACWR de siempre.
+    ratio = None
+    try:
+        from entrenos.services.estado_carga_service import lectura_carga
+        ratio = lectura_carga(cliente, hoy)['ratio']
+    except Exception:
+        logger.exception('dashboard_silencioso_preview: no se pudo leer la carga del panel')
+    if ratio is None:
+        ratio = acwr
     quiet_load = None
-    if acwr is not None:
+    if ratio is not None:
+        from entrenos.services.estado_carga_service import _texto_ratio
+        pct = round((float(ratio) - 1) * 100)
         quiet_load = {
-            'valor': f'{acwr:.2f}'.replace('.', ','),
-            'estado': carga,
+            'valor': f'{pct:+d} %'.replace('-', '−'),
+            'estado': 'Baja' if ratio < 0.8 else ('Estable' if ratio <= 1.3 else 'Alta'),
+            'frase': f'Esta semana vas {_texto_ratio(float(ratio))}',
         }
 
     # Organismo usa estados internos de coordinación. La portada, en cambio,

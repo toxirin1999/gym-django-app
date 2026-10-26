@@ -100,12 +100,15 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         response = self.client.get(self.url)
 
+        # 26-oct-2026: en palabras y en porcentaje, no "ACWR 0,93".
         self.assertEqual(response.context["quiet_load"], {
-            "valor": "0,93", "estado": "Estable",
+            "valor": "−7 %", "estado": "Estable",
+            "frase": "Esta semana vas como en tus semanas normales",
         })
         self.assertContains(response, 'class="load-chip"')
         self.assertContains(response, "Carga física")
-        self.assertContains(response, "0,93")
+        self.assertContains(response, "−7 %")
+        self.assertNotContains(response, "ACWR −7 %")
 
     @patch("core.organismo.resolver_estado_sistema_hoy")
     @patch("clientes.views._get_dashboard_context_data")
@@ -178,7 +181,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         self.assertContains(response, 'class="decision-signal"')
         self.assertContains(response, "Señal de carga")
-        self.assertContains(response, "ACWR 0,93")
+        self.assertContains(response, "Esta semana vas como en tus semanas normales")
 
     @patch('clientes.views._aviso_decision_pendiente')
     def test_muestra_unico_aviso_del_centro_solo_cuando_hay_accion_pendiente(self, aviso):
