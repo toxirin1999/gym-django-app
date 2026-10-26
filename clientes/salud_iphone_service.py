@@ -172,9 +172,68 @@ def _segundos_reloj(texto):
     return None
 
 
-def _horas_por_tramos(duraciones, fases=None):
+_MESES = {'ene': 1, 'jan': 1, 'feb': 2, 'mar': 3, 'abr': 4, 'apr': 4, 'may': 5, 'jun': 6,
+          'jul': 7, 'ago': 8, 'aug': 8, 'sep': 9, 'set': 9, 'oct': 10, 'nov': 11, 'dic': 12, 'dec': 12}
+_FECHA_ISO = re.compile(r'(\d{4})-(\d{1,2})-(\d{1,2})[ T,]+(\d{1,2}):(\d{2})')
+_FECHA_BARRAS = re.compile(r'(\d{1,2})/(\d{1,2})/(\d{2,4})[ ,]+(\d{1,2}):(\d{2})')
+_FECHA_TEXTO = re.compile(r'(\d{1,2})\s+(?:de\s+)?([a-záéíóú]{3})[a-záéíóú]*\.?\s+(?:de\s+)?(\d{4})[ ,]+(\d{1,2}):(\d{2})',
+                          re.IGNORECASE)
+_HUECO_NOCHES = 3 * 3600  # más de 3 h sin tramos = otra noche
+
+
+def _momento(texto):
+    """Fecha y hora de un tramo como la escribe Atajos → datetime (o None).
+
+    '2026-10-26 01:12', '26/10/26, 1:12' o '26 oct 2026, 1:12'.
+    """
+    from datetime import datetime
+    t = str(texto or '').strip()
+    try:
+        m = _FECHA_ISO.search(t)
+        if m:
+            a, mes, d, h, mi = (int(x) for x in m.groups())
+            return datetime(a, mes, d, h, mi)
+        m = _FECHA_BARRAS.search(t)
+        if m:
+            d, mes, a, h, mi = (int(x) for x in m.groups())
+            return datetime(a + 2000 if a < 100 else a, mes, d, h, mi)
+        m = _FECHA_TEXTO.search(t)
+        if m:
+            mes = _MESES.get(m.group(2).lower()[:3].translate(str.maketrans('áéíóú', 'aeiou')))
+            if mes:
+                return datetime(int(m.group(3)), mes, int(m.group(1)), int(m.group(4)), int(m.group(5)))
+    except ValueError:
+        return None
+    return None
+
+
+def _solo_ultima_noche(segundos, inicios):
+    """Índices de los tramos de la última noche.
+
+    26-oct-2026: el Atajo, aun pidiendo «últimas 12 horas», mandó también la
+    noche anterior (6 h 35 + 7 h 47 = 14 h 22). Con la hora de inicio de cada
+    tramo se agrupan por noches y solo cuenta la más reciente.
+    Devuelve None si no se pueden leer todas las horas.
+    """
+    momentos = [_momento(t) for t in inicios]
+    if len(momentos) != len(segundos) or any(m is None for m in momentos):
+        return None
+    orden = sorted(range(len(momentos)), key=lambda i: momentos[i])
+    grupo, fin = [], None
+    for i in orden:
+        ini = momentos[i]
+        if fin is not None and (ini - fin).total_seconds() > _HUECO_NOCHES:
+            grupo = []
+        grupo.append(i)
+        final_i = ini + timedelta(seconds=segundos[i] or 0)
+        fin = final_i if fin is None or final_i > fin else fin
+    return set(grupo)
+
+
+def _horas_por_tramos(duraciones, fases=None, inicios=None):
     """Suma los tramos de sueño (formato reloj), quitando los 'Despierto' / 'En cama' si llega la fase.
 
+    Si llegan las horas de inicio, solo cuenta la última noche.
     Devuelve None si no es una lista de tramos en formato reloj.
     """
     lineas = _lineas(duraciones)
@@ -182,13 +241,24 @@ def _horas_por_tramos(duraciones, fases=None):
         return None
     fases_l = _lineas(fases) if fases is not None else []
     usar_fases = len(fases_l) == len(lineas)
+    segundos = [_segundos_reloj(l) for l in lineas]
+    if any(s is None for s in segundos):
+        return None
+    validos = None
+    if inicios is not None:
+        inicios_l = _lineas(inicios)
+        validos = _solo_ultima_noche(segundos, inicios_l)
+        if validos is None:
+            import logging
+            logging.getLogger(__name__).warning(
+                'salud-iphone: no pude leer las horas de inicio del sueño (%s tramos, %s inicios, ejemplo %r)',
+                len(lineas), len(inicios_l), inicios_l[0] if inicios_l else None)
     total = 0.0
-    for i, linea in enumerate(lineas):
+    for i, seg in enumerate(segundos):
+        if validos is not None and i not in validos:
+            continue
         if usar_fases and any(f in fases_l[i].lower() for f in FASES_NO_SUENO):
             continue
-        seg = _segundos_reloj(linea)
-        if seg is None:
-            return None
         total += seg
     return total / 3600
 
@@ -206,7 +276,7 @@ def leer_atajo(payload, hoy):
             if clave not in payload:
                 continue
             if campo == 'horas_sueno':
-                horas = _horas_por_tramos(payload[clave], payload.get('fases'))
+                horas = _horas_por_tramos(payload[clave], payload.get('fases'), payload.get('inicios'))
                 if horas is None:
                     horas = _horas_sueno_atajo(clave, payload[clave])
                 if horas and 0 < horas <= 16:

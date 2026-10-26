@@ -268,6 +268,27 @@ class LeerAtajo(SimpleTestCase):
         r = leer_atajo({'sueno': '2:00:00\n3:00:00', 'fases': 'Núcleo'}, HOY)[HOY]
         self.assertEqual(r['horas_sueno'], 5.0)
 
+    def test_solo_cuenta_la_ultima_noche(self):
+        # 26-oct: llegaron las dos noches (6 h 35 + 7 h 47 = 14 h 22).
+        r = leer_atajo({
+            'sueno': '4:00:00\n3:47:00\n12:00\n4:00:00\n2:35:00',
+            'fases': 'Esencial\nREM\nVigilia\nEsencial\nREM',
+            'inicios': '24 oct 2026, 23:10\n25 oct 2026, 3:10\n25 oct 2026, 6:57\n'
+                       '25 oct 2026, 23:00\n26 oct 2026, 3:00',
+        }, HOY)[HOY]
+        self.assertEqual(r['horas_sueno'], round((4 * 60 + 155) / 60, 2))
+
+    def test_inicios_en_otros_formatos(self):
+        for a, b in (('2026-10-25 23:00', '2026-10-26 03:00'), ('25/10/26, 23:00', '26/10/26, 3:00'),
+                     ('25 de octubre de 2026, 23:00', '26 de octubre de 2026, 3:00')):
+            r = leer_atajo({'sueno': '8:00:00\n4:00:00\n2:00:00',
+                            'inicios': f'20 oct 2026, 23:00\n{a}\n{b}'}, HOY)[HOY]
+            self.assertEqual(r['horas_sueno'], 6.0, a)
+
+    def test_inicios_ilegibles_suma_todo(self):
+        r = leer_atajo({'sueno': '2:00:00\n3:00:00', 'inicios': 'ayer\nhoy'}, HOY)[HOY]
+        self.assertEqual(r['horas_sueno'], 5.0)
+
     def test_valores_absurdos_o_vacios(self):
         self.assertEqual(leer_atajo({'hrv': '', 'pulso_reposo': 5, 'sueno': 0}, HOY), {})
         self.assertEqual(leer_atajo({}, HOY), {})
