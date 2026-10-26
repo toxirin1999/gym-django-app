@@ -263,6 +263,29 @@ def _horas_por_tramos(duraciones, fases=None, inicios=None):
     return total / 3600
 
 
+HRV_HORA_FIN_NOCHE = 10
+
+
+def _hrv_de_la_noche(valores, inicios):
+    """Variabilidad: solo las medidas de la noche (de 0:00 a 10:00 del último día).
+
+    26-oct-2026: la app guardó 51 ms con medidas del día anterior mezcladas;
+    Salud marcaba 81 para la noche. Devuelve None si no se pueden alinear.
+    """
+    ns = [n for n in _numeros(valores) if n > 0] if not isinstance(valores, (list, tuple)) \
+        else [n for v in valores for n in _numeros(v) if n > 0]
+    momentos = [_momento(t) for t in _lineas(inicios)]
+    if not ns or len(ns) != len(momentos) or any(m is None for m in momentos):
+        import logging
+        logging.getLogger(__name__).warning(
+            'salud-iphone: no pude alinear la variabilidad con sus horas (%s valores, %s horas)',
+            len(ns), len(momentos))
+        return None
+    dia = max(momentos).date()
+    noche = [n for n, m in zip(ns, momentos) if m.date() == dia and m.hour < HRV_HORA_FIN_NOCHE]
+    return noche or None
+
+
 def leer_atajo(payload, hoy):
     """Formato plano del Atajo → {fecha: {...}} (mismo formato que ``leer_metricas``)."""
     if not isinstance(payload, dict):
@@ -283,7 +306,11 @@ def leer_atajo(payload, hoy):
                     valores[campo] = round(horas, 2)
             else:
                 patron = _MS if campo == 'hrv_ms' else _PULSO
-                ns = _valores_con_unidad(payload[clave], patron) or [n for n in _numeros(payload[clave]) if n > 0]
+                ns = None
+                if campo == 'hrv_ms' and payload.get('hrv_inicios') is not None:
+                    ns = _hrv_de_la_noche(payload[clave], payload['hrv_inicios'])
+                if not ns:
+                    ns = _valores_con_unidad(payload[clave], patron) or [n for n in _numeros(payload[clave]) if n > 0]
                 if ns:
                     media = round(sum(ns) / len(ns))
                     rango = (1, 300) if campo == 'hrv_ms' else (30, 200)

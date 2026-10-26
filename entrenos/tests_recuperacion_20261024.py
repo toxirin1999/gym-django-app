@@ -289,6 +289,17 @@ class LeerAtajo(SimpleTestCase):
         r = leer_atajo({'sueno': '2:00:00\n3:00:00', 'inicios': 'ayer\nhoy'}, HOY)[HOY]
         self.assertEqual(r['horas_sueno'], 5.0)
 
+    def test_variabilidad_solo_de_la_noche(self):
+        # 26-oct: Salud marcaba 81 para la noche; con las del día anterior salían 51.
+        r = leer_atajo({'hrv': '40\n35\n78\n84',
+                        'hrv_inicios': '25 oct 2026, 15:10\n25 oct 2026, 21:40\n'
+                                       '26 oct 2026, 1:20\n26 oct 2026, 4:05'}, HOY)[HOY]
+        self.assertEqual(r['hrv_ms'], 81)
+
+    def test_variabilidad_sin_horas_alineadas_hace_la_media(self):
+        r = leer_atajo({'hrv': '40\n80', 'hrv_inicios': '26 oct 2026, 1:20'}, HOY)[HOY]
+        self.assertEqual(r['hrv_ms'], 60)
+
     def test_valores_absurdos_o_vacios(self):
         self.assertEqual(leer_atajo({'hrv': '', 'pulso_reposo': 5, 'sueno': 0}, HOY), {})
         self.assertEqual(leer_atajo({}, HOY), {})
