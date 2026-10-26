@@ -36,6 +36,8 @@ _DIAS_SEMANA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado',
 def _frase_cola(cola):
     """'El Día 2 era del martes: no se pierde, lo haces hoy.'"""
     from datetime import date
+    if cola.get('motivo'):  # 26-oct-2026: cambiado para no repetir músculo de ayer
+        return cola['motivo']
     try:
         dia_semana = _DIAS_SEMANA[date.fromisoformat(cola['fecha_prevista']).weekday()]
     except (TypeError, ValueError):

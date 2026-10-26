@@ -1502,21 +1502,110 @@ def _siguiente_de_cola(cliente, fecha_hoy):
 
     # No repetir músculo dos días seguidos: si la primera comparte grupos con
     # lo que hiciste ayer, se adelanta la siguiente que no los toque.
-    ayer = fecha_hoy - _td(days=1)
-    grupos_ayer = set()
-    for s in cola:
-        e = s.get('entreno')
-        if e and (e.fecha_ejecucion or e.fecha) == ayer:
-            grupos_ayer |= _grupos_de(s['entrenamiento'])
+    # 26-oct-2026 (semana adaptativa, paso 1): "ayer" se lee de las series
+    # reales (también el domingo de la semana anterior: el lunes tocaba el
+    # Día 1 de pecho tras el Día 5 de pecho del domingo), cuenta el fútbol
+    # como pierna y, si ninguna atrasada sirve, se adelanta un día de la
+    # semana que aún no se ha hecho.
+    grupos_ayer, texto_ayer = _grupos_trabajados_ayer(cliente, fecha_hoy)
+    if not grupos_ayer:
+        # Sin series apuntadas: lo que decía el plan de la sesión de ayer.
+        ayer = fecha_hoy - _td(days=1)
+        del_plan = set()
+        for s in cola:
+            e = s.get('entreno')
+            if e and (e.fecha_ejecucion or e.fecha) == ayer:
+                del_plan |= _grupos_canon(s['entrenamiento'])
+        if del_plan:
+            grupos_ayer = del_plan
+            lista = sorted(del_plan)
+            texto_ayer = lista[0] if len(lista) == 1 else ', '.join(lista[:-1]) + ' y ' + lista[-1]
     elegida = candidatas[0]
-    if grupos_ayer and _grupos_de(elegida['entrenamiento']) & grupos_ayer:
-        for c in candidatas[1:]:
-            if not (_grupos_de(c['entrenamiento']) & grupos_ayer):
-                elegida = c
-                break
+    if grupos_ayer and _grupos_canon(elegida['entrenamiento']) & grupos_ayer:
+        alternativa = next(
+            (c for c in candidatas[1:] if not (_grupos_canon(c['entrenamiento']) & grupos_ayer)), None,
+        )
+        if alternativa is None:
+            alternativa = next(
+                (c for c in _futuras_de_la_semana(cliente, fecha_hoy)
+                 if not (_grupos_canon(c['entrenamiento']) & grupos_ayer)), None,
+            )
+        if alternativa is not None:
+            antes = _etiqueta_dia(elegida['nombre']) or 'día previsto'
+            ahora = _etiqueta_dia(alternativa['nombre']) or 'otro día'
+            alternativa = dict(alternativa, motivo=(
+                f'Hoy el {ahora} en vez del {antes}: ayer hiciste {texto_ayer} y el {antes} '
+                f'lo repite. El {antes} sigue en la semana.'
+            ))
+            elegida = alternativa
     if elegida['fecha'] == fecha_hoy and elegida['sp'] is None:
         return None  # lo que toca es la sesión de hoy: flujo normal
     return elegida
+
+
+_PIERNA = {'cuádriceps', 'isquios', 'gemelos', 'glúteos'}
+
+
+def _grupos_canon(entrenamiento):
+    from entrenos.services.criterios_entrenador_service import grupo_de
+    return {grupo_de(g) or str(g).casefold() for g in _grupos_de(entrenamiento)}
+
+
+def _grupos_trabajados_ayer(cliente, fecha_hoy):
+    """({grupos}, 'pecho, tríceps y cuádriceps') de lo que hiciste ayer.
+
+    Grupos con 2 series o más en el gimnasio; el fútbol de ayer cuenta como
+    pierna.
+    """
+    from datetime import timedelta as _td
+    from entrenos.services.criterios_entrenador_service import series_ayer_por_grupo
+
+    cuenta = series_ayer_por_grupo(cliente, fecha_hoy)
+    grupos = [g for g, n in cuenta.most_common() if n >= 2]
+    partes = list(grupos)
+    ayer = fecha_hoy - _td(days=1)
+    futbol = any(
+        (a.fecha_realizado or a.fecha) == ayer
+        for a in ActividadRealizada.objects.filter(
+            cliente=cliente, tipo='futbol', fecha__gte=ayer - _td(days=1), fecha__lte=fecha_hoy,
+        )
+    )
+    conjunto = set(grupos)
+    if futbol:
+        conjunto |= _PIERNA
+        partes.append('fútbol (pierna)')
+    if not partes:
+        return set(), ''
+    texto = partes[0] if len(partes) == 1 else ', '.join(partes[:-1]) + ' y ' + partes[-1]
+    return conjunto, texto
+
+
+def _futuras_de_la_semana(cliente, fecha_hoy):
+    """Días de lo que queda de semana (después de hoy) que aún no se han hecho."""
+    from datetime import timedelta as _td
+    from django.db.models import Q
+
+    lunes = fecha_hoy - _td(days=fecha_hoy.weekday())
+    hechas = {
+        (e.rutina.nombre or '').strip().casefold()
+        for e in EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False).filter(
+            Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=fecha_hoy)
+            | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=fecha_hoy)
+        ).select_related('rutina')
+    }
+    planificador = _build_planificador(cliente)
+    futuras = []
+    f = fecha_hoy + _td(days=1)
+    while f <= lunes + _td(days=6):
+        ent = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(f))
+        nombre = (ent.get('rutina_nombre') or '').strip() if ent else ''
+        if ent and not _es_descanso(ent) and nombre.casefold() not in hechas:
+            sp = SesionProgramada.objects.filter(
+                cliente=cliente, fecha_prevista=f, estado=SesionProgramada.ESTADO_PENDIENTE,
+            ).first()
+            futuras.append({'fecha': f, 'nombre': nombre, 'entrenamiento': ent, 'sp': sp, 'adelantada': True})
+        f += _td(days=1)
+    return futuras
 
 
 def resumen_semana_cerrada(cliente, fecha_hoy):
@@ -1618,7 +1707,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
                 'nombre_sesion': siguiente['nombre'],
                 'bloque_nombre': siguiente['entrenamiento'].get('bloque', '') or '',
                 'dia_numero': siguiente['entrenamiento'].get('dia'),
-                'motivo_estado': 'Sesión prevista no completada.',
+                'motivo_estado': 'Adelantada para no repetir músculo.' if siguiente.get('adelantada')
+                else 'Sesión prevista no completada.',
             },
         )
         if pendiente.estado != SesionProgramada.ESTADO_PENDIENTE:
@@ -1658,7 +1748,10 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
             entrenamiento = None
 
         dias_atras = (fecha_hoy - pendiente.fecha_prevista).days
-        if pendiente.pospuesta_hasta == fecha_hoy:
+        motivo_cola = (siguiente or {}).get('motivo') if siguiente is not None else None
+        if motivo_cola:
+            contexto_tiempo = motivo_cola
+        elif pendiente.pospuesta_hasta == fecha_hoy:
             if dias_atras == 1:
                 origen_tiempo = 'prevista originalmente ayer'
             elif dias_atras <= 3:
@@ -1681,12 +1774,13 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
             'estado': 'entrenar',
             'sesion_programada': pendiente,
             'entrenamiento': entrenamiento,
-            'mensaje': f'{contexto_tiempo} Sigue siendo la siguiente pieza útil del plan.',
+            'mensaje': contexto_tiempo if motivo_cola else f'{contexto_tiempo} Sigue siendo la siguiente pieza útil del plan.',
             'nota_semana': None,
             # Datos planos para explicar la cola (regla 3: el porqué con el dato).
             'cola': {
                 'dia': _etiqueta_dia(pendiente.nombre_sesion),
                 'fecha_prevista': pendiente.fecha_prevista.isoformat(),
+                **({'motivo': motivo_cola} if motivo_cola else {}),
             },
             'causa_principal': None,
             'modo_reducido': False,

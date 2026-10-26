@@ -31,6 +31,8 @@ GRUPOS = (
     ('hombro', 'hombros'), ('deltoid', 'hombros'),
     ('cuadricep', 'cuádriceps'), ('isquio', 'isquios'), ('femoral', 'isquios'),
     ('glute', 'glúteos'), ('gemelo', 'gemelos'), ('pantorr', 'gemelos'),
+    ('core', 'core'), ('abdom', 'core'), ('trapec', 'trapecio'),
+    ('pierna', 'cuádriceps'),  # "Piernas" sin más: se trata como cuádriceps
 )
 
 
