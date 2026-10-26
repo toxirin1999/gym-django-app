@@ -2383,7 +2383,14 @@ def trayectoria_plan(request):
         'explicacion_bloque_plan': _explicacion_bloque_para_trayectoria(trayectoria),
         'resumen_decisiones_plan': _resumen_decisiones_para_trayectoria(cliente),
         'progreso_temporal_plan': _progreso_temporal_para_trayectoria(trayectoria),
+        # 26-oct-2026: semana adaptativa, paso 2 (solo muestra).
+        'marcador_semanal': _marcador_semanal(cliente),
     })
+
+
+def _marcador_semanal(cliente):
+    from entrenos.services.marcador_semanal_service import marcador_cacheado
+    return marcador_cacheado(cliente, timezone.localdate())
 
 
 def _explicacion_bloque_para_trayectoria(trayectoria):

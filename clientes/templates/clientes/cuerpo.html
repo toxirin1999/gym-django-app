@@ -61,6 +61,14 @@
       {% endfor %}
     </section>
 
+    {% if frase_musculos %}
+    <section class="card" aria-labelledby="musculos-titulo">
+      <span class="mono label" id="musculos-titulo">Tu semana por músculo</span>
+      <p class="frase" style="margin-top:8px;font-size:14px">{{ frase_musculos }}</p>
+      <p class="nota"><a class="back" href="{% url 'clientes:trayectoria_plan' %}">Ver el detalle en Plan →</a></p>
+    </section>
+    {% endif %}
+
     <section class="card" aria-labelledby="camino-titulo">
       <span class="mono label" id="camino-titulo">Tu camino · 30 días</span>
       {% if frase_camino %}<p class="frase" style="margin-top:8px;font-size:14px">{{ frase_camino }}</p>{% endif %}

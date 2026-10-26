@@ -135,6 +135,9 @@ def cuerpo(request):
 
     cliente = get_object_or_404(Cliente, user=request.user)
     hoy = timezone.localdate()
+    from entrenos.services.marcador_semanal_service import marcador_cacheado
     return render(request, 'clientes/cuerpo.html', {
         'cliente': cliente, 'hoy': hoy, **contexto_panel(cliente, hoy),
+        # 26-oct-2026: la frase del marcador semanal por músculo; el detalle, en Plan.
+        'frase_musculos': marcador_cacheado(cliente, hoy)['frase'],
     })
