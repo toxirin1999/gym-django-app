@@ -33,7 +33,16 @@
     .punto{display:block;height:22px;margin-bottom:4px;border-radius:6px;background:#17231d;border:1px solid var(--line)}
     .punto.rojo{background:var(--red);border-color:var(--red)}.punto.ambar{background:var(--amber);border-color:var(--amber)}
     .punto.verde{background:var(--green);border-color:var(--green)}.punto.normal{background:#2f7d5c;border-color:#2f7d5c}
-    .punto.parada{background:none;border:1px dashed var(--blue)}.punto.sin_referencia{background:#1f3a2e}
+    .punto.parada{background:none;border:1px dashed var(--blue)}
+    /* 27-oct-2026: "Sin dato" hueco y "Sin media aún" en gris; antes los dos eran casi negros. */
+    .punto.sin{background:none;border:1px dashed #4a5a53}.punto.sin_referencia{background:#7d8a84;border-color:#7d8a84}
+    .card{position:relative}
+    .info summary{position:absolute;top:10px;right:10px;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--muted);font:italic 700 14px/1 Georgia,serif;cursor:pointer;list-style:none}
+    .info summary::-webkit-details-marker{display:none}
+    .info[open] summary{color:var(--ink);background:var(--blue);border-color:var(--blue)}
+    .info-txt{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#0e1a15;color:#cfd8d3;font-size:12.5px;line-height:1.5}
+    .info-txt p{margin:0 0 6px}.info-txt p:last-child{margin:0}
+    .valores{margin:6px 0 0;font-size:13px}
     form.botones{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
     form.botones button{min-height:40px;padding:0 14px;border:1px solid var(--green);border-radius:999px;color:var(--green);background:transparent;font:700 10px/1 "SF Mono",monospace;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
   </style>
@@ -48,6 +57,7 @@
       <span class="mono label" id="hoy-titulo">Hoy</span>
       <p class="titulo {{ estado.respuesta }}">{{ titulo }}</p>
       <p class="frase">{{ estado.frase }}</p>
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Es el resumen de lo de abajo: cómo amaneces (lo que mide el reloj por la noche) y cuánta carga llevas (tus últimos 7 días frente a tus 4 semanas anteriores).</p><p>Hasta tener 5 mañanas del reloj te estoy conociendo: te cuento lo que veo, pero no saco conclusiones.</p></div></details>
     </section>
 
     <section class="card" aria-labelledby="preguntas-titulo">
@@ -59,6 +69,7 @@
           <p>{{ p.porque }}</p>
         </div>
       {% endfor %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p><strong>¿Necesito descansar?</strong> Sí, si 3 de tus últimas 5 mañanas están por debajo de lo normal en ti y sigues entrenando como siempre.</p><p><strong>¿Me estoy pasando?</strong> «Carga alta» es un 30 % o más por encima de tus semanas normales; pasa a «Sí» cuando además el cuerpo lo nota (2 mañanas malas).</p><p><strong>¿Puedo dar más?</strong> Sí, cuando 10 de 14 mañanas estás bien, la carga está en lo tuyo, tu esfuerzo medio no sube y no hay molestias.</p></div></details>
     </section>
 
     {% if frase_musculos %}
@@ -66,6 +77,7 @@
       <span class="mono label" id="musculos-titulo">Tu semana por músculo</span>
       <p class="frase" style="margin-top:8px;font-size:14px">{{ frase_musculos }}</p>
       <p class="nota"><a class="back" href="{% url 'clientes:trayectoria_plan' %}">Ver el detalle en Plan →</a></p>
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cuento las series de los últimos 7 días de cada músculo y las comparo con lo que necesita: un margen, no un número. El mínimo son 10 series (o lo que pide tu plan, si es menos) y el máximo, lo que pide tu plan con 4 de margen, sin pasar de 20.</p><p>Las series indirectas cuentan la mitad: un press de pecho es medio tríceps; un remo, medio bíceps. Solo sale una frase si falta algo o te pasas.</p></div></details>
     </section>
     {% endif %}
 
@@ -85,6 +97,7 @@
       {% else %}
       <p class="nota">Aún no hay actividades con carga en estos 30 días.</p>
       {% endif %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>La carga de cada sesión es lo que dura por lo dura que fue (minutos × esfuerzo). Cuenta el gimnasio y también el fútbol.</p><p>La línea es la suma de tus últimos 7 días, día a día. La franja verde es tu zona normal: de un 20 % menos a un 30 % más que tu media de las 4 semanas anteriores.</p></div></details>
     </section>
 
     <section class="card" aria-labelledby="cuerpo-titulo">
@@ -94,7 +107,7 @@
           <div class="dia" role="listitem" title="{{ d.fecha }} · {{ d.nombre }}"><span class="punto {{ d.nivel }}"></span>{{ d.letra }}</div>
         {% endfor %}
       </div>
-      <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#17231d;border:1px solid var(--line)"></i>Sin dato</span></div>
+      <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#7d8a84"></i>Sin media aún</span><span><i style="background:none;border:1px dashed #4a5a53"></i>Sin dato</span></div>
 
       {% if variabilidad.puntos %}
       <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms{% endif %}</p>
@@ -105,10 +118,25 @@
         <line x1="8" x2="332" y1="{{ variabilidad.base_y }}" y2="{{ variabilidad.base_y }}" stroke="#284238"/>
         {% for m in variabilidad.marcas %}<text x="{{ m.x }}" y="{{ variabilidad.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
-      <p class="nota">Cuanto más alta, mejor recuperado. Un punto rojo es una mañana claramente por debajo de lo normal en ti.</p>
+      <p class="valores">Últimas mañanas: <strong>{{ variabilidad.ultimos }}</strong> ms</p>
+      <p class="nota">Cuanto más alta, mejor recuperado. Un punto rojo es una mañana claramente por debajo de lo normal en ti{% if not variabilidad.media %}; la franja de lo normal sale cuando haya 5 mañanas (llevo {{ variabilidad.dias_con_dato }}){% endif %}.</p>
       {% else %}
       <p class="nota">Aún no ha llegado ninguna medida de variabilidad del reloj.</p>
       {% endif %}
+
+      {% if pulso.puntos %}
+      <p class="nota" style="margin-top:16px">Pulso en reposo cada mañana{% if pulso.media %} · lo normal en ti, unas {{ pulso.media }} pulsaciones{% endif %}</p>
+      <svg viewBox="0 0 {{ pulso.ancho }} {{ pulso.alto }}" role="img" aria-label="Pulso en reposo de cada mañana, 30 días">
+        {% if pulso.media %}<rect x="8" y="{{ pulso.franja_y1 }}" width="324" height="{{ pulso.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
+        <line x1="8" x2="332" y1="{{ pulso.media_y }}" y2="{{ pulso.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}
+        {% for p in pulso.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"><title>{{ p.fecha }}: {{ p.valor }} pulsaciones</title></circle>{% endfor %}
+        <line x1="8" x2="332" y1="{{ pulso.base_y }}" y2="{{ pulso.base_y }}" stroke="#284238"/>
+        {% for m in pulso.marcas %}<text x="{{ m.x }}" y="{{ pulso.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+      </svg>
+      <p class="valores">Últimas mañanas: <strong>{{ pulso.ultimos }}</strong> pulsaciones</p>
+      <p class="nota">Al revés que la variabilidad: cuanto más bajo, mejor. Un punto rojo es una mañana con 5 pulsaciones o más por encima de lo normal en ti, que suele salir con cansancio acumulado, mal sueño, alcohol o cuando estás incubando algo.</p>
+      {% endif %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cada mañana comparo tres cosas con tu media de las 4 semanas anteriores (necesito 5 mañanas del reloj para tenerla):</p><p>· <strong>Variabilidad cardiaca</strong> un 15 % o más por debajo de lo normal en ti.<br>· <strong>Pulso en reposo</strong> 5 pulsaciones o más por encima.<br>· <strong>Sueño</strong>: menos de 6 h, o 1 h 15 menos de lo que sueles.</p><p>Ninguna señal y algo mejor que lo normal: <strong>Fresco</strong>. Nada fuera de lo normal: <strong>Normal</strong>. Una señal: <strong>Algo por debajo</strong>. Dos señales (o la variabilidad un 25 % por debajo): <strong>Por debajo</strong>.</p><p><strong>Sin media aún</strong>: hay datos de esa mañana, pero todavía no con qué compararlos. <strong>Sin dato</strong>: no llegó nada del reloj.</p></div></details>
     </section>
 
     <section class="card" aria-labelledby="parada-titulo">
@@ -123,6 +151,7 @@
           <button type="submit" name="accion" value="parada">Estoy de parada</button>
         {% endif %}
       </form>
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Si estás enfermo o vas a parar unos días, márcalo: esos días no cuentan como mala recuperación ni como falta de constancia, y al volver empezamos suave. Pulsa «Ya he vuelto» cuando retomes.</p></div></details>
     </section>
 
     <p class="nota">De momento este panel solo te cuenta lo que ve: no cambia tu plan. Los datos del reloj llegan cada mañana con el Atajo (<a class="back" href="{% url 'clientes:salud_iphone' %}">Salud del iPhone</a>).</p>

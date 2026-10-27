@@ -146,7 +146,9 @@ def lectura_recuperacion(cliente, hoy):
         nivel = 'rojo'
     elif senales:
         nivel = 'ambar'
-    elif buenas:
+    elif buenas and medias:
+        # 27-oct-2026: sin media no hay "fresco". El 27 salía en verde solo por
+        # dormir 7 h 52, con la variabilidad en 32 ms (55 y 81 los días antes).
         nivel = 'verde'
     elif medias:
         nivel = 'normal'  # 25-oct-2026: hay media y nada se sale de lo normal en ti

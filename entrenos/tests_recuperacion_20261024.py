@@ -99,7 +99,9 @@ class LecturaRecuperacion(ConCliente):
         self.base(dias=3)
         self.reloj(0, hrv=30, fc=70, sueno=7.2)
         r = rec.lectura_recuperacion(self.cliente, HOY)
-        self.assertEqual(r['nivel'], 'verde')  # solo cuenta el sueño, que no necesita media
+        # 27-oct-2026: sin media no se puede decir "fresco" aunque hayas dormido bien.
+        self.assertEqual(r['nivel'], 'sin_referencia')
+        self.assertIn('Has dormido 7 h 12', r['frase'])
 
     def test_sin_media_y_sin_sueno_bueno(self):
         self.reloj(0, hrv=30, fc=70, sueno=6.5)

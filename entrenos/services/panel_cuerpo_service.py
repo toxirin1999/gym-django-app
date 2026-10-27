@@ -124,23 +124,27 @@ def frase_camino(cliente, hoy):
     return f'{cabeza}: {unidas}.'
 
 
-def variabilidad(cliente, hoy, dias=DIAS_CAMINO):
-    """Puntos de variabilidad de cada mañana y tu franja normal (±15 % de tu media)."""
+def _serie_manana(cliente, hoy, campo, dias, franja, malo):
+    """Puntos de una medida de cada mañana y su franja normal alrededor de tu media.
+
+    ``franja(media)`` → (abajo, arriba); ``malo(valor, media)`` → punto en rojo.
+    """
     from clientes.models import BitacoraDiaria
     from entrenos.services.recuperacion_service import _medias_base
 
     desde = hoy - timedelta(days=dias - 1)
     valores = {}
-    for fecha, hrv in BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha__gte=desde, fecha__lte=hoy, hrv_ms__isnull=False,
-    ).values_list('fecha', 'hrv_ms'):
-        valores[fecha] = hrv
-    media = _medias_base(cliente, hoy + timedelta(days=1)).get('hrv_ms')
+    for fecha, v in BitacoraDiaria.objects.filter(
+        cliente=cliente, fecha__gte=desde, fecha__lte=hoy, **{f'{campo}__isnull': False},
+    ).values_list('fecha', campo):
+        valores[fecha] = float(v)
+    media = _medias_base(cliente, hoy + timedelta(days=1)).get(campo)
     if not valores:
         return {'puntos': [], 'media': None}
     # El eje va del valor más bajo al más alto (con la franja normal dentro), no desde cero:
     # desde cero, todas las mañanas salían en una línea plana.
-    referencia = list(valores.values()) + ([media * 0.85, media * 1.15] if media else [])
+    banda = franja(media) if media else None
+    referencia = list(valores.values()) + (list(banda) if banda else [])
     suelo, tope = min(referencia), max(referencia)
     margen = max((tope - suelo) * 0.15, 3)
     suelo, tope = suelo - margen, tope + margen
@@ -148,17 +152,35 @@ def variabilidad(cliente, hoy, dias=DIAS_CAMINO):
     for i in range(dias):
         d = desde + timedelta(days=i)
         if d in valores:
-            puntos.append({'x': _x(i, dias), 'y': _y(valores[d], tope, suelo), 'valor': valores[d],
-                           'fecha': f'{d:%d/%m}', 'bajo': bool(media and valores[d] < media * 0.85)})
+            puntos.append({'x': _x(i, dias), 'y': _y(valores[d], tope, suelo), 'valor': round(valores[d]),
+                           'fecha': f'{d:%d/%m}', 'bajo': bool(media and malo(valores[d], media))})
+    # 27-oct-2026: las últimas mañanas, escritas (con 3 puntos en 30 días no se leían).
+    ultimos = [p for p in puntos][-7:]
     out = {'puntos': puntos, 'media': round(media) if media else None, 'ancho': ANCHO, 'alto': ALTO,
            'base_y': ALTO - MARGEN_ABA, 'texto_y': ALTO - 6,
+           'ultimos': ' · '.join(str(p['valor']) for p in ultimos),
+           'dias_con_dato': len(valores),
            'marcas': [{'x': _x(i, dias), 'texto': f'{desde + timedelta(days=i):%d/%m}'} for i in (0, dias // 2, dias - 1)]}
-    if media:
-        out['franja_y1'] = _y(media * 1.15, tope, suelo)
-        out['franja_y2'] = _y(media * 0.85, tope, suelo)
+    if banda:
+        out['franja_y1'] = _y(banda[1], tope, suelo)
+        out['franja_y2'] = _y(banda[0], tope, suelo)
         out['media_y'] = _y(media, tope, suelo)
         out['franja_alto'] = round(out['franja_y2'] - out['franja_y1'], 1)
     return out
+
+
+def variabilidad(cliente, hoy, dias=DIAS_CAMINO):
+    """Variabilidad de cada mañana; franja normal ±15 % de tu media. Rojo: 15 % o más por debajo."""
+    return _serie_manana(cliente, hoy, 'hrv_ms', dias,
+                         franja=lambda m: (m * 0.85, m * 1.15), malo=lambda v, m: v < m * 0.85)
+
+
+def pulso(cliente, hoy, dias=DIAS_CAMINO):
+    """27-oct-2026: pulso en reposo de cada mañana; franja ±5 de tu media. Rojo: 5 o más por encima."""
+    from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
+    return _serie_manana(cliente, hoy, 'fc_reposo', dias,
+                         franja=lambda m: (m - PULSO_ALTO_LPM, m + PULSO_ALTO_LPM),
+                         malo=lambda v, m: v >= m + PULSO_ALTO_LPM)
 
 
 def dias_recientes(estado):
@@ -257,6 +279,7 @@ def contexto_panel(cliente, hoy):
         'preguntas': tres_preguntas(estado),
         'camino': camino(cliente, hoy),
         'variabilidad': variabilidad(cliente, hoy),
+        'pulso': pulso(cliente, hoy),
         'frase_camino': frase_camino(cliente, hoy),
         'dias': dias_recientes(estado),
         'parada': parada_en(cliente, hoy),
