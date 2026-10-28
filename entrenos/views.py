@@ -3731,6 +3731,17 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio for ejercicio in (ejercicios_planificados or [])
             if _tiene_series_planificadas(ejercicio)
         ]
+        # 27-oct-2026 (nota 2): la energía que marcas en el briefing cambia la
+        # sesión si va 2 puntos o más por debajo de lo habitual.
+        aviso_energia = None
+        if ejercicios_planificados and str(request.GET.get('energia', '')).isdigit():
+            try:
+                from entrenos.services.criterios_entrenador_service import aplicar_energia
+                aviso_energia = aplicar_energia(
+                    cliente, ejercicios_planificados, fecha_obj, int(request.GET['energia']),
+                )
+            except Exception:
+                logger.exception('[entrenamiento_activo] ajuste por energía falló')
         if not ejercicios_planificados:
             # Sin ejercicios no hay sesión que ejecutar: en vez de una pantalla
             # negra con el cronómetro corriendo y "0/0 series", se explica y se
@@ -4614,6 +4625,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
         'permiso_progresion': _permiso_prog_template,
         'retorno_tras_ausencia': _retorno_tras_ausencia,
+        'aviso_energia': aviso_energia,
         # 17-oct-2026: la energía se pregunta en el briefing y llega aquí.
         'energia_inicial': (
             int(request.GET['energia'])
@@ -9157,6 +9169,8 @@ def api_alternativas_maquina(request, cliente_id):
         data = json.loads(request.body)
         nombre_actual = data.get('nombre', '').lower()
         grupo = data.get('grupo_muscular', '')
+        # 27-oct-2026 (nota 16): sin los ejercicios que ya están en la sesión.
+        excluir = {' '.join(str(n).casefold().split()) for n in (data.get('excluir') or []) if n}
 
         if not grupo:
             return JsonResponse({'status': 'error', 'message': 'Falta grupo_muscular'}, status=400)
@@ -9169,7 +9183,7 @@ def api_alternativas_maquina(request, cliente_id):
         for tipo in ('compuesto_principal', 'compuesto_secundario', 'aislamiento'):
             for ej_entry in db_grupo.get(tipo, []):
                 nombre_ej = ej_entry if isinstance(ej_entry, str) else ej_entry.get('nombre', '')
-                if nombre_ej.lower() == nombre_actual:
+                if nombre_ej.lower() == nombre_actual or ' '.join(nombre_ej.casefold().split()) in excluir:
                     continue
                 candidatos.append(nombre_ej)
                 if len(candidatos) >= 6:
@@ -9179,19 +9193,30 @@ def api_alternativas_maquina(request, cliente_id):
 
         # Enriquecer con peso histórico
         alternativas = []
+        from entrenos.services.ultima_sesion_service import kg as _kg_txt, ultima_sesion
+        cliente_obj = get_object_or_404(Cliente, id=cliente_id, user=request.user)
         for nombre_ej in candidatos[:3]:
-            ej_realizado = EjercicioRealizado.objects.filter(
-                nombre_ejercicio__icontains=nombre_ej,
-                entreno__cliente_id=cliente_id
-            ).order_by('-entreno__fecha', '-id').first()
-
-            peso_hist = None
-            if ej_realizado and ej_realizado.peso_kg:
-                peso_hist = round(float(ej_realizado.peso_kg), 1)
+            # 27-oct-2026 (nota 15): de las series reales (la que entró), no la
+            # media del resumen; y con su "última vez" para la pantalla.
+            peso_hist = reps_hist = ultima = None
+            lectura = ultima_sesion(cliente_obj, nombre_ej, timezone.localdate() + timedelta(days=1))
+            if lectura and lectura['referencia']['peso'] > 0:
+                ref = lectura['referencia']
+                peso_hist = round(float(ref['peso']), 2)
+                reps_hist = int(round(float(ref.get('reps_mediana') or ref['reps'])))
+                ultima = f"{_kg_txt(peso_hist)} kg × {reps_hist}"
+            else:
+                ej_realizado = EjercicioRealizado.objects.filter(
+                    nombre_ejercicio__iexact=nombre_ej, entreno__cliente_id=cliente_id,
+                ).order_by('-entreno__fecha', '-id').first()
+                if ej_realizado and ej_realizado.peso_kg:
+                    peso_hist = round(float(ej_realizado.peso_kg), 1)
 
             alternativas.append({
                 'nombre': nombre_ej,
                 'peso_historico_kg': peso_hist,
+                'reps': reps_hist,
+                'ultima': ultima,
             })
 
         return JsonResponse({'status': 'ok', 'alternativas': alternativas})

@@ -286,7 +286,7 @@
   <div class="bib">
     <div class="bib-meta">
       <span>ENTRENO GUARDADO · {{ entreno.fecha|date:"D d M Y"|upper }}</span>
-      <span>{{ resumen.n_ejercicios }} DE {{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count }} EJERCICIO{{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count|pluralize }}</span>
+      <span>{{ resumen.n_ejercicios }} DE {{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count }} EJERCICIO{{ resumen.n_ejercicios|add:entreno.ejercicios_omitidos.count|pluralize }}</span>{% if no_hechos %}<span style="display:block;margin-top:4px;color:#f6c35b;">Sin hacer: {{ no_hechos|join:", " }}</span>{% endif %}
     </div>
     <div class="bib-body">
       <div class="bib-num">✓</div>

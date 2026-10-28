@@ -704,6 +704,11 @@
       document.querySelectorAll('.energia-btn').forEach(function(o){ o.setAttribute('aria-checked', String(o === b)); });
       var t = document.getElementById('energia-txt');
       if (t) t.textContent = 'Energía ' + v + ' · ' + (etiquetas[v] || '');
+      // 27-oct-2026 (nota 2): si va 2 o más por debajo de lo habitual, se dice qué cambia.
+      var habitual = parseFloat('{{ briefing.energia_media|default:""|stringformat:"s" }}'.replace(',', '.'));
+      if (t && habitual && parseInt(v, 10) <= habitual - 1.5) {
+        t.textContent += ' — por debajo de tu ' + String(habitual).replace('.', ',') + ' habitual: hoy repetimos reps y un punto menos de esfuerzo.';
+      }
       if (btn && base) btn.setAttribute('href', base + (base.indexOf('?') >= 0 ? '&' : '?') + 'energia=' + v);
     });
   });

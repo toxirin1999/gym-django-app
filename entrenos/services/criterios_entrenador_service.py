@@ -94,6 +94,7 @@ def aplicar_criterios(cliente, ejercicios, hoy):
     ayer = series_ayer_por_grupo(cliente, hoy)
     sueno, ratio = _sueno_y_carga(cliente, hoy)
     cansado = bool(sueno and sueno < SUENO_CORTO_H and ratio and ratio >= CARGA_ALTA)
+    variabilidad = _variabilidad_baja(cliente, hoy)  # 27-oct-2026 (E1)
     aplicadas = []
     for ej in ejercicios:
         try:
@@ -109,6 +110,8 @@ def aplicar_criterios(cliente, ejercicios, hoy):
         if cansado:
             motivos.append(f'has dormido {horas_texto(sueno)} y esta semana llevas un '
                            f'{round((ratio - 1) * 100)} % más de carga de lo normal en ti')
+        if variabilidad and not cansado:
+            motivos.append(variabilidad)
         if not motivos:
             continue
         nuevo = max(RPE_SUELO, rpe - 1)
@@ -120,3 +123,95 @@ def aplicar_criterios(cliente, ejercicios, hoy):
                                      f'{" y ".join(motivos)}. Deja una o dos reps en reserva.')
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
     return aplicadas
+
+
+HRV_BAJA = 0.15  # 15 % por debajo de tu media, como el panel del cuerpo
+ENERGIA_BAJA = 1.5  # unos 2 puntos por debajo de tu energía habitual al empezar (5 frente a 6,9)
+
+
+def _variabilidad_baja(cliente, hoy):
+    """'tu variabilidad cardiaca de hoy (32 ms) está un 40 % por debajo de lo normal en ti' o None.
+
+    Solo con media (5 mañanas del reloj): sin ella no se compara.
+    """
+    try:
+        from entrenos.services.recuperacion_service import _datos_hoy, _medias_base
+        hrv = _datos_hoy(cliente, hoy).get('hrv_ms')
+        media = _medias_base(cliente, hoy).get('hrv_ms')
+    except Exception:  # noqa: BLE001
+        return None
+    if not hrv or not media or hrv > media * (1 - HRV_BAJA):
+        return None
+    pct = round((media - hrv) / media * 100)
+    return f'tu variabilidad cardiaca de hoy ({round(hrv)} ms) está un {pct} % por debajo de lo normal en ti'
+
+
+def energia_habitual(cliente, hoy, dias=14):
+    """Media de la energía que marcas al empezar, en las sesiones de antes de hoy."""
+    from entrenos.models import EntrenoRealizado
+    valores = [
+        e for e in EntrenoRealizado.objects.filter(
+            cliente=cliente, fecha__gte=hoy - timedelta(days=dias), fecha__lt=hoy,
+            energia_pre_sesion__isnull=False,
+        ).values_list('energia_pre_sesion', flat=True)
+    ]
+    return round(sum(valores) / len(valores), 1) if len(valores) >= 3 else None
+
+
+def energia_baja(cliente, hoy, energia):
+    """(energía, habitual) si hoy marcas 2 o más por debajo de lo habitual; si no, None."""
+    if energia is None:
+        return None
+    habitual = energia_habitual(cliente, hoy)
+    if habitual is None or energia > habitual - ENERGIA_BAJA:
+        return None
+    return energia, habitual
+
+
+def _num(v):
+    return str(int(v)) if float(v).is_integer() else f'{v:g}'.replace('.', ',')
+
+
+def aplicar_energia(cliente, ejercicios, hoy, energia):
+    """27-oct-2026 (nota 2, E1/E5): la energía que marcas cambia la sesión.
+
+    Con 2 puntos o más por debajo de tu energía habitual: un punto menos de
+    RPE (nunca por debajo de 7, y sin sumarse a otro criterio que ya lo bajó)
+    y las mismas reps que la última vez, sin buscar la extra. Devuelve la
+    frase para enseñarla arriba, o None si no aplica.
+    """
+    baja = energia_baja(cliente, hoy, energia)
+    if not baja:
+        return None
+    hoy_e, habitual = baja
+    frase = (f'Hoy marcas energía {hoy_e} frente a tu {_num(habitual)} habitual: misma sesión, '
+             f'las mismas reps que la última vez y una o dos en reserva.')
+    for ej in ejercicios:
+        try:
+            rpe = float(ej.get('rpe_objetivo') or 0)
+        except (TypeError, ValueError):
+            rpe = 0
+        if rpe > RPE_SUELO and not ej.get('rpe_objetivo_plan') and not ej.get('_deload_aplicado'):
+            nuevo = max(RPE_SUELO, rpe - 1)
+            ej['rpe_objetivo_plan'] = ej.get('rpe_objetivo')
+            ej['rpe_objetivo'] = int(nuevo) if float(nuevo).is_integer() else nuevo
+        if ej.get('sugerencia_tope') or ej.get('usa_distancia') or ej.get('usa_tiempo'):
+            continue
+        from entrenos.services.ultima_sesion_service import rango_reps, ultima_sesion
+        rango = rango_reps(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+        try:
+            reps_hoy = int(ej.get('reps_objetivo_hoy') or 0)
+        except (TypeError, ValueError):
+            reps_hoy = 0
+        lectura = ultima_sesion(cliente, ej.get('nombre') or '', hoy, reps_min=rango[0]) if rango else None
+        if reps_hoy and lectura:
+            ref = lectura['referencia']
+            reps_antes = int(round(float(ref.get('reps_mediana') or ref['reps'])))
+            try:
+                mismo_peso = abs(float(ej.get('peso_kg') or 0) - float(ref['peso'])) < 0.01
+            except (TypeError, ValueError):
+                mismo_peso = False
+            if mismo_peso and reps_hoy > reps_antes:
+                ej['reps_objetivo_hoy'] = max(rango[0], reps_antes)
+        ej['criterio_entrenador'] = frase
+    return frase

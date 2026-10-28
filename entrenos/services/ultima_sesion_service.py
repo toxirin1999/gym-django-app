@@ -636,6 +636,16 @@ def anotar_ultima_vez(cliente, ej, hoy):
             for s in lectura['series'][lectura['series'].index(c) + 1:]
         )
     ]
+    # 27-oct-2026 (nota 3): una serie corta que llegó después de otra más
+    # pesada (crunch 75 × 16, 16, 11 y luego 70 × 11) es cansancio del final,
+    # no lo que da ese peso: el aviso contradecía la propia propuesta de 70.
+    cortas = [
+        c for c in cortas
+        # Solo si esa serie más pesada sí entró en el rango (75 × 16); en una
+        # pirámide de bajada que no entra (40 × 10, 30 × 11, 25 × 12) el aviso sigue.
+        if not any(s['peso'] > c['peso'] + 1e-6 and s['reps'] >= rango[0]
+                   for s in lectura['series'][:lectura['series'].index(c)])
+    ]
     if not cortas:
         return
     ligera = min(cortas, key=lambda s: s['peso'])

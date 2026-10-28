@@ -33,7 +33,7 @@ def _a_escala_empate_arriba(peso, salto):
     return arriba if (arriba - peso) <= (peso - abajo) + 1e-9 else abajo
 
 
-HUNDIMIENTO_REPS = 5  # caída de golpe entre dos series seguidas al mismo peso
+HUNDIMIENTO_REPS = 4  # caída de golpe entre dos series seguidas al mismo peso (27-oct: 5 → 4, press de hombro 16 → 12)
 
 
 def hundimiento_en_sesion(series, minimo, rpe_obj):
@@ -54,6 +54,48 @@ def hundimiento_en_sesion(series, minimo, rpe_obj):
     if primera['reps'] - siguiente['reps'] < HUNDIMIENTO_REPS:
         return None
     return primera, siguiente
+
+
+def hecho_fuera_de_orden(entreno, nombre):
+    """27-oct-2026 (E4): ¿se hizo este ejercicio después de otros que el plan ponía detrás?
+
+    Jalón al pecho, tercero en el plan, hecho el séptimo porque la máquina
+    estaba ocupada. Se mira el orden de la primera serie de cada ejercicio.
+    """
+    from entrenos.models import SerieRealizada
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+
+    version = getattr(entreno, 'gym_decision_version', None)
+    plan = [normalizar_ejercicio(e.get('nombre')) for e in
+            ((getattr(version, 'snapshot', None) or {}).get('entrenamiento') or {}).get('ejercicios') or []]
+    clave = normalizar_ejercicio(nombre)
+    if clave not in plan:
+        return False
+    primera = {}
+    for sid, n in SerieRealizada.objects.filter(entreno=entreno, completado=True).order_by('id').values_list(
+        'id', 'ejercicio__nombre',
+    ):
+        primera.setdefault(normalizar_ejercicio(n), sid)
+    if clave not in primera:
+        return False
+    detras = plan[plan.index(clave) + 1:]
+    return any(primera.get(otro, float('inf')) < primera[clave] for otro in detras)
+
+
+def contexto_cansancio(cliente, entreno, nombre):
+    """Por qué esa sesión pudo ir peor sin que el peso fuera el problema, o None."""
+    from entrenos.services.criterios_entrenador_service import energia_baja
+    try:
+        if hecho_fuera_de_orden(entreno, nombre):
+            return 'lo hiciste al final, fuera de su orden'
+    except Exception:  # noqa: BLE001
+        pass
+    baja = energia_baja(cliente, entreno.fecha, entreno.energia_pre_sesion)
+    if baja:
+        e, habitual = baja
+        hab = str(int(habitual)) if float(habitual).is_integer() else f'{habitual:g}'.replace('.', ',')
+        return f'llegabas con energía {e} frente a tu {hab} habitual'
+    return None
 
 
 def decidir_carga(cliente, ej, hoy):
@@ -131,6 +173,55 @@ def decidir_carga(cliente, ej, hoy):
                       f"fue cansancio, no el peso. Repetimos {_kg(primera['peso'])} kg a por {reps}."),
         }
 
+    # 2d. 27-oct-2026 (nota 14, E4): la primera serie entró y las últimas
+    # cayeron en un día que lo explica (ejercicio aplazado al final, o energía
+    # 2 puntos por debajo de lo habitual). Jalón 50 × 15, 15, 12 y 9 hecho el
+    # séptimo: no se baja a 45.
+    validas = [x for x in lectura['series'] if x['reps'] > 0 and x['peso'] > 0]
+    if validas and not antigua:
+        primera = validas[0]
+        cayeron = [x for x in validas[1:] if abs(x['peso'] - primera['peso']) < 1e-6 and x['reps'] < minimo]
+        if (primera['reps'] >= minimo and cayeron
+                and (primera.get('rpe') is None or primera['rpe'] <= rpe_obj + 1)):
+            motivo = contexto_cansancio(cliente, lectura['entreno'], nombre)
+            if motivo:
+                reps = objetivo_reps_hoy(primera['reps'], rango)
+                peor = min(cayeron, key=lambda x: x['reps'])
+                return {
+                    'peso': float(primera['peso']), 'reps': reps, 'regla': 'fatiga', 'tipo_fatiga': 'contexto',
+                    'reps_hoy': peor['reps'], 'reps_antes': primera['reps'], 'motivo': motivo,
+                    'frase': (f"La última vez {_kg(primera['peso'])} kg × {primera['reps']} entró y después "
+                              f"cayó a {peor['reps']}, pero {motivo}: repetimos {_kg(primera['peso'])} kg "
+                              f"a por {reps}."),
+                }
+
+    # 2e. 27-oct-2026 (nota 4): vuelta al peso de antes. Press de hombro: 40 × 16
+    # a RPE 8 y se hundió; se bajó a 35 y salió 35 × 15 × 3 a RPE 8. El 40 era
+    # el peso bueno: se vuelve a él a por el mínimo.
+    if not antigua and ref['en_rango']:
+        al_peso = [x for x in validas if abs(x['peso'] - peso_ref) < 1e-6]
+        rpes = [x['rpe'] for x in al_peso]
+        if al_peso and None not in rpes and max(rpes) <= rpe_obj and all(x['reps'] >= minimo for x in al_peso):
+            previa = ultima_sesion(cliente, nombre, lectura['fecha'], reps_min=minimo)
+            from entrenos.services.ultima_sesion_service import rango_de_sesion
+            if (previa and (lectura['fecha'] - previa['fecha']).days <= 21
+                    and rango_de_sesion(previa['entreno'], nombre) == rango_de_sesion(lectura['entreno'], nombre)):
+                prev_validas = [x for x in previa['series'] if x['reps'] > 0 and x['peso'] > 0]
+                p1 = prev_validas[0] if prev_validas else None
+                # Solo si allí se hundió de golpe (16 → 12), no poco a poco (15, 13, 8:
+                # eso sí era demasiado peso).
+                p2 = next((x for x in prev_validas[1:] if p1 and abs(x['peso'] - p1['peso']) < 1e-6), None)
+                de_golpe = p2 is None or (p1['reps'] - p2['reps'] >= HUNDIMIENTO_REPS)
+                if (p1 and de_golpe and p1['peso'] > peso_ref + 1e-6 and p1['reps'] >= minimo
+                        and p1.get('rpe') is not None and p1['rpe'] <= rpe_obj
+                        and (not tope or p1['peso'] <= tope + 1e-6)):
+                    return {
+                        'peso': float(p1['peso']), 'reps': minimo, 'regla': 'volver',
+                        'frase': (f"Con {_kg(peso_ref)} kg te sobró poco esfuerzo (RPE {_kg(max(rpes))}) y antes "
+                                  f"{_kg(p1['peso'])} kg × {p1['reps']} entró: hoy vuelves a {_kg(p1['peso'])} kg "
+                                  f"a por {minimo}."),
+                    }
+
     # 3. Cambio de familia de rango, o última vez de hace más de 6 semanas:
     # se estima para el rango de hoy, no se arrastra el peso (remo en polea
     # 60 × 8 hace dos meses → no "60 a por 15").
@@ -156,6 +247,14 @@ def decidir_carga(cliente, ej, hoy):
     techo, frase, accion = resultado
     if accion == 'bajar':
         return {'peso': float(techo), 'reps': minimo, 'regla': 'bajar', 'frase': frase}
+    if frase is None and any(t in nombre.casefold() for t in ('pallof', 'antirrot', 'anti-rot')):
+        # 27-oct-2026 (E2): en antirrotación lo que cuenta es no girar. Al tope
+        # del rango no se sube peso: se endurece con una pausa.
+        return {
+            'peso': peso_ref, 'reps': maximo, 'regla': 'mantener', 'pausa': True,
+            'frase': (f'Ya llegas a {maximo} con {_kg(peso_ref)} kg: mismo peso y aguanta 2 s con los brazos '
+                      f'estirados en cada repetición, en vez de subir.'),
+        }
     if frase is None:
         # Llegó al tope del rango: un salto arriba (nunca por encima del tope).
         peso = a_escala(peso_ref + salto, salto, 'cerca')
@@ -213,7 +312,13 @@ def aplicar_decision_carga(ej, decision):
         # contradecirlos (prensa: "hoy a por 13 reps (la última vez 12)" cuando
         # la última vez fueron 13 y la regla pedía 14). El texto sigue a la regla.
         motivo = str(ej.get('progresion_motivo') or '')
-        if decision.get('frase') and f"a por {decision['reps']}" not in motivo:
+        # 27-oct-2026 (nota 3): crunch 75 → 70 kg con el texto "Mismo peso: hoy a
+        # por 15": si la regla cambia el peso, el texto tiene que nombrarlo.
+        if decision.get('frase') and (
+            f"a por {decision['reps']}" not in motivo
+            or (decision['regla'] != 'mantener' and f"{_kg(decision['peso'])} kg" not in motivo)
+            or (decision['regla'] != 'mantener' and motivo.startswith('Mismo peso'))
+        ):
             ej['progresion_motivo'] = decision['frase']
             ej['progresion_motivo_local'] = 'regla_unica'
             ej.pop('motivo_peso', None)
@@ -269,6 +374,14 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         return None
     peso, reps, regla = decision['peso'], decision['reps'], decision['regla']
     peso_hoy = float(lectura['referencia']['peso'])
+    if regla == 'fatiga' and decision.get('tipo_fatiga') == 'contexto':
+        texto = (f"La próxima vez repetimos {_kg(peso)} kg a por {reps} reps: la primera serie entró "
+                 f"({_kg(peso)} × {decision['reps_antes']}) y la caída a {decision['reps_hoy']} fue porque "
+                 f"{decision['motivo']}.")
+        return (texto, 'Mantener', f'Repite {_kg(peso)} kg') if con_efecto else (texto, 'Mantener')
+    if regla == 'volver':
+        texto = f'Vuelvo a {_kg(peso)} kg a por {reps} reps: con {_kg(peso_hoy)} kg te sobró y {_kg(peso)} ya te entró.'
+        return (texto, 'Subir peso', f'Vuelve a {_kg(peso)} kg') if con_efecto else (texto, 'Subir peso')
     if regla == 'fatiga' and decision.get('tipo_fatiga') == 'sesion':
         texto = (f"La próxima vez repetimos {_kg(peso)} kg a por {reps} reps: la primera serie entró "
                  f"({_kg(peso)} × {decision['reps_antes']}) y luego se hundió a {decision['reps_hoy']}; "

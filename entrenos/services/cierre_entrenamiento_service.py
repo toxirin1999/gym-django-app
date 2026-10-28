@@ -477,6 +477,40 @@ def calcular_metricas_unidades(entreno, ejercicios):
     }
 
 
+def _peso_propuesto_igual(entreno, nombre):
+    """¿Hizo el ejercicio con el peso que le propuso la app ese día?"""
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+    from entrenos.services.ultima_sesion_service import serie_referencia, series_de_trabajo
+    version = getattr(entreno, 'gym_decision_version', None)
+    clave = normalizar_ejercicio(nombre)
+    for e in ((getattr(version, 'snapshot', None) or {}).get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(e.get('nombre')) != clave:
+            continue
+        try:
+            propuesto = float(e.get('peso_kg') or 0)
+        except (TypeError, ValueError):
+            return False
+        ref = serie_referencia(series_de_trabajo(entreno, nombre))
+        return bool(propuesto and ref and abs(ref['peso'] - propuesto) < 0.01)
+    return False
+
+
+def _no_hechos(entreno, ejercicios):
+    """27-oct-2026 (nota 21): ejercicios del plan de ese día que no se hicieron.
+
+    El rumano, con la máquina ocupada, se cambió por curl femoral y el cierre
+    decía "8 de 8": se dice qué se quedó fuera.
+    """
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+    version = getattr(entreno, 'gym_decision_version', None)
+    plan = ((getattr(version, 'snapshot', None) or {}).get('entrenamiento') or {}).get('ejercicios') or []
+    hechos = {normalizar_ejercicio(e.nombre_ejercicio) for e in ejercicios}
+    return [
+        _nombre_visible(e.get('nombre')) for e in plan
+        if e.get('nombre') and normalizar_ejercicio(e.get('nombre')) not in hechos
+    ]
+
+
 def _resumen_sesion(entreno, ejercicios):
     titulo = entreno.rutina.nombre if entreno.rutina_id else ''
     n_series_calculado = sum(ej.series for ej in ejercicios)
@@ -625,9 +659,17 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
 
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
     from rutinas.models import EjercicioBase
+    from entrenos.services.decision_log_service import normalizar_ejercicio
 
     cambios = []
+    vistos = set()
     for ej in ejercicios:
+        # 27-oct-2026 (nota 18): el mismo ejercicio dos veces en la sesión (el
+        # curl femoral y su repetición como alternativa al rumano) es una fila.
+        _clave = normalizar_ejercicio(ej.nombre_ejercicio)
+        if _clave in vistos:
+            continue
+        vistos.add(_clave)
         if ej.es_tope_maquina:
             # Farmer, planchas…: el peso fijo no es un tope de máquina; lo
             # que progresa son los metros o los segundos, no las reps.
@@ -801,6 +843,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             if dia_de_fatiga(cliente, ej.nombre_ejercicio, entreno, rango_hoy[0] if rango_hoy else None):
                 comparacion = dict(comparacion, tipo='mantenida',
                                    detalle=f"{comparacion['detalle']} · día de cansancio, se repite")
+            elif comparacion['tipo'] == 'bajada' and _peso_propuesto_igual(entreno, ej.nombre_ejercicio):
+                # 27-oct-2026 (nota 22): crunch 75 → 70 kg propuesto por la
+                # propia app: un ajuste del plan, no un retroceso en naranja.
+                comparacion = dict(comparacion, tipo='mantenida',
+                                   detalle=f"{comparacion['detalle']} · ajuste del plan")
             elif (comparacion['tipo'] == 'bajada' and mas_reciente is not None
                     and mas_reciente.pk != anterior.pk):
                 # Fondos 92,5 × 8 la última vez; hoy vuelven a 15-20 y se comparan con
@@ -948,6 +995,7 @@ def construir_contexto_cierre(cliente, entreno):
         'comprobaciones': comprobaciones,
         'que_viene': que_viene,
         'resumen': _resumen_sesion(entreno, ejercicios),
+        'no_hechos': _no_hechos(entreno, ejercicios),
         'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy),
         'lectura_plan': lectura_plan,
         'decisiones_entrenador': decisiones_entrenador,

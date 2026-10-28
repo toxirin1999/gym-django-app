@@ -1504,6 +1504,7 @@ body{background:
         <span>Energía <strong id="energia-resumen-valor" style="color:#eaf3f2;"></strong> · <span id="energia-pre-label" style="text-transform:none;letter-spacing:0;"></span></span>
         <span style="text-decoration:underline;text-transform:none;letter-spacing:0;">Cambiar</span>
       </button>
+      {% if aviso_energia %}<p id="aviso-energia" style="margin:10px 0 0;font-size:12px;line-height:1.45;color:#f6c35b;">{{ aviso_energia }}</p>{% endif %}
     </div>
 
 <!-- ══ NAVEGACIÓN GLOBAL (prev · dots · next) ══ -->
@@ -1887,6 +1888,10 @@ body{background:
         {% if ejercicio.rpe_anterior %}<span class="peso-ultima-vez__rpe" aria-label="RPE de la última vez">RPE {{ ejercicio.rpe_anterior|floatformat:"-1" }}</span>{% endif %}
         {% if ejercicio.diferencia_peso > 0 %}
           <span class="peso-ultima-vez__cue">+{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
+        {% elif ejercicio.diferencia_peso < 0 and sn == 1 %}
+          {# 27-oct-2026 (nota 3): 75 × 16 arriba y 70 kg abajo, sin decir por qué. #}
+          <span class="peso-ultima-vez__cue">{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
+          {% if ejercicio.progresion_motivo %}<span class="peso-ultima-vez__motivo" style="flex-basis:100%;font-size:10px;color:#b8c4be;line-height:1.35;">{{ ejercicio.progresion_motivo }}</span>{% endif %}
         {% elif sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           {# 23-oct-2026: solo en la S1; desde la S2 manda la propuesta entre series. #}
           <span class="peso-ultima-vez__cue">Hoy a por {{ ejercicio.reps_objetivo }} reps</span>
@@ -3469,7 +3474,7 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
     const tiempoFin=document.getElementById('pd-tiempo-'+fid);
     if(tiempoFin){tiempoFin.textContent='✓';tiempoFin.classList.remove('urgente');}
     const deFin=document.getElementById('pd-de-'+fid);
-    if(deFin)deFin.textContent='ÚLTIMA SERIE HECHA';
+    if(deFin)deFin.textContent='HECHO';  // 27-oct-2026 (nota 6): el texto largo se salía del círculo
     const ringFin=document.getElementById('ring-'+fid);
     if(ringFin){ringFin.style.strokeDashoffset='0';ringFin.style.stroke='#4ade80';}
     const overlayFin=document.getElementById('pd-urgente-overlay-'+fid);
@@ -3978,6 +3983,12 @@ document.getElementById('btn-ir-al-siguiente').addEventListener('click',()=>{
   const delta=saltoPendiente;
   saltoPendiente=null;
   modalSeriesPendientes.close();
+  // 27-oct-2026 (nota 13): al aplazar, directo al siguiente que queda por hacer,
+  // sin pasar por los que ya están hechos.
+  if(delta>0){
+    const idx=siguientePendiente();
+    if(idx>=0){irEjercicio(idx);return;}
+  }
   if(delta)navEjercicio(delta,true);
 });
 modalSeriesPendientes.addEventListener('click',event=>{
@@ -3996,10 +4007,12 @@ function abrirSwapMaquina(formId, nombre, grupo) {
   lista.innerHTML = '<div style="text-align:center;color:rgba(255,255,255,0.4);font-size:12px;padding:16px;">Buscando alternativas…</div>';
   document.getElementById('modal-swap-overlay').classList.add('active');
 
+  // 27-oct-2026 (nota 16): sin los ejercicios que ya están en la sesión de hoy.
+  const enSesion = Array.from(document.querySelectorAll('.cyber-ejercicio-nombre')).map(h => (h.textContent || '').trim());
   fetch(`{% url 'entrenos:api_alternativas_maquina' cliente.id %}`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-    body: JSON.stringify({nombre: nombre, grupo_muscular: grupo})
+    body: JSON.stringify({nombre: nombre, grupo_muscular: grupo, excluir: enSesion})
   })
   .then(r => r.json())
   .then(data => {
@@ -4008,9 +4021,9 @@ function abrirSwapMaquina(formId, nombre, grupo) {
       return;
     }
     lista.innerHTML = data.alternativas.map(alt => `
-      <div class="swap-alt-item" onclick="confirmarSwap('${alt.nombre.replace(/'/g,"\\'")}', ${alt.peso_historico_kg || 'null'})">
+      <div class="swap-alt-item" onclick='confirmarSwap(${JSON.stringify(alt.nombre)}, ${alt.peso_historico_kg || "null"}, ${JSON.stringify(alt.ultima || "")}, ${alt.reps || "null"})'>
         <span class="swap-alt-name">${alt.nombre}</span>
-        <span class="swap-alt-peso">${alt.peso_historico_kg ? alt.peso_historico_kg + ' kg' : 'Sin historial'}</span>
+        <span class="swap-alt-peso">${alt.peso_historico_kg ? fmtKg(alt.peso_historico_kg) + ' kg' : 'Sin historial'}</span>
       </div>
     `).join('');
   })
@@ -4019,24 +4032,43 @@ function abrirSwapMaquina(formId, nombre, grupo) {
   });
 }
 
-function confirmarSwap(nuevoNombre, pesoHistorico) {
+function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico) {
   if (!_swapFormId || !_swapNombreOriginal) return;
+  const fid = _swapFormId;
 
-  // Actualizar nombre visible en el card
-  const card = document.getElementById('card-' + _swapFormId);
+  // Actualizar nombre visible en el card (27-oct-2026, nota 18: tal cual, no en
+  // mayúsculas; el resumen lo mostraba como otro ejercicio).
+  const card = document.getElementById('card-' + fid);
   if (card) {
     const h2 = card.querySelector('.cyber-ejercicio-nombre');
-    if (h2) h2.textContent = nuevoNombre.toUpperCase();
-    const hidNombre = card.querySelector(`input[name="${_swapFormId}_nombre"]`);
+    if (h2) h2.textContent = nuevoNombre;
+    const hidNombre = card.querySelector(`input[name="${fid}_nombre"]`);
     if (hidNombre) hidNombre.value = nuevoNombre;
   }
 
-  // Si hay peso histórico, actualizar el input de peso de la primera serie
-  if (pesoHistorico) {
-    const pesoInput = document.getElementById(`peso-val-${_swapFormId}-0`);
-    if (pesoInput) pesoInput.textContent = pesoHistorico;
-    const hidPeso = document.getElementById(`hid-peso-${_swapFormId}-0`);
-    if (hidPeso) hidPeso.value = pesoHistorico;
+  // 27-oct-2026 (nota 15): el peso y la "última vez" del ejercicio nuevo en todas
+  // las series que faltan. Antes se escribía en un campo que no existe y se
+  // quedaban los 60 kg del rumano.
+  const total = parseInt(card?.dataset.totalSets || '0', 10) || 0;
+  const hechas = (STATE.seriesCompletadas[fid] || []).length;
+  for (let sn = hechas + 1; sn <= total; sn++) {
+    const inp = document.getElementById('peso-' + fid + '-' + sn);
+    if (inp) {
+      inp.value = pesoHistorico ? String(pesoHistorico) : '';
+      inp.dataset.planWeight = pesoHistorico ? String(pesoHistorico) : '';
+      if (pesoHistorico) calcularDiscosInline(fid, sn, pesoHistorico);
+    }
+    if (repsHistorico) {
+      const rh = document.getElementById('reps-hid-' + fid + '-' + sn);
+      const rd = document.getElementById('reps-disp-' + fid + '-' + sn);
+      if (rh) rh.value = repsHistorico;
+      if (rd) rd.textContent = repsHistorico;
+    }
+    const reg = document.getElementById('reg-' + fid + '-' + sn);
+    reg?.querySelectorAll('.peso-ultima-vez').forEach(box => {
+      box.innerHTML = '<span class="peso-ultima-vez__label">Sustituye a ' + _swapNombreOriginal + '</span>'
+        + '<span class="peso-ultima-vez__value">' + (ultimaTexto ? 'Última vez ' + ultimaTexto : 'Sin historial: elige el peso') + '</span>';
+    });
   }
 
   // Persistir en sesión via api_save_hot_swap

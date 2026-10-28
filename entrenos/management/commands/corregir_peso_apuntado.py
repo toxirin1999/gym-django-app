@@ -21,6 +21,7 @@ class Command(BaseCommand):
         parser.add_argument('--ejercicio', required=True)
         parser.add_argument('--de', required=True, type=Decimal)
         parser.add_argument('--a', required=True, type=Decimal)
+        parser.add_argument('--fecha', default=None, help='AAAA-MM-DD: solo ese día (27-oct-2026)')
         parser.add_argument('--aplicar', action='store_true')
 
     def handle(self, *args, **opts):
@@ -34,14 +35,24 @@ class Command(BaseCommand):
         if de == a or a <= 0:
             raise CommandError('El peso nuevo tiene que ser distinto y mayor que 0.')
 
+        filtro = {}
+        if opts.get('fecha'):
+            from datetime import date
+            try:
+                filtro = {'entreno__fecha': date.fromisoformat(opts['fecha'])}
+            except ValueError:
+                raise CommandError('La fecha va como AAAA-MM-DD.')
         series = list(
-            SerieRealizada.objects.filter(entreno__cliente=cliente, ejercicio__nombre__iexact=nombre, peso_kg=de)
+            SerieRealizada.objects.filter(entreno__cliente=cliente, ejercicio__nombre__iexact=nombre, peso_kg=de, **filtro)
             .select_related('entreno').order_by('entreno__fecha', 'serie_numero')
         )
         resumenes = list(EjercicioRealizado.objects.filter(
-            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, peso_kg=float(de),
+            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, peso_kg=float(de), **filtro,
         ).select_related('entreno'))
-        logs = list(GymDecisionLog.objects.filter(cliente=cliente, ejercicio__iexact=nombre, peso_anterior=float(de)))
+        logs = list(GymDecisionLog.objects.filter(
+            cliente=cliente, ejercicio__iexact=nombre, peso_anterior=float(de),
+            **({'entreno_origen__fecha': filtro['entreno__fecha']} if filtro else {}),
+        ))
 
         if not (series or resumenes or logs):
             self.stdout.write(f'No hay nada apuntado con {de} kg en «{nombre}».')
