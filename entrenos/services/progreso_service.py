@@ -32,7 +32,7 @@ def calcular_sugerencia_tope(datos_anterior):
     return False, None
 
 
-MAX_REPS_TOPE = 25
+MAX_REPS_TOPE = 20  # 28-oct-2026: 25 → 20; abducción a por 24 en un rango 12-15 ya no aportaba
 
 
 def reps_tope_con_margen(cliente, nombre, fecha, reps_sugeridas):

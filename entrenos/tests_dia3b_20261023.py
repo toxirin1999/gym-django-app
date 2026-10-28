@@ -75,11 +75,13 @@ class TopeConMargen(SimpleTestCase):
 
     def test_abduccion_21_a_rpe_6_con_objetivo_9(self):
         reps, aviso = self._reps([_s(60, 21, 8), _s(60, 21, 6), _s(60, 21, 6)], 9, 22)
-        self.assertEqual((reps, aviso), (24, None))
+        # 28-oct-2026: tope de reps 20 → se queda en 20 y propone endurecer.
+        self.assertEqual(reps, 20)
+        self.assertIn('baja en 3 s', aviso)
 
     def test_mas_de_25_endurece_la_serie(self):
         reps, aviso = self._reps([_s(60, 25, 6)], 9, 26)
-        self.assertEqual(reps, 25)
+        self.assertEqual(reps, 20)
         self.assertIn('baja en 3 s', aviso)
 
 

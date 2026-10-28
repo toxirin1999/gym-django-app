@@ -206,7 +206,17 @@ def kg(valor):
 
 
 def reps_txt(valor):
-    return kg(valor)
+    # 28-oct-2026: "17,5 reps" no existe; con dos series de 17 y 18, "17-18".
+    import math
+    try:
+        v = float(valor)
+    except (TypeError, ValueError):
+        return kg(valor)
+    if abs(v - round(v)) < 1e-6:
+        return str(int(round(v)))
+    if abs(v - math.floor(v) - 0.5) < 1e-6:
+        return f'{math.floor(v)}-{math.ceil(v)}'
+    return str(int(round(v)))
 
 
 def peso_para_reps(peso, reps, rpe, reps_objetivo, rpe_objetivo):

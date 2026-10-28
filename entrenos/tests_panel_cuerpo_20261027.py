@@ -41,7 +41,7 @@ class PanelCuerpo(Base):
         self.base(dias=10, fc=52)
         self.reloj(0, hrv=50, fc=58, sueno=7.5)
         p = pulso(self.cliente, HOY)
-        self.assertIn(p['media'], (52, 53))  # la media de la gráfica incluye hoy
+        self.assertEqual(p['media'], 52)  # 28-oct: sin la mañana de hoy
         self.assertTrue(p['puntos'][-1]['bajo'])
         self.assertFalse(p['puntos'][0]['bajo'])
 

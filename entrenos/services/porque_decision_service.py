@@ -84,8 +84,9 @@ def construir_porque(decision_gym):
         return recuperacion['frase']
     if contexto.get('acwr_dudoso') and acwr:
         return 'Una actividad reciente parece un error en los datos: no la tengo en cuenta para decidir.'
-    if decision_gym.get('estado') in ('entrenar', 'version_reducida') and acwr:
-        if 0.8 <= float(acwr) <= 1.3:
-            return _frase_acwr(acwr) + ' Carga estable: hay margen.'
-        return _frase_acwr(acwr)
+    carga = contexto.get('carga_ratio') or acwr  # 28-oct-2026: la misma cifra que el panel
+    if decision_gym.get('estado') in ('entrenar', 'version_reducida') and carga:
+        if 0.8 <= float(carga) <= 1.3:
+            return _frase_acwr(carga) + ' Carga estable: hay margen.'
+        return _frase_acwr(carga)
     return None

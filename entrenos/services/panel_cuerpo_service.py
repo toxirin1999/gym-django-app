@@ -138,7 +138,8 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo):
         cliente=cliente, fecha__gte=desde, fecha__lte=hoy, **{f'{campo}__isnull': False},
     ).values_list('fecha', campo):
         valores[fecha] = float(v)
-    media = _medias_base(cliente, hoy + timedelta(days=1)).get(campo)
+    # 28-oct-2026 (nota 9): la misma media que usan los días (sin la mañana de hoy).
+    media = _medias_base(cliente, hoy).get(campo)
     if not valores:
         return {'puntos': [], 'media': None}
     # El eje va del valor más bajo al más alto (con la franja normal dentro), no desde cero:
@@ -217,7 +218,7 @@ def tres_preguntas(estado):
                         porque=f'{malos} de los últimos {dias5} días por debajo de lo normal en ti.')
     elif conociendo:
         descanso.update(respuesta='Aún no lo sé', tono='neutro',
-                        porque=f'Me faltan días de reloj ({dias14} de 5).')
+                        porque=f'Me faltan mañanas comparadas con tu media ({dias14} de 5).')
     else:
         descanso.update(respuesta='No', tono='bien',
                         porque=f'{malos} de los últimos {dias5} días por debajo de lo normal (salta con 3).')

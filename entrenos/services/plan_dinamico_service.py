@@ -354,10 +354,17 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 ej['progresion_aplicada'] = True
                 ej['progresion_accion'] = 'subir_reps'
                 # 18-oct-2026: el objetivo, no el texto interno del log.
-                ej['progresion_motivo'] = (
-                    f'Una rep más: hoy a por {reps_sugeridas} reps (la última vez {log.reps_anteriores}).'
-                    if log.reps_anteriores else f'Hoy a por {reps_sugeridas} reps.'
-                )
+                # 28-oct-2026: con su unidad; el Farmer decía "Hoy a por 1 reps"
+                # (el objetivo en metros ya lo da el tope).
+                _tipo = ej.get('tipo_progresion') or ''
+                _unidad = 'm' if _tipo == 'progresion_distancia' else ('s' if _tipo == 'progresion_tiempo' else 'reps')
+                if _unidad != 'reps' and (reps_sugeridas or 0) < 5:
+                    ej.pop('progresion_motivo', None)
+                else:
+                    ej['progresion_motivo'] = (
+                        (f'Una rep más: hoy a por {reps_sugeridas} reps (la última vez {log.reps_anteriores}).' if _unidad == 'reps' else f'Hoy a por {reps_sugeridas} {_unidad} (la última vez {log.reps_anteriores}).')
+                        if log.reps_anteriores else f'Hoy a por {reps_sugeridas} {_unidad}.'
+                    )
                 cambios.append({
                     'tipo': 'progresion_aplicada',
                     'ejercicio_original': nombre,
@@ -524,6 +531,26 @@ def _rehacer_peso_variante(cliente, ej, hoy):
             )
 
 
+def _protegido_reps(ej):
+    return bool(ej.get('_deload_aplicado') or ej.get('deload') or ej.get('molestia_reciente_aplicada'))
+
+
+def _objetivo_sin_carga(cliente, ej, hoy):
+    """Sissy 9, 9 y 9 en 15-20: "Hoy a por 10 (la última vez 9, 9 y 9)"."""
+    from entrenos.services.ultima_sesion_service import VENTANA_DIAS, rango_reps, ultima_sesion
+    rango = rango_reps(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+    lectura = ultima_sesion(cliente, ej.get('nombre') or '', hoy)
+    if not rango or not lectura or (hoy - lectura['fecha']).days > VENTANA_DIAS:
+        return
+    reps = [s['reps'] for s in lectura['series'] if s['reps'] > 0]
+    if not reps:
+        return
+    objetivo = min(rango[1], max(reps) + 1)
+    lista = ', '.join(str(r) for r in reps[:-1]) + (f' y {reps[-1]}' if len(reps) > 1 else str(reps[-1]))
+    ej['reps_objetivo_hoy'] = objetivo
+    ej['progresion_motivo'] = f'Hoy a por {objetivo} (la última vez {lista}).'
+
+
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     """
     Modifica la lista de ejercicios del plan basándose en señales del sistema.
@@ -600,6 +627,13 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 or ej.get('progresion_bloqueada') or ej.get('postura_local') == 'sostener'
                 or str((ej.get('motivo_peso') or {}).get('tipo', '')) == 'recalculado_descarga'
             )
+            # 28-oct-2026: sin carga (sissy) también hay objetivo: tu mejor serie + 1.
+            if (ej.get('tipo_progresion') == 'progresion_reps' and not ej.get('progresion_motivo')
+                    and not _protegido_reps(ej)):
+                try:
+                    _objetivo_sin_carga(cliente, ej, hoy)
+                except Exception:
+                    logger.exception('[plan_dinamico] objetivo sin carga falló')
             if not _protegido:
                 from entrenos.services.cerebro_carga_service import aplicar_decision_carga, decidir_carga
                 try:

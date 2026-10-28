@@ -175,7 +175,11 @@ def estado_carga(cliente, hoy):
 
     parada = parada_en(cliente, hoy)
     ultimos5 = [d['nivel'] for d in cuerpo[:DESCANSA_VENTANA] if d['nivel'] not in (None, 'parada')]
-    ultimos14 = [d['nivel'] for d in cuerpo if d['nivel'] not in (None, 'parada')]
+    # 28-oct-2026: solo cuentan los días comparados con tu media. Con 5 mañanas
+    # "sin media aún" el panel ya decía "Vas bien… tu cuerpo respondiendo como
+    # siempre", sin haber comparado nada.
+    ultimos14 = [d['nivel'] for d in cuerpo if d['nivel'] not in (None, 'parada', 'sin_referencia')]
+    con_reloj = sum(1 for d in cuerpo if d['nivel'] not in (None, 'parada'))
     malos5 = sum(1 for n in ultimos5 if n in NIVELES_MALOS)
     buenos14 = sum(1 for n in ultimos14 if n in NIVELES_BUENOS)
     ratio = carga['ratio']
@@ -190,9 +194,13 @@ def estado_carga(cliente, hoy):
             f'recuperación ni como falta de constancia. Cuando vuelvas, empezamos suave.')}
 
     if len(ultimos14) < MIN_DIAS_RELOJ:
-        frase = (f'Te estoy conociendo: llevo {len(ultimos14)} '
-                 f'{"día" if len(ultimos14) == 1 else "días"} con datos del reloj y necesito '
-                 f'{MIN_DIAS_RELOJ} para saber qué es lo normal en ti.')
+        if con_reloj >= MIN_DIAS_RELOJ:
+            frase = (f'Te estoy conociendo: ya tengo {con_reloj} mañanas del reloj y empiezo a comparar '
+                     f'cada día con lo normal en ti; en unos días podré decirte cómo respondes.')
+        else:
+            frase = (f'Te estoy conociendo: llevo {con_reloj} '
+                     f'{"día" if con_reloj == 1 else "días"} con datos del reloj y necesito '
+                     f'{MIN_DIAS_RELOJ} para saber qué es lo normal en ti.')
         if ratio is not None:
             frase += f' Tu carga de esta semana va {_texto_ratio(ratio)}.'
         return {**base, 'respuesta': 'conociendote', 'frase': frase}

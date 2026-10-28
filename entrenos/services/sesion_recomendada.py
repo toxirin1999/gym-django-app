@@ -558,6 +558,13 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
         ctx.update(contexto_acwr(cliente, fecha_hoy))
     except Exception:
         pass
+    # 28-oct-2026: la cifra que se enseña es la del panel del cuerpo (7 días
+    # frente a las 4 semanas anteriores). Antes Ahora decía +31 % y +18 % a la vez.
+    try:
+        from entrenos.services.estado_carga_service import lectura_carga
+        ctx['carga_ratio'] = lectura_carga(cliente, fecha_hoy)['ratio']
+    except Exception:
+        pass
 
     return ctx
 
@@ -658,6 +665,11 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
         mensaje = contexto['recuperacion']['frase']
     elif causa == 'futbol_reciente' and (contexto.get('futbol_esfuerzo') or {}).get('frase'):
         mensaje = contexto['futbol_esfuerzo']['frase']
+    # 28-oct-2026: si la cola ya cambió el día por el fútbol, esa frase explica
+    # el cambio y lo de "sin apretar"; no se pisa con la genérica.
+    motivo_cola = (decision.get('cola') or {}).get('motivo')
+    if motivo_cola and causa in ('futbol_reciente', 'hyrox_reciente'):
+        mensaje = motivo_cola
 
     decision.update({
         'estado': estado,
@@ -1530,13 +1542,28 @@ def _siguiente_de_cola(cliente, fecha_hoy):
                 (c for c in _futuras_de_la_semana(cliente, fecha_hoy)
                  if not (_grupos_canon(c['entrenamiento']) & grupos_ayer)), None,
             )
+        # 28-oct-2026: si todos repiten algo (fútbol ayer y los tres días que
+        # quedan llevan pierna), el que menos repite: el Día 4 (solo isquios)
+        # antes que el Día 3 (cuádriceps, gemelos y glúteo).
+        choque_menor = False
+        if alternativa is None:
+            todas = candidatas[1:] + _futuras_de_la_semana(cliente, fecha_hoy)
+            n_elegida = len(_grupos_canon(elegida['entrenamiento']) & grupos_ayer)
+            mejor = min(todas, key=lambda c: len(_grupos_canon(c['entrenamiento']) & grupos_ayer), default=None)
+            if mejor is not None and len(_grupos_canon(mejor['entrenamiento']) & grupos_ayer) < n_elegida:
+                alternativa, choque_menor = mejor, True
         if alternativa is not None:
             antes = _etiqueta_dia(elegida['nombre']) or 'día previsto'
             ahora = _etiqueta_dia(alternativa['nombre']) or 'otro día'
-            alternativa = dict(alternativa, motivo=(
-                f'Hoy el {ahora} en vez del {antes}: ayer hiciste {texto_ayer} y el {antes} '
-                f'lo repite. El {antes} sigue en la semana.'
-            ))
+            if choque_menor:
+                comunes = sorted(_grupos_canon(alternativa['entrenamiento']) & grupos_ayer)
+                motivo = (f'Hoy el {ahora} en vez del {antes}: ayer hiciste {texto_ayer} y el {antes} '
+                          f'lo repite más; el {ahora} solo repite {" y ".join(comunes)}, así que esa parte, '
+                          f'sin apretar. El {antes} sigue en la semana.')
+            else:
+                motivo = (f'Hoy el {ahora} en vez del {antes}: ayer hiciste {texto_ayer} y el {antes} '
+                          f'lo repite. El {antes} sigue en la semana.')
+            alternativa = dict(alternativa, motivo=motivo)
             elegida = alternativa
     if elegida['fecha'] == fecha_hoy and elegida['sp'] is None:
         return None  # lo que toca es la sesión de hoy: flujo normal

@@ -99,6 +99,28 @@ def contexto_cansancio(cliente, entreno, nombre):
 
 
 def decidir_carga(cliente, ej, hoy):
+    """{'peso', 'reps', 'regla', 'frase'} para un ejercicio del plan de hoy, o None.
+
+    28-oct-2026: además ``peso_antes`` (el peso real de la última vez, para el
+    tachado del briefing: salía el 32,5 del plan anual, que nunca se levantó) y
+    la fecha cuando la última vez fue hace más de dos semanas.
+    """
+    decision = _decidir_carga(cliente, ej, hoy)
+    if not decision:
+        return decision
+    from entrenos.services.ultima_sesion_service import rango_reps, ultima_sesion
+    rango = rango_reps(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+    lectura = ultima_sesion(cliente, ej.get('nombre') or '', hoy, reps_min=rango[0] if rango else None)
+    if lectura:
+        decision['peso_antes'] = float(lectura['referencia']['peso'])
+        dias = (hoy - lectura['fecha']).days
+        frase = decision.get('frase') or ''
+        if dias > 14 and frase.startswith('La última vez'):
+            decision['frase'] = f"El {lectura['fecha']:%d/%m} (hace {dias} días)" + frase[len('La última vez'):]
+    return decision
+
+
+def _decidir_carga(cliente, ej, hoy):
     """{'peso', 'reps', 'regla', 'frase'} para un ejercicio del plan de hoy, o None."""
     from analytics.planificador_helms.calculo.compatibilidad_fase import son_rangos_compatibles
     from entrenos.services.maquina_service import a_escala, salto_carga, tope_de
@@ -307,6 +329,9 @@ def aplicar_decision_carga(ej, decision):
     reps_actuales = ej.get('reps_objetivo_hoy')
     if decision['regla'] == 'tope':
         reps_actuales = ej.get('reps_sugeridas_tope') or reps_actuales
+    if decision.get('peso_antes') and ej.get('peso_kg_anterior') is not None:
+        # El tachado es el peso real de la última vez, no el del plan anual.
+        ej['peso_kg_anterior'] = decision['peso_antes']
     if abs(peso_actual - decision['peso']) < 0.01 and str(reps_actuales) == str(decision['reps']):
         # 26-oct-2026: mismos números, pero el texto venía de otra capa y podía
         # contradecirlos (prensa: "hoy a por 13 reps (la última vez 12)" cuando
@@ -323,6 +348,8 @@ def aplicar_decision_carga(ej, decision):
             ej['progresion_motivo_local'] = 'regla_unica'
             ej.pop('motivo_peso', None)
         return False
+    if decision.get('peso_antes') and abs(decision['peso_antes'] - decision['peso']) >= 0.01:
+        ej['peso_kg_anterior'] = decision['peso_antes']
     ej['peso_kg'] = decision['peso']
     if 'peso_recomendado_kg' in ej:
         ej['peso_recomendado_kg'] = decision['peso']
