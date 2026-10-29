@@ -9729,10 +9729,18 @@ def editar_actividad_libre(request, cliente_id, actividad_id):
         actividad.titulo = request.POST.get('titulo', '').strip()
         actividad.fecha = request.POST.get('fecha', actividad.fecha)
         actividad.hora_inicio = request.POST.get('hora_inicio') or None
-        actividad.duracion_minutos = request.POST.get('duracion_minutos') or None
-        actividad.distancia_metros = request.POST.get('distancia_metros') or None
-        actividad.rpe_medio = request.POST.get('rpe_medio') or None
-        actividad.calorias = request.POST.get('calorias') or None
+        # 29-oct-2026: los números llegan como texto; sin convertirlos,
+        # calcular_carga_ua multiplicaba dos cadenas y la página daba error.
+        def _num(campo, tipo=float):
+            v = (request.POST.get(campo) or '').strip().replace(',', '.')
+            try:
+                return tipo(float(v)) if v else None
+            except ValueError:
+                return getattr(actividad, campo)
+        actividad.duracion_minutos = _num('duracion_minutos', int)
+        actividad.distancia_metros = _num('distancia_metros', int)
+        actividad.rpe_medio = _num('rpe_medio')
+        actividad.calorias = _num('calorias', int)
         actividad.notas = request.POST.get('notas', '')
         actividad.carga_ua = actividad.calcular_carga_ua()
         actividad.save()
