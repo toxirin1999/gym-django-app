@@ -34,7 +34,8 @@ class PlanDinamico(BaseSesion):
         ej = {'nombre': b.nombre, 'repeticiones': '15-20', 'tipo_progresion': 'progresion_reps'}
         _objetivo_sin_carga(self.cliente, ej, timezone.localdate())
         self.assertEqual(ej['reps_objetivo_hoy'], 10)
-        self.assertEqual(ej['progresion_motivo'], 'Hoy a por 10 (la última vez 9, 9 y 9).')
+        # 30-oct-2026: después va el rango de paso (8-12)
+        self.assertTrue(ej['progresion_motivo'].startswith('Hoy a por 10 (la última vez 9, 9 y 9).'))
 
     def test_nota4_tachado_y_fecha(self):
         from entrenos.services.cerebro_carga_service import aplicar_decision_carga, decidir_carga

@@ -565,7 +565,15 @@
       <button type="button" class="energia-btn" role="radio" aria-checked="false" data-val="{{ val }}">{{ val }}</button>
       {% endwith %}{% endfor %}
     </div>
-    <p class="energia-txt" id="energia-txt">Tócala antes de empezar: ajusta la sesión.</p>
+    <p class="energia-txt" id="energia-txt">{% if aviso_energia_briefing %}Energía {{ energia_briefing }} — {{ aviso_energia_briefing }}{% elif energia_briefing %}Energía {{ energia_briefing }}.{% else %}Tócala antes de empezar: ajusta la sesión.{% endif %}</p>
+  </div>
+  {% endif %}
+
+  {% if aviso_pierna_suave %}
+  <!-- 30-oct-2026 (nota 2): la versión suave de pierna, en concreto -->
+  <div class="msg-row energia" style="margin:0 0 18px;padding:12px 14px;border-radius:12px;">
+    <div class="msg-label" style="font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;">Pierna suave</div>
+    <div style="font-size:13px;line-height:1.45;">{{ aviso_pierna_suave }}</div>
   </div>
   {% endif %}
 
@@ -697,7 +705,15 @@
 (function(){
   var etiquetas = {1:'Agotado/a',2:'Muy bajo',3:'Bajo',4:'Regular',5:'Neutral',6:'Bien',7:'Bastante bien',8:'Con energía',9:'Muy energético/a',10:'Al máximo'};
   var btn = document.querySelector('.btn-comenzar[href]');
-  var base = btn ? btn.getAttribute('href') : null;
+  var base = btn ? btn.getAttribute('href').replace(/([?&])energia=\d+&?/, '$1').replace(/[?&]$/, '') : null;
+  // 30-oct-2026 (nota 1): con energía baja la sesión cambia (RPE y reps); el
+  // briefing se recarga para enseñar el plan que vas a hacer de verdad.
+  var energiaInicial = {{ energia_briefing|default:"null" }};
+  var habitualE = parseFloat('{{ briefing.energia_media|default:""|stringformat:"s" }}'.replace(',', '.'));
+  function esBaja(v){ return !!(habitualE && v && parseInt(v, 10) <= habitualE - 1.5); }
+  if (energiaInicial) {
+    document.querySelectorAll('.energia-btn').forEach(function(o){ o.setAttribute('aria-checked', String(o.dataset.val === String(energiaInicial))); });
+  }
   document.querySelectorAll('.energia-btn').forEach(function(b){
     b.addEventListener('click', function(){
       var v = b.dataset.val;
@@ -710,6 +726,12 @@
         t.textContent += ' — por debajo de tu ' + String(habitual).replace('.', ',') + ' habitual: hoy repetimos reps y un punto menos de esfuerzo.';
       }
       if (btn && base) btn.setAttribute('href', base + (base.indexOf('?') >= 0 ? '&' : '?') + 'energia=' + v);
+      if (esBaja(v) !== esBaja(energiaInicial)) {
+        var u = new URL(window.location.href);
+        u.searchParams.set('energia', v);
+        u.hash = 'energia-briefing';
+        window.location.replace(u.toString());
+      }
     });
   });
 })();

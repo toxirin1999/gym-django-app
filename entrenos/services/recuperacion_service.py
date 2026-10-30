@@ -313,7 +313,23 @@ def comprobacion_cierre(cliente, entreno):
     version = getattr(entreno, 'gym_decision_version', None)
     snapshot = getattr(version, 'snapshot', None) or {}
     causa = snapshot.get('causa_principal')
-    if causa not in ('recuperacion_baja', 'futbol_reciente'):
+    # 30-oct-2026 (nota 22): decir lo que de verdad cambió y por qué. El 30-oct
+    # no se quitó ninguna serie por el fútbol; lo que cambió fue un punto menos
+    # de esfuerzo porque marcaste energía 5 (sueles 6,7).
+    ajustes = []
+    try:
+        from entrenos.services.criterios_entrenador_service import _num, energia_baja
+        baja = energia_baja(cliente, entreno.fecha, entreno.energia_pre_sesion)
+    except Exception:  # noqa: BLE001
+        baja = None
+    if baja:
+        ajustes.append(f'un punto menos de esfuerzo porque marcaste energía {baja[0]} '
+                       f'(sueles {_num(baja[1])})')
+    if causa == 'futbol_reciente' and entreno.modo_reducido:
+        ajustes.append('la pierna, al final y con una serie menos, porque venías del fútbol')
+    elif causa == 'recuperacion_baja':
+        ajustes.append('la sesión más suave porque llegabas cansado')
+    if not ajustes:
         return None
     rpe_hoy = EjercicioRealizado.objects.filter(
         entreno=entreno, completado=True, rpe__isnull=False,
@@ -324,12 +340,12 @@ def comprobacion_cierre(cliente, entreno):
     ).aggregate(m=Avg('rpe'))['m']
     if rpe_hoy is None or rpe_antes is None:
         return None
-    motivo = 'llegabas cansado' if causa == 'recuperacion_baja' else 'venías del fútbol'
+    que = ' y '.join(ajustes)
     hoy_txt = f'{rpe_hoy:.1f}'.replace('.', ',')
     antes_txt = f'{rpe_antes:.1f}'.replace('.', ',')
     if rpe_hoy >= rpe_antes + 0.5:
-        return (f'Hoy te bajé la sesión porque {motivo}, y aun así te costó más de lo normal '
+        return (f'Hoy ajusté la sesión: {que}. Aun así te costó más de lo normal '
                 f'(esfuerzo {hoy_txt} sobre 10; sueles estar en {antes_txt}). Bien hecho no forzar: '
                 f'mañana descansa bien.')
-    return (f'Hoy te bajé la sesión porque {motivo}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10, '
-            f'como tus {antes_txt} de siempre): la rebaja fue justa y no pierdes nada.')
+    return (f'Hoy ajusté la sesión: {que}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10, '
+            f'como tus {antes_txt} de siempre): el ajuste fue justo y no pierdes nada.')

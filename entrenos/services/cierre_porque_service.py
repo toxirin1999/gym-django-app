@@ -163,7 +163,9 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
         return _porque_distancia(log.entreno_origen, log.ejercicio, rpe_txt)
 
     if motivo.startswith('Tope de peso alcanzado'):
-        return f'Peso fijo de {_kg(peso_hoy)} kg: progreso por metros (+1 m).' if peso_hoy else None
+        from entrenos.services.progreso_service import SALTO_METROS_TOPE
+        return (f'Peso fijo de {_kg(peso_hoy)} kg: progreso por metros (+{SALTO_METROS_TOPE} m).'
+                if peso_hoy else None)
 
     if motivo.startswith('Tope de máquina alcanzado'):
         if peso_hoy:

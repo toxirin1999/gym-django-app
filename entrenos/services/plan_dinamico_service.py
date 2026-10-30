@@ -538,7 +538,7 @@ def _protegido_reps(ej):
 def _objetivo_sin_carga(cliente, ej, hoy):
     """Sissy 9, 9 y 9 en 15-20: "Hoy a por 10 (la última vez 9, 9 y 9)"."""
     from entrenos.services.ultima_sesion_service import VENTANA_DIAS, rango_reps, ultima_sesion
-    rango = rango_reps(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+    rango = rango_reps(ej.get('repeticiones_plan_original') or ej.get('repeticiones_plan') or ej.get('repeticiones'))
     lectura = ultima_sesion(cliente, ej.get('nombre') or '', hoy)
     if not rango or not lectura or (hoy - lectura['fecha']).days > VENTANA_DIAS:
         return
@@ -549,6 +549,31 @@ def _objetivo_sin_carga(cliente, ej, hoy):
     lista = ', '.join(str(r) for r in reps[:-1]) + (f' y {reps[-1]}' if len(reps) > 1 else str(reps[-1]))
     ej['reps_objetivo_hoy'] = objetivo
     ej['progresion_motivo'] = f'Hoy a por {objetivo} (la última vez {lista}).'
+    # 30-oct-2026 (nota 13): con el rango aún lejos (sissy 10 en 15-20), un
+    # rango de paso a su alcance: 8-12 hasta hacer 12 en todas; luego 12-15.
+    paso = rango_de_paso(min(reps), rango)
+    if paso:
+        ej.setdefault('repeticiones_plan_original', ej.get('repeticiones_plan') or ej.get('repeticiones'))
+        ej['repeticiones'] = ej['repeticiones_plan'] = f'{paso[0]}-{paso[1]}'
+        ej['reps_min'], ej['reps_max'] = paso
+        ej['progresion_motivo'] += (f' Rango de paso {paso[0]}-{paso[1]} hasta hacer {paso[1]} en todas; '
+                                    f'el de la rutina es {rango[0]}-{rango[1]}.')
+
+
+RANGOS_DE_PASO = ((8, 12), (12, 15), (15, 20))
+
+
+def rango_de_paso(peor_serie, rango):
+    """(8, 12) si tu peor serie aún no llega al mínimo de la rutina; si no, None.
+
+    Se pasa al siguiente cuando haces el máximo del de paso en todas las series.
+    """
+    if peor_serie >= rango[0]:
+        return None
+    for bajo, alto in RANGOS_DE_PASO:
+        if peor_serie < alto and alto <= rango[1] and bajo < rango[0]:
+            return bajo, alto
+    return None
 
 
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):

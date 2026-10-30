@@ -303,8 +303,20 @@ def _decidir_carga(cliente, ej, hoy):
     if mismo and ref['en_rango'] and reps < maximo:
         al_peso = [x for x in lectura['series'] if abs(x['peso'] - peso_ref) < 1e-6 and x['reps'] > 0]
         rpes = [x['rpe'] for x in al_peso]
+        # 30-oct-2026 (nota 20): el margen se mide contra lo que se pidió ese
+        # día (con energía baja, un punto menos), no contra el plan de hoy.
+        rpe_dia = rpe_obj
+        try:
+            from entrenos.services.criterios_entrenador_service import rpe_pedido
+            from entrenos.services.decision_log_service import _rpe_objetivo_snapshot, normalizar_ejercicio
+            rpe_dia = rpe_pedido(
+                cliente, lectura['entreno'],
+                _rpe_objetivo_snapshot(lectura['entreno'], normalizar_ejercicio(nombre)) or rpe_obj,
+            )
+        except Exception:  # noqa: BLE001
+            pass
         if al_peso and None not in rpes and all(x['reps'] >= minimo for x in al_peso) \
-                and max(rpes) <= rpe_obj - 1:
+                and max(rpes) <= float(rpe_dia) - 1:
             # 25-oct-2026: con margen de sobra (fondos 75 × 15 y 16 a RPE 6 con
             # objetivo 7), dos reps más en vez de una.
             reps = min(maximo, reps + 1)

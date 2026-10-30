@@ -1403,7 +1403,11 @@ body{background:
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">⚡</span>
   <div>
     <div style="font-size:11px;font-weight:700;color:rgba(255,200,100,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Versión esencial activa</div>
+    {% if aviso_pierna_suave %}
+    <div style="font-size:12px;color:var(--td);opacity:0.85;line-height:1.5;">{{ aviso_pierna_suave }}</div>
+    {% else %}
     <div style="font-size:12px;color:var(--td);opacity:0.75;line-height:1.5;">Prioriza los ejercicios <strong>principales</strong>. Si el tiempo o la energía no alcanzan, los accesorios pueden quedar fuera hoy.</div>
+    {% endif %}
   </div>
 </div>
 {% endif %}
@@ -1603,9 +1607,6 @@ body{background:
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
         {% endif %}
-        {% if ejercicio.aviso_tope_tempo %}
-        <span class="exname-chip" style="background:rgba(245,158,11,0.12);color:#f5b544;border:1px solid rgba(245,158,11,0.3);white-space:normal;">⏱ {{ ejercicio.aviso_tope_tempo }}</span>
-        {% endif %}
         {% if ejercicio.estancado %}
         <span class="exname-chip" style="background:rgba(241,196,15,0.15);color:#F1C40F;border:1px solid rgba(241,196,15,0.3);" title="Sin progresión en 3 sesiones — prueba una variante o cambia el rango de reps">⚡ Estancado</span>
         {% endif %}
@@ -1624,6 +1625,10 @@ body{background:
         </select>{% else %}<input type="hidden" name="{{ ejercicio.form_id }}_tipo_carga" id="tipo-carga-{{ ejercicio.form_id }}" value="total">{% endif %}
       </div>
     </div>
+    {# 30-oct-2026 (nota 19): el aviso del techo va debajo de la tarjeta; dentro tapaba el nombre. #}
+    {% if ejercicio.aviso_tope_tempo %}
+    <div class="ex-aviso-tope" style="margin:8px 0 4px;padding:8px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:10px;color:#f5b544;font-size:12px;line-height:1.4;">⏱ {{ ejercicio.aviso_tope_tempo }}</div>
+    {% endif %}
 
     {# Phase 10A / 28.2 — Progression brake notice (contextual + lesión) #}
     {% if ejercicio.progresion_bloqueada and ejercicio.peso_kg_propuesto %}
@@ -3150,6 +3155,10 @@ function mostrarMensajeEjercicio(card,fid){
   card.appendChild(div);
 }
 
+// 30-oct-2026 (nota 15): con energía baja, quedarse corto es cansancio del día.
+const ENERGIA_BAJA_HOY={% if aviso_energia %}true{% else %}false{% endif %};
+const TECHO_REPS_TOPE={{ max_reps_tope|default:20 }};
+
 function resumenDeEjercicio(fid){
   const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
   // Alto respecto al objetivo de este ejercicio (RPE 9 en un ejercicio que pide 9 es lo pedido).
@@ -3170,6 +3179,20 @@ function resumenDeEjercicio(fid){
       return {e:'✓',t:'Ejercicio en objetivo',s:`${llegan}/${scs.length} series en objetivo. La próxima vez, a por ${objTD+1}${uni}.`};
     }
     return {e:'!',t:'Objetivo a medias',s:`${llegan}/${scs.length} series llegaron a ${objTD}${uni}. La próxima vez, otra vez a por ${objTD}${uni}.`};
+  }
+  // 30-oct-2026 (nota 12): sin carga (sissy) se juzga contra su objetivo de hoy
+  // y la última vez, no contra un rango que aún queda lejos.
+  if(!unidadTD && scs.length && scs.every(s=>!(s.peso>0))){
+    const objR=parseInt(regUno?.dataset.repsObj||'0',10)||0;
+    const mejorR=Math.max(...scs.map(s=>s.reps||0));
+    const peorR=Math.min(...scs.map(s=>s.reps||0));
+    if(objR>0 && peorR>=objR){
+      return {e:'✓',t:'Ejercicio en objetivo',s:`${scs.map(s=>s.reps).join(', ')}: llegaste a ${objR} en todas. La próxima vez, a por ${mejorR+1}.`};
+    }
+    if(objR>0){
+      const llegan=scs.filter(s=>(s.reps||0)>=objR).length;
+      return {e:'!',t:'Objetivo a medias',s:`${llegan}/${scs.length} series llegaron a ${objR}. La próxima vez, otra vez a por ${objR}.`};
+    }
   }
   if(!resultados.length){
     const lectura=rpeAlto
@@ -3204,6 +3227,10 @@ function resumenDeEjercicio(fid){
            && Math.abs((p2.peso||0)-(p1.peso||0))<1e-6 && (p1.reps-p2.reps)>=5){
           return {e:'!',t:'Se hundió por cansancio',s:`La primera serie entró (${fmtKg(p1.peso)} kg × ${p1.reps}) y luego cayó a ${p2.reps}: es cansancio de hoy, no el peso. La próxima vez repetimos ${fmtKg(p1.peso)} kg.`};
         }
+        if(ENERGIA_BAJA_HOY){
+          const pesoMax=Math.max(...scs.map(s=>s.peso||0));
+          return {e:'!',t:'Por debajo, con energía baja',s:lectura+' Hoy marcaste energía baja: es cansancio del día, no el peso. La próxima vez repetimos'+(pesoMax>0?` ${fmtKg(pesoMax)} kg`:' el peso')+'.'};
+        }
         return {e:'!',t:'Alguna serie por debajo del rango',s:lectura+' La próxima vez ajusto el peso para que entren todas.'};
       }
       return {e:'!',t:'Series fuera del rango',s:lectura+' La próxima vez ajusto el peso para que entren todas.'};
@@ -3226,7 +3253,19 @@ function resumenDeEjercicio(fid){
   // 26-oct-2026: con margen en todas (RPE un punto o más por debajo), dos reps
   // más, como decide el cierre.
   const conMargen=scs.every(s=>Number.isFinite(s.rpe)&&s.rpe>0&&s.rpe<=rpeObjEj-1);
-  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por ${conMargen?'dos reps':'una rep'} más.`};
+  // 30-oct-2026 (notas 10 y 18): el número concreto y nunca por encima del
+  // máximo del rango (curl araña 18 y 19 en 15-20: "a por 20", no "dos más").
+  const cardEj=document.getElementById('card-'+fid);
+  const repsMaxEj=parseInt(cardEj?.dataset.repsMax||regUno?.dataset.repsMax||'0',10)||0;
+  const mejorEj=Math.max(...scs.map(s=>s.reps||0));
+  if(cardEj?.dataset.topeKg && mejorEj>=TECHO_REPS_TOPE){
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en el techo de ${TECHO_REPS_TOPE} reps con el máximo de la máquina. La próxima vez, igual y con la bajada lenta, hasta que salga más fácil.`};
+  }
+  let objSig=mejorEj+(conMargen?2:1);
+  if(repsMaxEj>0 && objSig>=repsMaxEj){
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por ${repsMaxEj} en todas; con ${repsMaxEj} en todas, subo el peso.`};
+  }
+  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por ${objSig}.`};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────
@@ -3408,10 +3447,12 @@ function actualizarORM(fid,sn){
   if(!ormEl||!module)return;
   const peso=parseFloat(pesoInp?.value)||0;
   const reps=parseInt(repsInp?.value)||1;
-  if(peso<=0||reps>=15){ormEl.textContent='';module.hidden=true;return;}
+  // 30-oct-2026 (nota 16): por encima de 10 reps (gemelos a 13) la cifra no
+  // dice nada; y sin siglas: "fuerza máxima estimada".
+  if(peso<=0||reps>10){ormEl.textContent='';module.hidden=true;return;}
   const factor=1.0278-0.0278*Math.max(1,reps);
   const orm=factor>0?Math.round(peso/factor):Math.round(peso);
-  ormEl.textContent='1RM estimado: '+orm+' kg';
+  ormEl.textContent='Fuerza máxima estimada: '+orm+' kg (una rep)';
   module.hidden=false;
 }
 

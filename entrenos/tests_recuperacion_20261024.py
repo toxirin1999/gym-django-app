@@ -399,11 +399,13 @@ class ComprobacionCierre(ConCliente):
         e = self._entreno(0, 'recuperacion_baja', 8)
         frase = rec.comprobacion_cierre(self.cliente, e)
         self.assertIn('porque llegabas cansado', frase)
-        self.assertIn('la rebaja fue justa', frase)
+        self.assertIn('el ajuste fue justo', frase)  # 30-oct-2026
 
     def test_aun_asi_costo_mas(self):
         self._entreno(5, None, 7)
         e = self._entreno(0, 'futbol_reciente', 9)
+        e.modo_reducido = True  # 30-oct-2026: solo si la pierna se rebajó de verdad
+        e.save(update_fields=['modo_reducido'])
         self.assertIn('te costó más de lo normal', rec.comprobacion_cierre(self.cliente, e))
 
     def test_sesion_normal_no_dice_nada(self):

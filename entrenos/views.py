@@ -211,6 +211,15 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
                         repeticiones = int(round(float(ref['reps'])))
                         if ref['rpe'] is not None:
                             rpe_ref = ref['rpe']
+                        # 30-oct-2026 (nota 14): el RPE de la misma serie que
+                        # se enseña (gemelos 16 @7 y 17 @8 decía "16 reps · RPE 8").
+                        _misma = [
+                            x for x in (ref.get('validas') or [])
+                            if abs(x['peso'] - ref['peso']) < 1e-6 and x['reps'] == repeticiones
+                            and x.get('rpe') is not None
+                        ]
+                        if _misma:
+                            rpe_ref = _misma[0]['rpe']
                 volumen = round(peso * series * repeticiones, 2)
             return {
                 'peso': peso,
@@ -221,6 +230,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
                 'es_tope_maquina': getattr(ej, 'es_tope_maquina', False),
                 'tempo': ej.tempo,
                 'rpe': rpe_ref,
+                'es_distancia': mejor_distancia is not None,
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -3808,9 +3818,20 @@ def vista_entrenamiento_activo(request, cliente_id):
         tags_bloqueados = bio_rest.get('tags', set())
 
         # Phase 4A: In modo_reducido, sort principales first then opcionales
+        aviso_pierna_suave = None
         if modo_reducido:
+            # 30-oct-2026 (notas 2, 7 y 8): si es por el fútbol, la pierna va
+            # al final, con una serie menos y como opcional.
+            try:
+                from entrenos.services.pierna_suave_service import aplicar_pierna_suave
+                aviso_pierna_suave = aplicar_pierna_suave(cliente, ejercicios_planificados, fecha_obj)
+            except Exception:
+                logger.exception('[entreno activo] pierna suave falló')
             ejercicios_planificados.sort(
-                key=lambda e: 0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1
+                key=lambda e: (
+                    1 if e.get('pierna_suave') else 0,
+                    0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1,
+                )
             )
 
         # Phase Gym Peso 2 — calculado una vez para todo el bucle (no por ejercicio).
@@ -3823,7 +3844,10 @@ def vista_entrenamiento_activo(request, cliente_id):
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
-            ejercicio['es_principal'] = ejercicio.get('tipo_ejercicio') == 'compuesto_principal'
+            ejercicio['es_principal'] = (
+                ejercicio.get('tipo_ejercicio') == 'compuesto_principal'
+                and not ejercicio.get('pierna_suave')
+            )
             # Phase 11.1: set/merge origen_opcional for non-principal exercises
             if modo_reducido and not ejercicio.get('es_principal'):
                 existing = ejercicio.get('origen_opcional')
@@ -4626,6 +4650,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         'permiso_progresion': _permiso_prog_template,
         'retorno_tras_ausencia': _retorno_tras_ausencia,
         'aviso_energia': aviso_energia,
+        'aviso_pierna_suave': aviso_pierna_suave,
         # 17-oct-2026: la energía se pregunta en el briefing y llega aquí.
         'energia_inicial': (
             int(request.GET['energia'])
@@ -10039,6 +10064,15 @@ def briefing_entrenamiento(request, cliente_id):
             # 26-oct-2026: el rango del ejercicio se sigue enseñando (gemelos 15-20,
             # no "3 × 17"); el objetivo de hoy va aparte.
             ej.setdefault('repeticiones_plan', ej.get('repeticiones'))
+            # 30-oct-2026 (nota 4): si el objetivo del techo pasa del rango
+            # (abducción 20 en 12-15), se enseña el objetivo, no el rango.
+            try:
+                from entrenos.services.ultima_sesion_service import rango_reps as _rr
+                _r = _rr(ej.get('repeticiones_plan'))
+                if _r and int(alerta_tope['reps_objetivo']) > _r[1]:
+                    ej['repeticiones_plan'] = str(alerta_tope['reps_objetivo'])
+            except (TypeError, ValueError):
+                pass
             ej['repeticiones'] = alerta_tope['reps_objetivo']
             ej['reps_objetivo'] = alerta_tope['reps_objetivo']
             ej['reps_min'] = alerta_tope['reps_objetivo']
@@ -10062,6 +10096,33 @@ def briefing_entrenamiento(request, cliente_id):
         except Exception:
             _inc = None
         ej['aproximaciones'] = get_aproximaciones_calentamiento(peso_trabajo, ej['usa_peso'], incremento=_inc)
+        # 30-oct-2026 (nota 1): el objetivo del dead hang ("hoy 36 s") ya en el briefing.
+        if ej.get('usa_tiempo') and not ej.get('progresion_motivo'):
+            try:
+                _anotar_series_sin_carga(cliente, ej, fecha_obj)
+                if ej.get('objetivo_explicado') and ej.get('reps_objetivo'):
+                    ej['progresion_motivo'] = f"Hoy a por {ej['reps_objetivo']} s ({ej['objetivo_explicado']})."
+            except Exception:
+                logger.exception('[briefing] objetivo sin carga falló')
+
+    # 30-oct-2026 (nota 1): lo que la sesión va a cambiar se ve ya aquí.
+    # Energía marcada en el briefing (recarga con ?energia=N) y pierna suave.
+    energia_briefing = None
+    aviso_energia_briefing = None
+    if str(request.GET.get('energia', '')).isdigit() and 1 <= int(request.GET['energia']) <= 10:
+        energia_briefing = int(request.GET['energia'])
+        try:
+            from entrenos.services.criterios_entrenador_service import aplicar_energia
+            aviso_energia_briefing = aplicar_energia(cliente, ejercicios_mod, fecha_obj, energia_briefing)
+        except Exception:
+            logger.exception('[briefing] energía falló')
+    aviso_pierna_suave = None
+    if request.GET.get('modo_reducido') == '1':
+        try:
+            from entrenos.services.pierna_suave_service import aplicar_pierna_suave
+            aviso_pierna_suave = aplicar_pierna_suave(cliente, ejercicios_mod, fecha_obj)
+        except Exception:
+            logger.exception('[briefing] pierna suave falló')
 
     # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
     # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.
@@ -10081,6 +10142,8 @@ def briefing_entrenamiento(request, cliente_id):
         params_dict['sesion_programada_id'] = sesion_programada_id
     if request.GET.get('modo_reducido') == '1':
         params_dict['modo_reducido'] = '1'
+    if energia_briefing:
+        params_dict['energia'] = str(energia_briefing)
     params = urllib.parse.urlencode(params_dict)
     url_sesion = f"{reverse('entrenos:entrenamiento_activo', args=[cliente_id])}?{params}"
 
@@ -10119,6 +10182,9 @@ def briefing_entrenamiento(request, cliente_id):
         'estado_sistema': estado_sistema,
         # Regla 3 del rumbo: por qué esta sesión es así, con el dato.
         'porque_decision': _porque_briefing(autoridad_vigente),
+        'energia_briefing': energia_briefing,
+        'aviso_energia_briefing': aviso_energia_briefing,
+        'aviso_pierna_suave': aviso_pierna_suave,
     })
 
 
@@ -10291,7 +10357,10 @@ def _anotar_series_sin_carga(cliente, ejercicio, fecha):
         previo = int(previo) if previo else 0
     except Exception:
         previo = 0
-    if previo and min(reps) < previo and objetivo < previo:
+    # 30-oct-2026 (nota 11): solo si ese objetivo estaba a tiro (alguna serie
+    # llegó o se quedó a una). Sissy 9, 9 y 9 con un "objetivo" de 15 (el
+    # mínimo del rango) no es "repetir 15": hoy va a por 10.
+    if previo and min(reps) < previo and objetivo < previo and max(reps) + 1 >= previo:
         objetivo = previo
         ejercicio['reps_objetivo'] = previo
         ejercicio['objetivo_explicado'] = 'repetir: no todas las series llegaron'

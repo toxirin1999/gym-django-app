@@ -127,5 +127,5 @@ class FarmerMasUnMetro(Base):
         accion, valor, motivo = _decidir_accion(
             object(), [], Perfil(), 7, False, True, 'progresion_distancia',
         )
-        self.assertEqual((accion, valor), ('subir_reps', 1))
-        self.assertIn('+1 m', motivo)
+        self.assertEqual((accion, valor), ('subir_reps', 5))  # 30-oct-2026: +5 m
+        self.assertIn('+5 m', motivo)

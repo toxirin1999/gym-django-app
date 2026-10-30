@@ -27,11 +27,14 @@ def calcular_sugerencia_tope(datos_anterior):
 
     if datos_anterior.get('es_tope_maquina') and peso_ant > 0:
         reps_ant = datos_anterior.get('repeticiones') or 0
-        return True, int(reps_ant) + 1
+        # 30-oct-2026 (nota 9): con el peso fijo (farmer 36 kg por mano), de 5 en 5 m.
+        salto = SALTO_METROS_TOPE if datos_anterior.get('es_distancia') else 1
+        return True, int(reps_ant) + salto
 
     return False, None
 
 
+SALTO_METROS_TOPE = 5  # 30-oct-2026: farmer con el peso al máximo, +5 m (antes +1, un 2 %)
 MAX_REPS_TOPE = 20  # 28-oct-2026: 25 → 20; abducción a por 24 en un rango 12-15 ya no aportaba
 
 
@@ -56,6 +59,9 @@ def reps_tope_con_margen(cliente, nombre, fecha, reps_sugeridas):
         series = [s for s in lectura['series'] if s['reps'] > 0]
         rpes = [s['rpe'] for s in series if s.get('rpe') is not None]
         objetivo_rpe = _rpe_objetivo_snapshot(lectura['entreno'], normalizar_ejercicio(nombre))
+        if objetivo_rpe:
+            from entrenos.services.criterios_entrenador_service import rpe_pedido
+            objetivo_rpe = rpe_pedido(cliente, lectura['entreno'], objetivo_rpe)
         if series and rpes and objetivo_rpe:
             margen = max(1, round(float(objetivo_rpe) - float(min(rpes))))
             # 26-oct-2026: igual que sin tope, si TODAS las series quedaron al

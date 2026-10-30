@@ -213,5 +213,30 @@ def aplicar_energia(cliente, ejercicios, hoy, energia):
                 mismo_peso = False
             if mismo_peso and reps_hoy > reps_antes:
                 ej['reps_objetivo_hoy'] = max(rango[0], reps_antes)
+                # 30-oct-2026 (nota 1): el texto de la tarjeta dice lo mismo que el número.
+                ej['progresion_motivo'] = (f"Hoy, con energía baja, las mismas {ej['reps_objetivo_hoy']} "
+                                           f"reps de la última vez; la extra, otro día.")
         ej['criterio_entrenador'] = frase
     return frase
+
+
+def rpe_pedido(cliente, entreno, rpe_plan):
+    """30-oct-2026 (nota 20): el esfuerzo que se pidió de verdad ese día.
+
+    Con energía baja la sesión pidió un punto menos (curl Z RPE 9 → 8). Las
+    decisiones de "te sobró margen" se juzgan contra lo pedido: 15 reps a
+    RPE 8 cuando se pedía 8 no es margen, es lo pedido.
+    """
+    try:
+        rpe = float(rpe_plan)
+    except (TypeError, ValueError):
+        return rpe_plan
+    energia = getattr(entreno, 'energia_pre_sesion', None)
+    if energia is None or rpe <= RPE_SUELO:
+        return rpe
+    try:
+        if energia_baja(cliente, entreno.fecha, energia):
+            return max(RPE_SUELO, rpe - 1)
+    except Exception:  # noqa: BLE001
+        pass
+    return rpe

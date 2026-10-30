@@ -193,7 +193,9 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             carga_legible = f'{_kg_txt(peso_tope)} kg'
             if 'farmer' in nombre_normalizado or 'granjero' in nombre_normalizado:
                 carga_legible += ' por mano'
-            objetivo = reps_tope + 1  # +1 rep o +1 m, como el entrenamiento activo
+            # +1 rep, o +5 m con el peso fijo (30-oct-2026), como el entrenamiento activo
+            from entrenos.services.progreso_service import SALTO_METROS_TOPE
+            objetivo = reps_tope + (SALTO_METROS_TOPE if usa_distancia else 1)
             if not usa_distancia:
                 # 26-oct-2026: el mismo número que la regla única (con margen de
                 # esfuerzo: gemelos 100 × 17 a RPE 8 con objetivo 9 → 19).

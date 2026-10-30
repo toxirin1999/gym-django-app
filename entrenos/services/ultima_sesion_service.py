@@ -616,6 +616,21 @@ def anotar_ultima_vez(cliente, ej, hoy):
     nombre = ej.get('nombre') or ''
     tipo = ej.get('tipo_progresion') or 'peso_reps'
     rango = rango_reps(ej.get('repeticiones'))
+    if tipo in ('progresion_distancia', 'progresion_tiempo'):
+        # 30-oct-2026 (nota 1): el farmer (56 m como "rango") no tenía "La
+        # última vez" en el briefing porque 55 m < 56 no daba referencia.
+        from entrenos.models import EjercicioRealizado
+        previo = (
+            EjercicioRealizado.objects.filter(
+                entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
+                completado=True, entreno__fecha__lt=hoy,
+            ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id').first()
+        )
+        if previo and (hoy - previo.entreno.fecha) <= timedelta(days=VENTANA_DIAS):
+            texto = texto_series(previo.entreno, nombre, tipo)
+            if texto:
+                ej['ultima_vez_texto'] = f"{previo.entreno.fecha:%d/%m}: {texto}"
+        return
     lectura = ultima_sesion(cliente, nombre, hoy, reps_min=rango[0] if rango else None)
     if not lectura or (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS):
         return

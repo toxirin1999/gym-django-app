@@ -87,6 +87,21 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     return None
 
 
+def _objetivo_reps_hoy_snapshot(entreno, ejercicio_normalizado):
+    """``reps_objetivo_hoy`` de la sesión (ejercicios sin carga), o None."""
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    for ejercicio in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ejercicio.get('nombre')) != ejercicio_normalizado:
+            continue
+        valor = ejercicio.get('reps_objetivo_hoy')
+        try:
+            return Decimal(str(int(valor))) if valor else None
+        except (TypeError, ValueError, ArithmeticError):
+            return None
+    return None
+
+
 def _rpe_objetivo_snapshot(entreno, ejercicio_normalizado):
     """RPE objetivo que mostró la sesión (17-oct-2026), o None."""
     version = getattr(entreno, 'gym_decision_version', None)
@@ -513,6 +528,10 @@ def generar_decisiones_para_entreno(entreno):
         motivo_codigo = ''
 
         objetivo_reps = _objetivo_repeticiones_snapshot(entreno, nombre)
+        if objetivo_reps is None and tipo_progresion == 'progresion_reps':
+            # 30-oct-2026 (nota 12): sin carga (sissy) el objetivo del día es
+            # el de la regla "tu marca + 1" (10), no el máximo del rango (20).
+            objetivo_reps = _objetivo_reps_hoy_snapshot(entreno, nombre)
         objetivo_es_tope_rango = False
         if objetivo_reps is None and rango_sesion and not es_tope:
             # Doble progresión: con el mismo peso se sube cuando se llega al
@@ -539,7 +558,14 @@ def generar_decisiones_para_entreno(entreno):
                 f'Media {_formatear_reps(reps_media)} frente al objetivo '
                 f'{_formatear_reps(objetivo_reps)}'
             )
-            if reps_media < objetivo_reps and accion in ('subir_peso', 'subir_reps'):
+            if (
+                tipo_progresion == 'progresion_reps' and series_reps
+                and min(series_reps) >= objetivo_reps and not fallo
+            ):
+                accion = 'subir_reps'
+                valor_cambio = 1
+                motivo = f'{lectura} — objetivo cumplido en todas: una rep más'
+            elif reps_media < objetivo_reps and accion in ('subir_peso', 'subir_reps'):
                 accion = 'mantener'
                 valor_cambio = None
                 motivo = f'{lectura} — completar el objetivo antes de progresar'
@@ -754,11 +780,12 @@ def _decidir_accion(ej, historial, perfil, rpe, fallo, es_tope, tipo_progresion=
     # 2. Tope de máquina → subir reps (o distancia, si el ejercicio progresa así)
     if es_tope:
         if tipo_progresion == 'progresion_distancia':
-            # +1 m por sesión: lo mismo que propone el entrenamiento activo.
+            # 30-oct-2026 (nota 9): +5 m por sesión, lo mismo que el entrenamiento activo.
+            from entrenos.services.progreso_service import SALTO_METROS_TOPE
             return (
                 'subir_reps',
-                1,
-                'Tope de peso alcanzado — progresión por distancia (+1 m)',
+                SALTO_METROS_TOPE,
+                f'Tope de peso alcanzado — progresión por distancia (+{SALTO_METROS_TOPE} m)',
             )
         return (
             'subir_reps',
@@ -1100,9 +1127,18 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     if log.motivo_codigo == 'tope_maquina':
         mismo_peso = abs(float(peso_nuevo) - float(peso_anterior)) <= 0.5
         objetivo = log.reps_sugeridas or (reps_anteriores + 1)
+        # 30-oct-2026 (nota 21): desde el 28-oct las reps con el máximo de la
+        # máquina no pasan de 20; a partir de ahí se progresa con la bajada
+        # lenta. Un objetivo antiguo de 22 se juzga contra 20.
+        from entrenos.services.progreso_service import MAX_REPS_TOPE
+        objetivo = min(objetivo, MAX_REPS_TOPE)
         if fallo_nuevo or (rpe_nuevo is not None and rpe_nuevo >= 10):
             resultado = 'fallida'
             notas = 'El intento en el tope produjo fallo o RPE extremo'
+        elif mismo_peso and reps_nuevas >= MAX_REPS_TOPE:
+            resultado = 'validada'
+            notas = (f'En el techo de {MAX_REPS_TOPE} reps con el máximo de la máquina: '
+                     'ahora se progresa con la bajada lenta')
         elif not mismo_peso:
             resultado = 'neutra'
             notas = 'El peso cambió; no se puede aislar la progresión del tope'

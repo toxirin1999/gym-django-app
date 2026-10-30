@@ -51,7 +51,7 @@ class TestDecidirAccionTopeProgresionDistancia(TestCase):
             tipo_progresion='progresion_distancia',
         )
         self.assertEqual(accion, 'subir_reps')
-        self.assertEqual(valor_cambio, 1)
+        self.assertEqual(valor_cambio, 5)  # 30-oct-2026: +5 m
         self.assertIn('distancia', motivo.lower())
 
     def test_tope_con_peso_reps_mantiene_valor_cambio_none(self):

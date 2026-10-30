@@ -626,6 +626,14 @@ def _metricas_comparables_por_unidad(entreno, nombre_ejercicio, tipo_progresion)
     return None
 
 
+def _energia_baja_ese_dia(cliente, entreno):
+    try:
+        from entrenos.services.criterios_entrenador_service import energia_baja
+        return bool(energia_baja(cliente, entreno.fecha, entreno.energia_pre_sesion))
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _comparar_referencias(entreno, entreno_anterior, nombre):
     """{'tipo', 'detalle'} comparando la serie de referencia de hoy con la de la última vez."""
     from entrenos.services.ultima_sesion_service import (
@@ -654,7 +662,8 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
         }
     sube = hoy['peso'] > antes['peso']
     diff = _kg_txt(hoy['peso'] - antes['peso'])
-    return {'tipo': 'subida' if sube else 'bajada', 'detalle': f"{texto} ({'+' if sube else ''}{diff} kg)"}
+    return {'tipo': 'subida' if sube else 'bajada', 'detalle': f"{texto} ({'+' if sube else ''}{diff} kg)",
+            'peso_baja': not sube}
 
 
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
@@ -843,7 +852,14 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             if dia_de_fatiga(cliente, ej.nombre_ejercicio, entreno, rango_hoy[0] if rango_hoy else None):
                 comparacion = dict(comparacion, tipo='mantenida',
                                    detalle=f"{comparacion['detalle']} · día de cansancio, se repite")
-            elif comparacion['tipo'] == 'bajada' and _peso_propuesto_igual(entreno, ej.nombre_ejercicio):
+            elif comparacion['tipo'] == 'bajada' and not comparacion.get('peso_baja') and _energia_baja_ese_dia(cliente, entreno):
+                # 30-oct-2026 (nota 23): mismo peso y menos reps con energía
+                # baja (gemelos 25 × 16 → 25 × 13 con energía 5): cansancio del
+                # día, no un ajuste del plan.
+                comparacion = dict(comparacion, tipo='mantenida',
+                                   detalle=f"{comparacion['detalle']} · energía baja hoy, se repite")
+            elif (comparacion['tipo'] == 'bajada' and comparacion.get('peso_baja')
+                    and _peso_propuesto_igual(entreno, ej.nombre_ejercicio)):
                 # 27-oct-2026 (nota 22): crunch 75 → 70 kg propuesto por la
                 # propia app: un ajuste del plan, no un retroceso en naranja.
                 comparacion = dict(comparacion, tipo='mantenida',
