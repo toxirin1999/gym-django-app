@@ -677,6 +677,14 @@ class PlanificadorHelms:
         except Exception as e:
             logger.warning("Error precargando historial de ejercicios: %s", e)
             self._historial_ejercicios_raw = []
+        # 31-oct-2026: fechas de descarga, para que una sesión rebajada a
+        # propósito no sea la base (ni entre en el ancla) del peso de después.
+        try:
+            from entrenos.services.sesion_descarga_service import periodos_descarga
+            self._periodos_descarga = periodos_descarga(self.perfil.id)
+        except Exception as e:
+            logger.warning("Error leyendo periodos de descarga: %s", e)
+            self._periodos_descarga = []
 
     def _obtener_historial_ejercicio(self, nombre_ejercicio: str) -> dict:
         """
@@ -694,6 +702,14 @@ class PlanificadorHelms:
                 ]
                 if not matches:
                     return resultado
+
+                # 31-oct-2026: se saltan las sesiones de descarga si hay alguna normal.
+                periodos = getattr(self, '_periodos_descarga', None)
+                if periodos:
+                    from entrenos.services.sesion_descarga_service import fecha_en_descarga
+                    normales = [m for m in matches if not fecha_en_descarga(m['entreno__fecha'], periodos)]
+                    if normales:
+                        matches = normales
 
                 ref = matches[0]
                 if ref['peso_kg']:

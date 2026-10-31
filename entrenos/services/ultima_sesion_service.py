@@ -161,23 +161,35 @@ def rango_de_sesion(entreno, nombre):
     return None
 
 
-def ultima_sesion(cliente, nombre, antes_de, reps_min=None):
+def ultima_sesion(cliente, nombre, antes_de, reps_min=None, incluir_descarga=False):
     """La última sesión del ejercicio antes de ``antes_de`` (fecha), con su referencia.
 
     ``reps_min``: mínimo del rango con el que se lee la referencia. Si no se
     pasa, se usa el rango que se prescribió en esa sesión.
     Devuelve None si no hay sesión con series registradas.
+
+    31-oct-2026: las sesiones de descarga se saltan (peso rebajado a propósito
+    o RPE limitado): no dicen lo que el ejercicio da. Se usa la última sesión
+    normal y la lectura lleva ``tras_descarga`` con la fecha de la descarga
+    saltada. Si no hay ninguna sesión normal, se devuelve la de descarga
+    (``descarga=True``). ``incluir_descarga=True`` lee la última tal cual.
     """
     from entrenos.models import EjercicioRealizado
 
+    periodos = None
+    reserva = None
+    candidatas = 0
     for ej in (
         EjercicioRealizado.objects.filter(
             entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
             completado=True, entreno__fecha__lt=antes_de,
-        ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id')[:3]
+        ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id')[:8]
     ):
         series = series_de_trabajo(ej.entreno, nombre)
         if not series:
+            candidatas += 1
+            if candidatas >= 3:
+                break
             continue
         minimo = reps_min
         if minimo is None:
@@ -185,15 +197,30 @@ def ultima_sesion(cliente, nombre, antes_de, reps_min=None):
             minimo = rango[0] if rango else None
         ref = serie_referencia(series, minimo)
         if ref is None:
+            candidatas += 1
+            if candidatas >= 3:
+                break
             continue
-        return {
+        lectura = {
             'entreno': ej.entreno,
             'fecha': ej.entreno.fecha,
             'series': series,
             'referencia': ref,
             'es_tope_maquina': ej.es_tope_maquina,
         }
-    return None
+        if not incluir_descarga:
+            from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+            if periodos is None:
+                periodos = periodos_descarga(ej.entreno.cliente_id)
+            if es_sesion_descarga(ej.entreno, nombre, periodos):
+                if reserva is None:
+                    reserva = {**lectura, 'descarga': True}
+                continue
+        candidatas += 1
+        if reserva is not None:
+            lectura['tras_descarga'] = reserva['fecha']
+        return lectura
+    return reserva
 
 
 # ─────────────────────────────────────────────────────────────
@@ -637,6 +664,9 @@ def anotar_ultima_vez(cliente, ej, hoy):
     texto = texto_series(lectura['entreno'], nombre, tipo)
     if texto:
         ej['ultima_vez_texto'] = f"{lectura['fecha']:%d/%m}: {texto}"
+        if lectura.get('tras_descarga'):
+            # 31-oct-2026: la del día de descarga no cuenta; se dice de dónde sale.
+            ej['ultima_vez_texto'] += f" (antes de la descarga del {lectura['tras_descarga']:%d/%m})"
 
     if tipo not in ('peso_reps', 'peso_corporal_lastre') or not rango or ej.get('sugerencia_tope'):
         return

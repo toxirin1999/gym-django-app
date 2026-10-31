@@ -467,6 +467,26 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         'tipo_progresion': tipo_progresion,
     }
     siguiente = entreno.fecha + _td(days=1)
+    # 31-oct-2026: una sesión de descarga no es "la última vez" de nadie: la
+    # próxima sale de lo de antes de la descarga, y el cierre lo dice.
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga
+    if es_sesion_descarga(entreno, nombre):
+        from entrenos.models import EjercicioRealizado as _ER
+        if _ER.objects.filter(
+            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
+            entreno__fecha__gt=entreno.fecha,
+        ).exists():
+            return None  # ya hay una sesión posterior: este cierre es historia
+        decision = decidir_carga(cliente, ej, siguiente)
+        if not decision or not decision.get('peso'):
+            return None
+        from entrenos.services.ultima_sesion_service import series_de_trabajo
+        pesos_hoy = [x['peso'] for x in series_de_trabajo(entreno, nombre) if x['peso'] > 0]
+        peso, reps = decision['peso'], decision['reps']
+        accion = 'Subir peso' if pesos_hoy and float(peso) > max(pesos_hoy) + 1e-6 else 'Mantener'
+        texto = (f'Hoy era descarga: no cuenta como referencia. Al acabarla vuelves a '
+                 f'{_kg(peso)} kg a por {reps} reps, lo de antes de la descarga.')
+        return (texto, accion, f'Vuelve a {_kg(peso)} kg') if con_efecto else (texto, accion)
     lectura = ultima_sesion(cliente, nombre, siguiente, reps_min=rango[0])
     if not lectura or lectura['entreno'].pk != entreno.pk:
         return None
