@@ -191,8 +191,14 @@ def dias_recientes(estado):
     out = []
     for d in reversed(estado['cuerpo']):
         f = date.fromisoformat(d['fecha'])
-        out.append({'letra': LETRAS_DIA[f.weekday()], 'fecha': f'{f:%d/%m}', 'nivel': d['nivel'] or 'sin',
-                    'nombre': NOMBRES_NIVEL.get(d['nivel'], 'Sin dato')})
+        dia = {'letra': LETRAS_DIA[f.weekday()], 'fecha': f'{f:%d/%m}', 'nivel': d['nivel'] or 'sin',
+               'nombre': NOMBRES_NIVEL.get(d['nivel'], 'Sin dato')}
+        # 31-oct-2026: la energía baja al empezar también pinta el día (ámbar).
+        if d.get('energia_baja') and d['nivel'] not in ('ambar', 'rojo', 'parada'):
+            e, h = d['energia_baja']
+            dia['nivel'] = 'ambar'
+            dia['nombre'] = f'Energía {e} al empezar (sueles {str(h).replace(".", ",")})'
+        out.append(dia)
     return out
 
 

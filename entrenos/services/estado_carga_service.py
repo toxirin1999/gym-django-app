@@ -24,6 +24,13 @@ Respuestas (umbrales de partida, se ajustan viendo qué habrían dicho):
 - ``vas_bien``: nada de lo anterior.
 
 Los días de una parada declarada no cuentan como días malos ni buenos.
+
+31-oct-2026: la energía que marcas al empezar el entreno también cuenta. Un
+día con la energía 1,5 puntos o más por debajo de tu habitual es un día
+"por debajo", aunque el reloj diga otra cosa (el 30-oct el reloj decía
+"fresco" y David llegó con energía 5 frente a su 6,7). Como la energía tiene
+su propia referencia (tus sesiones de 2 semanas), "te pasas" ya puede saltar
+mientras el reloj aún está conociéndote.
 """
 
 from datetime import timedelta
@@ -113,11 +120,28 @@ def lectura_carga(cliente, hoy):
     }
 
 
+def energias_bajas(cliente, desde, hasta):
+    """{fecha: (energía, habitual)} de los días en que marcaste energía baja al empezar."""
+    from entrenos.models import EntrenoRealizado
+    from entrenos.services.criterios_entrenador_service import energia_baja
+
+    out = {}
+    for fecha, energia in EntrenoRealizado.objects.filter(
+        cliente=cliente, fecha__gte=desde, fecha__lte=hasta, energia_pre_sesion__isnull=False,
+    ).values_list('fecha', 'energia_pre_sesion'):
+        baja = energia_baja(cliente, fecha, energia)
+        if baja:
+            out[fecha] = baja
+    return out
+
+
 def lectura_cuerpo(cliente, hoy):
-    """Cómo amaneciste en los últimos 14 días: [{'fecha', 'nivel'}] (más reciente primero)."""
+    """Cómo amaneciste en los últimos 14 días: [{'fecha', 'nivel', 'energia_baja'}] (más reciente primero)."""
     from entrenos.services.recuperacion_service import lectura_recuperacion
 
-    parada = _dias_en_parada(cliente, hoy - timedelta(days=DAR_MAS_VENTANA - 1), hoy)
+    desde = hoy - timedelta(days=DAR_MAS_VENTANA - 1)
+    parada = _dias_en_parada(cliente, desde, hoy)
+    bajas = energias_bajas(cliente, desde, hoy)
     dias = []
     for i in range(DAR_MAS_VENTANA):
         d = hoy - timedelta(days=i)
@@ -125,8 +149,15 @@ def lectura_cuerpo(cliente, hoy):
             dias.append({'fecha': d.isoformat(), 'nivel': 'parada'})
             continue
         lectura = lectura_recuperacion(cliente, d)
-        dias.append({'fecha': d.isoformat(), 'nivel': lectura['nivel'] if lectura else None})
+        dia = {'fecha': d.isoformat(), 'nivel': lectura['nivel'] if lectura else None}
+        if d in bajas:
+            dia['energia_baja'] = list(bajas[d])
+        dias.append(dia)
     return dias
+
+
+def _malo(dia):
+    return dia['nivel'] in NIVELES_MALOS or bool(dia.get('energia_baja'))
 
 
 def _rpe_medio(cliente, desde, hasta):
@@ -174,24 +205,51 @@ def estado_carga(cliente, hoy):
     molestias = molestias_recientes(cliente, hoy)
 
     parada = parada_en(cliente, hoy)
-    ultimos5 = [d['nivel'] for d in cuerpo[:DESCANSA_VENTANA] if d['nivel'] not in (None, 'parada')]
+    # 31-oct-2026: un día cuenta si tiene dato del reloj o energía baja marcada.
+    dias5 = [d for d in cuerpo[:DESCANSA_VENTANA]
+             if d['nivel'] != 'parada' and (d['nivel'] is not None or d.get('energia_baja'))]
+    ultimos5 = [d['nivel'] for d in dias5]
     # 28-oct-2026: solo cuentan los días comparados con tu media. Con 5 mañanas
     # "sin media aún" el panel ya decía "Vas bien… tu cuerpo respondiendo como
     # siempre", sin haber comparado nada.
     ultimos14 = [d['nivel'] for d in cuerpo if d['nivel'] not in (None, 'parada', 'sin_referencia')]
     con_reloj = sum(1 for d in cuerpo if d['nivel'] not in (None, 'parada'))
-    malos5 = sum(1 for n in ultimos5 if n in NIVELES_MALOS)
-    buenos14 = sum(1 for n in ultimos14 if n in NIVELES_BUENOS)
+    malos5 = sum(1 for d in dias5 if _malo(d))
+    por_energia5 = sum(1 for d in dias5 if d.get('energia_baja') and d['nivel'] not in NIVELES_MALOS)
+    buenos14 = sum(1 for d in cuerpo
+                   if d['nivel'] in NIVELES_BUENOS and not d.get('energia_baja'))
     ratio = carga['ratio']
 
     base = {'carga': carga, 'cuerpo': cuerpo, 'esfuerzo': esfuerzo, 'molestias': molestias,
-            'malos_5': malos5, 'dias_5': len(ultimos5), 'buenos_14': buenos14, 'dias_14': len(ultimos14)}
+            'malos_5': malos5, 'dias_5': len(ultimos5), 'buenos_14': buenos14, 'dias_14': len(ultimos14),
+            'malos_5_energia': por_energia5}
+
+    def _detalle_malos():
+        if not por_energia5:
+            return f'{malos5} de los últimos {len(ultimos5)} días por debajo de lo normal'
+        reloj = malos5 - por_energia5
+        partes = []
+        if reloj:
+            partes.append(f'{reloj} según el reloj')
+        partes.append(f'{por_energia5} con tu energía baja al empezar')
+        return f'{malos5} de los últimos {len(ultimos5)} días por debajo de lo normal: ' + ' y '.join(partes)
+
+    def _te_pasas():
+        return {**base, 'respuesta': 'te_pasas', 'frase': (
+            f'Esta semana llevas un {_pct(ratio)} % más de carga que en tus semanas normales y tu cuerpo '
+            f'empieza a notarlo ({_detalle_malos()}). Aflojamos un par de días.')}
 
     if parada:
         que = 'enfermo' if parada.tipo == parada.TIPO_ENFERMO else 'de parada'
         return {**base, 'respuesta': 'parada', 'frase': (
             f'Estás {que} desde el {parada.inicio:%d/%m}. Estos días no cuentan: ni como mala '
             f'recuperación ni como falta de constancia. Cuando vuelvas, empezamos suave.')}
+
+    # 31-oct-2026: la energía baja no necesita la media del reloj, así que
+    # "te pasas" puede saltar ya mientras el reloj te está conociendo.
+    if len(ultimos14) < MIN_DIAS_RELOJ and ratio is not None and ratio >= PASAS_RATIO \
+            and por_energia5 and malos5 >= PASAS_MALOS:
+        return _te_pasas()
 
     if len(ultimos14) < MIN_DIAS_RELOJ:
         if con_reloj >= MIN_DIAS_RELOJ:
@@ -207,15 +265,12 @@ def estado_carga(cliente, hoy):
 
     if malos5 >= DESCANSA_MALOS and (ratio is None or ratio >= 0.8):
         return {**base, 'respuesta': 'descansa', 'frase': (
-            f'Llevas {malos5} de los últimos {len(ultimos5)} días amaneciendo por debajo de lo normal '
-            f'en ti, y la carga sigue {_texto_ratio(ratio) if ratio is not None else "como siempre"}. '
+            f'Llevas {_detalle_malos()}, y la carga sigue '
+            f'{_texto_ratio(ratio) if ratio is not None else "como siempre"}. '
             f'Hoy descansa o haz algo suave: mañana rendirás más.')}
 
     if ratio is not None and ratio >= PASAS_RATIO and malos5 >= PASAS_MALOS:
-        return {**base, 'respuesta': 'te_pasas', 'frase': (
-            f'Esta semana llevas un {_pct(ratio)} % más de carga que en tus semanas normales y tu cuerpo '
-            f'empieza a notarlo ({malos5} de los últimos {len(ultimos5)} días por debajo de lo normal). '
-            f'Aflojamos un par de días.')}
+        return _te_pasas()
 
     if (buenos14 >= DAR_MAS_BUENOS and ratio is not None
             and DAR_MAS_RATIO[0] <= ratio <= DAR_MAS_RATIO[1]
