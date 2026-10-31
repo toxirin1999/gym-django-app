@@ -29,19 +29,16 @@ def _cabecera():
 
 
 CARGA = b"""<div id="pwa-carga" role="status" aria-live="polite" style="position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 72px);transform:translateX(-50%);z-index:2147483647;pointer-events:none;display:none;align-items:center;gap:10px;padding:10px 16px;border-radius:99px;background:rgba(10,14,16,.96);border:1px solid rgba(66,228,160,.5);box-shadow:0 6px 24px rgba(0,0,0,.5);color:#42e4a0;font:600 14px/1 -apple-system,system-ui,sans-serif"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(66,228,160,.25);border-top-color:#42e4a0;animation:pwaGira .7s linear infinite"></span>Cargando\xe2\x80\xa6</div>
-<svg id="pwa-borde" aria-hidden="true" style="position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483646;pointer-events:none;display:none;overflow:visible"><rect id="pwa-borde-r" x="2" y="2" rx="44" ry="44" fill="none" stroke="#42e4a0" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px rgba(66,228,160,.8))"/></svg>
-<style>@keyframes pwaGira{to{transform:rotate(360deg)}}@keyframes pwaBorde{from{stroke-dashoffset:var(--pwa-p)}to{stroke-dashoffset:0}}</style>
+<div id="pwa-borde" aria-hidden="true" style="position:fixed;inset:0;z-index:2147483646;pointer-events:none;display:none;border-radius:44px;padding:3px;overflow:hidden;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask:linear-gradient(#000 0 0) content-box exclude,linear-gradient(#000 0 0)"><div style="position:absolute;left:50%;top:50%;width:300vmax;height:300vmax;margin:-150vmax 0 0 -150vmax;background:conic-gradient(from 0deg,rgba(66,228,160,0) 0deg,rgba(66,228,160,0) 290deg,#42e4a0 350deg,rgba(66,228,160,0) 360deg);animation:pwaGira 1.6s linear infinite;will-change:transform"></div></div>
+<style>@keyframes pwaGira{to{transform:rotate(360deg)}}</style>
 <script>(function(){
 // 31-oct-2026: un aviso centrado bajo la parte de arriba (la barra fina
 // quedaba tapada por el difuminado superior de la pantalla).
-// 31-oct-2026 (2): ademas, una linea fina que recorre el borde de la pantalla.
-var b=document.getElementById('pwa-carga'),sv=document.getElementById('pwa-borde'),r=document.getElementById('pwa-borde-r'),tm=null;
-function borde(){if(!sv||!r)return;var w=window.innerWidth-4,h=window.innerHeight-4;
-  r.setAttribute('width',w);r.setAttribute('height',h);
-  var p=2*(w+h)-(8-2*Math.PI)*44,seg=Math.max(80,p*0.18);
-  r.style.strokeDasharray=seg+' '+(p-seg);r.style.setProperty('--pwa-p',p);
-  r.style.animation='none';void r.getBoundingClientRect();r.style.animation='pwaBorde 1.6s linear infinite';
-  sv.style.display='block';}
+// 31-oct-2026 (2): ademas, una linea fina que recorre el borde de la pantalla. Gira con
+// transform (no con JS ni con el trazo del SVG): en el iPhone sigue moviendose mientras
+// la pagina nueva carga.
+var b=document.getElementById('pwa-carga'),sv=document.getElementById('pwa-borde'),tm=null;
+function borde(){if(sv)sv.style.display='block';}
 function on(){if(!b)return;clearTimeout(tm);tm=setTimeout(function(){b.style.display='flex';borde();tm=setTimeout(off,15000);},150);}
 function off(){if(!b)return;clearTimeout(tm);b.style.display='none';if(sv)sv.style.display='none';}
 document.addEventListener('click',function(e){
