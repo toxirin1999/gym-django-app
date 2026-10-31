@@ -83,6 +83,18 @@ def _medias_base(cliente, hoy):
     return medias
 
 
+def media_variabilidad(cliente, hoy):
+    """31-oct-2026: «lo normal en ti» de la variabilidad, en ms y redondeado.
+
+    Una sola media para todas las pantallas (Cuerpo, Memoria): la de las
+    4 semanas anteriores (``VENTANA_BASE_DIAS``), solo con días del reloj.
+    Antes Memoria usaba 60 días (66 ms) y Cuerpo 28 (60 ms). None si aún no hay
+    ``MIN_DIAS_BASE`` mañanas.
+    """
+    media = _medias_base(cliente, hoy).get('hrv_ms')
+    return round(media) if media else None
+
+
 def _datos_hoy(cliente, hoy):
     from clientes.models import BitacoraDiaria
 

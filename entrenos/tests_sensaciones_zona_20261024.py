@@ -1,4 +1,4 @@
-"""24-oct-2026 · Paso 3: bombeo / agujetas / molestia por zona al cierre."""
+"""24-oct-2026 · Paso 3: molestia por zona al cierre (desde el 31-oct, solo molestia)."""
 
 from datetime import timedelta
 
@@ -31,20 +31,21 @@ class Servicio(ConEntrenos):
         self.assertEqual([z for z, _ in svc.zonas_de_entreno(e)], ['cuadriceps', 'gemelos'])
 
     def test_contexto_marca_lo_guardado(self):
-        e = self.sesion(0, self.hack)
-        svc.guardar(self.cliente, e, 'cuadriceps', 'bombeo', 2)
-        fila = svc.contexto_cierre(e)[0]
-        valores = {p['campo']: p['valor'] for p in fila['preguntas']}
-        self.assertEqual(valores, {'bombeo': 2, 'agujetas': None, 'molestia': None})
+        e = self.sesion(0, self.hack, self.gemelos)
+        svc.guardar(self.cliente, e, 'cuadriceps', 'molestia', 2)
+        self.assertEqual(
+            [(f['zona'], f['molestia']) for f in svc.contexto_cierre(e)],
+            [('cuadriceps', True), ('gemelos', False)],
+        )
 
     def test_guardar_valida(self):
         e = self.sesion(0, self.hack)
         with self.assertRaises(ValueError):
-            svc.guardar(self.cliente, e, 'cuadriceps', 'bombeo', 3)
+            svc.guardar(self.cliente, e, 'cuadriceps', 'molestia', 3)
         with self.assertRaises(ValueError):
-            svc.guardar(self.cliente, e, 'cuadriceps', 'dolor', 1)
+            svc.guardar(self.cliente, e, 'cuadriceps', 'bombeo', 1)  # ya no se pregunta
         with self.assertRaises(ValueError):
-            svc.guardar(self.cliente, e, 'biceps', 'bombeo', 1)  # no se trabajó hoy
+            svc.guardar(self.cliente, e, 'biceps', 'molestia', 1)  # no se trabajó hoy
 
     def test_una_mala_sesion_no_basta_para_bajar(self):
         e = self.sesion(2, self.hack)
@@ -53,16 +54,19 @@ class Servicio(ConEntrenos):
 
     def test_dos_malas_en_14_dias_bajan(self):
         a, b = self.sesion(9, self.hack), self.sesion(2, self.hack)
-        svc.guardar(self.cliente, a, 'cuadriceps', 'agujetas', 2)
+        svc.guardar(self.cliente, a, 'cuadriceps', 'molestia', 2)
         svc.guardar(self.cliente, b, 'cuadriceps', 'molestia', 1)
         d = svc.zona_para_bajar(self.cliente, HOY)
         self.assertEqual((d['zona'], d['sesiones']), ('cuadriceps', 2))
 
-    def test_agujetas_leves_no_cuentan_y_fuera_de_ventana_tampoco(self):
+    def test_agujetas_ya_no_cuentan_y_fuera_de_ventana_tampoco(self):
+        from entrenos.models import SensacionZonaGym
         a, b = self.sesion(20, self.hack), self.sesion(2, self.hack)
         svc.guardar(self.cliente, a, 'cuadriceps', 'molestia', 2)
-        svc.guardar(self.cliente, b, 'cuadriceps', 'agujetas', 1)
+        # Datos antiguos con agujetas fuertes: ya no cuentan.
+        SensacionZonaGym.objects.create(cliente=self.cliente, entreno=b, zona='cuadriceps', agujetas=2)
         self.assertIsNone(svc.zona_para_bajar(self.cliente, HOY))
+        self.assertFalse(svc.frena_subir(self.cliente, 'cuadriceps', HOY))
 
     def test_frena_subir_mira_la_ultima_respuesta(self):
         a, b = self.sesion(6, self.hack), self.sesion(1, self.hack)
@@ -76,7 +80,7 @@ class Propuesta(ConEntrenos):
     def test_propuesta_de_bajar_cita_sesiones_y_fechas(self):
         a, b = self.sesion(9, self.hack), self.sesion(2, self.hack)
         svc.guardar(self.cliente, a, 'cuadriceps', 'molestia', 1)
-        svc.guardar(self.cliente, b, 'cuadriceps', 'agujetas', 2)
+        svc.guardar(self.cliente, b, 'cuadriceps', 'molestia', 2)
         p = generar_propuesta_si_procede(self.cliente, HOY)
         self.assertIsNotNone(p)
         self.assertEqual((p.zona, p.direccion), ('cuadriceps', PropuestaZonaGym.DIRECCION_BAJAR))
@@ -93,10 +97,11 @@ class Pantalla(ConEntrenos):
     def test_cierre_muestra_las_zonas(self):
         e = self.sesion(0, self.hack, self.gemelos)
         r = self.client.get(reverse('entrenos:post_entreno_resumen', args=[self.cliente.id, e.id]))
-        self.assertContains(r, '¿Cómo respondió el músculo?')
+        self.assertContains(r, '¿Alguna molestia?')
         self.assertContains(r, 'data-zona="cuadriceps"')
         self.assertContains(r, 'data-zona="gemelos"')
-        self.assertContains(r, 'Agujetas de la vez anterior')
+        self.assertNotContains(r, 'Agujetas de la vez anterior')
+        self.assertNotContains(r, 'Bombeo hoy')
 
     def test_endpoint_guarda_y_responde(self):
         e = self.sesion(0, self.hack)

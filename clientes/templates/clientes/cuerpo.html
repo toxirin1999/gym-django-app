@@ -111,7 +111,7 @@
       <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#7d8a84"></i>Sin media aún</span><span><i style="background:none;border:1px dashed #4a5a53"></i>Sin dato</span></div>
 
       {% if variabilidad.puntos %}
-      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms{% endif %}</p>
+      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms (media de las 4 semanas anteriores){% endif %}</p>
       <svg viewBox="0 0 {{ variabilidad.ancho }} {{ variabilidad.alto }}" role="img" aria-label="Variabilidad cardiaca de cada mañana, 30 días">
         {% if variabilidad.media %}<rect x="8" y="{{ variabilidad.franja_y1 }}" width="324" height="{{ variabilidad.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
         <line x1="8" x2="332" y1="{{ variabilidad.media_y }}" y2="{{ variabilidad.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}

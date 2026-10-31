@@ -2603,6 +2603,7 @@ function ajustarPesoPanel(fid,sn,delta){
   // peso raro como 59,5 el siguiente es 60, no 64,5.
   const nuevo=Math.max(0,aEscalaJS(actual,Math.abs(delta),delta>0?'arriba':'abajo'));
   inp.value=String(Number(nuevo.toFixed(2)));
+  marcarSerieTocada(fid,sn);
   inp.dispatchEvent(new Event('input',{bubbles:true}));
   if(navigator.vibrate)navigator.vibrate(20);
   actualizarORM(fid,sn);
@@ -3303,6 +3304,7 @@ function cambiarPicker(dispId,hidId,delta,min,max,fid,sn,tipo){
     disp.textContent=val;
   }
   hid.value=val;
+  if(fid&&sn)marcarSerieTocada(fid,sn);
   if(navigator.vibrate)navigator.vibrate(8);
   if(fid&&sn)actualizarORM(fid,sn);
 }
@@ -3344,8 +3346,34 @@ function seleccionarRPE(fidSn,valor){
   if(desc){desc.textContent=descripcionRPE(fidSn,valor);desc.style.color=valor>=9?'var(--rl)':valor>=7?'var(--g)':'var(--td)';}
   if(navigator.vibrate)navigator.vibrate(8);
 }
+// 31-oct-2026: una serie que sale tal cual la propuesta se guarda al tocar
+// el RPE (antes: RPE + Guardar). Si se tocó el peso, las reps o la casilla de
+// aproximación, sigue haciendo falta Guardar. Solo con un toque (no con las
+// flechas del teclado), nunca al corregir una serie ya guardada.
+const _serieTocada = {};
+function marcarSerieTocada(fid,sn){ _serieTocada[fid+'-'+sn] = true; }
+document.addEventListener('input', ev => {
+  const m = /^peso-(.+)-(\d+)$/.exec(ev.target?.id || '');
+  if (m && ev.isTrusted) marcarSerieTocada(m[1], m[2]);
+}, true);
+document.addEventListener('change', ev => {
+  const m = /^aproximacion-(.+)-(\d+)$/.exec(ev.target?.id || '');
+  if (m) marcarSerieTocada(m[1], m[2]);
+}, true);
+function guardarConRPESiNadaCambio(fidSn){
+  const corte = fidSn.lastIndexOf('-');
+  const fid = fidSn.slice(0, corte), sn = fidSn.slice(corte + 1);
+  if (_serieTocada[fidSn]) return;
+  if (_serieEnEdicion[fid] === parseInt(sn)) return;
+  if (document.getElementById('check-' + fidSn)?.checked) return;
+  const btn = document.querySelector('.btn-guardar[data-fid="' + fid + '"][data-sn="' + sn + '"]');
+  if (btn && !btn.disabled) btn.click();
+}
 document.querySelectorAll('.rpe-pick-btn').forEach(btn=>{
-  btn.addEventListener('click',()=>seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val)));
+  btn.addEventListener('click',()=>{
+    seleccionarRPE(btn.dataset.fidSn,parseInt(btn.dataset.val));
+    guardarConRPESiNadaCambio(btn.dataset.fidSn);
+  });
   btn.addEventListener('keydown',event=>{
     if(!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(event.key))return;
     event.preventDefault();

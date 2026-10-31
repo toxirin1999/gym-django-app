@@ -455,6 +455,9 @@ def _get_hrv_patron(cliente, hoy):
         rpe_hrv_alto = sum(p[1] for p in hrv_alto) / len(hrv_alto)
         rpe_hrv_bajo  = sum(p[1] for p in hrv_bajo)  / len(hrv_bajo)
         hrv_medio = round(sum(b for b in bitacoras.values()) / len(bitacoras))
+        # 31-oct-2026: la misma media que Cuerpo (4 semanas), no la de 60 días.
+        from entrenos.services.recuperacion_service import media_variabilidad
+        hrv_medio = media_variabilidad(cliente, hoy) or hrv_medio
 
         # Umbral personalizado: media del propio usuario (no fijo a 50ms)
         hrv_alto = [p for p in pares if p[0] >= hrv_medio]

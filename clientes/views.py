@@ -5805,6 +5805,9 @@ def memoria_entrenador(request, cliente_id):
             calidad_sueno_media=_Avg('calidad_sueno'),
         )
         bio_resumen['dias_con_dato'] = bio_qs.exclude(hrv_ms__isnull=True).count()
+        # 31-oct-2026: la variabilidad «normal» es una sola en toda la app (Cuerpo).
+        from entrenos.services.recuperacion_service import media_variabilidad
+        bio_resumen['hrv_medio'] = media_variabilidad(cliente, hoy) or bio_resumen['hrv_medio']
         hrv_reciente = bio_qs.filter(fecha__gte=hoy - timedelta(days=7)).aggregate(avg=_Avg('hrv_ms'))['avg']
         hrv_anterior = bio_qs.filter(fecha__lt=hoy - timedelta(days=7)).aggregate(avg=_Avg('hrv_ms'))['avg']
         if hrv_reciente and hrv_anterior and hrv_anterior > 0:

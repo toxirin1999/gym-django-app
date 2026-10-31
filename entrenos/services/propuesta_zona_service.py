@@ -13,6 +13,13 @@ Las cuatro reglas del rumbo (docs/rumbo_entrenador_vivo.md) en un solo gesto:
    dice si funcionó. Si funcionó, el cambio se queda.
 
 Regla de oro: si no puede citar el dato, no propone nada.
+
+31-oct-2026 (repaso de apps, idea 2): además del retroceso, la fatiga y las
+molestias, dos señales sacadas solo de lo que ya se registra:
+- **Por encima del máximo** dos semanas seguidas (marcador semanal) → −2.
+- **Margen sin progreso**: los ejercicios de la zona terminan 3 sesiones
+  seguidas al menos un punto por debajo del RPE pedido ese día y sin subir
+  su fuerza estimada, con la zona por debajo de su máximo → +2.
 """
 
 from datetime import timedelta
@@ -30,6 +37,9 @@ _MOTIVOS_FATIGA = (
 UMBRAL_EJERCICIO = -5.0      # % de caída de un ejercicio para tenerlo en cuenta
 ENFRIAMIENTO_DIAS = 28       # tras rechazar o evaluar, no repetir la misma zona
 MAX_EJERCICIOS = 2
+SESIONES_MARGEN = 3          # sesiones seguidas con margen y sin progreso
+VENTANA_MARGEN_DIAS = 35
+MARGEN_RPE = 1.0             # al menos un punto por debajo del RPE pedido
 
 
 def _kg(valor):
@@ -141,6 +151,216 @@ def _texto_propuesta_bajar(deteccion):
     )
 
 
+def _zona_de_grupo(grupo):
+    from entrenos.services.evolucion_muscular_service import normalizar_zona
+    return normalizar_zona(grupo, None)
+
+
+def zonas_por_encima_del_maximo(cliente, hoy=None):
+    """{zona: (hechas_esta, hechas_anterior, minimo, maximo)} por encima del máximo dos semanas seguidas.
+
+    Semana = ventana de 7 días del marcador semanal (series de trabajo, las
+    indirectas cuentan media). El máximo es el de la semana del plan de hoy.
+    Dos ventanas seguidas para no reaccionar a una semana de recuperar sesiones.
+    """
+    from entrenos.services.marcador_semanal_service import marcador_cacheado, series_hechas
+
+    hoy = hoy or timezone.localdate()
+    filas = (marcador_cacheado(cliente, hoy) or {}).get('filas') or []
+    anterior = series_hechas(cliente, hoy - timedelta(days=7))
+    altas = {}
+    for f in filas:
+        zona = _zona_de_grupo(f['clave'])
+        previas = anterior.get(f['clave'], 0)
+        if zona and f['hechas'] > f['maximo'] and previas > f['maximo']:
+            altas[zona] = (f['hechas'], previas, f['minimo'], f['maximo'])
+    return altas
+
+
+def _num(valor):
+    return str(int(valor)) if float(valor).is_integer() else f'{valor:g}'.replace('.', ',')
+
+
+def detectar_zona_por_encima(cliente, hoy=None):
+    """La zona que más se pasa de su máximo (dos semanas seguidas), o None."""
+    from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA
+
+    altas = zonas_por_encima_del_maximo(cliente, hoy)
+    if not altas:
+        return None
+    zona, (h, previas, minimo, maximo) = max(altas.items(), key=lambda kv: (kv[1][0] - kv[1][3], kv[0]))
+    return {'zona': zona, 'nombre_zona': NOMBRES_ZONA.get(zona, zona.title()),
+            'hechas': h, 'previas': previas, 'minimo': minimo, 'maximo': maximo}
+
+
+def _texto_propuesta_por_encima(d):
+    return (
+        f"{d['nombre_zona']}: {_num(d['hechas'])} series esta semana y {_num(d['previas'])} la anterior, "
+        f"por encima de tu máximo útil ({d['minimo']}–{d['maximo']}). Esas series no suman, solo cansan. "
+        f"Te propongo −{SERIES_EXTRA} series semanales de {d['nombre_zona']} durante {SEMANAS} semanas."
+    )
+
+
+def _rpe_pedido(entreno, nombre):
+    """RPE que se pidió ese día (con las rebajas de ese día), o None."""
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+
+    version = getattr(entreno, 'gym_decision_version', None)
+    snapshot = getattr(version, 'snapshot', None) or {}
+    clave = normalizar_ejercicio(nombre)
+    for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ej.get('nombre')) == clave:
+            try:
+                return float(ej.get('rpe_objetivo'))
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
+def _sesiones_con_margen(cliente, nombre, hoy):
+    """Las últimas sesiones del ejercicio si todas tuvieron margen y no progresó, o None.
+
+    Margen: la serie de referencia terminó al menos ``MARGEN_RPE`` por debajo
+    del RPE pedido ese día. Sin progreso: la fuerza estimada de la última no
+    supera la de la primera. Las sesiones de descarga no cuentan.
+    """
+    from entrenos.models import EjercicioRealizado
+    from entrenos.services.evolucion_muscular_service import _e1rm
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+    from entrenos.services.ultima_sesion_service import rango_de_sesion, serie_referencia, series_de_trabajo
+
+    periodos = periodos_descarga(cliente.pk)
+    sesiones = []
+    for ej in EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
+        entreno__fecha__gt=hoy - timedelta(days=VENTANA_MARGEN_DIAS), entreno__fecha__lte=hoy,
+    ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id'):
+        if len(sesiones) >= SESIONES_MARGEN:
+            break
+        if es_sesion_descarga(ej.entreno, nombre, periodos):
+            continue
+        series = series_de_trabajo(ej.entreno, nombre)
+        if not series or any(s.get('metros') for s in series):
+            continue
+        rango = rango_de_sesion(ej.entreno, nombre)
+        ref = serie_referencia(series, rango[0] if rango else None)
+        pedido = _rpe_pedido(ej.entreno, nombre)
+        if ref is None or ref['peso'] <= 0 or ref.get('rpe') is None or pedido is None:
+            return None
+        sesiones.append({'fecha': ej.entreno.fecha, 'peso': ref['peso'], 'reps': int(ref['reps']),
+                         'rpe': float(ref['rpe']), 'pedido': pedido})
+    if len(sesiones) < SESIONES_MARGEN:
+        return None
+    if any(s['rpe'] > s['pedido'] - MARGEN_RPE for s in sesiones):
+        return None
+    sesiones.reverse()  # de la más antigua a la última
+    primera, ultima = sesiones[0], sesiones[-1]
+    if _e1rm(ultima['peso'], ultima['reps']) > _e1rm(primera['peso'], primera['reps']) + 1e-6:
+        return None
+    return sesiones
+
+
+def detectar_zona_con_margen(cliente, hoy=None):
+    """Zona por debajo de su máximo cuyos ejercicios llevan 3 sesiones con margen y sin progreso.
+
+    Hacen falta al menos dos ejercicios de la zona así (o el único que tenga).
+    Nunca en una zona por encima del máximo ni con molestia reciente.
+    """
+    from entrenos.models import EjercicioRealizado
+    from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA, normalizar_zona
+    from entrenos.services.marcador_semanal_service import marcador_cacheado
+    from entrenos.services.sensacion_zona_service import frena_subir
+
+    hoy = hoy or timezone.localdate()
+    filas = (marcador_cacheado(cliente, hoy) or {}).get('filas') or []
+    llenas = {_zona_de_grupo(f['clave']) for f in filas if f['hechas'] >= f['maximo']}
+    por_zona = {}
+    for nombre, grupo in EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente, completado=True,
+        entreno__fecha__gt=hoy - timedelta(days=VENTANA_MARGEN_DIAS), entreno__fecha__lte=hoy,
+    ).values_list('nombre_ejercicio', 'grupo_muscular').distinct():
+        zona = normalizar_zona(grupo, nombre)
+        if zona and nombre not in por_zona.setdefault(zona, []):
+            por_zona[zona].append(nombre)
+    candidatas = []
+    for zona, nombres in por_zona.items():
+        if zona in llenas or frena_subir(cliente, zona, hoy):
+            continue
+        con_margen = {}
+        for nombre in nombres:
+            ses = _sesiones_con_margen(cliente, nombre, hoy)
+            if ses:
+                con_margen[nombre] = ses
+        if not con_margen or len(con_margen) < min(2, len(nombres)):
+            continue
+        candidatas.append((len(con_margen), zona, con_margen))
+    if not candidatas:
+        return None
+    _, zona, con_margen = max(candidatas, key=lambda c: (c[0], c[1]))
+    return {'zona': zona, 'nombre_zona': NOMBRES_ZONA.get(zona, zona.title()), 'ejercicios': con_margen}
+
+
+def _texto_propuesta_margen(d):
+    nombre, ses = next(iter(d['ejercicios'].items()))
+    rpes = ', '.join(_kg(s['rpe']) for s in ses)
+    pedido = _kg(ses[-1]['pedido'])
+    lista = ' y '.join(list(d['ejercicios'])[:MAX_EJERCICIOS])
+    return (
+        f"{d['nombre_zona']}: en tus últimas {len(ses)} sesiones de {nombre} terminaste a RPE {rpes} "
+        f"cuando se pedía {pedido}, sin subir ({_kg(ses[0]['peso'])} kg × {ses[0]['reps']} → "
+        f"{_kg(ses[-1]['peso'])} kg × {ses[-1]['reps']}). Te propongo +{SERIES_EXTRA} series semanales de "
+        f"{d['nombre_zona']} durante {SEMANAS} semanas; lo mediré en {lista}."
+    )
+
+
+def _enfriada(cliente, zona, hoy):
+    from entrenos.models import PropuestaZonaGym
+    return PropuestaZonaGym.objects.filter(
+        cliente=cliente, zona=zona,
+        estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
+        creada_en__date__gte=hoy - timedelta(days=ENFRIAMIENTO_DIAS),
+    ).exists()
+
+
+def _generar_propuesta_por_encima(cliente, hoy):
+    from entrenos.models import EjercicioRealizado, PropuestaZonaGym
+    from entrenos.services.evolucion_muscular_service import normalizar_zona
+
+    d = detectar_zona_por_encima(cliente, hoy)
+    if d is None or _enfriada(cliente, d['zona'], hoy):
+        return None
+    ejercicios = []
+    for ej in EjercicioRealizado.objects.filter(
+        entreno__cliente=cliente, completado=True, entreno__fecha__gte=hoy - timedelta(days=13),
+    ).order_by('-entreno__fecha'):
+        if (normalizar_zona(getattr(ej, 'grupo_muscular', None), ej.nombre_ejercicio) == d['zona']
+                and ej.nombre_ejercicio not in ejercicios):
+            ejercicios.append(ej.nombre_ejercicio)
+    return PropuestaZonaGym.objects.create(
+        cliente=cliente, zona=d['zona'], ejercicios=ejercicios[:MAX_EJERCICIOS],
+        series_extra=SERIES_EXTRA, direccion=PropuestaZonaGym.DIRECCION_BAJAR, semanas=SEMANAS,
+        deteccion={'motivo': 'por_encima_del_maximo', 'hechas': d['hechas'], 'previas': d['previas'],
+                   'minimo': d['minimo'], 'maximo': d['maximo']},
+        texto=_texto_propuesta_por_encima(d),
+    )
+
+
+def _generar_propuesta_margen(cliente, hoy):
+    from entrenos.models import PropuestaZonaGym
+
+    d = detectar_zona_con_margen(cliente, hoy)
+    if d is None or _enfriada(cliente, d['zona'], hoy):
+        return None
+    return PropuestaZonaGym.objects.create(
+        cliente=cliente, zona=d['zona'], ejercicios=list(d['ejercicios'])[:MAX_EJERCICIOS],
+        series_extra=SERIES_EXTRA, direccion=PropuestaZonaGym.DIRECCION_SUBIR, semanas=SEMANAS,
+        deteccion={'motivo': 'margen_sin_progreso', 'ejercicios': {
+            n: [{**s, 'fecha': s['fecha'].isoformat()} for s in ses] for n, ses in d['ejercicios'].items()
+        }},
+        texto=_texto_propuesta_margen(d),
+    )
+
+
 def generar_propuesta_si_procede(cliente, hoy=None):
     """Crea una propuesta pendiente si hay una zona en retroceso y nada en curso."""
     from entrenos.models import PropuestaZonaGym
@@ -152,15 +372,20 @@ def generar_propuesta_si_procede(cliente, hoy=None):
     )
     if en_curso.exists():
         return None
+    # 31-oct-2026: pasarse del máximo dos semanas seguidas va primero, y una
+    # zona así nunca recibe más series aunque retroceda.
+    propuesta = _generar_propuesta_por_encima(cliente, hoy)
+    if propuesta is not None:
+        return propuesta
     deteccion = detectar_zona_en_retroceso(cliente, hoy)
     if deteccion is not None:
-        # 24-oct-2026: no subir volumen a una zona que la última vez dolió o
-        # dejó agujetas fuertes, aunque retroceda.
+        # 24-oct-2026: no subir volumen a una zona que la última vez dolió,
+        # aunque retroceda.
         from entrenos.services.sensacion_zona_service import frena_subir
-        if frena_subir(cliente, deteccion['zona'], hoy):
+        if frena_subir(cliente, deteccion['zona'], hoy) or deteccion['zona'] in zonas_por_encima_del_maximo(cliente, hoy):
             deteccion = None
     if deteccion is None:
-        return _generar_propuesta_bajar(cliente, hoy)
+        return _generar_propuesta_margen(cliente, hoy) or _generar_propuesta_bajar(cliente, hoy)
     reciente = PropuestaZonaGym.objects.filter(
         cliente=cliente, zona=deteccion['zona'],
         estado__in=[PropuestaZonaGym.ESTADO_RECHAZADA, PropuestaZonaGym.ESTADO_EVALUADA],
@@ -218,7 +443,7 @@ def _generar_propuesta_bajar(cliente, hoy):
 
 
 def _generar_propuesta_bajar_por_sensaciones(cliente, hoy):
-    """24-oct-2026: molestia o agujetas fuertes repetidas en una zona → −2 series."""
+    """24-oct-2026: molestia repetida en una zona → −2 series (agujetas fuera desde el 31-oct)."""
     from entrenos.models import EjercicioRealizado, PropuestaZonaGym
     from entrenos.services.evolucion_muscular_service import normalizar_zona
     from entrenos.services.sensacion_zona_service import zona_para_bajar
@@ -250,7 +475,7 @@ def _generar_propuesta_bajar_por_sensaciones(cliente, hoy):
         semanas=SEMANAS,
         deteccion={'sensaciones': deteccion['sesiones'], 'fechas': [f.isoformat() for f in deteccion['fechas']]},
         texto=(
-            f"{deteccion['nombre_zona']}: molestia articular o agujetas fuertes en {deteccion['sesiones']} "
+            f"{deteccion['nombre_zona']}: molestia articular en {deteccion['sesiones']} "
             f"sesiones en 14 días ({fechas}). Te propongo −{SERIES_EXTRA} series semanales de "
             f"{deteccion['nombre_zona']} durante {SEMANAS} semanas para recuperar margen."
         ),

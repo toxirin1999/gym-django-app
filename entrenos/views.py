@@ -8417,6 +8417,7 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
         'cliente': cliente,
         'entreno': entreno,
         'sensaciones': sensaciones,
+        'sensaciones_con_molestia': any(f.get('molestia') for f in sensaciones),
         'comprobacion_rebaja': comprobacion_rebaja,
         **contexto,
     })
@@ -8425,7 +8426,7 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
 @login_required
 @require_POST
 def guardar_sensacion_zona(request, cliente_id, entreno_id):
-    """Guarda una respuesta (bombeo / agujetas / molestia) de una zona del cierre.
+    """Guarda la molestia (0 = no, 2 = sí) de una zona del cierre.
 
     Tras guardar, mira si las sensaciones acumuladas justifican una propuesta
     de volumen por zona (``propuesta_zona_service``).

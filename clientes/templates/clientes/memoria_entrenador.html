@@ -347,7 +347,7 @@
         {% if bio_resumen.hrv_medio %}
         <div class="mem-quad">
           <div class="v {% if bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct > 0 %}ok{% elif bio_resumen.hrv_tendencia_pct and bio_resumen.hrv_tendencia_pct < -10 %}warn{% endif %}">{{ bio_resumen.hrv_medio|floatformat:0 }}<small>ms</small></div>
-          <div class="k">HRV medio{% if bio_resumen.hrv_tendencia_pct is not None %} ({% if bio_resumen.hrv_tendencia_pct > 0 %}↑{% elif bio_resumen.hrv_tendencia_pct < 0 %}↓{% endif %}{{ bio_resumen.hrv_tendencia_pct|floatformat:1 }}%){% endif %}</div>
+          <div class="k">HRV · media 4 sem.{% if bio_resumen.hrv_tendencia_pct is not None %} ({% if bio_resumen.hrv_tendencia_pct > 0 %}↑{% elif bio_resumen.hrv_tendencia_pct < 0 %}↓{% endif %}{{ bio_resumen.hrv_tendencia_pct|floatformat:1 }}%){% endif %}</div>
         </div>
         {% endif %}
         {% if bio_resumen.fc_media %}
@@ -618,7 +618,7 @@
         {% endif %}
         {% if modelo.hrv_patron %}
         <div>
-          <div class="k"><span>HRV medio</span></div>
+          <div class="k"><span>HRV · media de 4 semanas</span></div>
           <div class="v">{{ modelo.hrv_patron.hrv_medio }}<small> ms</small></div>
           <div class="d">{{ modelo.hrv_patron.descripcion }}</div>
         </div>
