@@ -153,6 +153,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'core.pwa_middleware.PwaMiddleware',  # 31-oct-2026: icono de la app y aviso de carga
 ]
 USE_I18N = True
 ROOT_URLCONF = 'gymproject.urls'

@@ -7,7 +7,22 @@ from django.conf.urls.static import static
 from django.contrib.auth import views as auth_views
 from clientes import views as clientes_views
 
+from django.views.generic.base import RedirectView
+
+
+class _IconoApp(RedirectView):
+    """31-oct-2026: el iPhone busca el icono en la raíz si la página no lo dice."""
+    fichero = 'icons/apple-touch-icon.png'
+
+    def get_redirect_url(self, *args, **kwargs):
+        from django.templatetags.static import static as _static_url
+        return _static_url(self.fichero)
+
+
 urlpatterns = [
+    path('apple-touch-icon.png', _IconoApp.as_view()),
+    path('apple-touch-icon-precomposed.png', _IconoApp.as_view()),
+    path('favicon.ico', _IconoApp.as_view(fichero='icons/favicon-32.png')),
     path('diario/', include('diario.urls')),
     # --- Rutas Principales y de Autenticación ---
     path('admin/', admin.site.urls),
