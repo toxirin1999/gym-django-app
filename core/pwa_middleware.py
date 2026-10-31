@@ -29,13 +29,21 @@ def _cabecera():
 
 
 CARGA = b"""<div id="pwa-carga" role="status" aria-live="polite" style="position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 72px);transform:translateX(-50%);z-index:2147483647;pointer-events:none;display:none;align-items:center;gap:10px;padding:10px 16px;border-radius:99px;background:rgba(10,14,16,.96);border:1px solid rgba(66,228,160,.5);box-shadow:0 6px 24px rgba(0,0,0,.5);color:#42e4a0;font:600 14px/1 -apple-system,system-ui,sans-serif"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(66,228,160,.25);border-top-color:#42e4a0;animation:pwaGira .7s linear infinite"></span>Cargando\xe2\x80\xa6</div>
-<style>@keyframes pwaGira{to{transform:rotate(360deg)}}</style>
+<svg id="pwa-borde" aria-hidden="true" style="position:fixed;inset:0;width:100vw;height:100vh;z-index:2147483646;pointer-events:none;display:none;overflow:visible"><rect id="pwa-borde-r" x="2" y="2" rx="44" ry="44" fill="none" stroke="#42e4a0" stroke-width="4" stroke-linecap="round" style="filter:drop-shadow(0 0 4px rgba(66,228,160,.8))"/></svg>
+<style>@keyframes pwaGira{to{transform:rotate(360deg)}}@keyframes pwaBorde{from{stroke-dashoffset:var(--pwa-p)}to{stroke-dashoffset:0}}</style>
 <script>(function(){
 // 31-oct-2026: un aviso centrado bajo la parte de arriba (la barra fina
 // quedaba tapada por el difuminado superior de la pantalla).
-var b=document.getElementById('pwa-carga'),tm=null;
-function on(){if(!b)return;clearTimeout(tm);tm=setTimeout(function(){b.style.display='flex';tm=setTimeout(off,15000);},150);}
-function off(){if(!b)return;clearTimeout(tm);b.style.display='none';}
+// 31-oct-2026 (2): ademas, una linea fina que recorre el borde de la pantalla.
+var b=document.getElementById('pwa-carga'),sv=document.getElementById('pwa-borde'),r=document.getElementById('pwa-borde-r'),tm=null;
+function borde(){if(!sv||!r)return;var w=window.innerWidth-4,h=window.innerHeight-4;
+  r.setAttribute('width',w);r.setAttribute('height',h);
+  var p=2*(w+h)-(8-2*Math.PI)*44,seg=Math.max(80,p*0.18);
+  r.style.strokeDasharray=seg+' '+(p-seg);r.style.setProperty('--pwa-p',p);
+  r.style.animation='none';void r.getBoundingClientRect();r.style.animation='pwaBorde 1.6s linear infinite';
+  sv.style.display='block';}
+function on(){if(!b)return;clearTimeout(tm);tm=setTimeout(function(){b.style.display='flex';borde();tm=setTimeout(off,15000);},150);}
+function off(){if(!b)return;clearTimeout(tm);b.style.display='none';if(sv)sv.style.display='none';}
 document.addEventListener('click',function(e){
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;
   var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;
