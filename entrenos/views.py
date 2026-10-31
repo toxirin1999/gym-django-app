@@ -208,7 +208,10 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
                     ref = serie_referencia(series_reales, limites[0] if limites else None)
                     if ref:
                         peso = round(ref['peso'], 2)
-                        repeticiones = int(round(float(ref['reps'])))
+                        # 31-oct-2026 (nota 3): la mediana, la misma cifra que usa la
+                        # frase de la regla (buenos días "22 × 5" en la tarjeta y
+                        # "22 × 6" en la frase).
+                        repeticiones = int(round(float(ref.get('reps_mediana') or ref['reps'])))
                         if ref['rpe'] is not None:
                             rpe_ref = ref['rpe']
                         # 30-oct-2026 (nota 14): el RPE de la misma serie que
@@ -3969,7 +3972,12 @@ def vista_entrenamiento_activo(request, cliente_id):
                                 reps_anteriores + 1 if reps_anteriores < reps_min
                                 else min(reps_max, reps_anteriores)
                             )
-                    if ejercicio.get('usa_distancia'):
+                    # 31-oct-2026 (notas 8 y 9): con el peso al tope, los metros los
+                    # decide el tope (+5 m); aquí se pisaban con +1 (se veía 57 y
+                    # se guardaba 61).
+                    if ejercicio.get('usa_distancia') and not (
+                        ejercicio.get('sugerencia_tope') and ejercicio.get('reps_sugeridas_tope')
+                    ):
                         d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
                         if d_anterior > 0:
                             try:
@@ -4476,7 +4484,9 @@ def vista_entrenamiento_activo(request, cliente_id):
             # --- PROGRESIÓN PARA EJERCICIOS DE DISTANCIA ---
             # Si hay dato anterior: propone anterior+1m (éxito) o anterior-1m (no completado).
             # "Éxito" = llegó al mínimo del rango objetivo.
-            if ejercicio.get('usa_distancia'):
+            if ejercicio.get('usa_distancia') and not (
+                ejercicio.get('sugerencia_tope') and ejercicio.get('reps_sugeridas_tope')
+            ):  # 31-oct-2026: con tope, manda el tope (+5 m)
                 d_anterior = int(ejercicio.get('repeticiones_anterior') or 0)
                 if d_anterior > 0:
                     try:

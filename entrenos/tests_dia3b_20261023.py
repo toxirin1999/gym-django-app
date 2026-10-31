@@ -99,7 +99,7 @@ class PlantillaDia3b(SimpleTestCase):
             'ejercicio.aviso_tope_tempo',                                         # 21
             'Tope de la máquina y RPE',                                           # 18
             'La próxima vez, a por ${mejor+1}',                                   # 16
-            'La próxima vez, a por ${objTD+1}${uni}',                             # 10
+            'La próxima vez, a por ${objTD+saltoTD}${uni}',                       # 10 (31-oct: +5 m con tope)
             'aproximaciones and not ejercicio.usa_distancia',                     # 9
             '.exname-toprow{padding-right:96px;}',                                # 5
             'ejercicio.repeticiones_plan|default:ejercicio.repeticiones',         # 8 y 17

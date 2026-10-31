@@ -57,7 +57,7 @@ class PoliticaIncrementosFisicosTests(TestCase):
             nombre='Sentadilla con barra', grupo_muscular='Pierna', equipo='Barra',
         )
         self.assertEqual(float(maquina.incremento_fisico_kg), 5.0)
-        self.assertEqual(float(barra.incremento_fisico_kg), 2.5)  # discos de 2,5 (17-oct-2026)
+        self.assertEqual(float(barra.incremento_fisico_kg), 5.0)  # 31-oct-2026: barra olímpica, un disco de 2,5 por lado
 
 
 class RPERealObligatorioTests(TestCase):

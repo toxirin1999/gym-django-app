@@ -1546,7 +1546,7 @@ body{background:
      data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
      data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
      data-inc-kg="{{ ejercicio.incremento_kg|default:2.5|stringformat:'s' }}"{% if ejercicio.tope_maquina_kg %} data-tope-kg="{{ ejercicio.tope_maquina_kg|stringformat:'s' }}"{% endif %}
-     data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
+     data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"{% if ejercicio.usa_distancia and ejercicio.sugerencia_tope %} data-salto-metros="{{ salto_metros_tope|default:5 }}"{% endif %}
      data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}"
      data-total-sets="{{ ejercicio.series }}"
      data-descanso="{{ ejercicio.descanso_minutos|default:3|unlocalize }}"
@@ -1751,7 +1751,7 @@ body{background:
        data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
        data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
        data-usa-peso="{% if ejercicio.usa_peso %}1{% else %}0{% endif %}"
-       data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"
+       data-usa-distancia="{% if ejercicio.usa_distancia %}1{% else %}0{% endif %}"{% if ejercicio.usa_distancia and ejercicio.sugerencia_tope %} data-salto-metros="{{ salto_metros_tope|default:5 }}"{% endif %}
        data-usa-tiempo="{% if ejercicio.usa_tiempo %}1{% else %}0{% endif %}">
     {% if not forloop.first %}
     <div id="sugerencia-{{ ejercicio.form_id }}-{{ sn }}"
@@ -1848,7 +1848,8 @@ body{background:
                     data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
                     data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
                     data-delta="-5" data-min="0" data-max="2000">−</button>
-            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{{ ejercicio.reps_objetivo }}</span>
+            {# 31-oct-2026 (nota 8): el número que se ve es el que se guarda. #}
+            <span class="picker-val" id="reps-disp-{{ ejercicio.form_id }}-{{ sn }}">{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{{ ejercicio.reps_sugeridas_tope }}{% else %}{{ ejercicio.reps_objetivo }}{% endif %}</span>
             <button type="button" class="picker-btn mas"
                     data-disp="reps-disp-{{ ejercicio.form_id }}-{{ sn }}"
                     data-hid="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
@@ -2860,7 +2861,11 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
   if (!peso || peso <= 0 || !Number.isFinite(rpe)) return mismo;
 
   const bajar = () => {
-    const p = aEscalaJS(peso, salto, 'abajo');
+    let p = aEscalaJS(peso, salto, 'abajo');
+    // 31-oct-2026 (nota 6): si la serie se hizo por encima del peso del plan
+    // (encogimientos 120 × 10 con 110 propuesto), se vuelve directo al del plan.
+    const pesoPlan = parseFloat(document.getElementById('peso-'+fid+'-1')?.dataset.planWeight || '');
+    if (pesoPlan > 0 && pesoPlan < peso - 1e-6 && pesoPlan < p) p = pesoPlan;
     if (!(p > 0) || p >= peso) return mismo;
     return { peso: p, reps: repsMin, tipo: 'bajar',
              texto: `${reps} reps a RPE ${rpe}: bajo a ${fmtKg(p)} kg para entrar en ${repsMin}-${repsMax}.` };
@@ -3176,7 +3181,9 @@ function resumenDeEjercicio(fid){
     const llegan=scs.filter(s=>(s.reps||0)>=objTD).length;
     const uni=unidadTD==='m'?' m':' s';
     if(llegan===scs.length && !rpeAlto){
-      return {e:'✓',t:'Ejercicio en objetivo',s:`${llegan}/${scs.length} series en objetivo. La próxima vez, a por ${objTD+1}${uni}.`};
+      // 31-oct-2026 (nota 9): con el peso del farmer al tope, de 5 en 5 m.
+      const saltoTD=parseInt(regUno?.dataset.saltoMetros||'1',10)||1;
+      return {e:'✓',t:'Ejercicio en objetivo',s:`${llegan}/${scs.length} series en objetivo. La próxima vez, a por ${objTD+saltoTD}${uni}.`};
     }
     return {e:'!',t:'Objetivo a medias',s:`${llegan}/${scs.length} series llegaron a ${objTD}${uni}. La próxima vez, otra vez a por ${objTD}${uni}.`};
   }

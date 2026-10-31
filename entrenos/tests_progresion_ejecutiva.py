@@ -134,7 +134,7 @@ class TestCase2_BajarPesoAplica(ProgresionEjecutivaBase):
         ej = ejercicios_mod[0]
         self.assertTrue(ej.get('progresion_aplicada'))
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
-        self.assertEqual(ej['peso_kg'], 72.5)  # 80 * 0.9 → redondeo a 2.5
+        self.assertEqual(ej['peso_kg'], 70.0)  # 80 * 0.9 = 72 → barra olímpica de 5 en 5 (31-oct-2026)
         self.assertTrue(any(c['tipo'] == 'progresion_aplicada' for c in cambios))
 
         log.refresh_from_db()
@@ -246,7 +246,7 @@ class TestCase7_FrenoNoBloqueaBajarPeso(ProgresionEjecutivaBase):
         self.assertTrue(ej.get('progresion_aplicada'))
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
         self.assertFalse(ej.get('progresion_pospuesta', False))
-        self.assertEqual(ej['peso_kg'], 72.5)
+        self.assertEqual(ej['peso_kg'], 70.0)  # barra olímpica de 5 en 5 (31-oct-2026)
 
         log.refresh_from_db()
         self.assertEqual(log.estado_aplicacion, 'aplicada')
@@ -774,7 +774,7 @@ class TestCase15_FrenoLocalNoAfectaBajarPeso(ProgresionEjecutivaBase):
         self.assertTrue(ej.get('progresion_aplicada'))
         self.assertEqual(ej['progresion_accion'], 'bajar_peso')
         self.assertFalse(ej.get('progresion_pospuesta', False))
-        self.assertEqual(ej['peso_kg'], 72.5)
+        self.assertEqual(ej['peso_kg'], 70.0)  # barra olímpica de 5 en 5 (31-oct-2026)
 
         log.refresh_from_db()
         self.assertEqual(log.estado_aplicacion, 'aplicada')

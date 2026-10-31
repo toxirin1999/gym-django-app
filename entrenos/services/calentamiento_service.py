@@ -8,6 +8,9 @@ sin cambiar sus valores: 50% / 70% / 85% del peso de trabajo, redondeados al
 """
 
 
+PESO_MIN_CALENTAMIENTO = 10
+
+
 def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=None):
     """
     Series de aproximación (calentamiento) antes del peso de trabajo.
@@ -24,6 +27,10 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
         return None
 
     if peso_trabajo <= 0 or not usa_peso:
+        return None
+    if peso_trabajo < PESO_MIN_CALENTAMIENTO:
+        # 31-oct-2026: Y-raises en polea a 8 kg salía "4 · 5 · 6 kg". Con
+        # tan poco peso, la primera serie ya es el calentamiento.
         return None
 
     def _redondear(p):

@@ -141,6 +141,19 @@ SALTO_MANCUERNA = 2.5      # por mancuerna; en "peso total" de dos, el doble
 SALTO_KETTLEBELL = 2.0
 # 19-oct-2026: barra Z con discos de 2,5 → se cargan de dos en dos (uno por lado).
 SALTO_BARRA_Z = 5.0
+# 31-oct-2026: barra olímpica de 20 kg y el disco más pequeño de 2,5 → de 5 en
+# 5 (uno por lado) y nunca por debajo de la barra vacía (buenos días a 17,5 kg
+# y encogimientos a 117,5 / 102,5 no se pueden cargar).
+SALTO_BARRA_OLIMPICA = 5.0
+PESO_BARRA_OLIMPICA = 20.0
+_TOKENS_BARRA_OLIMPICA = (
+    'barra', 'barbell', 'press banca', 'peso muerto', 'deadlift', 'bench press',
+    'buenos días', 'buenos dias', 'good morning', 'sentadilla trasera', 'sentadilla frontal',
+    'back squat', 'front squat',
+)
+# Con estas palabras no es una barra libre: máquina o carril con sus propios topes.
+_NO_BARRA_LIBRE = ('multipower', 'smith', 'prensa', 'hack', 'convergent', 'fondos', 'dips',
+                   'máquina', 'maquina', 'polea', 'cable', 'landmine', 'mina')
 
 _TOKENS_KETTLEBELL = ('kettlebell', 'pesa rusa',
                       # 25-oct-2026: David hace la búlgara con una kettlebell (8 → 10 kg).
@@ -175,7 +188,7 @@ def es_una_mancuerna(nombre):
 
 
 def tipo_equipo_carga(nombre, equipo=None):
-    """'kettlebell' | 'barra_z' | 'mancuerna_una' | 'mancuerna_dos' | 'discos' | 'maquina' | None."""
+    """'kettlebell' | 'barra_z' | 'mancuerna_una' | 'mancuerna_dos' | 'barra_olimpica' | 'discos' | 'maquina' | None."""
     descriptor = f'{nombre or ""} {equipo or ""}'.casefold()
     # Una sola kettlebell (de 2 en 2 desde el 25-oct-2026).
     if any(t in descriptor for t in _TOKENS_KETTLEBELL):
@@ -186,6 +199,10 @@ def tipo_equipo_carga(nombre, equipo=None):
         if any(t in descriptor for t in _TOKENS_UNA_MANO) or es_una_mancuerna(nombre):
             return 'mancuerna_una'
         return 'mancuerna_dos'
+    if any(t in descriptor for t in _TOKENS_BARRA_OLIMPICA) and not any(
+        t in descriptor for t in _NO_BARRA_LIBRE
+    ):
+        return 'barra_olimpica'
     if any(t in descriptor for t in _TOKENS_DISCOS):
         return 'discos'
     if any(t in descriptor for t in _TOKENS_MAQUINA):
@@ -202,7 +219,13 @@ def salto_fisico(nombre, equipo=None):
         'mancuerna_dos': SALTO_MANCUERNA * 2,
         'kettlebell': SALTO_KETTLEBELL,
         'barra_z': SALTO_BARRA_Z,
+        'barra_olimpica': SALTO_BARRA_OLIMPICA,
     }.get(tipo_equipo_carga(nombre, equipo))
+
+
+def peso_minimo(nombre, equipo=None):
+    """El peso más bajo que se puede cargar: 20 kg con barra olímpica; si no, None."""
+    return PESO_BARRA_OLIMPICA if tipo_equipo_carga(nombre, equipo) == 'barra_olimpica' else None
 
 
 def salto_carga(cliente, nombre):

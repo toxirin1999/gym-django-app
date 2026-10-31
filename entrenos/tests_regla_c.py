@@ -28,7 +28,7 @@ class EscalaReal(SimpleTestCase):
         self.assertEqual(salto_fisico('Machine Shoulder Press'), 5)
         self.assertEqual(salto_fisico('Crunch en Polea (Cable Crunch)'), 5)
         self.assertEqual(salto_fisico('Curl Femoral Tumbado'), 5)
-        self.assertEqual(salto_fisico('Peso Muerto Rumano'), 2.5)
+        self.assertEqual(salto_fisico('Peso Muerto Rumano'), 5)  # 31-oct-2026: barra olímpica, discos de 2,5 por lado
         self.assertEqual(salto_fisico('Remo con Mancuerna a una mano'), 2.5)
         # Dos mancuernas en "peso total": de 5 en 5 (37,5 no se puede montar).
         self.assertEqual(salto_fisico('Press Arnold'), 5)

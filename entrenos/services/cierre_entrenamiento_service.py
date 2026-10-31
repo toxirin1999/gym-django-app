@@ -662,8 +662,13 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
         }
     sube = hoy['peso'] > antes['peso']
     diff = _kg_txt(hoy['peso'] - antes['peso'])
+    if sube and not hoy['en_rango']:
+        # 31-oct-2026 (nota 10): más peso pero por debajo del rango (encogimientos
+        # 110 × 16 → 120 × 10) no es una subida en verde.
+        return {'tipo': 'mantenida', 'detalle': f"{texto} (+{diff} kg, por debajo del rango)"}
     return {'tipo': 'subida' if sube else 'bajada', 'detalle': f"{texto} ({'+' if sube else ''}{diff} kg)",
-            'peso_baja': not sube}
+            'peso_baja': not sube,
+            'en_rango_hoy': bool(minimo) and all(x['reps'] >= minimo for x in (hoy.get('validas') or []))}
 
 
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
@@ -862,8 +867,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                     and _peso_propuesto_igual(entreno, ej.nombre_ejercicio)):
                 # 27-oct-2026 (nota 22): crunch 75 → 70 kg propuesto por la
                 # propia app: un ajuste del plan, no un retroceso en naranja.
-                comparacion = dict(comparacion, tipo='mantenida',
-                                   detalle=f"{comparacion['detalle']} · ajuste del plan")
+                # 31-oct-2026 (nota 12): si con el peso propuesto entró todo, acertó (en verde).
+                acerto = comparacion.get('en_rango_hoy')
+                comparacion = dict(comparacion, tipo='subida' if acerto else 'mantenida',
+                                   detalle=f"{comparacion['detalle']} · "
+                                           + ('ajuste del plan, entró todo' if acerto else 'ajuste del plan'))
             elif (comparacion['tipo'] == 'bajada' and mas_reciente is not None
                     and mas_reciente.pk != anterior.pk):
                 # Fondos 92,5 × 8 la última vez; hoy vuelven a 15-20 y se comparan con

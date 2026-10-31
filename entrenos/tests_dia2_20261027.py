@@ -159,7 +159,8 @@ class Cierre(Comun):
         nombres = [c['nombre'] for c in cambios]
         self.assertEqual(nombres.count('Curl Femoral Tumbado'), 1)
         c = next(c for c in cambios if c['nombre'] == crunch.nombre)
-        self.assertEqual(c['tipo'], 'mantenida')
+        # 31-oct-2026 (nota 12): con el peso propuesto entró todo → en verde.
+        self.assertEqual(c['tipo'], 'subida')
         self.assertIn('ajuste del plan', c['detalle'])
         self.assertEqual(_no_hechos(e2, ejercicios), ['Peso Muerto Rumano'])
 

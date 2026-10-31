@@ -94,8 +94,21 @@ def frase_decision(log, etiqueta='Después'):
 
     En el cierre de la sesión que la evaluó, ``etiqueta='Hoy'``.
     """
-    partes = [f'{_capitalizar(log.ejercicio)}: {describir_accion(log)}.']
     despues = _sesion_evaluadora(log)
+    accion = describir_accion(log)
+    if despues and log.accion in ('subir_peso', 'bajar_peso', 'deload'):
+        # 31-oct-2026 (nota 11): el peso que se propuso de verdad ese día (el
+        # briefing recalculó 35 kg; el log guardaba los 45 del cierre anterior).
+        try:
+            from entrenos.models import EntrenoRealizado
+            from entrenos.services.cerebro_carga_service import _peso_plan
+            propuesto = _peso_plan(EntrenoRealizado.objects.get(pk=despues['entreno_id']), log.ejercicio)
+        except Exception:  # noqa: BLE001
+            propuesto = None
+        if propuesto and (log.peso_sugerido is None or abs(float(log.peso_sugerido) - propuesto) > 0.01):
+            verbo = {'subir_peso': 'subí el peso a', 'bajar_peso': 'bajé el peso a', 'deload': 'metí una descarga a'}
+            accion = f'{verbo[log.accion]} {_kg(propuesto)} kg'
+    partes = [f'{_capitalizar(log.ejercicio)}: {accion}.']
     if despues and despues['peso'] is not None and despues['reps']:
         if float(despues['peso'] or 0) > 0:
             dato = f"{etiqueta}: {_kg(despues['peso'])} kg × {despues['reps']}"
