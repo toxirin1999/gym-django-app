@@ -28,13 +28,14 @@ def _cabecera():
     ).encode()
 
 
-CARGA = b"""<div id="pwa-carga" aria-hidden="true" style="position:fixed;inset:0 0 auto 0;height:3px;z-index:2147483647;pointer-events:none;opacity:0;transition:opacity .15s"><div style="height:100%;width:30%;background:#42e4a0;animation:pwaCarga 1s ease-in-out infinite"></div></div>
-<div id="pwa-carga-txt" role="status" aria-live="polite" style="position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483647;padding:8px 14px;border-radius:99px;background:rgba(10,14,16,.92);border:1px solid rgba(66,228,160,.35);color:#42e4a0;font:600 13px/1 -apple-system,system-ui,sans-serif;display:none">Cargando\xe2\x80\xa6</div>
-<style>@keyframes pwaCarga{0%{transform:translateX(-100%)}100%{transform:translateX(340%)}}</style>
+CARGA = b"""<div id="pwa-carga" role="status" aria-live="polite" style="position:fixed;left:50%;top:calc(env(safe-area-inset-top, 0px) + 72px);transform:translateX(-50%);z-index:2147483647;pointer-events:none;display:none;align-items:center;gap:10px;padding:10px 16px;border-radius:99px;background:rgba(10,14,16,.96);border:1px solid rgba(66,228,160,.5);box-shadow:0 6px 24px rgba(0,0,0,.5);color:#42e4a0;font:600 14px/1 -apple-system,system-ui,sans-serif"><span style="width:16px;height:16px;border-radius:50%;border:2px solid rgba(66,228,160,.25);border-top-color:#42e4a0;animation:pwaGira .7s linear infinite"></span>Cargando\xe2\x80\xa6</div>
+<style>@keyframes pwaGira{to{transform:rotate(360deg)}}</style>
 <script>(function(){
-var b=document.getElementById('pwa-carga'),t=document.getElementById('pwa-carga-txt'),tm=null;
-function on(){if(!b)return;b.style.opacity='1';clearTimeout(tm);tm=setTimeout(function(){if(t)t.style.display='block';tm=setTimeout(off,15000);},400);}
-function off(){if(!b)return;b.style.opacity='0';clearTimeout(tm);if(t)t.style.display='none';}
+// 31-oct-2026: un aviso centrado bajo la parte de arriba (la barra fina
+// quedaba tapada por el difuminado superior de la pantalla).
+var b=document.getElementById('pwa-carga'),tm=null;
+function on(){if(!b)return;clearTimeout(tm);tm=setTimeout(function(){b.style.display='flex';tm=setTimeout(off,15000);},150);}
+function off(){if(!b)return;clearTimeout(tm);b.style.display='none';}
 document.addEventListener('click',function(e){
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;
   var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;
