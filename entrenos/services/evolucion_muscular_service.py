@@ -172,9 +172,12 @@ def _estado(pct):
     return 'progresa_mucho'
 
 
-def _lectura(estado, series_semana, n_dudosos=0, n_ligeros=0):
+def _lectura(estado, series_semana, n_dudosos=0, n_ligeros=0, n_cambio_rango=0):
     """Frase descriptiva y determinista para la fila de cada zona."""
     if estado == 'sin_datos':
+        if n_cambio_rango and not n_dudosos:
+            return ('Cambiaste de rango de reps (ahora más reps y menos peso): '
+                    'aún no hay con qué comparar. No es una pérdida de fuerza.')
         if n_ligeros and not n_dudosos:
             return ('Solo hay accesorios ligeros comparables: sus saltos en % no '
                     'reflejan la fuerza del grupo.')
@@ -240,6 +243,17 @@ def _series(cliente, desde, hoy):
     )
 
 
+TRAMOS_REPS = ((1, 8, 'fuerza'), (9, 14, 'medio'), (15, 999, 'alto'))
+
+
+def tramo_reps(reps):
+    """'fuerza' (≤ 8), 'medio' (9-14) o 'alto' (≥ 15)."""
+    for bajo, alto, nombre in TRAMOS_REPS:
+        if bajo <= reps <= alto:
+            return nombre
+    return 'alto'
+
+
 def comparar_ejercicios(cliente, hoy=None, dias=90):
     """
     Detalle por ejercicio de las dos ventanas. Lo usan el mapa y el comando
@@ -289,21 +303,48 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
         ventana = 'ahora' if fecha > inicio_actual else 'antes'
         info = por_ejercicio.setdefault((zona, _plano(nombre)), {
             'zona': zona, 'ejercicio': nombre.strip(), 'antes': None, 'ahora': None,
+            '_tramos': {'antes': {}, 'ahora': {}}, '_ultimo_tramo': None,
         })
         # Candidatos ordenados por fecha: el último nombre visto es el más reciente.
         info['ejercicio'] = nombre.strip()
+        dato = {
+            'e1rm': e1rm, 'peso_kg': float(peso or 0), 'reps': reps, 'fecha': fecha,
+            'tipo_carga': tipo, 'multiplicador': mult, 'peso_total_kg': peso_total,
+            'fuente': fuente,
+        }
         actual = info[ventana]
         if actual is None or e1rm > actual['e1rm']:
-            info[ventana] = {
-                'e1rm': e1rm, 'peso_kg': float(peso or 0), 'reps': reps, 'fecha': fecha,
-                'tipo_carga': tipo, 'multiplicador': mult, 'peso_total_kg': peso_total,
-                'fuente': fuente,
-            }
+            info[ventana] = dato
+        # 01-nov-2026: lo mejor de cada tramo de reps, para comparar como con como.
+        tramo = tramo_reps(reps)
+        previo = info['_tramos'][ventana].get(tramo)
+        if previo is None or e1rm > previo['e1rm']:
+            info['_tramos'][ventana][tramo] = dato
+        if ventana == 'ahora':
+            info['_ultimo_tramo'] = tramo
 
     resultado = []
     for info in por_ejercicio.values():
         pct = None
+        info['cambio_rango'] = False
+        tramos = info.pop('_tramos')
+        ultimo = info.pop('_ultimo_tramo')
         if info['antes'] and info['ahora']:
+            # 01-nov-2026: la fuerza estimada a 15-20 reps sale más baja que a
+            # 6-8 (encogimientos 110 × 16 cuentan como × 15). Se compara el
+            # mismo tramo de reps; si no hay ninguno en común, no se compara.
+            # Solo cuando los dos extremos no se parecen (≤ 8 frente a ≥ 15); tramos
+            # vecinos (8 y 12) se comparan como siempre.
+            lejos = {tramo_reps(info['antes']['reps']), tramo_reps(info['ahora']['reps'])} == {'fuerza', 'alto'}
+            if lejos:
+                comunes = [t for t in tramos['ahora'] if t in tramos['antes']]
+                if comunes:
+                    tramo = ultimo if ultimo in comunes else max(
+                        comunes, key=lambda t: tramos['ahora'][t]['fecha'])
+                    info['antes'], info['ahora'] = tramos['antes'][tramo], tramos['ahora'][tramo]
+                else:
+                    info['cambio_rango'] = True
+        if info['antes'] and info['ahora'] and not info['cambio_rango']:
             pct = round((info['ahora']['e1rm'] - info['antes']['e1rm'])
                         / info['antes']['e1rm'] * 100, 1)
         info['pct'] = pct
@@ -350,7 +391,10 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
     fiables = defaultdict(list)
     dudosos = defaultdict(list)
     ligeros = defaultdict(list)
+    cambio_rango = defaultdict(int)
     for e in comparar_ejercicios(cliente, hoy=hoy, dias=dias):
+        if e.get('cambio_rango'):
+            cambio_rango[e['zona']] += 1
         if e['pct'] is None:
             continue
         resumen = {'ejercicio': e['ejercicio'], 'antes': round(e['antes']['e1rm'], 1),
@@ -373,8 +417,10 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
             'dudosos': sorted(dudosos.get(zona, []), key=lambda c: -abs(c['pct'])),
             'ligeros': sorted(ligeros.get(zona, []), key=lambda c: -abs(c['pct'])),
         }
+        grupo['cambio_rango'] = cambio_rango.get(zona, 0)
         grupo['lectura'] = _lectura(grupo['estado'], grupo['series_semana'],
-                                    len(grupo['dudosos']), len(grupo['ligeros']))
+                                    len(grupo['dudosos']), len(grupo['ligeros']),
+                                    grupo['cambio_rango'])
         grupos.append(grupo)
 
     con_datos = sorted((g for g in grupos if g['pct'] is not None), key=lambda g: -g['pct'])
