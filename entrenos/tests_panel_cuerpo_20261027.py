@@ -32,7 +32,7 @@ class PanelCuerpo(Base):
         self.reloj(0, hrv=32, fc=58, sueno=7.9)
         v = variabilidad(self.cliente, HOY)
         self.assertEqual(v['ultimos'], '55 · 81 · 32')
-        self.assertEqual(v['dias_con_dato'], 3)
+        self.assertEqual(v['dias_con_dato'], 2)  # 31-oct-2026: sin la de hoy, como la media
         self.assertIsNone(v['media'])
         p = pulso(self.cliente, HOY)
         self.assertEqual(p['ultimos'], '59 · 58 · 58')
@@ -53,6 +53,6 @@ class PanelCuerpo(Base):
         self.assertContains(r, 'Sin media aún')
         self.assertContains(r, 'Últimas mañanas: <strong>81 · 32</strong> ms', html=False)
         self.assertContains(r, 'Pulso en reposo cada mañana')
-        self.assertContains(r, 'la franja de lo normal sale cuando haya 5 mañanas (llevo 2)')
+        self.assertContains(r, 'la franja de lo normal sale cuando haya 5 mañanas (llevo 1)')
         self.assertGreaterEqual(r.content.decode().count('class="info"'), 5)
         self.assertContains(r, 'aria-label="Cómo funciona"')

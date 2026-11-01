@@ -668,8 +668,10 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     # 28-oct-2026: si la cola ya cambió el día por el fútbol, esa frase explica
     # el cambio y lo de "sin apretar"; no se pisa con la genérica.
     motivo_cola = (decision.get('cola') or {}).get('motivo')
-    if motivo_cola and causa in ('futbol_reciente', 'hyrox_reciente'):
+    if motivo_cola and causa in ('futbol_reciente', 'hyrox_reciente', 'sesion_hoy'):
         mensaje = motivo_cola
+        if causa != 'sesion_hoy' and 'sin apretar' not in motivo_cola:
+            mensaje += ' Lo que lleve pierna, en versión suave.'
 
     decision.update({
         'estado': estado,
@@ -1456,6 +1458,12 @@ def cola_semana(cliente, fecha_hoy, planificador=None):
 
 
 def _siguiente_de_cola(cliente, fecha_hoy):
+    """La sesión atrasada que toca hoy, o None (ver ``_cola_con_motivo``)."""
+    r = _cola_con_motivo(cliente, fecha_hoy)
+    return None if r is not None and r.get('hoy_normal') else r
+
+
+def _cola_con_motivo(cliente, fecha_hoy):
     """La sesión atrasada que toca hoy, o None.
 
     Devuelve un dict con 'fecha', 'nombre', 'entrenamiento' (puede ser None) y
@@ -1566,7 +1574,11 @@ def _siguiente_de_cola(cliente, fecha_hoy):
             alternativa = dict(alternativa, motivo=motivo)
             elegida = alternativa
     if elegida['fecha'] == fecha_hoy and elegida['sp'] is None:
-        return None  # lo que toca es la sesión de hoy: flujo normal
+        # Lo que toca es la sesión de hoy: flujo normal. 31-oct-2026: si se
+        # llegó a ella saltando la atrasada (fútbol ayer), se conserva el porqué.
+        if elegida.get('motivo'):
+            return {'hoy_normal': True, 'motivo': elegida['motivo']}
+        return None
     return elegida
 
 
@@ -1718,10 +1730,13 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
     # Paso 3: la siguiente sesión de la cola de la semana (si hay una atrasada).
     pendiente = None
     try:
-        siguiente = _siguiente_de_cola(cliente, fecha_hoy)
+        siguiente = _cola_con_motivo(cliente, fecha_hoy)
     except Exception:
         logger.exception('obtener_sesion_recomendada_hoy: error calculando la cola semanal')
         siguiente = None
+    motivo_hoy = None
+    if siguiente is not None and siguiente.get('hoy_normal'):
+        motivo_hoy, siguiente = siguiente.get('motivo'), None
     if siguiente is not None and siguiente.get('sp') is not None:
         pendiente = siguiente['sp']
     elif siguiente is not None:
@@ -1890,7 +1905,8 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
         'estado': 'entrenar',
         'sesion_programada': None,
         'entrenamiento': entrenamiento_hoy,
-        'mensaje': 'Esta es la sesión prevista para hoy.',
+        'mensaje': motivo_hoy or 'Esta es la sesión prevista para hoy.',
+        **({'cola': {'motivo': motivo_hoy}} if motivo_hoy else {}),
         'nota_semana': None,
         'causa_principal': None,
         'modo_reducido': False,

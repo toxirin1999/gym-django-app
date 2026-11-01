@@ -789,6 +789,13 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                         cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
                     continue
         if anterior is None:
+            # 31-oct-2026 (C19): el ejercicio no desaparece del cierre (buenos
+            # días, última vez el 16/09 con otro rango): se dice que no hay con qué comparar.
+            # Dos hilos del mismo ejercicio en la misma semana (fondos a 8 y a 15)
+            # siguen sin mezclarse: solo cuando la última vez es antigua.
+            if mas_reciente is not None and (entreno.fecha - mas_reciente.entreno.fecha).days > 42:
+                cambios.append({'nombre': ej.nombre_ejercicio, 'tipo': 'mantenida',
+                                'detalle': f"sin referencia reciente (última vez, {mas_reciente.entreno.fecha:%d/%m})"})
             continue
 
         # La comparación de tiempo/distancia tiene su propia unidad. El peso

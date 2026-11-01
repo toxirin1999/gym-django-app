@@ -205,6 +205,9 @@ def _get_serie_critica_global(cliente, hoy):
 
         pct = round(tasa * 100)
         pct_global = round(tasa_global * 100)
+        # 31-oct-2026 (B12): "1 % frente al 1 % de media" no es un hallazgo.
+        if pct - pct_global < 5:
+            return None
         return {
             'serie': serie,
             'pct': pct,
@@ -212,7 +215,7 @@ def _get_serie_critica_global(cliente, hoy):
             'n_datos': n_malas,
             'descripcion': (
                 f"La técnica cede en el {pct} % de tus series {serie}, "
-                f"frente al {pct_global} % de media. El plan lo usa para limitar el volumen."
+                f"frente al {pct_global} % de media."
             ),
         }
     except Exception:
@@ -321,6 +324,11 @@ def _get_ventana_recuperacion(cliente, hoy):
 
         dias_optimo = min(medias, key=medias.get)
         etiqueta_dia = 'día' if dias_optimo == 1 else 'días'
+        otros = [d for d in medias if d != dias_optimo]
+        rpe_otros = sum(medias[d] for d in otros) / len(otros)
+        # 31-oct-2026 (B12): con la cifra con la que compara; si apenas cambia, no se dice.
+        if rpe_otros - medias[dias_optimo] < 0.3:
+            return None
 
         return {
             'dias_optimos': dias_optimo,
@@ -328,8 +336,8 @@ def _get_ventana_recuperacion(cliente, hoy):
             'n_datos': sum(len(v) for v in intervalos_rpe.values()),
             'descripcion': (
                 f"Rindes mejor con {dias_optimo} {etiqueta_dia} de descanso entre sesiones "
-                f"(RPE medio {str(round(medias[dias_optimo], 1)).replace('.', ',')} vs días adyacentes). "
-                f"El plan respeta esta ventana cuando puede."
+                f"(esfuerzo medio {str(round(medias[dias_optimo], 1)).replace('.', ',')}, frente a "
+                f"{str(round(rpe_otros, 1)).replace('.', ',')} con otros descansos)."
             ),
         }
     except Exception:
@@ -469,16 +477,25 @@ def _get_hrv_patron(cliente, hoy):
         rpe_hrv_alto = sum(p[1] for p in hrv_alto) / len(hrv_alto)
         rpe_hrv_bajo  = sum(p[1] for p in hrv_bajo)  / len(hrv_bajo)
 
+        # 31-oct-2026 (B12): decía "con HRV bajo sube a 8,0" cuando con HRV alto
+        # era 8,2. La frase sale de los números; si la diferencia es mínima, no hay hallazgo.
+        dif = rpe_hrv_bajo - rpe_hrv_alto
+        if abs(dif) < 0.3:
+            return None
+        fmt = lambda x: str(round(x, 1)).replace('.', ',')  # noqa: E731
+        if dif > 0:
+            texto = (f"Las mañanas con la variabilidad por encima de tu media ({hrv_medio} ms) entrenas con "
+                     f"menos esfuerzo: {fmt(rpe_hrv_alto)} frente a {fmt(rpe_hrv_bajo)} cuando está por debajo.")
+        else:
+            texto = (f"Curioso: las mañanas con la variabilidad por debajo de tu media ({hrv_medio} ms) "
+                     f"te cuesta menos ({fmt(rpe_hrv_bajo)} frente a {fmt(rpe_hrv_alto)}). Con más datos lo veremos.")
+
         return {
             'hrv_medio': hrv_medio,
             'rpe_hrv_alto': round(rpe_hrv_alto, 1),
             'rpe_hrv_bajo': round(rpe_hrv_bajo, 1),
             'n_datos': len(pares),
-            'descripcion': (
-                f"Con HRV ≥{hrv_medio}ms (tu media) el RPE post-sesión baja a {str(round(rpe_hrv_alto, 1)).replace('.', ',')}. "
-                f"Con HRV bajo sube a {str(round(rpe_hrv_bajo, 1)).replace('.', ',')}. "
-                f"Tu HRV medio es {hrv_medio}ms."
-            ),
+            'descripcion': texto,
         }
     except Exception:
         return None

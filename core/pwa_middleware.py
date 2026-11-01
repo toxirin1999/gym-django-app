@@ -39,7 +39,9 @@ CARGA = b"""<div id="pwa-carga" role="status" aria-live="polite" style="position
 // la pagina nueva carga.
 var b=document.getElementById('pwa-carga'),sv=document.getElementById('pwa-borde'),tm=null;
 function borde(){if(sv)sv.style.display='block';}
-function on(){if(!b)return;clearTimeout(tm);tm=setTimeout(function(){b.style.display='flex';borde();tm=setTimeout(off,15000);},150);}
+// 01-nov-2026: se muestra al momento. Con la espera de 150 ms, el iPhone a veces ya
+// habia congelado la pagina para cambiar a la siguiente y el aviso no llegaba a salir.
+function on(){if(!b)return;clearTimeout(tm);b.style.display='flex';borde();tm=setTimeout(off,15000);}
 function off(){if(!b)return;clearTimeout(tm);b.style.display='none';if(sv)sv.style.display='none';}
 document.addEventListener('click',function(e){
   if(e.defaultPrevented||e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey)return;

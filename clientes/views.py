@@ -2058,6 +2058,32 @@ def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     return texto + '.'
 
 
+def _proxima_tras_hoy(cliente):
+    """31-oct-2026 (A1): lo que toca mañana según la cola de la semana, como en
+    Rutina, Plan y el cierre ("Dia 5 - Hipertrofia", o "Descanso").
+
+    Antes, con la sesión de hoy hecha, Ahora enseñaba el plan anual de mañana
+    ("Día de Descanso") aunque el Día 5 seguía pendiente.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+    try:
+        from entrenos.services.sesion_recomendada import (
+            _build_planificador, _es_descanso, _normalizar_entrenamiento, _siguiente_de_cola,
+        )
+        manana = timezone.localdate() + timedelta(days=1)
+        siguiente = _siguiente_de_cola(cliente, manana)
+        if siguiente:
+            return siguiente.get('nombre')
+        sesion = _normalizar_entrenamiento(_build_planificador(cliente).generar_entrenamiento_para_fecha(manana))
+        if _es_descanso(sesion):
+            return 'Descanso'
+        return sesion.get('rutina_nombre') or sesion.get('nombre')
+    except Exception:  # noqa: BLE001
+        logger.exception('_proxima_tras_hoy falló')
+        return None
+
+
 def _ultima_energia_pre_sesion(cliente, dias=7):
     """{'valor', 'fecha'} de la última energía pre-sesión de los últimos ``dias``, o None."""
     from entrenos.models import EntrenoRealizado
@@ -2322,7 +2348,9 @@ def dashboard_silencioso_preview(request):
             'frase': texto_decision,
             'cta_label': accion_label,
             'cta_url': accion_url,
-            'sesion_nombre': sesion.get('nombre') or sesion.get('rutina_nombre'),
+            'sesion_nombre': (
+                _proxima_tras_hoy(cliente) if estado_operativo in ('DESCANSAR', 'HECHO') else None
+            ) or sesion.get('nombre') or sesion.get('rutina_nombre'),
             # Regla 3 del rumbo: por qué, en una frase y con el dato.
             'porque': porque_decision,
         },
@@ -2385,6 +2413,8 @@ def trayectoria_plan(request):
         'progreso_temporal_plan': _progreso_temporal_para_trayectoria(trayectoria),
         # 26-oct-2026: semana adaptativa, paso 2 (solo muestra).
         'marcador_semanal': _marcador_semanal(cliente),
+        # 31-oct-2026 (A4): "Ver por qué" desde Ahora; la propuesta en curso es un ajuste activo.
+        'propuesta_plan': _propuesta_zona_visible(cliente, timezone.localdate()),
     })
 
 
@@ -2435,6 +2465,7 @@ def _progreso_temporal_para_trayectoria(trayectoria):
         'porcentaje': round((transcurridos / total_dias) * 100),
         'semana_iso': fecha.isocalendar().week,
         'semanas_restantes': (restantes_dias + 6) // 7,
+        'dias_restantes': restantes_dias,  # 31-oct-2026: "1 sem" con el bloque acabando mañana
         'inicio': inicio,
         'fin': fin,
     }

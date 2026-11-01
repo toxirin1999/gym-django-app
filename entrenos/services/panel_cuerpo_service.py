@@ -160,7 +160,9 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo):
     out = {'puntos': puntos, 'media': round(media) if media else None, 'ancho': ANCHO, 'alto': ALTO,
            'base_y': ALTO - MARGEN_ABA, 'texto_y': ALTO - 6,
            'ultimos': ' · '.join(str(p['valor']) for p in ultimos),
-           'dias_con_dato': len(valores),
+           # 31-oct-2026: las mañanas que cuentan para la media (sin la de hoy):
+           # decía "llevo 5" con 4 en la media.
+           'dias_con_dato': sum(1 for f in valores if f < hoy),
            'marcas': [{'x': _x(i, dias), 'texto': f'{desde + timedelta(days=i):%d/%m}'} for i in (0, dias // 2, dias - 1)]}
     if banda:
         out['franja_y1'] = _y(banda[1], tope, suelo)

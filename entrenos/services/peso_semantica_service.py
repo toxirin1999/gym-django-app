@@ -109,6 +109,11 @@ def normalizar_semantica_carga(ejercicio):
     nombre = str(out.get("nombre") or "").casefold()
     if any(t in nombre for t in _POR_PIERNA):
         out["reps_unidad"] = "por pierna"
+        # 31-oct-2026 (nota 17 del 30-oct): el peso va con cada pierna, como en
+        # los gemelos a una pierna. Las zancadas con 16 kg × 9 por pierna
+        # contaban 16 × 9 (una pierna) y los gemelos, los dos lados.
+        if out.get("peso_formato") in (None, "total", "una_mancuerna"):
+            out["peso_formato"] = "por_lado"
     elif out.get("peso_formato") in {"por_lado", "por_mano"}:
         out["reps_unidad"] = "por lado"
     elif ("curl" in nombre and any(t in nombre for t in _MANCUERNA)) or any(t in nombre for t in _POR_BRAZO_SIN_MANCUERNA):

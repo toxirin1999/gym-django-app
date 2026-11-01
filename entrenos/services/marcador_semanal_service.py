@@ -152,7 +152,37 @@ def _num(valor):
 
 
 def _frase(filas):
-    """Lo que hay que decir de la semana, o None si va bien."""
+    """Lo que hay que decir de la semana, o None si va bien.
+
+    31-oct-2026: lo que falta y, además, lo que ya sobra (tríceps 17 de 9–14
+    con el Día 5 por delante). Solo avisa; no cambia la sesión.
+    """
+    falta = _frase_falta(filas)
+    sobra = _frase_sobra(filas)
+    if falta and sobra:
+        return f'{falta} {sobra}'
+    return falta or sobra
+
+
+def _frase_sobra(filas):
+    altos = sorted((f for f in filas if f['estado'] == 'alto'),
+                   key=lambda x: x['hechas'] - x['maximo'], reverse=True)
+    if not altos:
+        return None
+    con_dia = [f for f in altos if f['cubren']]
+    if con_dia:
+        nombres = [f"{f['grupo'].lower()} ({_num(f['hechas'])} de {f['minimo']}–{f['maximo']})" for f in con_dia[:3]]
+        lista = nombres[0] if len(nombres) == 1 else ', '.join(nombres[:-1]) + ' y ' + nombres[-1]
+        dias = ' y el '.join(sorted({d for f in con_dia[:3] for d in f['cubren']})[:2])
+        verbo = 'va' if len(nombres) == 1 else 'van'
+        return (f"Ya {verbo} por encima del máximo {lista}, y el {dias} lo vuelve a cargar: "
+                f"esas series no suman, solo cansan.")
+    f = altos[0]
+    return (f"{f['grupo']} va por encima ({_num(f['hechas'])} de {f['minimo']}–{f['maximo']}): "
+            f"más series no suman, solo cansan.")
+
+
+def _frase_falta(filas):
     sin_cubrir = [f for f in filas if f['estado'] == 'bajo' and not f['cubren']]
     if sin_cubrir:
         f = sin_cubrir[0]
@@ -164,11 +194,6 @@ def _frase(filas):
         falta = f['minimo'] - f['hechas']
         dias = ' y el '.join(f['cubren'][:2])
         return f"Te faltan {_num(falta)} series de {f['grupo'].lower()} para el mínimo: el {dias} las cubre."
-    altos = [f for f in filas if f['estado'] == 'alto']
-    if altos:
-        f = altos[0]
-        return (f"{f['grupo']} va por encima ({_num(f['hechas'])} de {f['minimo']}–{f['maximo']}): "
-                f"más series no suman, solo cansan.")
     return None
 
 
