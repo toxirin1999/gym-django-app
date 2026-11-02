@@ -64,8 +64,25 @@ class PlanificadorHelms:
             return None
         return info
 
-    def _ajustes_volumen_grupo(self) -> Dict[str, int]:
-        """Series extra por grupo que decide el entrenador (paso 5), solo clientes reales."""
+    def _ajustes_volumen_grupo(self, incluir_pausadas: bool = False) -> Dict[str, int]:
+        """Series extra por grupo que decide el entrenador (paso 5), solo clientes reales.
+
+        2-nov-2026: ``incluir_pausadas`` cuenta la propuesta pausada por la
+        descarga, solo para repartir los días: si no, al pausarla el lunes por la
+        tarde la semana se recolocaba y el martes tocaba otra vez el press francés.
+        """
+        if incluir_pausadas:
+            if '_ajustes_reparto' not in self.__dict__:
+                self._ajustes_reparto = {}
+                try:
+                    if self._cliente_dinamico_obj() is not None:
+                        from django.utils import timezone
+                        from entrenos.services.volumen_grupo_service import series_por_grupo
+                        self._ajustes_reparto = series_por_grupo(
+                            self._cliente_dinamico, timezone.localdate(), incluir_pausadas=True)
+                except Exception:
+                    logger.exception('PlanificadorHelms: ajustes de reparto no disponibles')
+            return self._ajustes_reparto
         if '_ajustes_grupo' in self.__dict__:
             return self._ajustes_grupo
         self._ajustes_grupo = {}
@@ -80,6 +97,12 @@ class PlanificadorHelms:
         except Exception:
             logger.exception('PlanificadorHelms: ajustes de volumen por grupo no disponibles')
         return self._ajustes_grupo
+
+    def _cliente_dinamico_obj(self):
+        if not hasattr(self, '_cliente_dinamico'):
+            from clientes.models import Cliente
+            self._cliente_dinamico = Cliente.objects.filter(pk=self.perfil.id).first()
+        return self._cliente_dinamico
 
     def generar_entrenamiento_para_fecha(self, fecha_objetivo: date) -> Optional[Dict[str, Any]]:
         info_dinamica = self._semana_dinamica(fecha_objetivo)
@@ -363,9 +386,13 @@ class PlanificadorHelms:
 
     def _generar_semana_especifica(self, bloque: Dict[str, Any], numero_bloque: int) -> Dict[str, List[Dict[str, Any]]]:
         ajustes_grupo = self._ajustes_volumen_grupo()
+        ajustes_reparto = (
+            self._ajustes_volumen_grupo(incluir_pausadas=True) if bloque.get('fase') == 'descarga'
+            else ajustes_grupo
+        )
         _cache_key = (
             numero_bloque, bloque.get('fase', ''), bloque.get('volumen_multiplicador', 1.0),
-            tuple(sorted(ajustes_grupo.items())),
+            tuple(sorted(ajustes_grupo.items())), tuple(sorted(ajustes_reparto.items())),
         )
         if not hasattr(self, '_semana_cache'):
             self._semana_cache = {}
@@ -430,8 +457,8 @@ class PlanificadorHelms:
                 # Con el volumen ya rebajado, todo cabía en una sesión y cada
                 # músculo quedaba en un día, un ejercicio y 4 series.
                 vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult_reparto, mrv_g))
-            if grupo in ajustes_grupo:  # paso 5: ajuste del entrenador, acotado a MRV
-                vol_efectivo = max(1, min(vol_efectivo + ajustes_grupo[grupo], mrv_g))
+            if grupo in ajustes_reparto:  # paso 5: ajuste del entrenador, acotado a MRV
+                vol_efectivo = max(1, min(vol_efectivo + ajustes_reparto[grupo], mrv_g))
             if vol_efectivo <= 0:
                 continue
             primer_ej = candidatos_grupo[0]

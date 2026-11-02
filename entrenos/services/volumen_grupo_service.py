@@ -34,8 +34,12 @@ def _signo(propuesta):
     return -1 if getattr(propuesta, 'direccion', 'subir') == 'bajar' else 1
 
 
-def ajustes_volumen(cliente, fecha):
-    """{grupo: {'series': int, 'motivos': [str]}} vigentes en ``fecha``."""
+def ajustes_volumen(cliente, fecha, incluir_pausadas=False):
+    """{grupo: {'series': int, 'motivos': [str]}} vigentes en ``fecha``.
+
+    ``incluir_pausadas``: cuenta también la propuesta pausada por la descarga
+    (solo para repartir los días de la semana, no para las series).
+    """
     ajustes = {}
 
     def sumar(grupo, series, motivo):
@@ -55,7 +59,7 @@ def ajustes_volumen(cliente, fecha):
             inicio__lte=fecha, fin__gte=fecha,
         ):
             activas.add(p.zona)
-            if pausa:
+            if pausa and not incluir_pausadas:
                 continue
             series = _signo(p) * SERIES_POR_AJUSTE
             sumar(p.zona, series,
@@ -92,6 +96,6 @@ def ajustes_volumen(cliente, fecha):
     return {g: v for g, v in ajustes.items() if v['series']}
 
 
-def series_por_grupo(cliente, fecha):
+def series_por_grupo(cliente, fecha, incluir_pausadas=False):
     """Solo los números: {grupo: series_extra}. Lo que consume el planificador."""
-    return {g: v['series'] for g, v in ajustes_volumen(cliente, fecha).items()}
+    return {g: v['series'] for g, v in ajustes_volumen(cliente, fecha, incluir_pausadas).items()}
