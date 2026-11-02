@@ -3,36 +3,36 @@
 {% block title %}Simbiosis{% endblock %}
 {% block extra_css %}
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700&display=swap');
+
 :root {
     --sim-paper: #0d0c10; --sim-ink: #f0eadf; --sim-muted: #918a81;
     --sim-line: rgba(235,226,208,.14); --sim-gold: #c4a365;
     --sim-violet: #a78bfa; --sim-danger: #f0a0a0;
 }
 * { box-sizing: border-box; }
-body { background: var(--sim-paper) !important; color: var(--sim-ink); font-family: Manrope, sans-serif !important; }
+body { background: var(--sim-paper) !important; color: var(--sim-ink); font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif !important; }
 .sim-wrap { max-width: 980px; margin: 0 auto; padding: clamp(2rem,6vw,5rem) 1.25rem 6rem; }
 .sim-header { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(14rem,.65fr); gap:3rem; padding-bottom:2.5rem; border-bottom:1px solid var(--sim-ink); }
 .sim-kicker,.chapter-index,.sim-section-label { color:var(--sim-gold); font-size:.69rem; font-weight:700; letter-spacing:.16em; text-transform:uppercase; }
-.sim-title,.chapter-title { font-family:'Crimson Pro',serif; font-weight:400; letter-spacing:-.025em; }
+.sim-title,.chapter-title { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-weight:400; letter-spacing:-.025em; }
 .sim-title { font-size:clamp(3.8rem,10vw,7rem); line-height:.78; margin:.6rem 0 1.2rem; }
-.sim-subtitle { max-width:34rem; font-family:'Crimson Pro',serif; font-size:1.35rem; line-height:1.35; color:var(--sim-muted); }
+.sim-subtitle { max-width:34rem; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:1.35rem; line-height:1.35; color:var(--sim-muted); }
 .sim-boundary { align-self:end; border-left:2px solid var(--sim-gold); padding-left:1rem; color:var(--sim-muted); font-size:.78rem; line-height:1.65; }
 .sim-metrics { grid-column:1/-1; display:flex; gap:clamp(1.5rem,5vw,4rem); padding-top:1rem; }
 .sim-metric { display:flex; gap:.45rem; align-items:baseline; }
-.sim-metric-val { font-family:'Crimson Pro',serif; font-size:2rem; }
+.sim-metric-val { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:2rem; }
 .sim-metric-label { color:var(--sim-muted); font-size:.66rem; letter-spacing:.09em; text-transform:uppercase; }
 .chapter { display:grid; grid-template-columns:9rem 1fr; gap:2rem; padding:3.5rem 0; border-bottom:1px solid var(--sim-line); }
 .chapter-title { font-size:clamp(2.2rem,5vw,3.4rem); line-height:1; margin:.25rem 0 1.4rem; }
-.chapter-lead { font-family:'Crimson Pro',serif; font-size:1.3rem; color:var(--sim-muted); margin:0 0 1.5rem; }
+.chapter-lead { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:1.3rem; color:var(--sim-muted); margin:0 0 1.5rem; }
 .editorial-list { border-top:1px solid var(--sim-line); }
 .radar-item,.circulo-item,.interaccion-item { display:flex; gap:1rem; align-items:center; padding:1rem 0; border-bottom:1px solid var(--sim-line); color:inherit; text-decoration:none; }
-.radar-name,.circulo-name,.interaccion-titulo { color:var(--sim-ink); font-family:'Crimson Pro',serif; font-size:1.25rem; font-weight:600; text-decoration:none; }
+.radar-name,.circulo-name,.interaccion-titulo { color:var(--sim-ink); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:1.25rem; font-weight:600; text-decoration:none; }
 .interaccion-titulo { min-height:44px; display:inline-flex; align-items:center; }
 .radar-meta,.circulo-tipo,.interaccion-meta,.interaccion-desc,.sombra-evidencia { color:var(--sim-muted); font-size:.74rem; line-height:1.55; }
 .radar-actions { display:flex; gap:.4rem; margin-left:auto; flex-wrap:wrap; }
 .radar-btn,.sim-cta,summary { min-height: 44px; }
-.radar-btn { border:1px solid var(--sim-line); background:transparent; color:var(--sim-ink); padding:.55rem .8rem; font:600 .68rem Manrope,sans-serif; cursor:pointer; }
+.radar-btn { border:1px solid var(--sim-line); background:transparent; color:var(--sim-ink); padding:.55rem .8rem; font:600 .68rem -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; cursor:pointer; }
 .radar-btn.add { border-color:var(--sim-gold); color:var(--sim-gold); }
 .radar-btn.ignore { color:var(--sim-muted); }
 .radar-btn:disabled { opacity:.5; cursor:wait; }
@@ -45,7 +45,7 @@ body { background: var(--sim-paper) !important; color: var(--sim-ink); font-fami
 .interaccion-item { align-items:flex-start; }.interaccion-item>div:last-child { flex:1; }
 .interaccion-origen { color:var(--sim-violet); margin-left:.4rem; }
 .sim-cta { display:inline-flex; align-items:center; margin-top:1.25rem; color:var(--sim-gold); font-size:.72rem; font-weight:700; letter-spacing:.07em; text-transform:uppercase; }
-.sim-empty { color:var(--sim-muted); font-family:'Crimson Pro',serif; font-size:1.1rem; font-style:italic; }
+.sim-empty { color:var(--sim-muted); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:1.1rem; font-style:italic; }
 .archive-details { margin-top:1rem; border-top:1px solid var(--sim-line); }
 .archive-details summary { display:flex; align-items:center; cursor:pointer; color:var(--sim-muted); font-size:.75rem; letter-spacing:.08em; text-transform:uppercase; }
 .archive-details[open] summary { color:var(--sim-gold); }

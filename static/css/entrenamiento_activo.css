@@ -910,7 +910,7 @@
             /* --- Estilos para el Formulario de Check-in --- */
             .checkin-form .slider-group { margin-bottom: 1.5rem; }
             .checkin-form .slider-label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.75rem; }
-            .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: monospace; }
+            .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; }
             .checkin-form input[type="range"] { width: 100%; accent-color: var(--cyan-glow); }
         /* Añade esto a tu bloque <style> en portal_sesion.html */
 
@@ -928,7 +928,7 @@
         .detail-value {
             font-size: 1.25rem;
             font-weight: 700;
-            font-family: monospace;
+            font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
             margin-top: 0.25rem;
         }
         .text-fuchsia-400 { color: #f0abfc; }

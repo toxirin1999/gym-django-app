@@ -775,7 +775,7 @@
     .joi-thinking-dots::after {
         content: "";
         /* Se llena con JS */
-        font-family: monospace;
+        font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
         font-size: 2em;
         color: #C8AA6E;
         animation: joiThinkingDots 1.5s steps(1, end) infinite;
@@ -848,24 +848,24 @@
     <div style="height: 50px; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; padding: 0 1.5rem; background: rgba(10,22,40,0.95); border-bottom: 1px solid rgba(200,170,110,0.12);">
         <div style="display: flex; align-items: center; gap: 10px;">
             <i class="fas fa-robot" style="color: #C8AA6E; font-size: 0.8rem;"></i>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.72rem; color: rgba(200,200,200,0.5);">
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.72rem; color: rgba(200,200,200,0.5);">
                 COACH_IA · Readiness: <strong style="color: #C8AA6E;">{% widthratio bio_readiness.score|default:1 1 100 %}%</strong> · Vol ×{{ ajuste_volumen|default:"1.0" }} · {{ modo_recuperacion|default:"Protocolo Estándar" }}
             </span>
         </div>
         <div style="display:flex;align-items:center;gap:8px;">
             {% widthratio bio_readiness.score|default:1 1 100 as readiness_pct %}
             {% if readiness_pct|add:0 >= 80 %}
-                <span style="padding: 2px 12px; background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● ÓPTIMO</span>
+                <span style="padding: 2px 12px; background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25); font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● ÓPTIMO</span>
             {% elif readiness_pct|add:0 >= 60 %}
-                <span style="padding: 2px 12px; background: rgba(200,75,49,0.15); color: #C84B31; border: 1px solid rgba(200,75,49,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● PRECAUCIÓN</span>
+                <span style="padding: 2px 12px; background: rgba(200,75,49,0.15); color: #C84B31; border: 1px solid rgba(200,75,49,0.3); font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● PRECAUCIÓN</span>
             {% else %}
-                <span style="padding: 2px 12px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● RIESGO</span>
+                <span style="padding: 2px 12px; background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.15em;">● RIESGO</span>
             {% endif %}
             {% for lesion in lesiones_activas %}
             <form method="POST" action="{% url 'hyrox:marcar_lesion_recuperada' lesion.id %}" style="margin:0;" onsubmit="return confirm('¿Confirmas que te has recuperado totalmente de {{ lesion.zona_afectada|default:lesion }}?')">
                 {% csrf_token %}
                 <input type="hidden" name="next" value="{% url 'clientes:panel_cliente' %}">
-                <button type="submit" style="padding:2px 10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);font-family:'Share Tech Mono',monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
+                <button type="submit" style="padding:2px 10px;background:rgba(74,222,128,0.15);color:#4ade80;border:1px solid rgba(74,222,128,0.4);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.65rem;font-weight:700;letter-spacing:0.1em;cursor:pointer;transition:all .15s;" onmouseover="this.style.background='rgba(74,222,128,0.3)'" onmouseout="this.style.background='rgba(74,222,128,0.15)'">
                     ✅ RECUPERADO
                 </button>
             </form>
@@ -876,23 +876,23 @@
     <!-- DIVISOR -->
     <div style="display: flex; align-items: center; gap: 12px; padding: 10px 1.5rem; flex-shrink: 0;">
         <div style="flex: 1; height: 1px; background: linear-gradient(to right, transparent, rgba(200,170,110,0.3));"></div>
-        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase;">◆ PROTOCOLO DE COMBATE ◆</span>
+        <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase;">◆ PROTOCOLO DE COMBATE ◆</span>
         <div style="flex: 1; height: 1px; background: linear-gradient(to left, transparent, rgba(200,170,110,0.3));"></div>
     </div>
 
     <!-- HERO -->
     <div style="flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 0 1rem; text-align: center; min-height: 0; overflow: hidden;">
 
-        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px;">
+        <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.25em; text-transform: uppercase; margin-bottom: 8px;">
             {{ proximo_entrenamiento.objetivo|default:"HIPERTROFIA"|upper }} · SEMANA {{ semana_actual|default:"1" }} · DÍA {{ dia_actual|default:"1" }}
         </p>
 
-        <h1 style="font-family: 'Cinzel', serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #F0E6D3; text-transform: uppercase; margin: 0 0 12px 0; line-height: 1.1; drop-shadow: 0 0 40px rgba(200,170,110,0.2);">
+        <h1 style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: #F0E6D3; text-transform: uppercase; margin: 0 0 12px 0; line-height: 1.1; drop-shadow: 0 0 40px rgba(200,170,110,0.2);">
             {{ proximo_entrenamiento.nombre|default:"ENTRENAMIENTO NO DISPONIBLE"|upper }}
         </h1>
 
         <div style="display: inline-flex; align-items: center; gap: 8px; padding: 5px 16px; background: rgba(200,170,110,0.07); border: 1px solid rgba(200,170,110,0.2); margin-bottom: 1.5rem;">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #C8AA6E; letter-spacing: 0.15em;">▶ VOL {{ volumen_sugerido|default:"100" }}%</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.7rem; color: #C8AA6E; letter-spacing: 0.15em;">▶ VOL {{ volumen_sugerido|default:"100" }}%</span>
         </div>
 
         <!-- Lista ejercicios -->
@@ -901,26 +901,26 @@
                 {% for ej in proximo_entrenamiento.ejercicios|slice:":3" %}
                 <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px 16px; background: rgba(200,170,110,0.04); border: 1px solid rgba(200,170,110,0.1); border-left: 2px solid rgba(200,170,110,0.35); margin-bottom: 3px; clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);">
                     <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: rgba(200,170,110,0.3);">{{ forloop.counter|stringformat:"02d" }}</span>
-                        <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: rgba(240,230,210,0.75); font-weight: 600;">{{ ej.nombre_ejercicio }}</span>
+                        <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: rgba(200,170,110,0.3);">{{ forloop.counter|stringformat:"02d" }}</span>
+                        <span style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.95rem; color: rgba(240,230,210,0.75); font-weight: 600;">{{ ej.nombre_ejercicio }}</span>
                     </div>
-                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; color: #C8AA6E; letter-spacing: 0.1em;">{{ ej.series }}×{{ ej.repeticiones }}</span>
+                    <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.85rem; color: #C8AA6E; letter-spacing: 0.1em;">{{ ej.series }}×{{ ej.repeticiones }}</span>
                 </div>
                 {% endfor %}
                 {% if proximo_entrenamiento.ejercicios|length > 3 %}
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; text-align: center; margin-top: 8px; letter-spacing: 0.15em;">
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; color: #785A28; text-align: center; margin-top: 8px; letter-spacing: 0.15em;">
                     // +{{ proximo_entrenamiento.ejercicios|length|add:"-3" }} EJERCICIOS · ACCEDE AL PROTOCOLO COMPLETO
                 </p>
                 {% endif %}
             {% else %}
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; text-align: center; letter-spacing: 0.15em;">// ANÁLISIS BIO-TÁCTICO PENDIENTE</p>
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; color: #785A28; text-align: center; letter-spacing: 0.15em;">// ANÁLISIS BIO-TÁCTICO PENDIENTE</p>
             {% endif %}
         </div>
 
         <!-- CTA -->
         {% if entreno_hoy_realizado and entreno_realizado_obj %}
             <!-- SESIÓN COMPLETADA HOY -->
-            <div style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: 'Cinzel', serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; background: rgba(76, 175, 80, 0.15); border: 2px solid rgba(76, 175, 80, 0.4); color: #4CAF50; margin-bottom: 12px; border-radius: 6px;">
+            <div style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.95rem; font-weight: 700; letter-spacing: 0.1em; background: rgba(76, 175, 80, 0.15); border: 2px solid rgba(76, 175, 80, 0.4); color: #4CAF50; margin-bottom: 12px; border-radius: 6px;">
                 <i class="fas fa-check-circle"></i> &nbsp; SESIÓN COMPLETADA
                 {% if entreno_realizado_obj.sesion_detalle.rpe_medio >= 8 %}
                     <span style="margin-left: 12px; padding: 4px 10px; background: rgba(255, 152, 0, 0.2); border: 1px solid rgba(255, 152, 0, 0.4); color: #FFA500; border-radius: 4px; font-size: 0.8rem; letter-spacing: 0.05em;">RPE {{ entreno_realizado_obj.sesion_detalle.rpe_medio|floatformat:1 }} - ALTO</span>
@@ -932,14 +932,14 @@
                 <i class="fas fa-play-circle"></i> EJECUTAR PROTOCOLO
             </a>
         {% else %}
-        <button class="btn-empezar-gym" style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: 'Cinzel', serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; opacity: 0.5; cursor: not-allowed; margin-bottom: 12px; border: none;">
+        <button class="btn-empezar-gym" style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 500px; height: 60px; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 1rem; font-weight: 700; letter-spacing: 0.2em; opacity: 0.5; cursor: not-allowed; margin-bottom: 12px; border: none;">
             ⚔ EJECUTAR PROTOCOLO
         </button>
         {% endif %}
 
         <div style="display: flex; justify-content: center; gap: 10px;">
-            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">↺ CAMBIAR RUTINA</a>
-            <button id="btn-toggle-dashboard-full" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">⚡ BLADE RUNNER</button>
+            <a href="{% url 'entrenos:vista_plan_anual' cliente.id %}" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #A08C5B; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-decoration: none; transition: all 0.2s;">↺ CAMBIAR RUTINA</a>
+            <button id="btn-toggle-dashboard-full" style="padding: 8px 20px; background: transparent; border: 1px solid rgba(200,170,110,0.3); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; cursor: pointer; transition: all 0.2s;">⚡ BLADE RUNNER</button>
         </div>
     </div>
 
@@ -947,29 +947,29 @@
     <div style="height: 60px; flex-shrink: 0; border-top: 1px solid rgba(200,170,110,0.1); background: rgba(10,22,40,0.95); display: grid; grid-template-columns: repeat(5, 1fr); divide-x: rgba(200,170,110,0.08);">
         {% for stat in focus_stats %}
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">{{ stat.label }}</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ stat.value }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">{{ stat.label }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ stat.value }}</span>
         </div>
         {% empty %}
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">SESIONES</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.asistencia|floatformat:"0"|default:"0" }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">SESIONES</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.asistencia|floatformat:"0"|default:"0" }}</span>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CARGA TOTAL</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CARGA TOTAL</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</span>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CONSISTENCIA</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CONSISTENCIA</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</span>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; border-right: 1px solid rgba(200,170,110,0.08);">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">ACWR</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ analisis_acwr.acwr|floatformat:2|default:"0.00" }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">ACWR</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ analisis_acwr.acwr|floatformat:2|default:"0.00" }}</span>
         </div>
         <div style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CICLO</span>
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ mesociclo_actual.numero|default:"1" }}</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 2px;">CICLO</span>
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.1rem; color: #C8AA6E; line-height: 1;">{{ mesociclo_actual.numero|default:"1" }}</span>
         </div>
         {% endfor %}
     </div>
@@ -984,34 +984,34 @@
     <!-- ── HEADER ────────────────────────────────────────────────────── -->
     <header style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-start; padding: 1.25rem 0 1.25rem 0; border-bottom: 1px solid rgba(200,170,110,0.1); margin-bottom: 1.5rem; gap: 1rem;">
         <div>
-            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 4px;">
+            <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 4px;">
                 OPERATIVO {{ cliente.id }} · {% if cliente.localizacion %}{{ cliente.localizacion }}{% else %}SECTOR 7G{% endif %}
             </p>
-            <h1 style="font-family: 'Cinzel', serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: #F0E6D3; margin: 0 0 12px 0; letter-spacing: 0.05em; text-transform: uppercase;">
+            <h1 style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: clamp(1.6rem, 4vw, 2.2rem); font-weight: 700; color: #F0E6D3; margin: 0 0 12px 0; letter-spacing: 0.05em; text-transform: uppercase;">
                 {{ cliente.nombre|upper }}
             </h1>
             <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                <a href="{% url 'clientes:detalle_cliente' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
                     <i class="fas fa-user" style="font-size: 0.7rem;"></i> Mi Perfil
                 </a>
-                <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                <a href="{% url 'clientes:configurar_preferencias_helms' cliente.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.2); color: #785A28; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
                     <i class="fas fa-sliders-h" style="font-size: 0.7rem;"></i> Config. Entreno
                 </a>
-                <a href="{% url 'hyrox:dashboard' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                <a href="{% url 'hyrox:dashboard' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,75,49,0.3); color: #C84B31; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
                     <i class="fas fa-running" style="font-size: 0.7rem;"></i> Hyrox
                 </a>
-                <button id="btn-toggle-focus" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.4); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;">
+                <button id="btn-toggle-focus" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.4); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; cursor: pointer;">
                     <i class="fas fa-crosshairs" style="font-size: 0.7rem;"></i> FOCUS
                 </button>
-                <a href="{% url 'clientes:panel_cliente' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.15); color: #785A28; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+                <a href="{% url 'clientes:panel_cliente' %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.15); color: #785A28; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
                     <i class="fas fa-arrow-left" style="font-size: 0.7rem;"></i> Volver
                 </a>
             </div>
         </div>
         {% if estoico_disponible and contenido_hoy %}
         <div style="border-left: 2px solid rgba(200,170,110,0.2); padding-left: 1rem; max-width: 320px;">
-            <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 6px;">DIARIO ESTOICO</p>
-            <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: rgba(200,170,110,0.45); font-style: italic; line-height: 1.5; margin: 0;">
+            <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 6px;">DIARIO ESTOICO</p>
+            <p style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.85rem; color: rgba(200,170,110,0.45); font-style: italic; line-height: 1.5; margin: 0;">
                 "{{ contenido_hoy.cita }}"
             </p>
         </div>
@@ -1022,8 +1022,8 @@
     {% if bio_readiness.score is not None %}
     <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.15); border-left: 3px solid #C8AA6E; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem;">
         <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
-        <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 10px;">◆ NÚCLEO COACH_IA</p>
-        <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: rgba(200,200,200,0.75); line-height: 1.6; margin-bottom: 12px;">
+        <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 10px;">◆ NÚCLEO COACH_IA</p>
+        <p style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.9rem; color: rgba(200,200,200,0.75); line-height: 1.6; margin-bottom: 12px;">
             {% if bio_readiness.score < 0.4 %}
             David, tu capacidad de recuperación está al <strong style="color: #ef4444;">{% widthratio bio_readiness.score 1 100 %}%</strong> — <strong style="color: #ef4444;">modo supervivencia</strong>. He reducido el volumen al 50% para proteger tu recuperación.
             {% elif bio_readiness.score < 0.8 %}
@@ -1034,11 +1034,11 @@
         </p>
         {% if bio_banner.tags %}
         <div style="display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px;">
-            <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.1em; text-transform: uppercase;">
+            <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.1em; text-transform: uppercase;">
                 <i class="fas fa-ban" style="margin-right: 4px;"></i>Bloqueados:
             </span>
             {% for tag in bio_banner.tags %}
-            <span style="padding: 3px 10px; background: rgba(200,75,49,0.1); border: 1px solid rgba(200,75,49,0.25); color: #C84B31; font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; letter-spacing: 0.08em;">
+            <span style="padding: 3px 10px; background: rgba(200,75,49,0.1); border: 1px solid rgba(200,75,49,0.25); color: #C84B31; font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; letter-spacing: 0.08em;">
                 {{ tag|cut:"__"|title }}
             </span>
             {% endfor %}
@@ -1047,7 +1047,7 @@
         {% if bio_banner.injuries %}
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
             {% for inj in bio_banner.injuries %}
-            <a href="{% url 'hyrox:test_recuperacion' inj.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.25); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
+            <a href="{% url 'hyrox:test_recuperacion' inj.id %}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; background: transparent; border: 1px solid rgba(200,170,110,0.25); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.65rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase;">
                 <i class="fas fa-stethoscope"></i> Test Recuperación ({{ inj.zona|title }})
             </a>
             {% endfor %}
@@ -1059,16 +1059,16 @@
     <!-- ── MÉTRICAS ───────────────────────────────────────────────────── -->
     <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; background: rgba(200,170,110,0.08); border: 1px solid rgba(200,170,110,0.08); margin-bottom: 1.5rem;">
         <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ total_entrenamientos|default:"0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">ENTRENOS</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ total_entrenamientos|default:"0" }}</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">ENTRENOS</div>
         </div>
         <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CARGA TOTAL</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.volumen|floatformat:"0"|default:"0" }}T</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CARGA TOTAL</div>
         </div>
         <div style="background: #0A1628; padding: 1.25rem; text-align: center;">
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</div>
-            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CONSISTENCIA</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 2rem; color: #C8AA6E; font-weight: 700; line-height: 1; margin-bottom: 4px;">{{ metricas_radar.frecuencia_semanal|floatformat:1|default:"0.0" }}</div>
+            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.55rem; color: #785A28; letter-spacing: 0.2em; text-transform: uppercase;">CONSISTENCIA</div>
         </div>
     </div>
 
@@ -1081,24 +1081,24 @@
             <!-- ACCIONES RÁPIDAS -->
             <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">◆ ACCIONES RÁPIDAS</p>
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">◆ ACCIONES RÁPIDAS</p>
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-                    <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'analytics:dashboard_cliente' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-dumbbell"></i> Panel Entrenos
                     </a>
-                    <a href="{% url 'estiramientos:panel' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'estiramientos:panel' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-person-rays"></i> Estiramientos
                     </a>
-                    <a href="{% url 'analytics:dashboard_ia_principal' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'analytics:dashboard_ia_principal' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-robot"></i> Dashboard IA
                     </a>
-                    <a href="{% url 'diario:dashboard_diario' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'diario:dashboard_diario' %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-book"></i> Diario
                     </a>
-                    <a href="{% url 'analytics:dashboard_global' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'analytics:dashboard_global' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-globe"></i> Dashboard Global
                     </a>
-                    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
+                    <a href="{% url 'entrenos:dashboard_evolucion' cliente.id %}" style="display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: rgba(200,170,110,0.05); border: 1px solid rgba(200,170,110,0.15); color: #C8AA6E; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-decoration: none; text-transform: uppercase; transition: all 0.2s;">
                         <i class="fas fa-chart-line"></i> Evolución Deportiva
                     </a>
                 </div>
@@ -1111,17 +1111,17 @@
             {% if sesiones_anticipadas %}
             <div style="background: #0A1628; border: 1px solid rgba(251,191,36,0.2); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #fbbf24, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #fbbf24; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">⚡ MISIONES ANTICIPADAS</p>
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #fbbf24; letter-spacing: 0.3em; text-transform: uppercase; margin-bottom: 1rem;">⚡ MISIONES ANTICIPADAS</p>
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                     {% for s in sesiones_anticipadas %}
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: rgba(251,191,36,0.05); border-left: 2px solid rgba(251,191,36,0.3);">
                         <div>
-                            <div style="font-family: 'Rajdhani', sans-serif; font-size: 0.9rem; color: #C8C8C8; font-weight: 600;">{{ s.entreno_gym.rutina.nombre|default:s.tipo|default:"Entrenamiento" }}</div>
-                            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; margin-top: 2px;">
+                            <div style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.9rem; color: #C8C8C8; font-weight: 600;">{{ s.entreno_gym.rutina.nombre|default:s.tipo|default:"Entrenamiento" }}</div>
+                            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; margin-top: 2px;">
                                 Plan: {{ s.fecha|date:"d M" }} · Realizado: {{ s.fecha_realizado|date:"d M" }}
                             </div>
                         </div>
-                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #4ade80;">✓</span>
+                        <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; color: #4ade80;">✓</span>
                     </div>
                     {% endfor %}
                 </div>
@@ -1132,16 +1132,16 @@
             <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ REGISTROS DE CAMPO</p>
-                    <a href="{% url 'entrenos:lista_entrenamientos' %}" style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; transition: color 0.2s;">VER ARCHIVO →</a>
+                    <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ REGISTROS DE CAMPO</p>
+                    <a href="{% url 'entrenos:lista_entrenamientos' %}" style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none; transition: color 0.2s;">VER ARCHIVO →</a>
                 </div>
                 {% if entrenamientos_recientes %}
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                     {% for entrenamiento in entrenamientos_recientes %}
                     <a href="{% url 'entrenos:detalle_entrenamiento' entrenamiento.id %}" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; background: rgba(1,10,19,0.5); border-left: 2px solid {% if forloop.first %}rgba(200,170,110,0.4){% else %}rgba(200,170,110,0.12){% endif %}; text-decoration: none; transition: all 0.2s;">
                         <div>
-                            <h4 style="font-family: 'Rajdhani', sans-serif; font-size: 0.95rem; color: #C8C8C8; font-weight: 600; margin: 0 0 4px 0;">{{ entrenamiento.rutina.nombre|default:"Operación Táctica" }}</h4>
-                            <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; display: flex; gap: 12px;">
+                            <h4 style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.95rem; color: #C8C8C8; font-weight: 600; margin: 0 0 4px 0;">{{ entrenamiento.rutina.nombre|default:"Operación Táctica" }}</h4>
+                            <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; color: #785A28; display: flex; gap: 12px;">
                                 <span>{{ entrenamiento.fecha|date:"d M y"|upper }}</span>
                                 {% if entrenamiento.volumen_total_kg %}<span>· {{ entrenamiento.volumen_total_kg|floatformat:0 }}kg</span>{% endif %}
                                 {% if entrenamiento.duracion_minutos %}<span>· {{ entrenamiento.duracion_minutos }}m</span>{% endif %}
@@ -1152,7 +1152,7 @@
                     {% endfor %}
                 </div>
                 {% else %}
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; color: #785A28; text-align: center; padding: 1.5rem; letter-spacing: 0.15em;">Sin registros en el sistema central.</p>
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.7rem; color: #785A28; text-align: center; padding: 1.5rem; letter-spacing: 0.15em;">Sin registros en el sistema central.</p>
                 {% endif %}
             </div>
 
@@ -1160,8 +1160,8 @@
             <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ BALANCE DE FUERZA</p>
-                    <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;">VER ANÁLISIS →</a>
+                    <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ BALANCE DE FUERZA</p>
+                    <a href="{% url 'analytics:progresion_avanzado' cliente.id %}" style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; text-decoration: none;">VER ANÁLISIS →</a>
                 </div>
                 <div style="position: relative; height: 220px; margin-bottom: 1rem;">
                     <canvas id="radarChartInicio"></canvas>
@@ -1170,8 +1170,8 @@
                 <div style="display: flex; flex-direction: column; gap: 2px;">
                     {% for ratio in ratios_fuerza.ratios|slice:":3" %}
                     <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: rgba(1,10,19,0.5); border-left: 2px solid rgba(200,170,110,0.15);">
-                        <span style="font-family: 'Rajdhani', sans-serif; font-size: 0.85rem; color: #C8C8C8; font-weight: 600;">{{ ratio.nombre }}</span>
-                        <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.85rem; font-weight: 700;
+                        <span style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.85rem; color: #C8C8C8; font-weight: 600;">{{ ratio.nombre }}</span>
+                        <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.85rem; font-weight: 700;
                             {% if ratio.estado == 'optimo' %}color: #4ade80;
                             {% elif ratio.estado == 'bajo' %}color: #C8AA6E;
                             {% else %}color: #C84B31;{% endif %}">
@@ -1225,24 +1225,24 @@
             <div style="background: #0A1628; border: 1px solid rgba(200,170,110,0.12); padding: 1.25rem 1.5rem;">
                 <div style="height: 2px; background: linear-gradient(90deg, #C8AA6E, #785A28, transparent); margin: -1.25rem -1.5rem 1rem -1.5rem;"></div>
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ MESOCICLO ACTUAL</p>
-                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.6rem; color: #C8AA6E; padding: 2px 10px; border: 1px solid rgba(200,170,110,0.3);">Ciclo {{ mesociclo_actual.numero }}</span>
+                    <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #785A28; letter-spacing: 0.3em; text-transform: uppercase; margin: 0;">◆ MESOCICLO ACTUAL</p>
+                    <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.6rem; color: #C8AA6E; padding: 2px 10px; border: 1px solid rgba(200,170,110,0.3);">Ciclo {{ mesociclo_actual.numero }}</span>
                 </div>
-                <p style="font-family: 'Share Tech Mono', monospace; font-size: 0.65rem; color: #785A28; margin-bottom: 12px;">
+                <p style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.65rem; color: #785A28; margin-bottom: 12px;">
                     {{ mesociclo_actual.fecha_inicio|date:"d/m" }} — {{ mesociclo_actual.fecha_fin|date:"d/m/Y" }}
                 </p>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;">
                     <div style="text-align: center; padding: 10px; background: rgba(1,10,19,0.5); border: 1px solid rgba(200,170,110,0.08);">
-                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.carga_total|floatformat:0 }}</div>
-                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Carga Total (kg)</div>
+                        <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.carga_total|floatformat:0 }}</div>
+                        <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Carga Total (kg)</div>
                     </div>
                     <div style="text-align: center; padding: 10px; background: rgba(1,10,19,0.5); border: 1px solid rgba(200,170,110,0.08);">
-                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.sesiones }}</div>
-                        <div style="font-family: 'Share Tech Mono', monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Sesiones</div>
+                        <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 1.4rem; color: #C8AA6E; font-weight: 700;">{{ mesociclo_actual.datos.sesiones }}</div>
+                        <div style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.5rem; color: #785A28; letter-spacing: 0.15em; text-transform: uppercase; margin-top: 2px;">Sesiones</div>
                     </div>
                 </div>
                 <div style="text-align: center; margin-bottom: 8px;">
-                    <span style="font-family: 'Share Tech Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 4px 14px;
+                    <span style="font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; font-size: 0.7rem; font-weight: 700; padding: 4px 14px;
                         {% if mesociclo_actual.efectividad == 'alta' %}background: rgba(74,222,128,0.1); color: #4ade80; border: 1px solid rgba(74,222,128,0.25);
                         {% elif mesociclo_actual.efectividad == 'media' %}background: rgba(200,170,110,0.1); color: #C8AA6E; border: 1px solid rgba(200,170,110,0.25);
                         {% else %}background: rgba(200,75,49,0.1); color: #C84B31; border: 1px solid rgba(200,75,49,0.25);{% endif %}">
@@ -1250,7 +1250,7 @@
                     </span>
                 </div>
                 {% if mesociclo_actual.recomendaciones %}
-                <p style="font-family: 'Rajdhani', sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); text-align: center; border-top: 1px solid rgba(200,170,110,0.08); padding-top: 10px; margin-top: 6px;">
+                <p style="font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 0.8rem; color: rgba(200,200,200,0.5); text-align: center; border-top: 1px solid rgba(200,170,110,0.08); padding-top: 10px; margin-top: 6px;">
                     {{ mesociclo_actual.recomendaciones|first }}
                 </p>
                 {% endif %}

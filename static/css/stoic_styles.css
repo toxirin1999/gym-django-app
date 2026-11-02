@@ -14,8 +14,8 @@
     --muted-color: #7f8c8d;
     
     /* Fuentes */
-    --font-primary: 'Inter', sans-serif;
-    --font-serif: 'Crimson Text', serif;
+    --font-primary: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+    --font-serif: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     
     /* Espaciado */
     --border-radius: 8px;

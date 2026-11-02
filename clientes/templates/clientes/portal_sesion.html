@@ -26,7 +26,7 @@
         background-size: cover !important;
         background-color: #000 !important;
         color: var(--text-primary);
-        font-family: 'Inter', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     }
 
     /* --- Animaciones --- */
@@ -77,7 +77,7 @@
     /* --- Estilos para el Formulario de Check-in --- */
     .checkin-form .slider-group { margin-bottom: 1.5rem; }
     .checkin-form .slider-label { display: flex; justify-content: space-between; font-weight: 600; margin-bottom: 0.75rem; }
-    .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: monospace; }
+    .checkin-form .slider-label span:last-child { color: var(--cyan-glow); font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; }
     .checkin-form input[type="range"] { width: 100%; accent-color: var(--cyan-glow); }
 /* Añade esto a tu bloque <style> en portal_sesion.html */
 
@@ -103,7 +103,7 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.35rem 0;
-    font-family: monospace;
+    font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 .aprox-row .detail-motivo {
     margin-top: 0;
@@ -111,7 +111,7 @@
 .detail-value {
     font-size: 1.25rem;
     font-weight: 700;
-    font-family: monospace;
+    font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
     margin-top: 0.25rem;
 }
 .text-fuchsia-400 { color: #f0abfc; }
@@ -214,7 +214,7 @@ body {
     background-size: cover !important;
     background-color: #000 !important;
     color: var(--text-primary);
-    font-family: 'Inter', sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
 }
 .container { max-width: 1400px; margin: auto; padding: 2rem; }
 
@@ -384,7 +384,7 @@ body {
                     <div>
                         <label class="slider-label" style="font-size:0.85rem;">
                             <span><i class="fas fa-heart" style="color:#ff4d6d;"></i> FC Reposo</span>
-                            <span style="color:var(--cyan-glow); font-family:monospace;">lpm</span>
+                            <span style="color:var(--cyan-glow); font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;">lpm</span>
                         </label>
                         <input type="number" name="fc_reposo" placeholder="ej. 52" min="30" max="200"
                                style="width:100%; background:#1a1a2e; border:1px solid #333; color:#e0e0e0;
@@ -393,7 +393,7 @@ body {
                     <div>
                         <label class="slider-label" style="font-size:0.85rem;">
                             <span><i class="fas fa-wave-square" style="color:#00ff9d;"></i> HRV</span>
-                            <span style="color:var(--cyan-glow); font-family:monospace;">ms</span>
+                            <span style="color:var(--cyan-glow); font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;">ms</span>
                         </label>
                         <input type="number" name="hrv_ms" placeholder="ej. 68" min="1" max="300"
                                style="width:100%; background:#1a1a2e; border:1px solid #333; color:#e0e0e0;

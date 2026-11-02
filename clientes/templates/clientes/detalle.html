@@ -5,8 +5,6 @@
 {% block title %}{{ cliente.nombre }} — Centro de Mando{% endblock %}
 
 {% block extra_css %}
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
 /* smooth scroll */
 html { scroll-behavior: smooth; }
@@ -29,9 +27,9 @@ html { scroll-behavior: smooth; }
   --ok:      oklch(0.55 0.15 145);  /* green */
   --warn:    oklch(0.72 0.17 70);   /* yellow */
   --danger:  oklch(0.55 0.22 25);   /* red */
-  --font-d:  'Archivo Black','Archivo',sans-serif;
-  --font-b:  'Archivo',system-ui,sans-serif;
-  --font-m:  'JetBrains Mono',ui-monospace,monospace;
+  --font-d:  -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  --font-b:  -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  --font-m:  'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 
   background: var(--bg);
   color: var(--ink);

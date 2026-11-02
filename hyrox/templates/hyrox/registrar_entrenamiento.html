@@ -5,9 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Registrar Sesión · Hyrox</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Archivo:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { background: #EFEAE1; height: 100%; overflow: hidden; }
@@ -26,9 +23,9 @@
     --ok: oklch(0.55 0.15 145);
     --warn: oklch(0.72 0.17 70);
     --danger: oklch(0.55 0.22 25);
-    --font-disp: 'Archivo Black', 'Archivo', sans-serif;
-    --font-body: 'Archivo', system-ui, sans-serif;
-    --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+    --font-disp: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+    --font-body: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+    --font-mono: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
     background: var(--bg);
     color: var(--ink);
     font-family: var(--font-body);
@@ -701,7 +698,7 @@
 <body>
 
 {% if modo_protegida %}
-<div style="background:oklch(0.72 0.17 70);color:#0F0F0E;padding:12px 16px;font-family:system-ui,sans-serif;font-size:12px;display:flex;align-items:flex-start;gap:12px;flex-shrink:0;">
+<div style="background:oklch(0.72 0.17 70);color:#0F0F0E;padding:12px 16px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;font-size:12px;display:flex;align-items:flex-start;gap:12px;flex-shrink:0;">
   <span style="font-size:18px;flex-shrink:0;margin-top:-2px;">🛡️</span>
   <div>
     <strong>Recuperación Activa</strong> — El sistema detectó esfuerzo extremo. Esta sesión está preconfigurada con actividades ligeras (movilidad, estiramientos, caminata suave). Objetivo: cerrar el día sin añadir fatiga.
@@ -709,7 +706,7 @@
 </div>
 {% endif %}
 <noscript>
-  <div style="background:#b45309;color:#fff;padding:8px 16px;font-family:system-ui,sans-serif;font-size:13px;text-align:center;">
+  <div style="background:#b45309;color:#fff;padding:8px 16px;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;font-size:13px;text-align:center;">
     Habilita JavaScript para la experiencia completa. El formulario funciona igualmente de forma tradicional.
   </div>
 </noscript>

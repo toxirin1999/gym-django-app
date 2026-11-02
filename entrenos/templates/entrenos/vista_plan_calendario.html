@@ -5,17 +5,14 @@
 
 {% block extra_css %}
 <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&family=Bebas+Neue&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,700;1,300&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
 <style>
 
     /* LoL Override fonts */
-    body { font-family: 'Rajdhani', sans-serif !important; }
-    h1, h2, h3, h4, h5, .header-title-text, .cp-title, .np-next-name, .modal-rutina-name, .topbar-title, .card-name, .np-days-num { font-family: 'Cinzel', serif !important; }
-    .summary-value, .kpi-value, .exercise-cell, .week-label, .header-stat-value { font-family: 'Share Tech Mono', monospace !important; }
+    body { font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif !important; }
+    h1, h2, h3, h4, h5, .header-title-text, .cp-title, .np-next-name, .modal-rutina-name, .topbar-title, .card-name, .np-days-num { font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif !important; }
+    .summary-value, .kpi-value, .exercise-cell, .week-label, .header-stat-value { font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace !important; }
 
     /* ============================================
        DASHBOARD CYBERPUNK REFINED
@@ -392,9 +389,9 @@
         --danger-color: #FF4757;
 
         /* Tipografía */
-        --font-display: 'Cinzel', serif;
-        --font-body: 'Rajdhani', sans-serif;
-        --font-mono: 'Share Tech Mono', monospace;
+        --font-display: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+        --font-body: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+        --font-mono: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 
         /* Efectos Glassmorphism */
         --glass-bg: rgba(10, 22, 40, 0.6);
@@ -4079,7 +4076,7 @@
     .proj-panel {
         width: 100%;
         position: relative;
-        font-family: 'DM Sans', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     }
 
     /* Header */
@@ -4092,7 +4089,7 @@
     }
 
     .header-title-text {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 2.2rem;
         letter-spacing: 0.06em;
         color: var(--proj-text);
@@ -4208,7 +4205,7 @@
     }
 
     .card-name {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 1.1rem;
         letter-spacing: 0.1em;
         color: var(--proj-text);
@@ -4441,7 +4438,7 @@
     }
 
     .cp-title {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 2rem;
         letter-spacing: 0.06em;
         color: #e8edf2;
@@ -4534,7 +4531,7 @@
     }
 
     .cp-stat-val {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 1.6rem;
         letter-spacing: 0.04em;
         color: var(--phase-primary, #00d4ff);
@@ -4558,7 +4555,7 @@
     }
 
     .cp-prog-pct {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 1.1rem;
         letter-spacing: 0.05em;
         color: var(--phase-primary, #00d4ff);
@@ -4694,7 +4691,7 @@
     }
 
     .np-days-num {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 3rem;
         letter-spacing: 0.02em;
         color: var(--phase-primary, #00d4ff);
@@ -4752,7 +4749,7 @@
     }
 
     .np-next-name {
-        font-family: 'Bebas Neue', sans-serif;
+        font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
         font-size: 1.4rem;
         letter-spacing: 0.08em;
         color: #e8edf2;

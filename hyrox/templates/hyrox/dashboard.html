@@ -5,8 +5,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% if objetivo_activo %}HYROX · Race Command{% else %}HYROX{% endif %}</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Archivo+Black&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="{% static 'css/jds.css' %}">
   <style>
@@ -57,7 +55,7 @@ body {
   --ink-3: var(--fg-dim);
   --ink-4: var(--fg-mute);
   --ink-5: var(--jds-text-faint);
-  --font-disp: 'Archivo Black', 'Space Grotesk', sans-serif;
+  --font-disp: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
   --font-body: var(--jds-font);
   --font-mono: var(--jds-mono);
   --border: var(--line);
@@ -75,7 +73,7 @@ body {
 ::selection { background: var(--accent); color: #fff; }
 
 /* ── TYPOGRAPHY CLASSES ────────────────────────── */
-.mono { font-family: 'JetBrains Mono', monospace; }
+.mono { font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace; }
 .display {
   font-family: var(--font-body);
   letter-spacing: -0.04em;
@@ -126,17 +124,17 @@ body {
 }
 .rb-section-header-left { display: flex; align-items: flex-end; gap: 24px; }
 .rb-section-num-large {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size: 11px; color: var(--fg-mute);
   padding-bottom: 6px; white-space: nowrap;
 }
 .rb-section-eyebrow {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size: 11px; color: var(--fg-mute);
   letter-spacing: 0.18em; text-transform: uppercase; margin-bottom: 8px;
 }
 .rb-section-title-xl {
-  font-family: 'Archivo Black', sans-serif;
+  font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
   font-size: clamp(36px, 5vw, 64px);
   letter-spacing: -0.04em; line-height: 0.85;
   text-transform: uppercase; color: var(--fg);
@@ -153,7 +151,7 @@ body {
 /* ── TAG PATTERN ────────────────────────────────── */
 .tag {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 5px 9px; font-family: 'JetBrains Mono', monospace;
+  padding: 5px 9px; font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   font-size: 10px; font-weight: 700; letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -1991,7 +1989,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
     </svg>
     <div style="display:flex;justify-content:space-between;margin-top:4px;">
       <span style="font-size:10px;color:var(--fg-mute);">{{ curva.puntos.0.f }}</span>
-      <span style="font-size:10px;font-family:monospace;color:var(--accent);font-weight:700;">{{ curva.max_v }} {{ curva.unit }}</span>
+      <span style="font-size:10px;font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;color:var(--accent);font-weight:700;">{{ curva.max_v }} {{ curva.unit }}</span>
       <span style="font-size:10px;color:var(--fg-mute);">hoy</span>
     </div>
     {% endif %}
@@ -2707,7 +2705,7 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
           });
           yax.innerHTML = '<div style="display:flex;flex-direction:column;height:80px;justify-content:space-around">'
             + labels.map(function(l){
-                return '<span style="font-size:8px;color:var(--ink-5);font-family:monospace;display:block;line-height:1">'+l+'</span>';
+                return '<span style="font-size:8px;color:var(--ink-5);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;display:block;line-height:1">'+l+'</span>';
               }).join('')
             + '</div>';
         }
@@ -2715,9 +2713,9 @@ details[open] > summary i.fa-chevron-down { transform: rotate(180deg); }
         var labWrap = document.getElementById('rb-pace-labels');
         if(labWrap){
           labWrap.innerHTML =
-            '<span style="font-size:9px;color:var(--ink-5);font-family:monospace">'+pts[0].f+'</span>'
-            +(pts.length>2?'<span style="font-size:9px;color:var(--ink-5);font-family:monospace;opacity:.5">'+pts[Math.floor(pts.length/2)].f+'</span>':'')
-            +'<span style="font-size:9px;color:var(--ink-5);font-family:monospace">'+pts[pts.length-1].f+'</span>';
+            '<span style="font-size:9px;color:var(--ink-5);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace">'+pts[0].f+'</span>'
+            +(pts.length>2?'<span style="font-size:9px;color:var(--ink-5);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;opacity:.5">'+pts[Math.floor(pts.length/2)].f+'</span>':'')
+            +'<span style="font-size:9px;color:var(--ink-5);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace">'+pts[pts.length-1].f+'</span>';
         }
       })();
       </script>

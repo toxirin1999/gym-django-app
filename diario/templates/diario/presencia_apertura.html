@@ -179,7 +179,7 @@
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0.6rem 0.9rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 0.95rem;
     color: var(--text);
     background: var(--bg);
@@ -194,7 +194,7 @@
     border: 1.5px solid var(--border);
     border-radius: 12px;
     padding: 0.6rem 0.9rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 0.95rem;
     color: var(--text);
     background: var(--bg);
@@ -211,7 +211,7 @@ textarea.intencion {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 0.85rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 1rem;
     line-height: 1.6;
     color: var(--text);
@@ -232,7 +232,7 @@ textarea.intencion::placeholder { color: var(--muted); }
     border: none;
     border-radius: 0.75rem;
     padding: 0.875rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -260,11 +260,11 @@ textarea.intencion::placeholder { color: var(--muted); }
             </div>
             <div style="display:flex; gap:0.4rem;">
                 <button onclick="promoverPersona({{ p.id }}, '{{ p.nombre }}')"
-                    style="background:#15803D; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:white; font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
+                    style="background:#15803D; border:none; border-radius:8px; padding:0.3rem 0.7rem; color:white; font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; cursor:pointer;">
                     Subir
                 </button>
                 <button onclick="descartarPersona({{ p.id }})"
-                    style="background:var(--border); border:none; border-radius:8px; padding:0.3rem 0.7rem; color:var(--muted); font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,sans-serif; cursor:pointer;">
+                    style="background:var(--border); border:none; border-radius:8px; padding:0.3rem 0.7rem; color:var(--muted); font-size:0.75rem; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; cursor:pointer;">
                     Ignorar
                 </button>
             </div>
@@ -337,7 +337,7 @@ textarea.intencion::placeholder { color: var(--muted); }
                 <button type="button"
                     class="molestia-chip {% if vires.molestia_zona == val %}active{% endif %}"
                     data-val="{{ val }}"
-                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.molestia_zona == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.molestia_zona == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
+                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.molestia_zona == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.molestia_zona == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;transition:all 0.15s;">
                     {{ label }}
                 </button>
                 {% endfor %}

@@ -40,7 +40,7 @@
   }
 
   .mon-label {
-    font-family: 'Cinzel', serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 0.63rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
@@ -238,7 +238,7 @@
     border: 1.5px solid rgba(255,255,255,0.1);
     background: rgba(255,255,255,0.03);
     color: rgba(255,255,255,0.2);
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
     flex-shrink: 0;
   }
   .cumpl-day-circle.ok   { background: rgba(74,222,128,0.15); border-color: rgba(74,222,128,0.5); color: #4ade80; }
@@ -247,7 +247,7 @@
   .cumpl-day-pct {
     font-size: 0.6rem;
     color: rgba(255,255,255,0.25);
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
   }
 
   /* ── Lápiz editar composición ── */
@@ -256,7 +256,7 @@
     color: rgba(255,255,255,0.25);
     text-decoration: none;
     font-size: 0.72rem;
-    font-family: 'Share Tech Mono', monospace;
+    font-family: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
     letter-spacing: 0.04em;
     padding: 4px 8px;
     border-radius: 6px;
@@ -278,7 +278,7 @@
   <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
       <div class="mon-label">Monitor</div>
-      <h4 style="color:#fff; margin:0; font-family:'Cinzel',serif; font-size:1.1rem;">
+      <h4 style="color:#fff; margin:0; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:1.1rem;">
         Progreso y Recuperación
       </h4>
     </div>
@@ -292,7 +292,7 @@
     <div class="mon-title">
       <span>Composición corporal</span>
       <div style="display:flex;align-items:center;gap:10px;">
-        <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'Share Tech Mono',monospace;">
+        <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;">
           Navy Method · {{ perfil.updated_at|date:"d/m/Y" }}
         </span>
         <a href="{% url 'nutricion_app_django:configurar_perfil' %}" class="edit-pencil" title="Editar medidas">
@@ -350,7 +350,7 @@
   <div class="mon-card">
     <div class="mon-title">
       <span>Cumplimiento — esta semana</span>
-      <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'Share Tech Mono',monospace;">últimos 7 días</span>
+      <span style="font-size:0.7rem;color:rgba(255,255,255,0.25);font-family:'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;">últimos 7 días</span>
     </div>
     <div class="cumpl-daily-grid" id="cumplDailyGrid">
       <!-- Rellenado por JS -->

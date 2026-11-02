@@ -52,8 +52,8 @@
   --jds-shadow-soft: 0 24px 80px rgba(0, 0, 0, 0.42);
 
   /* Type */
-  --jds-font: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", system-ui, sans-serif;
-  --jds-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --jds-font: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  --jds-mono: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 
 /* ── 2. UTILIDADES ──────────────────────────────────────────────────────── */

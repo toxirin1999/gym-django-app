@@ -47,9 +47,9 @@
   --r-lg: 10px;
 
   /* Fonts */
-  --font-disp: 'Archivo Black', 'Archivo', sans-serif;
-  --font-body: 'Archivo', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-disp: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  --font-body: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
+  --font-mono: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 
 /* ─── REFINED (default) ─── pulido, jerarquía limpia ─── */
@@ -107,8 +107,8 @@
   --t-small: 10px;
   --r: 3px;
   --r-lg: 4px;
-  --font-disp: 'JetBrains Mono', ui-monospace, monospace;
-  --font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --font-disp: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+  --font-body: 'SF Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
 }
 
 /* ═══ BASE LAYOUT ═══════════════════════════════════════════ */

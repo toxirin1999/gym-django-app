@@ -7,7 +7,7 @@
     --accent-color: #6366f1; /* Tono violeta de las misiones */
     --border-color: #3a3a3a;
     --progress-bar-bg: #404040;
-    --font-family: 'Inter', sans-serif;
+    --font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
 }
 
 body {

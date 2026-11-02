@@ -6,21 +6,21 @@
 {% block extra_css %}
 <style>
   :root { --gesto-oro:#d4b56f; --gesto-tinta:#f0eadf; --gesto-muted:#999187; --gesto-line:rgba(221,202,161,.16); --gesto-panel:#121116; }
-  .gestos-page { background:#0c0b0f !important; color:var(--gesto-tinta); font-family:'Manrope', sans-serif; }
+  .gestos-page { background:#0c0b0f !important; color:var(--gesto-tinta); font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   .gestos-shell { max-width: 980px; margin:0 auto; padding:clamp(2rem,6vw,5rem) 1.25rem 6rem; }
   .gestos-hero { display:grid; grid-template-columns:minmax(0,1.5fr) minmax(240px,.5fr); gap:3rem; padding-bottom:3rem; border-bottom:1px solid var(--gesto-line); }
-  .eyebrow,.section-no { color:var(--gesto-oro); font:700 .68rem/1 'Manrope',sans-serif; letter-spacing:.18em; text-transform:uppercase; }
-  .gestos-hero h1 { margin:.65rem 0 1rem; font:500 clamp(3.5rem,10vw,7.5rem)/.8 'Crimson Pro',serif; letter-spacing:-.055em; }
-  .gestos-intro { max-width:590px; color:#bbb3a8; font:400 clamp(1.15rem,2.4vw,1.5rem)/1.45 'Crimson Pro',serif; }
+  .eyebrow,.section-no { color:var(--gesto-oro); font:700 .68rem/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing:.18em; text-transform:uppercase; }
+  .gestos-hero h1 { margin:.65rem 0 1rem; font:500 clamp(3.5rem,10vw,7.5rem)/.8 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing:-.055em; }
+  .gestos-intro { max-width:590px; color:#bbb3a8; font:400 clamp(1.15rem,2.4vw,1.5rem)/1.45 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   .hero-note { align-self:end; padding:1.25rem 0 0 1.25rem; border-left:1px solid var(--gesto-oro); color:var(--gesto-muted); font-size:.78rem; line-height:1.7; }
   .gestos-section { display:grid; grid-template-columns:150px 1fr; gap:2rem; padding:3rem 0; border-bottom:1px solid var(--gesto-line); }
-  .section-label h2 { margin:.65rem 0 0; font:500 1.9rem/1 'Crimson Pro',serif; }
+  .section-label h2 { margin:.65rem 0 0; font:500 1.9rem/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   .today-reading { display:flex; align-items:center; justify-content:space-between; gap:2rem; padding:1.4rem 0; }
-  .today-reading strong { display:block; font:500 1.45rem/1.2 'Crimson Pro',serif; }
+  .today-reading strong { display:block; font:500 1.45rem/1.2 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   .today-reading p { margin:.4rem 0 0; color:var(--gesto-muted); font-size:.82rem; }
   .gesture-list { border-top:1px solid var(--gesto-line); }
   .gesture-row { display:grid; grid-template-columns:minmax(160px,1.15fr) minmax(150px,.75fr) minmax(220px,1.35fr) auto; gap:1.25rem; align-items:center; padding:1.3rem 0; border-bottom:1px solid var(--gesto-line); }
-  .gesture-name { font:500 1.35rem/1.1 'Crimson Pro',serif; }
+  .gesture-name { font:500 1.35rem/1.1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   .gesture-description,.gesture-reading,.gesture-meta { color:var(--gesto-muted); font-size:.76rem; line-height:1.55; }
   .gesture-meta strong { color:#d7cfc3; font-weight:600; }
   .button,.text-action,summary { min-height: 44px; display:inline-flex; align-items:center; justify-content:center; }
@@ -37,7 +37,7 @@
   .archive > summary { justify-content:flex-start; gap:.75rem; color:#d4ccc0; font-size:.78rem; cursor:pointer; }
   .archive-row { display:grid; grid-template-columns:1fr auto auto; gap:1rem; align-items:center; min-height:64px; border-top:1px solid var(--gesto-line); }
   .archive-state { color:var(--gesto-muted); font-size:.7rem; text-transform:uppercase; letter-spacing:.1em; }
-  .empty { padding:1.25rem 0; color:var(--gesto-muted); font:italic 1rem 'Crimson Pro',serif; }
+  .empty { padding:1.25rem 0; color:var(--gesto-muted); font:italic 1rem -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; }
   a:focus-visible,button:focus-visible,summary:focus-visible { outline:2px solid #f2d997; outline-offset:4px; }
   @media (max-width: 760px) { .gestos-hero,.gestos-section { grid-template-columns:1fr; gap:1.5rem; } .gesture-row { grid-template-columns:1fr auto; } .gesture-meta,.gesture-reading { grid-column:1/-1; } }
   @media (max-width: 600px) { .gestos-shell { padding-inline:1rem; } .gestos-hero h1{font-size:4rem}.today-reading{align-items:flex-start;flex-direction:column}.gesture-row{grid-template-columns:1fr}.gesture-row>.button{width:100%}.archive-row{grid-template-columns:1fr}.archive-row form{width:100%}.archive-row button{width:100%} }

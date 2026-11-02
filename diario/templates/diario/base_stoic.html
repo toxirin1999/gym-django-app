@@ -7,9 +7,6 @@
     <title>{% block title %}Diario{% endblock %} · Sic Parvis Magna</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,500;0,600;1,400&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'css/stoic_styles.css' %}">
     <link rel="stylesheet" href="{% static 'css/jds.css' %}">
     <link rel="stylesheet" href="{% static 'css/diario_dark.css' %}">
@@ -24,11 +21,11 @@
         .diario-brand__mark {
             width: 30px; height: 30px; display: grid; place-items: center;
             border: 1px solid rgba(196, 163, 101, .55); border-radius: 50%;
-            color: #c4a365; font-family: 'Crimson Pro', Georgia, serif; font-size: 1rem;
+            color: #c4a365; font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size: 1rem;
         }
-        .diario-brand__name { display: block; color: #f3eee4; font: 600 1rem/1 'Crimson Pro', Georgia, serif; letter-spacing: .08em; }
-        .diario-brand__motto { display: block; margin-top: .2rem; color: #8e887e; font: 600 .56rem/1 Manrope, sans-serif; letter-spacing: .17em; text-transform: uppercase; }
-        .diario-nav .nav-link { color: #aaa399 !important; font: 600 .72rem/1 Manrope, sans-serif; letter-spacing: .08em; text-transform: uppercase; }
+        .diario-brand__name { display: block; color: #f3eee4; font: 600 1rem/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing: .08em; }
+        .diario-brand__motto { display: block; margin-top: .2rem; color: #8e887e; font: 600 .56rem/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing: .17em; text-transform: uppercase; }
+        .diario-nav .nav-link { color: #aaa399 !important; font: 600 .72rem/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing: .08em; text-transform: uppercase; }
         .diario-nav .nav-link:hover, .diario-nav .nav-link:focus-visible, .diario-nav .nav-link.active { color: #e2c98f !important; }
         .diario-nav .nav-link.active::after { content: ''; display: block; width: 18px; height: 1px; margin: .45rem auto 0; background: #c4a365; }
         .diario-nav .dropdown-menu { background: #141219; border: 1px solid rgba(235, 226, 208, .12); border-radius: 4px; padding: .45rem; box-shadow: 0 18px 48px rgba(0,0,0,.38); }
@@ -41,7 +38,7 @@
         .diario-feedback { max-width: 1120px; }
         .diario-feedback__primary { margin-bottom: 0; border-color: rgba(196, 163, 101, .3); background: rgba(196, 163, 101, .08); color: #e8dfd1; }
         .diario-feedback__more { margin-top: .55rem; color: #aaa399; }
-        .diario-feedback__more summary { width: fit-content; cursor: pointer; color: #cdb77e; font: 700 .66rem/1.4 Manrope, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+        .diario-feedback__more summary { width: fit-content; cursor: pointer; color: #cdb77e; font: 700 .66rem/1.4 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; letter-spacing: .1em; text-transform: uppercase; }
         .diario-feedback__list { display: grid; gap: .55rem; margin-top: .55rem; }
         .diario-feedback__list .alert { margin: 0; opacity: .82; }
         .skip-link { position: fixed; left: 1rem; top: -5rem; z-index: 2000; padding: .7rem 1rem; color: #111; background: #e2c98f; }

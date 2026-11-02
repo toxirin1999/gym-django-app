@@ -43,7 +43,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 1.1rem 1.25rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 1rem;
     line-height: 1.7;
     color: var(--text);
@@ -211,7 +211,7 @@
     border: none;
     border-radius: 0.75rem;
     padding: 0.875rem;
-    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
     font-size: 1rem;
     font-weight: 700;
     cursor: pointer;
@@ -357,7 +357,7 @@
                 width:100%;
                 background: linear-gradient(135deg, #7C3AED, #A78BFA);
                 border:none; border-radius:12px; padding:0.9rem 1rem;
-                color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif;
+                color:white; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;
                 font-size:0.9rem; font-weight:600; cursor:pointer;
                 animation: pulse-habito 2s ease-in-out infinite;
                 text-align:left; display:flex; align-items:center; gap:0.75rem;
@@ -411,7 +411,7 @@
         </script>
         {% endif %}
 
-        <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
+        <a href="{% url 'diario:dashboard_diario' %}" style="display:block; margin-top:1.5rem; background:#2E2A3A; border:none; border-radius:12px; padding:0.85rem; color:#A78BFA; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:0.9rem; font-weight:600; text-align:center; text-decoration:none; transition:background 0.15s;">
             Volver al Diario
         </a>
         <a id="editar-cierre" href="{% url 'diario:presencia_cierre' %}?editar=1&amp;version={{ version_cierre }}" style="display:block; margin-top:0.75rem; color:#7C7590; text-align:center;">Editar cierre</a>
@@ -552,7 +552,7 @@
                     class="cuerpo-chip"
                     data-val="{{ val }}"
                     aria-pressed="{% if vires.cuerpo_cierre == val %}true{% else %}false{% endif %}"
-                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,sans-serif;transition:all 0.15s;">
+                    style="padding:0.45rem 0.9rem;border-radius:100px;border:1.5px solid var(--border);background:{% if vires.cuerpo_cierre == val %}var(--accent-light){% else %}transparent{% endif %};color:{% if vires.cuerpo_cierre == val %}var(--accent){% else %}var(--muted){% endif %};font-size:0.85rem;cursor:pointer;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;transition:all 0.15s;">
                     {{ label }}
                 </button>
                 {% endfor %}
@@ -569,8 +569,8 @@
             <div style="font-size:0.68rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:#7C3AED; margin-bottom:0.75rem;">JOI — Antes de cerrar el día</div>
             <div id="simbiosis-pregunta" style="font-size:1rem; font-style:italic; color:#EDE9E3; line-height:1.6; margin-bottom:1rem;"></div>
             <div style="font-size:0.75rem; color:#7C7590; margin-bottom:0.5rem;">Responde antes de cerrar el día:</div>
-            <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
-            <button type="button" id="confirmar-simbiosis" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:-apple-system,BlinkMacSystemFont,sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
+            <textarea id="simbiosis-textarea" style="width:100%; background:#13111A; border:1px solid #2E2A3A; border-radius:10px; padding:0.75rem; color:#EDE9E3; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:0.9rem; min-height:80px; outline:none; resize:none;" placeholder="Escribe tu respuesta..."></textarea>
+            <button type="button" id="confirmar-simbiosis" style="margin-top:0.75rem; width:100%; background:#7C3AED; border:none; border-radius:10px; padding:0.75rem; color:white; font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif; font-size:0.9rem; font-weight:600; cursor:pointer;">
                 Respondido — cerrar el día
             </button>
         </div>

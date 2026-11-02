@@ -33,7 +33,7 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif !important;
+  font-family: -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif !important;
   color: #ffffff !important;
   background-color: var(--c-bg-1) !important;
   background-image: radial-gradient(circle at top right, rgba(30, 41, 59, 0.4), rgba(10, 11, 20, 0.8)) !important;

@@ -7,7 +7,7 @@
   <title>Cómo responde tu cuerpo · {{ cliente.nombre|default:request.user.username }}</title>
   <style>
     :root{--ink:#030604;--panel:#08110d;--line:#284238;--paper:#f3f0e8;--muted:#a3ada7;--green:#42e4a0;--blue:#65caff;--amber:#f6c35b;--red:#ff7f6e}
-    *{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+    *{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
     .mono{font-family:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
     main{width:min(100%,520px);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
     .back{color:var(--blue);font-size:10px;text-decoration:none}
@@ -38,7 +38,7 @@
     /* 27-oct-2026: "Sin dato" hueco y "Sin media aún" en gris; antes los dos eran casi negros. */
     .punto.sin{background:none;border:1px dashed #4a5a53}.punto.sin_referencia{background:#7d8a84;border-color:#7d8a84}
     .card{position:relative}
-    .info summary{position:absolute;top:10px;right:10px;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--muted);font:italic 700 14px/1 Georgia,serif;cursor:pointer;list-style:none}
+    .info summary{position:absolute;top:10px;right:10px;width:32px;height:32px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--muted);font:italic 700 14px/1 -apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;cursor:pointer;list-style:none}
     .info summary::-webkit-details-marker{display:none}
     .info[open] summary{color:var(--ink);background:var(--blue);border-color:var(--blue)}
     .info-txt{margin:12px 0 0;padding:10px 12px;border-radius:10px;background:#0e1a15;color:#cfd8d3;font-size:12.5px;line-height:1.5}
