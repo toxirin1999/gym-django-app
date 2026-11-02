@@ -1,4 +1,5 @@
 import logging
+from entrenos.services.nombre_rutina import clave_rutina
 from datetime import timedelta
 
 from django.core.cache import cache
@@ -95,11 +96,16 @@ def buscar_entreno_realizado_esta_semana(cliente, hoy, rutina_nombre):
     lunes_semana = hoy - timedelta(days=hoy.weekday())
     semana_hoy = _semana_en_bloque(cliente, hoy)
 
-    candidatos = EntrenoRealizado.objects.filter(
-        cliente=cliente,
-        fecha__gte=lunes_semana,
-        rutina__nombre__iexact=rutina_nombre,
-    ).prefetch_related('ejercicios_realizados').order_by('-fecha')
+    from entrenos.services.nombre_rutina import clave_rutina
+    clave = clave_rutina(rutina_nombre)
+    candidatos = [
+        e for e in EntrenoRealizado.objects.filter(
+            cliente=cliente,
+            fecha__gte=lunes_semana,
+            rutina__isnull=False,
+        ).select_related('rutina').prefetch_related('ejercicios_realizados').order_by('-fecha')
+        if clave_rutina(e.rutina.nombre) == clave
+    ]
 
     for candidato in candidatos:
         sesion_programada = candidato.sesiones_programadas.first()
@@ -150,13 +156,18 @@ def _buscar_entreno_rutina_en_ventana(cliente, nombre_rutina, fecha_desde, fecha
     if not nombre_rutina:
         return None
     try:
-        candidatos = EntrenoRealizado.objects.filter(
-            cliente=cliente,
-            fecha__gte=fecha_desde,
-            fecha__lte=fecha_hasta,
-            rutina__nombre__iexact=nombre_rutina,
-        ).order_by('fecha')
-        return candidatos.first() if candidatos.count() == 1 else None
+        from entrenos.services.nombre_rutina import clave_rutina
+        clave = clave_rutina(nombre_rutina)
+        candidatos = [
+            e for e in EntrenoRealizado.objects.filter(
+                cliente=cliente,
+                fecha__gte=fecha_desde,
+                fecha__lte=fecha_hasta,
+                rutina__isnull=False,
+            ).select_related('rutina').order_by('fecha')
+            if clave_rutina(e.rutina.nombre) == clave
+        ]
+        return candidatos[0] if len(candidatos) == 1 else None
     except Exception:
         return None
 
@@ -208,13 +219,13 @@ def _marcar_completadas(cliente, fecha_hoy):
     rutina_a_entrenos: dict = defaultdict(list)
     for e in entrenos_con_rutina:
         if e.rutina and e.rutina.nombre:
-            rutina_a_entrenos[e.rutina.nombre.lower()].append(e)
+            rutina_a_entrenos[clave_rutina(e.rutina.nombre)].append(e)
 
     for sp in pendientes:
         if sp.nombre_sesion:
             fecha_desde = sp.fecha_prevista
             ventana_hasta = min(sp.fecha_prevista + timedelta(days=7), fecha_hoy)
-            nombre_lower = sp.nombre_sesion.lower()
+            nombre_lower = clave_rutina(sp.nombre_sesion)
             candidatos = [
                 e for e in rutina_a_entrenos.get(nombre_lower, [])
                 if (
@@ -1211,13 +1222,14 @@ def resolver_sesion_programada_portal(cliente, fecha, rutina_nombre):
     No corrige ni elige entre candidatos ambiguos. La fecha efectiva es
     ``pospuesta_hasta`` cuando existe y, en otro caso, ``fecha_prevista``.
     """
-    identidad = ' '.join((rutina_nombre or '').casefold().split())
+    from entrenos.services.nombre_rutina import clave_rutina
+    identidad = clave_rutina(rutina_nombre)
     candidatas = []
     for sesion in SesionProgramada.objects.filter(
         cliente=cliente, estado=SesionProgramada.ESTADO_PENDIENTE,
     ).only('id', 'nombre_sesion', 'fecha_prevista', 'pospuesta_hasta'):
         fecha_efectiva = sesion.pospuesta_hasta or sesion.fecha_prevista
-        nombre = ' '.join((sesion.nombre_sesion or '').casefold().split())
+        nombre = clave_rutina(sesion.nombre_sesion)
         if fecha_efectiva == fecha and nombre == identidad:
             candidatas.append(sesion)
     return candidatas[0] if len(candidatas) == 1 else None
@@ -1447,9 +1459,9 @@ def cola_semana(cliente, fecha_hoy, planificador=None):
         .select_related('rutina').order_by('fecha_ejecucion', 'fecha', 'id')
     )
     for e in entrenos:
-        nombre = (e.rutina.nombre or '').strip().casefold()
+        nombre = clave_rutina(e.rutina.nombre)
         for s in sesiones:
-            if not s['hecha'] and s['nombre'].casefold() == nombre:
+            if not s['hecha'] and clave_rutina(s['nombre']) == nombre:
                 s['hecha'] = True
                 s['entreno'] = e
                 s['resuelta_por'] = 'entreno'
@@ -1626,7 +1638,7 @@ def _futuras_de_la_semana(cliente, fecha_hoy):
 
     lunes = fecha_hoy - _td(days=fecha_hoy.weekday())
     hechas = {
-        (e.rutina.nombre or '').strip().casefold()
+        clave_rutina(e.rutina.nombre)
         for e in EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False).filter(
             Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=fecha_hoy)
             | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=fecha_hoy)
@@ -1638,7 +1650,7 @@ def _futuras_de_la_semana(cliente, fecha_hoy):
     while f <= lunes + _td(days=6):
         ent = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(f))
         nombre = (ent.get('rutina_nombre') or '').strip() if ent else ''
-        if ent and not _es_descanso(ent) and nombre.casefold() not in hechas:
+        if ent and not _es_descanso(ent) and clave_rutina(nombre) not in hechas:
             sp = SesionProgramada.objects.filter(
                 cliente=cliente, fecha_prevista=f, estado=SesionProgramada.ESTADO_PENDIENTE,
             ).first()

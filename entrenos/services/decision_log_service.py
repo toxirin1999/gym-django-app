@@ -433,9 +433,15 @@ def generar_decisiones_para_entreno(entreno):
         entreno=entreno, completado=True
     ).order_by('nombre_ejercicio')
 
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+    _periodos = periodos_descarga(cliente.id)
     for ej in ejercicios:
         nombre = normalizar_ejercicio(ej.nombre_ejercicio)
         if not nombre:
+            continue
+        # 2-nov-2026: una sesión de descarga no decide la siguiente (el peso
+        # va rebajado a propósito): ni subir, ni bajar, ni mantener.
+        if es_sesion_descarga(entreno, ej.nombre_ejercicio, _periodos):
             continue
 
         # Historial de las últimas 5 sesiones de este ejercicio
@@ -906,9 +912,16 @@ def evaluar_decisiones_para_entreno(entreno):
         entreno=entreno, completado=True
     )
 
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+    _periodos = periodos_descarga(cliente.id)
     for ej in ejercicios:
         nombre = normalizar_ejercicio(ej.nombre_ejercicio)
         if not nombre:
+            continue
+        # 2-nov-2026 (nota 7): una sesión de descarga no comprueba decisiones
+        # (cable fly "bajé el peso a 20 kg… funcionó": los 20 kg eran la descarga).
+        # Quedan pendientes para la primera sesión normal.
+        if es_sesion_descarga(entreno, ej.nombre_ejercicio, _periodos):
             continue
 
         ejecutivas = ('progresion_peso', 'progresion_reps', 'molestia_reciente')

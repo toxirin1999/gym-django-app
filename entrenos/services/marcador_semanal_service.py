@@ -101,8 +101,9 @@ def _pendientes(cliente, hoy, sesiones):
     from entrenos.models import EntrenoRealizado
 
     lunes = hoy - timedelta(days=hoy.weekday())
+    from entrenos.services.nombre_rutina import clave_rutina
     hechas = Counter(
-        (e.rutina.nombre or '').strip().casefold()
+        clave_rutina(e.rutina.nombre)
         for e in EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False).filter(
             Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=hoy)
             | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=hoy)
@@ -110,7 +111,7 @@ def _pendientes(cliente, hoy, sesiones):
     )
     pendientes = []
     for s in sesiones:
-        clave = s['nombre'].casefold()
+        clave = clave_rutina(s['nombre'])
         if hechas[clave] > 0:
             hechas[clave] -= 1
             continue

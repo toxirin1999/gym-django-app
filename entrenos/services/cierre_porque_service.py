@@ -401,6 +401,8 @@ def lo_que_viene(cliente, entreno):
     except Exception:
         pass
 
+    from entrenos.services.propuesta_zona_service import en_pausa_por_descarga, sincronizar_pausas
+    sincronizar_pausas(cliente)
     for p in PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, fin__gte=manana,
     ).order_by('inicio'):
@@ -409,6 +411,10 @@ def lo_que_viene(cliente, entreno):
         cambio = f'{signo}{SERIES_POR_AJUSTE} series semanales de {p.nombre_zona}'
         if p.inicio and p.inicio >= manana:
             lineas.append(f'Desde el {p.inicio:%d/%m}, {cambio} por la propuesta que aceptaste (hasta el {p.fin:%d/%m}).')
+        elif en_pausa_por_descarga(cliente, manana):
+            # 2-nov-2026 (nota 11): igual que Ahora y Plan.
+            lineas.append(f'La propuesta de {p.nombre_zona} ({cambio}) está en pausa esta semana por la '
+                          f'descarga; sigue después y acaba el {p.fin:%d/%m}.')
         else:
             lineas.append(f'Sigue la propuesta: {cambio} hasta el {p.fin:%d/%m}.')
     return lineas

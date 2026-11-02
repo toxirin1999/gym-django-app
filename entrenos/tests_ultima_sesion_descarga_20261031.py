@@ -121,7 +121,8 @@ class PesoTrasLaDescarga(Escenario):
         )
         self.assertIn('Hoy era descarga', texto)
         self.assertIn('80 kg', texto)
-        self.assertEqual(accion, 'Subir peso')
+        # 2-nov-2026: la etiqueta es 'Volver' (no es una subida).
+        self.assertEqual(accion, 'Volver')
         self.assertEqual(efecto, 'Vuelve a 80 kg')
 
 

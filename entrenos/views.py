@@ -3589,6 +3589,15 @@ def _fecha_planificada_para_sesion(cliente, sesion_programada_id, fecha_por_defe
     return sesion.fecha_prevista if sesion else fecha_por_defecto
 
 
+def _ej_en_descarga(ejercicio):
+    """2-nov-2026: en la semana de descarga el tope de máquina no propone reps.
+
+    Solo limita el peso (nunca por encima). Antes, los gemelos de la descarga
+    salían a 100 kg × 19 con «Tope · 19 reps» aunque la descarga pedía 90 × 15.
+    """
+    return bool(ejercicio.get('deload') or ejercicio.get('regla_carga') == 'descarga')
+
+
 @login_required
 def vista_entrenamiento_activo(request, cliente_id):
     """
@@ -3940,6 +3949,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     )
                     if (
                         sugerencia_tope
+                        and not _ej_en_descarga(ejercicio)
                         and (not _accion_peso_materializada or ejercicio.get('sugerencia_tope'))
                         and float(datos_anterior.get('peso') or 0) > 0
                     ):
@@ -4056,7 +4066,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                 _tope_guardado = tope_de(cliente, ejercicio.get('nombre', ''))
                 if _tope_guardado:
                     ejercicio['tope_maquina_kg'] = _tope_guardado
-                    ejercicio['sugerencia_tope'] = True
+                    ejercicio['sugerencia_tope'] = not _ej_en_descarga(ejercicio)
                     _peso_ini = float(ejercicio.get('peso_inicial_kg') or _tope_guardado)
                     ejercicio['peso_inicial_kg'] = min(_peso_ini, _tope_guardado)
                 try:
@@ -4321,7 +4331,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     )
                     if _aviso_tempo:
                         ejercicio['aviso_tope_tempo'] = _aviso_tempo
-                if sugerencia_tope and peso_ant > 0:
+                if sugerencia_tope and peso_ant > 0 and not _ej_en_descarga(ejercicio):
                     ejercicio['peso_inicial_kg'] = peso_ant
                     ejercicio['reps_sugeridas_tope'] = reps_sugeridas_tope
                     ejercicio['sugerencia_tope'] = True
@@ -4396,7 +4406,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             _tope_guardado = _tope_de(cliente, ejercicio.get('nombre', ''))
             if _tope_guardado:
                 ejercicio['tope_maquina_kg'] = _tope_guardado
-                ejercicio['sugerencia_tope'] = True
+                ejercicio['sugerencia_tope'] = not _ej_en_descarga(ejercicio)
                 _peso_ini = float(ejercicio.get('peso_inicial_kg') or _tope_guardado)
                 ejercicio['peso_inicial_kg'] = min(_peso_ini, _tope_guardado)
 

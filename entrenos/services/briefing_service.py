@@ -107,6 +107,12 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
     tres_semanas = hoy - timedelta(days=21)
 
     nombres_hoy = [e.get('nombre', '') for e in ejercicios_planificados if e.get('nombre')]
+    # 2-nov-2026: en descarga, el tope de máquina no da la directriz del día
+    # ni cambia el peso o las reps de la tarjeta (gemelos 100 × 19 en descarga).
+    en_descarga = {
+        e.get('nombre', '') for e in ejercicios_planificados
+        if e.get('deload') or e.get('regla_carga') == 'descarga'
+    }
 
     # ── Estado físico reciente ─────────────────────────────────────
     entrenos_recientes = EntrenoRealizado.objects.filter(
@@ -156,7 +162,7 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             es_tope_maquina=True,
             entreno__fecha__gte=dos_semanas,
         ).order_by('-entreno__fecha').first()
-        if tope_ej:
+        if tope_ej and nombre not in en_descarga:
             usa_distancia = bool(ej_base and ej_base.tipo_progresion == 'progresion_distancia')
             distancia_tope = 0
             if usa_distancia and ej_base:

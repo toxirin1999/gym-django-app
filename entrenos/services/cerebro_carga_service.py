@@ -477,16 +477,28 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
             entreno__fecha__gt=entreno.fecha,
         ).exists():
             return None  # ya hay una sesión posterior: este cierre es historia
-        decision = decidir_carga(cliente, ej, siguiente)
-        if not decision or not decision.get('peso'):
-            return None
-        from entrenos.services.ultima_sesion_service import series_de_trabajo
-        pesos_hoy = [x['peso'] for x in series_de_trabajo(entreno, nombre) if x['peso'] > 0]
-        peso, reps = decision['peso'], decision['reps']
-        accion = 'Subir peso' if pesos_hoy and float(peso) > max(pesos_hoy) + 1e-6 else 'Mantener'
-        texto = (f'Hoy era descarga: no cuenta como referencia. Al acabarla vuelves a '
-                 f'{_kg(peso)} kg a por {reps} reps, lo de antes de la descarga.')
-        return (texto, accion, f'Vuelve a {_kg(peso)} kg') if con_efecto else (texto, accion)
+        # 2-nov-2026 (notas 9, 10 y 12): se cuenta lo de antes de la descarga
+        # tal cual. Antes se decidía con el rango de la descarga y salían cosas
+        # como "vuelves a 35 kg" en el press francés (antes eran 30) o "90 kg"
+        # en los gemelos (antes 100), y la etiqueta decía "Subir peso".
+        antes = ultima_sesion(cliente, nombre, siguiente)
+        if not antes or antes.get('descarga'):
+            texto = 'Hoy era descarga: no cuenta como referencia.'
+            return (texto, 'Volver', None) if con_efecto else (texto, 'Volver')
+        ref = antes['referencia']
+        reps_antes = ref.get('reps_mediana') if ref.get('reps_mediana') is not None else ref['reps']
+        reps_antes = int(round(float(reps_antes)))
+        peso_antes = float(ref['peso'])
+        cuando = f"el {antes['fecha']:%d/%m}"
+        if peso_antes > 0:
+            texto = (f'Hoy era descarga: no cuenta como referencia. La próxima vez se parte de lo de antes, '
+                     f'{cuando}: {_kg(peso_antes)} kg × {reps_antes}.')
+            efecto = f'Vuelve a {_kg(peso_antes)} kg'
+        else:
+            texto = (f'Hoy era descarga: no cuenta como referencia. La próxima vez se parte de lo de antes, '
+                     f'{cuando}: {reps_antes} reps.')
+            efecto = f'Vuelve a {reps_antes} reps'
+        return (texto, 'Volver', efecto) if con_efecto else (texto, 'Volver')
     lectura = ultima_sesion(cliente, nombre, siguiente, reps_min=rango[0])
     if not lectura or lectura['entreno'].pk != entreno.pk:
         return None

@@ -188,7 +188,9 @@ def _decisiones_entrenador(cliente, entreno):
         }]
 
     if not logs:
-        return []
+        # 2-nov-2026: una sesión de descarga ya no crea decisiones; el cierre
+        # dice, ejercicio a ejercicio, de qué se parte la próxima vez.
+        return _decisiones_de_descarga(cliente, entreno)
 
     # 17-oct-2026: en el orden en que se hicieron, no en el de creación.
     orden = {}
@@ -671,6 +673,43 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
             'en_rango_hoy': bool(minimo) and all(x['reps'] >= minimo for x in (hoy.get('validas') or []))}
 
 
+def _decisiones_de_descarga(cliente, entreno):
+    """Las filas de "Decisión para la próxima sesión" de una sesión de descarga."""
+    from rutinas.models import EjercicioBase
+    from entrenos.services.cerebro_carga_service import proxima_vez_texto
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+
+    periodos = periodos_descarga(cliente.id)
+    filas, vistos = [], set()
+    for ej in entreno.ejercicios_realizados.filter(completado=True).order_by('orden', 'id'):
+        clave = normalizar_ejercicio(ej.nombre_ejercicio)
+        if clave in vistos or not es_sesion_descarga(entreno, ej.nombre_ejercicio, periodos):
+            continue
+        vistos.add(clave)
+        tipo = (EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
+                .values_list('tipo_progresion', flat=True).first()) or 'peso_reps'
+        try:
+            regla = proxima_vez_texto(cliente, entreno, ej.nombre_ejercicio, tipo, None, con_efecto=True)
+        except Exception:  # noqa: BLE001
+            regla = None
+        if not regla:
+            continue
+        porque, accion, efecto = regla
+        hoy = None
+        try:
+            from entrenos.services.cierre_porque_service import texto_series
+            hoy = texto_series(entreno, ej.nombre_ejercicio, tipo)
+        except Exception:  # noqa: BLE001
+            pass
+        filas.append({
+            'ejercicio': _nombre_visible(ej.nombre_ejercicio), 'accion': accion, 'motivo': '',
+            'porque': porque, 'hoy': hoy, 'efecto': efecto, 'efecto_tipo': 'subida',
+            'evidencia': None, 'confianza': 'media',
+        })
+    return filas
+
+
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
     from rutinas.models import EjercicioBase
     from entrenos.services.decision_log_service import normalizar_ejercicio
@@ -684,7 +723,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         if _clave in vistos:
             continue
         vistos.add(_clave)
-        if ej.es_tope_maquina:
+        if ej.es_tope_maquina and not es_descarga_hoy:
             # Farmer, planchas…: el peso fijo no es un tope de máquina; lo
             # que progresa son los metros o los segundos, no las reps.
             progresion = (

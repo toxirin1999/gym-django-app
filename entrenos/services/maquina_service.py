@@ -40,9 +40,15 @@ def registrar_topes_de_entreno(entreno):
     from entrenos.models import EjercicioRealizado, TopeMaquinaGym
     from entrenos.services.ultima_sesion_service import series_de_trabajo
 
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+    periodos = periodos_descarga(entreno.cliente_id)
     for ej in EjercicioRealizado.objects.filter(entreno=entreno, completado=True):
         clave = _clave(ej.nombre_ejercicio)
         if not clave:
+            continue
+        # 2-nov-2026: en descarga el peso va rebajado a propósito; no dice
+        # nada del tope de la máquina (los gemelos lo dejaron en 90 en vez de 100).
+        if es_sesion_descarga(entreno, ej.nombre_ejercicio, periodos):
             continue
         pesos = [s['peso'] for s in series_de_trabajo(entreno, ej.nombre_ejercicio) if s['peso'] > 0]
         if not pesos:

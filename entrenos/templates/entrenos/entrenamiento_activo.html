@@ -1542,6 +1542,7 @@ body{background:
 {% endif %}
 <div class="cyber-ejercicio-card" id="card-{{ ejercicio.form_id }}"
      data-form-id="{{ ejercicio.form_id }}"
+     data-descarga="{% if ejercicio.deload or ejercicio.regla_carga == 'descarga' %}1{% else %}0{% endif %}"
      data-rpe-target="{{ ejercicio.rpe_objetivo|default:8|unlocalize }}"
      data-reps-min="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_min|default:ejercicio.reps_objetivo|default:8 }}{% endif %}"
      data-reps-max="{% if ejercicio.sugerencia_tope %}{{ ejercicio.reps_objetivo }}{% else %}{{ ejercicio.reps_max|default:ejercicio.reps_objetivo|default:12 }}{% endif %}"
@@ -2628,6 +2629,13 @@ function tieneSeriesPendientes(card){
 
 // 26-oct-2026: primer ejercicio con series pendientes, mirando hacia delante y
 // después desde el principio (los que dejaste para después). -1 si no queda.
+// 2-nov-2026 (nota 5): "Te queda X" solo si es el último; si quedan más, se dice.
+function textoSiguiente(idx,nombre){
+  const quedan=cards.filter((c,i)=>i!==STATE.ejActual&&tieneSeriesPendientes(c)).length;
+  if(idx>=STATE.ejActual)return 'Continuar con '+nombre;
+  return quedan>1?'Vuelve a '+nombre+' (quedan '+quedan+')':'Te queda '+nombre;
+}
+
 function siguientePendiente(){
   for(let paso=1;paso<cards.length;paso++){
     const idx=(STATE.ejActual+paso)%cards.length;
@@ -3169,6 +3177,18 @@ function resumenDeEjercicio(fid){
   const scs=seriesDeTrabajo(STATE.seriesCompletadas[fid]||[]);
   // Alto respecto al objetivo de este ejercicio (RPE 9 en un ejercicio que pide 9 es lo pedido).
   const rpeObjEj=parseFloat(document.getElementById('reg-'+fid+'-1')?.dataset.rpeObj||'8')||8;
+  // 2-nov-2026 (notas 2, 3 y 6): en descarga no hay "la próxima vez, mismo
+  // peso" ni "ajusto el peso": la sesión no cuenta como referencia. Lo que
+  // importa es que el esfuerzo se quede en lo pedido.
+  if(document.getElementById('card-'+fid)?.dataset.descarga==='1' && scs.length){
+    const pasadas=scs.map((s,i)=>({n:i+1,rpe:s.rpe||0})).filter(x=>x.rpe>=rpeObjEj+2);
+    const noCuenta=' Hoy no cuenta como referencia: la próxima vez se parte de lo de antes de la descarga.';
+    if(pasadas.length){
+      const cuales=pasadas.map(x=>'la '+x.n+'ª ('+fmtKg(x.rpe)+')').join(' y ');
+      return {e:'!',t:'Descarga, con algo de más',s:'Se te fue el esfuerzo en '+cuales+'; la descarga pide RPE '+fmtKg(rpeObjEj)+': deja más reps en la recámara.'+noCuenta};
+    }
+    return {e:'✓',t:'Descarga hecha',s:'Sin apurar, como tocaba.'+noCuenta};
+  }
   const rpeAlto=scs.some(s=>(s.rpe||0)>=9&&(s.rpe||0)>rpeObjEj);
   const resultados=scs.map((s,index)=>resultadoPlanSerie(fid,index+1,s.reps,false)).filter(Boolean);
   const fueraDeRango=resultados.some(resultado=>resultado.clase!=='en-rango');
@@ -3268,6 +3288,13 @@ function resumenDeEjercicio(fid){
   const mejorEj=Math.max(...scs.map(s=>s.reps||0));
   if(cardEj?.dataset.topeKg && mejorEj>=TECHO_REPS_TOPE){
     return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en el techo de ${TECHO_REPS_TOPE} reps con el máximo de la máquina. La próxima vez, igual y con la bajada lenta, hasta que salga más fácil.`};
+  }
+  // 2-nov-2026 (nota 4): si ya llegaste al máximo del rango en todas, toca
+  // subir el peso (press francés 15, 15 y 15 en 10-15 decía "a por 15").
+  const pesoTopeEj=Math.max(...scs.map(s=>s.peso||0));
+  const peorEj=Math.min(...scs.filter(s=>(s.peso||0)===pesoTopeEj).map(s=>s.reps||0));
+  if(repsMaxEj>0 && peorEj>=repsMaxEj && !cardEj?.dataset.topeKg){
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y vuelves al mínimo del rango.`};
   }
   let objSig=mejorEj+(conMargen?2:1);
   if(repsMaxEj>0 && objSig>=repsMaxEj){
@@ -3649,7 +3676,7 @@ function saltarDescanso(fid){
       +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>'
       +(siguienteNombre
         ?'<button type="button" class="ejercicio-continuar" onclick="irEjercicio('+idxPendiente+')">'
-          +(idxPendiente<STATE.ejActual?'Te queda ':'Continuar con ')+siguienteNombre+' →</button>'
+          +textoSiguiente(idxPendiente,siguienteNombre)+' →</button>'
         :'<button type="button" class="ejercicio-continuar" onclick="document.getElementById(\'btn-mostrar-resumen\')?.click()">Todo hecho: revisar y finalizar →</button>');
     if(card){
       card.appendChild(div);
