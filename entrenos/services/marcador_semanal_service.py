@@ -129,13 +129,24 @@ def marcador_semanal(cliente, hoy):
     plan, sesiones = series_plan_semana(cliente, hoy)
     if not plan:
         return {'filas': [], 'frase': None}
-    hechas = series_hechas(cliente, hoy)
+    # 2-nov-2026: en la semana de descarga se cuenta desde el lunes y contra la
+    # descarga; los últimos 7 días eran la semana normal anterior y el mínimo
+    # de una semana normal ("te faltan 7 de pecho") no tiene sentido aquí.
+    descarga = False
+    try:
+        from entrenos.services.sesion_descarga_service import semana_plan_descarga
+        descarga = semana_plan_descarga(cliente.id, hoy)
+    except Exception:  # noqa: BLE001
+        pass
+    hechas = series_hechas(cliente, hoy, dias=hoy.weekday() + 1) if descarga else series_hechas(cliente, hoy)
     pendientes = _pendientes(cliente, hoy, sesiones)
 
     filas = []
     for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
         minimo = min(MINIMO_EVIDENCIA, en_plan)
         maximo = min(MAXIMO_EVIDENCIA, max(en_plan, MINIMO_EVIDENCIA) + MARGEN)
+        if descarga:
+            minimo, maximo = 0, en_plan + 2
         h = hechas.get(grupo, 0)
         estado = 'bajo' if h < minimo else ('alto' if h > maximo else 'ok')
         cubren = [_dia(s['nombre']) for s in pendientes if grupo in s['grupos']]
@@ -145,7 +156,12 @@ def marcador_semanal(cliente, hoy):
             'pct': min(100, round(h / maximo * 100)) if maximo else 0,
             'pct_min': min(100, round(minimo / maximo * 100)) if maximo else 0,
         })
-    return {'filas': filas, 'frase': _frase(filas)}
+    if descarga:
+        sobra = _frase_sobra(filas)
+        frase = ('Semana de descarga: aquí no hay mínimos que cumplir, se cuenta desde el lunes '
+                 'frente a lo que pide la descarga.' + (f' {sobra}' if sobra else ''))
+        return {'filas': filas, 'frase': frase, 'descarga': True, 'sobra': sobra, 'periodo': 'Esta semana (descarga)'}
+    return {'filas': filas, 'frase': _frase(filas), 'descarga': False, 'periodo': 'Últimos 7 días'}
 
 
 def _num(valor):
@@ -194,7 +210,8 @@ def _frase_falta(filas):
         f = max(bajos, key=lambda x: x['minimo'] - x['hechas'])
         falta = f['minimo'] - f['hechas']
         dias = ' y el '.join(f['cubren'][:2])
-        return f"Te faltan {_num(falta)} series de {f['grupo'].lower()} para el mínimo: el {dias} las cubre."
+        verbo = 'las cubren' if len(f['cubren'][:2]) > 1 else 'las cubre'
+        return f"Te faltan {_num(falta)} series de {f['grupo'].lower()} para el mínimo: el {dias} {verbo}."
     return None
 
 

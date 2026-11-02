@@ -334,15 +334,15 @@
         <div class="mem-quads">
         <div class="mem-quad">
           <div class="v {% if sesiones_semana >= 3 %}ok{% elif sesiones_semana and sesiones_semana < 2 %}warn{% else %}na{% endif %}">{% if sesiones_semana %}{{ sesiones_semana }}{% else %}—{% endif %}</div>
-          <div class="k">Sesiones / semana</div>
+          <div class="k">Sesiones / semana · 4 sem.</div>
         </div>
         <div class="mem-quad">
           <div class="v {% if rpe_medio_gym and rpe_medio_gym >= 8.5 %}warn{% elif rpe_medio_gym and rpe_medio_gym <= 6 %}ok{% else %}na{% endif %}">{% if rpe_medio_gym %}{{ rpe_medio_gym }}<small>/10</small>{% else %}—{% endif %}</div>
-          <div class="k">RPE medio gym</div>
+          <div class="k">Esfuerzo medio gym · 4 sem.</div>
         </div>
         <div class="mem-quad">
           <div class="v {% if energia_media and energia_media >= 7 %}ok{% elif energia_media and energia_media <= 4 %}warn{% else %}na{% endif %}">{% if energia_media %}{{ energia_media }}<small>/10</small>{% else %}—{% endif %}</div>
-          <div class="k">Energía pre-sesión</div>
+          <div class="k">Energía pre-sesión · 4 sem.</div>
         </div>
         {% if bio_resumen.hrv_medio %}
         <div class="mem-quad">
@@ -410,7 +410,7 @@
       <div class="mem-label">Tu RPE en fuerza</div>
       <h2 class="mem-heading">¿Tu esfuerzo marcado cuadra con lo que haces?</h2>
       <div class="mem-big">
-        <div class="n">{{ rpe_gym.altos }} de {{ rpe_gym.casos }}<small>comparaciones · {{ rpe_gym.dias }} días</small></div>
+        <div class="n">{{ rpe_gym.altos }} de {{ rpe_gym.casos }}<small>veces que no cuadró · {{ rpe_gym.dias }} días</small></div>
         <div class="d">
           {% if rpe_gym.lectura == 'insuficiente' %}
             Aún hay pocas comparaciones para concluir. Cuento las veces que, con el mismo peso, a los pocos días hiciste 2 o más repeticiones por encima de lo que tu RPE dejaba en reserva.
@@ -421,7 +421,7 @@
           {% else %}
             Tu RPE cuadra con lo que haces después: es una buena guía para las decisiones.
           {% endif %}
-          {% if rpe_gym.ejemplo %}<span style="display:block;margin-top:6px;opacity:.75;">Ejemplo: {{ rpe_gym.ejemplo }}</span>{% endif %}
+          {% if rpe_gym.ejemplo %}<span style="display:block;margin-top:6px;opacity:.75;">{% if rpe_gym.lectura == 'alto' or rpe_gym.lectura == 'algo_alto' %}Ejemplo{% else %}Una de las {{ rpe_gym.altos }} que no cuadraron{% endif %}: {{ rpe_gym.ejemplo }}</span>{% endif %}
         </div>
       </div>
     </article>

@@ -9544,6 +9544,16 @@ def timeline_atleta(request, cliente_id):
     HUMOR_EMOJI = {'verde': '😊', 'amarillo': '😐', 'rojo': '😞'}
     DIAS_ES = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom']
 
+    # 2-nov-2026: si ese día no hay check-in, la energía que marcaste al
+    # empezar el entreno (la que usa Ahora). Antes solo salía en los días con
+    # check-in y el historial parecía no tener energía de las últimas semanas.
+    energia_entreno = {}
+    for _fe, _f, _en in EntrenoRealizado.objects.filter(
+        cliente=cliente, energia_pre_sesion__isnull=False,
+        fecha__gte=hoy - timedelta(days=dias_rango + 1),
+    ).values_list('fecha_ejecucion', 'fecha', 'energia_pre_sesion'):
+        energia_entreno.setdefault(_fe or _f, _en)
+
     dias = []
     # 15-oct-2026: lo más reciente arriba (antes empezaba hace 30 días).
     for i in range(dias_rango):
@@ -9564,7 +9574,9 @@ def timeline_atleta(request, cliente_id):
             'n_actividades': len(actos),
             'bitacora': bitacora,
             'humor_emoji': HUMOR_EMOJI.get(bitacora.humor, '') if bitacora and bitacora.humor else '',
-            'energia': bitacora.energia_subjetiva if bitacora else None,
+            'energia': (bitacora.energia_subjetiva if bitacora and bitacora.energia_subjetiva else None)
+                       or energia_entreno.get(f),
+            'energia_de_entreno': not (bitacora and bitacora.energia_subjetiva) and f in energia_entreno,
             'emocion_dia': bitacora.emocion_dia if bitacora else '',
             'nota': (bitacora.nota_personal or '')[:100] if bitacora else '',
         })

@@ -106,7 +106,7 @@ body{min-height:100vh;margin:0;background:radial-gradient(110% 32% at 54% -5%,#1
       <div class="hl-day">
         <div class="hl-day-head">
           <span class="hl-day-name">{{ dia.dia_semana }} {{ dia.fecha|date:"d M" }}{% if dia.es_hoy %}<span class="hl-today">Hoy</span>{% endif %}</span>
-          {% if dia.energia %}<span class="hl-day-energy">Energía <b>{{ dia.energia }}</b>/10 {{ dia.humor_emoji|default:"" }}</span>{% endif %}
+          {% if dia.energia %}<span class="hl-day-energy">{% if dia.energia_de_entreno %}Energía al empezar{% else %}Energía{% endif %} <b>{{ dia.energia }}</b>/10 {{ dia.humor_emoji|default:"" }}</span>{% endif %}
         </div>
         {% for actividad in dia.actividades %}
         <button type="button" class="hl-row tl-row" data-tipo="{{ actividad.tipo }}" data-id="{{ actividad.id }}" aria-expanded="false" aria-controls="tl-actions-{{ actividad.id }}" onclick="tlToggleRow(this)">
