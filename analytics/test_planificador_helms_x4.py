@@ -364,16 +364,13 @@ class TestX4Descarga(TestCase):
                         f"{ej['nombre']} en descarga: {ej['series']} > 4"
                     )
 
-    def test_un_ejercicio_por_grupo_en_descarga(self):
-        """max_ej_por_grupo=1 para descarga → un solo ejercicio por grupo muscular por día."""
+    def test_al_menos_dos_series_por_ejercicio_en_descarga(self):
+        """2-nov-2026: la descarga usa los ejercicios del bloque anterior (puede
+        haber dos por grupo), pero nunca un ejercicio con una sola serie."""
         for dia, ejercicios in self._semana.items():
-            grupos_vistos: dict = {}
             for ej in ejercicios:
-                g = ej['grupo_muscular']
-                grupos_vistos[g] = grupos_vistos.get(g, 0) + 1
-            for g, count in grupos_vistos.items():
-                with self.subTest(dia=dia, grupo=g):
-                    self.assertEqual(count, 1, f"{g} aparece {count} veces en {dia}")
+                with self.subTest(dia=dia, ejercicio=ej['nombre']):
+                    self.assertGreaterEqual(ej['series'], 2)
 
     def test_descarga_tope_menor_que_hipertrofia(self):
         """El tope de descarga (3) debe ser menor que el de hipertrofia (5)."""

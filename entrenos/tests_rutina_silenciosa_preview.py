@@ -339,10 +339,13 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn("if (trigger && trigger.isConnected) trigger.focus();", plantilla)
         self.assertIn(".modal-close:focus-visible", plantilla)
 
+    # 2-nov-2026: sin la cola real de la semana (semana_rutina_service), que con
+    # la base de pruebas genera su propia semana; aquí se prueba SesionProgramada.
+    @patch("entrenos.views._semana_rutina_real", side_effect=lambda c, h, i, s: (s, None))
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_pospuesta_hasta_hoy_es_la_accion_del_dia(
-        self, planificador, educacion,
+        self, planificador, educacion, _semana_real,
     ):
         """La fecha efectiva, no la prescrita, decide la Rutina de hoy."""
         hoy = date(2026, 9, 26)
@@ -368,11 +371,14 @@ class RutinaSilenciosaPreviewTests(TestCase):
         sabado = next(dia for dia in contexto["semana"] if dia["fecha"] == hoy)
         self.assertEqual(sabado["tipo"], "sesion")
 
+    # 2-nov-2026: sin la cola real de la semana (semana_rutina_service), que con
+    # la base de pruebas genera su propia semana; aquí se prueba SesionProgramada.
+    @patch("entrenos.views._semana_rutina_real", side_effect=lambda c, h, i, s: (s, None))
     @patch("entrenos.views._calcular_ejercicios_dia")
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_dia_pospuesto_tiene_preview_y_cta_con_identidad_original(
-        self, planificador, educacion, calcular_ejercicios,
+        self, planificador, educacion, calcular_ejercicios, _semana_real,
     ):
         """El selector abre el día efectivo sin perder su sesión prescrita."""
         hoy = date(2026, 9, 26)
@@ -452,10 +458,13 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertIn("rutina_nombre=D%C3%ADa+5+-+Descarga+activa", viernes["preview"]["url"])
         self.assertEqual(contexto["hoy"]["tipo"], "sesion")
 
+    # 2-nov-2026: sin la cola real de la semana (semana_rutina_service), que con
+    # la base de pruebas genera su propia semana; aquí se prueba SesionProgramada.
+    @patch("entrenos.views._semana_rutina_real", side_effect=lambda c, h, i, s: (s, None))
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
     def test_sesion_cerrada_no_resucita_desde_plan_helms(
-        self, planificador, educacion,
+        self, planificador, educacion, _semana_real,
     ):
         """El fallback sólo cubre sesiones no materializadas, nunca historial cerrado."""
         hoy = date(2026, 9, 25)

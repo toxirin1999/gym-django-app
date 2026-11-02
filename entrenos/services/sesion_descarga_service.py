@@ -70,3 +70,130 @@ def es_sesion_descarga(entreno, nombre, periodos=None):
     if periodos is None:
         periodos = periodos_descarga(entreno.cliente_id)
     return fecha_en_descarga(entreno.fecha, periodos)
+
+
+# ── Semana de descarga del plan: peso y reps (2-nov-2026) ──────────────────
+# Lo que se busca en una descarga es bajar el esfuerzo, no seguir progresando:
+# mismos ejercicios, menos series (lo pone el planificador), RPE 6 y, para que
+# ese RPE salga de verdad, un poco menos de peso. Antes el briefing de la
+# descarga decía "mismo peso: hoy a por 10 (la última vez 9)" con los 16 kg de
+# siempre: una subida en la semana de bajar.
+
+FACTOR_PESO_DESCARGA = 0.9
+
+
+def semana_plan_descarga(cliente_id, fecha):
+    """True si la semana de ``fecha`` es de descarga en el plan (SemanaPlanGym)."""
+    from entrenos.models import SemanaPlanGym
+
+    lunes = fecha - timedelta(days=fecha.weekday())
+    return SemanaPlanGym.objects.filter(cliente_id=cliente_id, lunes=lunes, descarga=True).exists()
+
+
+def _limpiar_progresion(ej):
+    for clave in ('progresion_pospuesta', 'progresion_aplicada', 'sugerencia_tope'):
+        if clave in ej:
+            ej[clave] = False
+    ej.pop('progresion_accion', None)
+    ej.pop('reps_sugeridas_tope', None)
+    ej.pop('motivo_peso', None)
+
+
+def ajustar_a_descarga(cliente, ej, hoy):
+    """Pone peso y reps de descarga a partir de la última sesión normal.
+
+    Con carga: un 10 % menos de peso (al menos un salto) y como mucho las reps
+    de la última vez. Si el rango de la descarga es de otra familia (venías de
+    6-8), el peso se estima para el mínimo del rango a RPE 6. Sin carga: las
+    reps de la última vez, no una más. Devuelve la frase o None si no toca.
+    """
+    from analytics.planificador_helms.calculo.compatibilidad_fase import son_rangos_compatibles
+    from entrenos.services.maquina_service import a_escala, peso_minimo, salto_carga, tope_de
+    from entrenos.services.ultima_sesion_service import kg, peso_para_reps, rango_reps, ultima_sesion
+
+    nombre = ej.get('nombre') or ''
+    tipo = ej.get('tipo_progresion') or 'peso_reps'
+    rango_txt = ej.get('repeticiones_plan') or ej.get('repeticiones')
+    rango = rango_reps(rango_txt)
+    if not nombre or not rango or tipo not in ('peso_reps', 'peso_corporal_lastre', 'progresion_reps'):
+        return None
+    minimo, maximo = rango
+    lectura = ultima_sesion(cliente, nombre, hoy, reps_min=minimo)
+    if not lectura or lectura.get('descarga'):
+        return None
+    ref = lectura['referencia']
+    reps_ref = int(round(float(ref.get('reps_mediana') if ref.get('reps_mediana') is not None else ref['reps'])))
+    rpe = ej.get('rpe_objetivo') or 6
+    dias = (hoy - lectura['fecha']).days
+    cuando = 'la última vez' if dias <= 14 else f"el {lectura['fecha']:%d/%m}"
+
+    if tipo == 'progresion_reps':
+        reps = max(1, min(reps_ref, maximo))
+        ej['reps_objetivo_hoy'] = reps
+        frase = (f'Semana de descarga: {reps} reps, las de {cuando}, sin apurar (RPE {kg(rpe)}). '
+                 f'No se busca una más.')
+    else:
+        peso_ref = float(ref['peso'] or 0)
+        if peso_ref <= 0:
+            return None
+        salto = salto_carga(cliente, nombre)
+        if son_rangos_compatibles(reps_ref, rango_txt):
+            peso = a_escala(peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
+            if peso >= peso_ref - 1e-6:
+                peso = peso_ref - salto
+            reps = max(1, min(reps_ref, maximo))
+        else:
+            estimado = peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))
+            peso = a_escala(estimado or peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
+            reps = minimo
+        tope = tope_de(cliente, nombre)
+        if tope:
+            peso = min(peso, float(tope))
+        suelo = peso_minimo(nombre)
+        if suelo:
+            peso = max(peso, suelo)
+        if peso <= 0:
+            peso = peso_ref
+        ej['peso_kg_anterior'] = peso_ref
+        ej['peso_kg'] = peso
+        if 'peso_recomendado_kg' in ej:
+            ej['peso_recomendado_kg'] = peso
+        ej['reps_objetivo_hoy'] = reps
+        frase = (f'Semana de descarga: {kg(peso)} kg ({cuando} {kg(peso_ref)} kg × {reps_ref}) '
+                 f'a por {reps}, sin apurar (RPE {kg(rpe)}). No se busca subir.')
+    _limpiar_progresion(ej)
+    ej['regla_carga'] = 'descarga'
+    ej['deload'] = True
+    ej['progresion_motivo'] = frase
+    ej['progresion_motivo_local'] = 'descarga'
+    return frase
+
+
+def aplicar_semana_descarga(cliente, ejercicios, hoy, cambios):
+    """En la semana de descarga del plan, peso y reps de descarga en todos los ejercicios.
+
+    Quita del briefing los avisos de progresión de esos ejercicios ("progresión
+    pospuesta", "subir") y deja uno solo que explica la semana.
+    """
+    import logging
+
+    if not semana_plan_descarga(cliente.id, hoy):
+        return False
+    ajustados = set()
+    for ej in ejercicios:
+        try:
+            if ajustar_a_descarga(cliente, ej, hoy):
+                ajustados.add(ej.get('nombre'))
+        except Exception:  # noqa: BLE001
+            logging.getLogger(__name__).exception('[descarga] ajuste de %s falló', ej.get('nombre'))
+    cambios[:] = [
+        c for c in cambios
+        if not (str(c.get('tipo', '')).startswith('progresion_') and c.get('ejercicio_original') in ajustados)
+    ]
+    if ajustados:
+        cambios.append({
+            'tipo': 'deload', 'ejercicio_original': None, 'ejercicio_nuevo': None,
+            'razon': ('Semana de descarga: mismos ejercicios, la mitad de series, RPE 6 y algo menos de '
+                      'peso. Ningún ejercicio busca subir esta semana.'),
+        })
+    return bool(ajustados)

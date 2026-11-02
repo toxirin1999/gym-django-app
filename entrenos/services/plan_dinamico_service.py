@@ -668,6 +668,16 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 except Exception:
                     logger.exception('[plan_dinamico] regla única de carga falló')
 
+        # ── Semana de descarga del plan (2-nov-2026) ────────────────────────
+        # Después de la regla única: en descarga manda la descarga (menos peso,
+        # las reps de la última vez como mucho), no la progresión.
+        if not deload:
+            try:
+                from entrenos.services.sesion_descarga_service import aplicar_semana_descarga
+                aplicar_semana_descarga(cliente, ejercicios_mod, hoy, cambios)
+            except Exception:
+                logger.exception('[plan_dinamico] semana de descarga falló')
+
         # ── Criterios de entrenador (26-oct-2026): esfuerzo del día ─────────
         # Un punto menos de RPE si el grupo se trabajó ayer, o si has dormido
         # poco con la carga alta. Lo dice en una frase con el dato.

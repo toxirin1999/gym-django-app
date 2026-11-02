@@ -346,6 +346,21 @@ class PlanificadorHelms:
                     "periodizacion": {'origen': info.get('origen'), 'descarga': bool(info.get('descarga'))},
                 }
 
+    @staticmethod
+    def _bloque_previo_a_descarga(numero_bloque: int):
+        """(fase, numero_bloque, vol_mult de su última semana) del bloque de
+        contenido anterior a esa descarga."""
+        try:
+            periodizacion = GeneradorPeriodizacion.generar_periodizacion_anual()
+            for j in range(min(numero_bloque - 1, len(periodizacion)) - 1, -1, -1):
+                if periodizacion[j].get('fase') != 'descarga':
+                    previo = periodizacion[j]
+                    return (previo.get('fase', 'hipertrofia'), j + 1,
+                            previo.get('vol_fin', previo.get('volumen_multiplicador', 1.0)))
+        except Exception:  # noqa: BLE001
+            logger.exception('Bloque previo a la descarga no encontrado')
+        return 'descarga', numero_bloque, 1.0
+
     def _generar_semana_especifica(self, bloque: Dict[str, Any], numero_bloque: int) -> Dict[str, List[Dict[str, Any]]]:
         ajustes_grupo = self._ajustes_volumen_grupo()
         _cache_key = (
@@ -373,15 +388,22 @@ class PlanificadorHelms:
             except Exception:
                 self._cliente_obj = None
         cliente_obj = self._cliente_obj
+        # 2-nov-2026: la descarga usa los ejercicios del bloque que acaba de
+        # terminar (misma rotación y mismas reglas de selección). Antes era un
+        # bloque propio: rotaba el catálogo con su número y salían ejercicios
+        # que no se estaban haciendo (push press, salto al cajón...).
+        fase_sel, numero_sel, vol_mult_reparto = fase, numero_bloque, vol_mult
+        if fase == 'descarga':
+            fase_sel, numero_sel, vol_mult_reparto = self._bloque_previo_a_descarga(numero_bloque)
         ejercicios_bloque = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
-            numero_bloque, fase, self.ejercicios_evitar, cliente=cliente_obj
+            numero_sel, fase_sel, self.ejercicios_evitar, cliente=cliente_obj
         )
         patron_manager = PatronManager(fase)
         semana_planificada = {}
 
         # X.4: leer max_ej_por_grupo desde SelectorEjercicios como fuente única
         # (en lugar del [:2] literal que vivía en paralelo al valor de selector.py).
-        reglas_fase = SelectorEjercicios.obtener_reglas_por_fase(fase)
+        reglas_fase = SelectorEjercicios.obtener_reglas_por_fase(fase_sel)
         n_ejercicios_grupo = reglas_fase['max_ej_por_grupo']
         tope_por_ejercicio = TOPE_SERIES_POR_EJERCICIO.get(fase, 4)
 
@@ -402,6 +424,12 @@ class PlanificadorHelms:
             # Mismo redondeo que el reparto por toques (ceil): si no, el
             # asignador decidía la frecuencia con 8 series y la sesión llevaba 9.
             vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult, mrv_g))
+            if fase == 'descarga':
+                # 2-nov-2026: en descarga se mantienen los días de cada músculo
+                # (los de la semana normal) y se reparte la mitad de las series.
+                # Con el volumen ya rebajado, todo cabía en una sesión y cada
+                # músculo quedaba en un día, un ejercicio y 4 series.
+                vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult_reparto, mrv_g))
             if grupo in ajustes_grupo:  # paso 5: ajuste del entrenador, acotado a MRV
                 vol_efectivo = max(1, min(vol_efectivo + ajustes_grupo[grupo], mrv_g))
             if vol_efectivo <= 0:
@@ -451,7 +479,7 @@ class PlanificadorHelms:
                     continue
                 ejercicios_toque1 = candidatos_grupo_completos[:n_ejercicios_grupo]
                 pool_seguro = SelectorEjercicios.construir_pool_seguro_por_grupo(
-                    grupo, fase, cliente=cliente_obj
+                    grupo, fase_sel, cliente=cliente_obj
                 )
                 plan_variantes[grupo] = construir_variantes_por_toque(
                     grupo, freq_grupo, grupo in GRUPOS_GRANDES, pool_seguro, ejercicios_toque1
@@ -507,10 +535,18 @@ class PlanificadorHelms:
                 vol_semana_grupo = math.ceil(min(vol_ajustado_bloque, mrv_grupo))
                 if grupo in ajustes_grupo:  # paso 5: ajuste del entrenador, acotado a MRV
                     vol_semana_grupo = max(1, min(vol_semana_grupo + ajustes_grupo[grupo], mrv_grupo))
+                if es_descarga_bloque:
+                    # 2-nov-2026: la mitad de lo que lleva de verdad la semana
+                    # normal (con su reparto y sus límites por sesión).
+                    vol_semana_grupo = math.ceil(min(volumen_objetivo_grupo * vol_mult_reparto, mrv_grupo))
+                    if grupo in ajustes_grupo:
+                        vol_semana_grupo = max(1, min(vol_semana_grupo + ajustes_grupo[grupo], mrv_grupo))
                 if grupo in volumen_efectivo_map:
                     # Grupo sin sitio para todas sus sesiones: se respeta el
                     # límite por sesión y se pierde volumen, no se amontona.
                     vol_semana_grupo = min(vol_semana_grupo, volumen_efectivo_map[grupo])
+                if es_descarga_bloque:
+                    vol_semana_grupo = math.ceil(vol_semana_grupo * vol_mult)
                 toque_previsto = toque_por_grupo.get(grupo, 0) + 1
                 if frecuencia > 0:
                     base_toque, resto_toque = divmod(vol_semana_grupo, frecuencia)
@@ -530,8 +566,12 @@ class PlanificadorHelms:
                 candidatos = variantes_grupo.get(toque, candidatos_todos[:n_ejercicios_grupo])
 
                 n_ej_toque = len(candidatos[:n_ejercicios_grupo])
+                if es_descarga_bloque and n_ej_toque:
+                    # Al menos 2 series por ejercicio: con pocas series ese día,
+                    # menos ejercicios (se queda el primero), no más series.
+                    n_ej_toque = min(n_ej_toque, max(1, vol_dia // 2))
                 base_ej, resto_ej = divmod(vol_dia, n_ej_toque) if n_ej_toque else (0, 0)
-                for idx_ej, ej in enumerate(candidatos[:n_ejercicios_grupo]):
+                for idx_ej, ej in enumerate(candidatos[:n_ej_toque]):
                     nombre = ej['nombre']
                     patron = ej['patron'] or patron_manager.obtener_patron_ejercicio(nombre)
                     tipo_ej = self._determinar_tipo_ejercicio_completo(grupo, nombre)
