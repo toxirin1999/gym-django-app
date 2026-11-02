@@ -296,12 +296,12 @@
     {% with r=revision_bloque.revision c=revision_bloque.en_curso %}
     {% if r %}
     <div class="mem-label">Revisión del bloque · {{ r.inicio|date:"d/m" }}–{{ r.fin|date:"d/m" }}</div>
-    <h2 class="mem-heading" id="memoria-bloque-title">{{ r.nombre }}{% if r.fuerza_media is not None %} · fuerza {% if r.fuerza_media >= 0 %}+{% endif %}{{ r.fuerza_media|floatformat:"0" }} %{% endif %}</h2>
+    <h2 class="mem-heading" id="memoria-bloque-title">{{ r.nombre }}{% if r.fuerza_media is not None %} · fuerza en el bloque {% if r.fuerza_media >= 0 %}+{% endif %}{{ r.fuerza_media|floatformat:"0" }} %{% endif %}</h2>
     <div class="mem-list">
-      <div class="mem-row"><div class="idx">01</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Sesiones: {{ r.sesiones.hechas }} de {{ r.sesiones.previstas }} previstas{% if r.sesiones.pct is not None %} ({{ r.sesiones.pct }} %){% endif %} en {{ r.semanas }} semana{{ r.semanas|pluralize }}{% if r.descargas %} y {{ r.descargas }} de descarga{% endif %}.</div></div></div>
-      <div class="mem-row"><div class="idx">02</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Frente a las semanas anteriores: {% if r.suben %}suben {{ r.suben|join:", " }}{% else %}ninguna zona sube claramente{% endif %}{% if r.bajan %}; bajan {{ r.bajan|join:", " }}{% endif %}.</div></div></div>
+      <div class="mem-row"><div class="idx">01</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Sesiones: {{ r.sesiones.hechas }} de {{ r.sesiones.previstas }} previstas{% if r.sesiones.pct is not None %} ({{ r.sesiones.pct }} %){% endif %} en {{ r.semanas }} semana{{ r.semanas|pluralize }} de entrenamiento{% if r.descargas %} (la descarga que lo cierra no cuenta){% endif %}.</div></div></div>
+      <div class="mem-row"><div class="idx">02</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Durante el bloque, frente a las {{ r.semanas }} semana{{ r.semanas|pluralize }} de antes: {% if r.suben %}suben {{ r.suben|join:", " }}{% else %}ninguna zona sube claramente{% endif %}{% if r.bajan %}; bajan {{ r.bajan|join:", " }}{% endif %}.</div></div></div>
       {% if r.equilibrar %}
-      <div class="mem-row"><div class="idx">03</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Equilibrar (zonas que caían al empezar):{% for e in r.equilibrar %}<br>{{ e.texto }}{% endfor %}</div></div></div>
+      <div class="mem-row"><div class="idx">03</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Equilibrar (zonas que caían al empezar, a 90 días como «Cómo has evolucionado»):{% for e in r.equilibrar %}<br>{{ e.texto }}{% endfor %}</div></div></div>
       {% endif %}
       <div class="mem-row"><div class="idx">04</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Decisiones comprobadas en el bloque: {% if r.decisiones.total %}{{ r.decisiones.funcionaron }} de {{ r.decisiones.total }} funcionaron{% else %}ninguna con conclusión{% endif %}.{% for p in r.propuestas %}<br>{{ p }}{% endfor %}</div></div></div>
       <div class="mem-row"><div class="idx">05</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">{{ r.cambia }}</div></div></div>
@@ -433,7 +433,7 @@
       <div class="mem-label">Perfil de fuerza</div>
       <details class="mem-collapse">
         <summary>
-          1RM estimado
+          1RM estimado · mejor de 90 días
           <span class="mem-count">{{ perfil_atletico|length }} {{ perfil_atletico|length|pluralize:"ejercicio,ejercicios" }}</span>
         </summary>
         <div class="mem-list">

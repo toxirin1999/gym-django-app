@@ -32,7 +32,7 @@ def _bloques_de_registros(registros, periodizacion):
     grupos = []
     for r in registros:
         bloque, _ = bloque_para_semana({'semana_plan': r.semana_plan, 'descarga': False}, periodizacion)
-        if bloque is None or bloque.get('fase') == 'descarga':
+        if bloque is None or bloque.get('fase') == 'descarga' or getattr(r, 'descarga', False):
             if grupos:
                 grupos[-1]['fin'] = r.lunes + timedelta(days=6)
                 grupos[-1]['descargas'] += 1
@@ -44,9 +44,19 @@ def _bloques_de_registros(registros, periodizacion):
                 grupos[-1]['cerrado'] = True
             g = {'bloque': bloque, 'inicio': r.lunes, 'fin': None, 'semanas_reales': 0,
                  'descargas': 0, 'cerrado': False, 'ultima_semana_plan': r.semana_plan}
+            if r is registros[0]:
+                # 2-nov-2026: las semanas se guardan desde el 13-oct; si el
+                # primer registro cae a mitad de un bloque (semana 3 de la
+                # Metabólica), sus semanas anteriores también son del bloque.
+                semanas_bloque = bloque.get('semanas') or []
+                previas = semanas_bloque.index(r.semana_plan) if r.semana_plan in semanas_bloque else 0
+                if previas:
+                    g['inicio'] = r.lunes - timedelta(days=7 * previas)
+                    g['semanas_reales'] = previas
             grupos.append(g)
         g['semanas_reales'] += 1
         g['fin'] = r.lunes + timedelta(days=6)
+        g['fin_contenido'] = g['fin']
         g['ultima_semana_plan'] = r.semana_plan
     return grupos
 
@@ -109,6 +119,10 @@ def revisar_bloque(cliente, grupo):
     from entrenos.services.propuesta_zona_service import frase_evaluacion
 
     inicio, fin = grupo['inicio'], grupo['fin']
+    # 2-nov-2026: lo que pasó en el bloque se mide en sus semanas de
+    # entrenamiento; la descarga que lo cierra no entra (ni sus sesiones ni
+    # su fuerza, que está rebajada a propósito).
+    fin = grupo.get('fin_contenido') or fin
     dias = max(7, (fin - inicio).days + 1)
     semanas_contenido = grupo['semanas_reales']
     previstas = semanas_contenido * _dias_previstos(cliente)
@@ -165,6 +179,7 @@ def revisar_bloque(cliente, grupo):
         'nombre': grupo['bloque'].get('nombre'),
         'inicio': inicio,
         'fin': fin,
+        'dias': dias,
         'semanas': semanas_contenido,
         'descargas': grupo['descargas'],
         'sesiones': {'hechas': hechas, 'previstas': previstas,

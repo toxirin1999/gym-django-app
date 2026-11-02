@@ -516,11 +516,77 @@ def rechazar_propuesta(propuesta):
     return p
 
 
+# ── Pausa por descarga (2-nov-2026) ──────────────────────────────────────
+# Una semana de descarga dentro de una propuesta no le suma series (en la
+# descarga se baja el volumen de todo) y tampoco cuenta como una de sus
+# semanas: la propuesta se alarga una semana por cada descarga. Antes
+# isquios seguía "semana 3 de 4" en plena descarga, con +2 series, y la
+# comprobación final iba a comparar unas semanas con una descarga dentro.
+
+def _lunes_descarga(cliente_id, desde, hasta):
+    from entrenos.models import SemanaPlanGym
+
+    return set(SemanaPlanGym.objects.filter(
+        cliente_id=cliente_id, descarga=True, lunes__gte=desde - timedelta(days=6), lunes__lte=hasta,
+    ).values_list('lunes', flat=True))
+
+
+def fin_con_pausas(p):
+    """Fin de la propuesta contando una semana más por cada descarga dentro."""
+    if not p.inicio:
+        return p.fin
+    base = p.inicio + timedelta(days=p.semanas * 7 - 1)
+    fin = base
+    for _ in range(4):
+        n = len(_lunes_descarga(p.cliente_id, p.inicio, fin))
+        nuevo = base + timedelta(days=7 * n)
+        if nuevo == fin:
+            break
+        fin = nuevo
+    return fin
+
+
+def sincronizar_pausas(cliente):
+    """Deja ``fin`` de las propuestas aceptadas al día con sus pausas por descarga."""
+    from entrenos.models import PropuestaZonaGym
+
+    try:
+        for p in PropuestaZonaGym.objects.filter(
+            cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, inicio__isnull=False,
+        ):
+            fin = fin_con_pausas(p)
+            if fin and fin != p.fin:
+                p.fin = fin
+                p.save(update_fields=['fin'])
+    except Exception:  # noqa: BLE001 — nunca romper una pantalla por esto
+        import logging
+        logging.getLogger(__name__).exception('[propuesta] pausas por descarga')
+
+
+def en_pausa_por_descarga(cliente, hoy):
+    from entrenos.services.sesion_descarga_service import semana_plan_descarga
+
+    try:
+        return semana_plan_descarga(cliente.id, hoy)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def semana_de_propuesta(p, hoy):
+    """Semana de la propuesta que es hoy, sin contar las de descarga."""
+    if not p.inicio or hoy < p.inicio:
+        return None
+    lunes_hoy = hoy - timedelta(days=hoy.weekday())
+    previas = {l for l in _lunes_descarga(p.cliente_id, p.inicio, hoy) if l < lunes_hoy}
+    return max(1, min(p.semanas, (hoy - p.inicio).days // 7 + 1 - len(previas)))
+
+
 def propuesta_activa(cliente, hoy=None):
     """La propuesta aceptada en vigor hoy, o None."""
     from entrenos.models import PropuestaZonaGym
 
     hoy = hoy or timezone.localdate()
+    sincronizar_pausas(cliente)
     return PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA,
         inicio__lte=hoy, fin__gte=hoy,
@@ -537,14 +603,14 @@ def propuesta_visible(cliente, hoy=None):
     ).order_by('-creada_en').first()
     if pendiente:
         return {'tipo': 'pendiente', 'propuesta': pendiente}
+    sincronizar_pausas(cliente)
     aceptada = PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, fin__gte=hoy,
     ).order_by('-inicio').first()
     if aceptada:
-        semana = None
-        if aceptada.inicio and hoy >= aceptada.inicio:
-            semana = min(aceptada.semanas, (hoy - aceptada.inicio).days // 7 + 1)
-        return {'tipo': 'en_curso', 'propuesta': aceptada, 'semana': semana}
+        semana = semana_de_propuesta(aceptada, hoy)
+        pausa = bool(semana) and en_pausa_por_descarga(cliente, hoy)
+        return {'tipo': 'en_curso', 'propuesta': aceptada, 'semana': semana, 'pausa': pausa}
     return None
 
 
@@ -555,7 +621,7 @@ def aplicar_a_ejercicios(cliente, ejercicios, hoy, cambios, es_descarga=False):
     del planificador (volumen_grupo_service); aquí ya no se suman series a
     ejercicios sueltos, solo se explica el cambio si la zona sale hoy.
     """
-    if es_descarga:
+    if es_descarga or en_pausa_por_descarga(cliente, hoy):
         return
     p = propuesta_activa(cliente, hoy)
     if p is None:
@@ -586,15 +652,24 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
     from entrenos.services.evolucion_muscular_service import comparar_ejercicios
 
     hoy = hoy or timezone.localdate()
+    sincronizar_pausas(cliente)
     evaluadas = []
     for p in PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, fin__lt=hoy,
     ):
         objetivo = {_plano(n) for n in p.ejercicios}
-        filas = [
-            e for e in comparar_ejercicios(cliente, p.fin, p.semanas * 7)
-            if _plano(e['ejercicio']) in objetivo and e['pct'] is not None and not e['dudoso']
+        # 2-nov-2026: la ventana es la de la propuesta de verdad (con sus
+        # semanas de pausa), y si los ejercicios elegidos ya no están en el
+        # programa (cambió el bloque), se mide con los de la zona que sí se
+        # hicieron.
+        dias = ((p.fin - p.inicio).days + 1) if p.inicio else p.semanas * 7
+        comparables = [
+            e for e in comparar_ejercicios(cliente, p.fin, dias)
+            if e['pct'] is not None and not e['dudoso']
         ]
+        filas = [e for e in comparables if _plano(e['ejercicio']) in objetivo]
+        if not filas:
+            filas = [e for e in comparables if e.get('zona') == p.zona and not e.get('ligero')]
         if not filas:
             resultado = 'neutra'
             notas = 'No hubo sesiones suficientes de esos ejercicios para comparar'

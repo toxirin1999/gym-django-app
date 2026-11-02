@@ -5541,6 +5541,37 @@ def _estaciones_paradas_desde(estaciones, dias=60):
     return ultima if (timezone.localdate() - ultima).days > dias else None
 
 
+def _perfil_fuerza_90d(cliente, hoy):
+    """[{'ejercicio', 'rm', 'fecha'}] con la mejor fuerza estimada de 90 días, de mayor a menor.
+
+    Sin ejercicios de tiempo o distancia (plancha, dead hang, farmer) y sin
+    repetir el mismo ejercicio escrito de dos formas ("Face pull" / "Face pulls").
+    """
+    try:
+        from entrenos.services.evolucion_muscular_service import _plano, comparar_ejercicios
+        from rutinas.models import EjercicioBase
+
+        sin_1rm = {
+            _plano(n) for n in EjercicioBase.objects.filter(
+                tipo_progresion__in=('progresion_tiempo', 'progresion_distancia'),
+            ).values_list('nombre', flat=True)
+        }
+        mejores = {}
+        for fila in comparar_ejercicios(cliente, hoy, 90):
+            ahora = fila.get('ahora')
+            if not ahora or not ahora.get('e1rm') or _plano(fila['ejercicio']) in sin_1rm:
+                continue
+            clave = ' '.join(p[:-1] if len(p) > 3 and p.endswith('s') else p
+                             for p in _plano(fila['ejercicio']).split())
+            if clave not in mejores or ahora['e1rm'] > mejores[clave]['rm']:
+                mejores[clave] = {'ejercicio': fila['ejercicio'], 'rm': round(float(ahora['e1rm']), 1),
+                                  'fecha': ahora.get('fecha')}
+        return sorted(mejores.values(), key=lambda x: -x['rm'])
+    except Exception:  # noqa: BLE001
+        logger.exception('memoria_entrenador: perfil de fuerza a 90 días no disponible')
+        return []
+
+
 def _rms_numericos(one_rm_data):
     """Devuelve solo RMs que son realmente números, no metadatos del JSON."""
     resultado = []
@@ -5685,12 +5716,20 @@ def memoria_entrenador(request, cliente_id):
         'press militar': 'Press Militar', 'dominadas': 'Dominadas',
     }
     rms_numericos, rm_metadatos_descartados = _rms_numericos(one_rm)
-    visto = set()
-    for key, val in sorted(rms_numericos, key=lambda x: -x[1]):
-        label = rm_labels.get(key, key.replace('_', ' ').title())
-        if label not in visto:
-            visto.add(label)
-            perfil_atletico.append({'ejercicio': label, 'rm': val})
+    # 2-nov-2026: el perfil sale del mismo cálculo que "Cómo has evolucionado"
+    # (mejor fuerza estimada de los últimos 90 días, con el peso corporal en
+    # los fondos). El JSON guardado se quedaba atrás y no cuadraba (dips 41 kg
+    # aquí y 120 kg en la evolución) y daba "1RM" a la plancha o al dead hang.
+    perfil_atletico = _perfil_fuerza_90d(cliente, hoy)
+    if perfil_atletico:
+        rm_metadatos_descartados = 0
+    else:
+        visto = set()
+        for key, val in sorted(rms_numericos, key=lambda x: -x[1]):
+            label = rm_labels.get(key, key.replace('_', ' ').title())
+            if label not in visto:
+                visto.add(label)
+                perfil_atletico.append({'ejercicio': label, 'rm': val})
 
     # ── 2. DATOS HYROX ────────────────────────────────────────────────────────
     hyrox_obj = None

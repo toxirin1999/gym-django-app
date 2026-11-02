@@ -622,6 +622,28 @@ def generar_decisiones_para_entreno(entreno):
                     )
                     motivo_codigo = ''
 
+        # 2-nov-2026 (nota 7 del 31-oct, también aquí): la primera serie se
+        # hizo por encima del peso del plan (encogimientos 120 × 10 con 110
+        # propuesto) y las de después, ya al peso del plan, se quedaron cortas.
+        # El briefing repite el peso del plan; el registro decía "bajar".
+        if accion == 'bajar_peso' and referencia is not None and rango_sesion:
+            try:
+                from entrenos.services.cerebro_carga_service import _peso_plan
+                plan_kg = _peso_plan(entreno, ej.nombre_ejercicio)
+            except Exception:  # noqa: BLE001
+                plan_kg = None
+            validas_ref = referencia.get('validas') or []
+            al_plan = [x for x in validas_ref[1:] if plan_kg and abs(x['peso'] - plan_kg) < 1e-6]
+            if (plan_kg and validas_ref and validas_ref[0]['peso'] > plan_kg + 1e-6 and al_plan
+                    and all(x['reps'] < rango_sesion[0] for x in al_plan)):
+                accion = 'mantener'
+                valor_cambio = None
+                motivo = (
+                    f"La primera serie fue con {_kg_txt(validas_ref[0]['peso'])} kg, por encima de los "
+                    f"{_kg_txt(plan_kg)} del plan — se repiten los {_kg_txt(plan_kg)} kg"
+                )
+                motivo_codigo = ''
+
         if accion == 'subir_reps' and es_tope:
             motivo_codigo = 'tope_maquina'
 
@@ -1206,11 +1228,21 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Subida realizada pero RPE elevado'
     elif log.accion == 'subir_reps' and reps_nuevas > reps_anteriores:
-        resultado = 'validada'
-        if tipo_progresion == 'progresion_distancia':
-            notas = 'Incremento de distancia confirmado'
+        objetivo = getattr(log, 'reps_sugeridas', None)
+        if (objetivo and tipo_progresion != 'progresion_distancia'
+                and float(reps_nuevas) < float(objetivo)):
+            # 2-nov-2026: subió, pero no llegó al objetivo que se pidió
+            # (abducción a por 22 y salieron 20): todavía no "funcionó".
+            resultado = 'neutra'
+            _r = lambda v: _formatear_reps(Decimal(str(v)))
+            notas = (f'Subió de {_r(reps_anteriores)} a {_r(reps_nuevas)} reps, '
+                     f'sin llegar a las {_r(objetivo)} del objetivo')
         else:
-            notas = 'Incremento de repeticiones confirmado'
+            resultado = 'validada'
+            if tipo_progresion == 'progresion_distancia':
+                notas = 'Incremento de distancia confirmado'
+            else:
+                notas = 'Incremento de repeticiones confirmado'
     elif log.accion in ('bajar_peso', 'deload') and peso_nuevo <= peso_anterior:
         if rpe_nuevo is not None and rpe_nuevo <= 8:
             resultado = 'validada'

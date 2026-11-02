@@ -45,12 +45,18 @@ def ajustes_volumen(cliente, fecha):
 
     try:
         from entrenos.models import PropuestaZonaGym
+        from entrenos.services.propuesta_zona_service import en_pausa_por_descarga, sincronizar_pausas
+        sincronizar_pausas(cliente)
+        # 2-nov-2026: en la semana de descarga la propuesta en curso se pausa.
+        pausa = en_pausa_por_descarga(cliente, fecha)
         activas = set()
         for p in PropuestaZonaGym.objects.filter(
             cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA,
             inicio__lte=fecha, fin__gte=fecha,
         ):
             activas.add(p.zona)
+            if pausa:
+                continue
             series = _signo(p) * SERIES_POR_AJUSTE
             sumar(p.zona, series,
                   f'{series:+d} series de {p.nombre_zona} por la propuesta aceptada (hasta el {p.fin:%d/%m})')

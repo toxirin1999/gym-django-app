@@ -63,7 +63,10 @@ class PropuestaZonaTests(TestCase):
         with self.assertRaises(PropuestaNoVigente):
             aceptar_propuesta(p)
 
-    def test_aceptada_suma_series_desde_manana_y_no_en_descarga(self):
+    # 2-nov-2026: con la fecha real, la base de pruebas puede caer en una semana
+    # de descarga del plan, y ahí la propuesta se pausa (tests_paneles_20261102).
+    @patch('entrenos.services.propuesta_zona_service.en_pausa_por_descarga', return_value=False)
+    def test_aceptada_suma_series_desde_manana_y_no_en_descarga(self, _pausa):
         self._isquios_caen()
         p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
         self.assertEqual(p.inicio, self.hoy + timedelta(days=1))
