@@ -9,6 +9,10 @@ solo dibuja; no decide nada.
 from datetime import timedelta
 
 DIAS_CAMINO = 30
+# 3-nov-2026: variabilidad y pulso, 14 mañanas como «Cómo amaneces» (con 30 días
+# y datos desde el 24-oct todo se apelotonaba a la derecha).
+DIAS_MANANAS = 14
+DIAS_TENDENCIA = 7
 ANCHO, ALTO = 340, 170
 MARGEN_IZQ, MARGEN_DER, MARGEN_ARR, MARGEN_ABA = 8, 8, 16, 22
 FRANJA = (0.8, 1.3)  # tu zona normal: de un 20 % menos a un 30 % más que tu semana normal
@@ -124,10 +128,18 @@ def frase_camino(cliente, hoy):
     return f'{cabeza}: {unidas}.'
 
 
-def _serie_manana(cliente, hoy, campo, dias, franja, malo):
+def _n0(v):
+    return str(round(v))
+
+
+def _serie_manana(cliente, hoy, campo, dias, franja, malo, lectura=None):
     """Puntos de una medida de cada mañana y su franja normal alrededor de tu media.
 
     ``franja(media)`` → (abajo, arriba); ``malo(valor, media)`` → punto en rojo.
+    ``lectura(valor, media)`` → frase corta ("un 37 % por debajo de lo normal").
+    3-nov-2026: también la línea de tendencia (media de 7 días) y la frase de
+    hoy y de la tendencia: con un valor suelto que sube y baja 40 ms de un día a
+    otro, el gráfico solo no se entendía.
     """
     from clientes.models import BitacoraDiaria
     from entrenos.services.recuperacion_service import _medias_base
@@ -135,13 +147,30 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo):
     desde = hoy - timedelta(days=dias - 1)
     valores = {}
     for fecha, v in BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha__gte=desde, fecha__lte=hoy, **{f'{campo}__isnull': False},
+        cliente=cliente, fecha__gte=desde - timedelta(days=DIAS_TENDENCIA - 1), fecha__lte=hoy,
+        **{f'{campo}__isnull': False},
     ).values_list('fecha', campo):
         valores[fecha] = float(v)
+    previos = {f: v for f, v in valores.items() if f < desde}
+    valores = {f: v for f, v in valores.items() if f >= desde}
     # 28-oct-2026 (nota 9): la misma media que usan los días (sin la mañana de hoy).
     media = _medias_base(cliente, hoy).get(campo)
     if not valores:
         return {'puntos': [], 'media': None}
+
+    todos = {**previos, **valores}
+
+    def _tendencia(d):
+        ventana = [todos[f] for f in todos if d - timedelta(days=DIAS_TENDENCIA - 1) <= f <= d]
+        return sum(ventana) / len(ventana) if len(ventana) >= 3 else None
+
+    tendencias = {}
+    for i in range(dias):
+        d = desde + timedelta(days=i)
+        t = _tendencia(d)
+        if t is not None and (d in valores or d == hoy):
+            tendencias[i] = t
+
     # El eje va del valor más bajo al más alto (con la franja normal dentro), no desde cero:
     # desde cero, todas las mañanas salían en una línea plana.
     banda = franja(media) if media else None
@@ -154,36 +183,74 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo):
         d = desde + timedelta(days=i)
         if d in valores:
             puntos.append({'x': _x(i, dias), 'y': _y(valores[d], tope, suelo), 'valor': round(valores[d]),
-                           'fecha': f'{d:%d/%m}', 'bajo': bool(media and malo(valores[d], media))})
+                           'fecha': f'{d:%d/%m}', 'bajo': bool(media and malo(valores[d], media)),
+                           'hoy': d == hoy})
     # 27-oct-2026: las últimas mañanas, escritas (con 3 puntos en 30 días no se leían).
     ultimos = [p for p in puntos][-7:]
+    marcas = [{'x': _x(i, dias), 'texto': f'{desde + timedelta(days=i):%d/%m}'} for i in (0, dias // 2)]
+    marcas.append({'x': _x(dias - 1, dias), 'texto': 'hoy'})
     out = {'puntos': puntos, 'media': round(media) if media else None, 'ancho': ANCHO, 'alto': ALTO,
            'base_y': ALTO - MARGEN_ABA, 'texto_y': ALTO - 6,
            'ultimos': ' · '.join(str(p['valor']) for p in ultimos),
            # 31-oct-2026: las mañanas que cuentan para la media (sin la de hoy):
            # decía "llevo 5" con 4 en la media.
            'dias_con_dato': sum(1 for f in valores if f < hoy),
-           'marcas': [{'x': _x(i, dias), 'texto': f'{desde + timedelta(days=i):%d/%m}'} for i in (0, dias // 2, dias - 1)]}
+           'marcas': marcas,
+           # Puntos como texto con punto decimal: la página está en español y
+           # Django escribía "231,4", que el SVG no entiende (los puntos se iban a x=0).
+           'linea': ' '.join(f"{p['x']},{p['y']}" for p in puntos),
+           'tendencia': ' '.join(f'{_x(i, dias)},{_y(t, tope, suelo)}' for i, t in sorted(tendencias.items()))
+           if len(tendencias) >= 2 else ''}
     if banda:
         out['franja_y1'] = _y(banda[1], tope, suelo)
         out['franja_y2'] = _y(banda[0], tope, suelo)
         out['media_y'] = _y(media, tope, suelo)
         out['franja_alto'] = round(out['franja_y2'] - out['franja_y1'], 1)
+        out['media_texto_y'] = round(out['media_y'] - 4, 1)
+        if lectura:
+            if hoy in valores:
+                out['hoy_valor'] = round(valores[hoy])
+                out['hoy_lectura'] = lectura(valores[hoy], media)
+            t = tendencias.get(dias - 1)
+            if t is not None:
+                out['tendencia_valor'] = round(t)
+                out['tendencia_lectura'] = lectura(t, media)
     return out
 
 
-def variabilidad(cliente, hoy, dias=DIAS_CAMINO):
+def _lectura_variabilidad(v, media):
+    pct = round((v / media - 1) * 100)
+    if v < media * 0.85:
+        return f'un {-pct} % por debajo de lo normal en ti'
+    if v > media * 1.15:
+        return f'un {pct} % por encima de lo normal: bien recuperado'
+    return 'dentro de lo normal en ti'
+
+
+def _lectura_pulso(v, media):
+    from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
+    dif = round(v - media)
+    if dif >= PULSO_ALTO_LPM:
+        return f'{dif} pulsaciones más de lo normal en ti'
+    if dif <= -2:
+        return f'{-dif} menos de lo normal: tranquilo'
+    return 'como siempre'
+
+
+def variabilidad(cliente, hoy, dias=DIAS_MANANAS):
     """Variabilidad de cada mañana; franja normal ±15 % de tu media. Rojo: 15 % o más por debajo."""
     return _serie_manana(cliente, hoy, 'hrv_ms', dias,
-                         franja=lambda m: (m * 0.85, m * 1.15), malo=lambda v, m: v < m * 0.85)
+                         franja=lambda m: (m * 0.85, m * 1.15), malo=lambda v, m: v < m * 0.85,
+                         lectura=_lectura_variabilidad)
 
 
-def pulso(cliente, hoy, dias=DIAS_CAMINO):
+def pulso(cliente, hoy, dias=DIAS_MANANAS):
     """27-oct-2026: pulso en reposo de cada mañana; franja ±5 de tu media. Rojo: 5 o más por encima."""
     from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
     return _serie_manana(cliente, hoy, 'fc_reposo', dias,
                          franja=lambda m: (m - PULSO_ALTO_LPM, m + PULSO_ALTO_LPM),
-                         malo=lambda v, m: v >= m + PULSO_ALTO_LPM)
+                         malo=lambda v, m: v >= m + PULSO_ALTO_LPM,
+                         lectura=_lectura_pulso)
 
 
 def dias_recientes(estado):

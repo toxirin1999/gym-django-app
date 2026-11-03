@@ -603,6 +603,7 @@
           </div>
         </div>
         <div class="plan-badge-group">
+          {% if ej.opcional_hoy %}<span class="tag tag-subtle joi">OPCIONAL HOY</span>{% endif %}
           {% if ej.sustituido %}<span class="tag tag-subtle accent">↔ CAMBIADO</span>
           {% elif ej.deload %}<span class="tag tag-subtle accent">↓ DELOAD</span>
           {% elif ej.regla_carga == 'recalcular' %}<span class="tag tag-subtle accent">↔ NUEVO RANGO</span>
@@ -672,7 +673,7 @@
       {% if ej.aproximaciones %}
       <div class="plan-warmup">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        <span>Calentamiento: <b>{{ ej.aproximaciones.peso1|floatformat:"-1" }} · {{ ej.aproximaciones.peso2|floatformat:"-1" }} · {{ ej.aproximaciones.peso3|floatformat:"-1" }} kg</b></span>
+        <span>Calentamiento: <b>{{ ej.aproximaciones.peso1|floatformat:"-1" }} · {{ ej.aproximaciones.peso2|floatformat:"-1" }}{% if ej.aproximaciones.peso3 %} · {{ ej.aproximaciones.peso3|floatformat:"-1" }}{% endif %} kg</b></span>
       </div>
       {% endif %}
 

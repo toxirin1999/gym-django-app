@@ -80,6 +80,24 @@ def es_sesion_descarga(entreno, nombre, periodos=None):
 # siempre: una subida en la semana de bajar.
 
 FACTOR_PESO_DESCARGA = 0.9
+# 3-nov-2026 (nota 1): con un 10 % menos de peso y las mismas reps de la última
+# vez (que salieron a RPE 8-9) la descarga sale a RPE 7-8, no a 6. Para que
+# sobren 3 o 4 reps, 3 menos que la última vez, sin bajar del mínimo del rango
+# y sin pasar de 3 por debajo del máximo (10-15 → como mucho 12).
+REPS_MENOS_DESCARGA = 3
+
+
+def reps_descarga(reps_ref, minimo, maximo):
+    """Reps de una serie de descarga a partir de las de la última vez.
+
+    15 en 10-15 → 12; 13 → 10; 11 → 10. Si la última vez ya fue el mínimo del
+    rango, las mismas (el peso más bajo hace el resto).
+    """
+    reps_ref = int(reps_ref)
+    if reps_ref <= minimo:
+        return max(1, min(reps_ref, maximo))
+    techo = max(minimo, maximo - REPS_MENOS_DESCARGA)
+    return max(minimo, min(reps_ref - REPS_MENOS_DESCARGA, techo))
 
 
 def semana_plan_descarga(cliente_id, fecha):
@@ -128,10 +146,14 @@ def ajustar_a_descarga(cliente, ej, hoy):
     cuando = 'la última vez' if dias <= 14 else f"el {lectura['fecha']:%d/%m}"
 
     if tipo == 'progresion_reps':
-        reps = max(1, min(reps_ref, maximo))
+        reps = reps_descarga(reps_ref, minimo, maximo)
         ej['reps_objetivo_hoy'] = reps
-        frase = (f'Semana de descarga: {reps} reps, las de {cuando}, sin apurar (RPE {kg(rpe)}). '
-                 f'No se busca una más.')
+        if reps < reps_ref:
+            frase = (f'Semana de descarga: {reps} reps ({cuando} {reps_ref}), sin apurar (RPE {kg(rpe)}): '
+                     f'que te sobren 3 o 4. No se busca una más.')
+        else:
+            frase = (f'Semana de descarga: {reps} reps, las de {cuando}, sin apurar (RPE {kg(rpe)}). '
+                     f'No se busca una más.')
     else:
         peso_ref = float(ref['peso'] or 0)
         if peso_ref <= 0:
@@ -141,7 +163,7 @@ def ajustar_a_descarga(cliente, ej, hoy):
             peso = a_escala(peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
             if peso >= peso_ref - 1e-6:
                 peso = peso_ref - salto
-            reps = max(1, min(reps_ref, maximo))
+            reps = reps_descarga(reps_ref, minimo, maximo)
         else:
             estimado = peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))
             peso = a_escala(estimado or peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
@@ -159,8 +181,9 @@ def ajustar_a_descarga(cliente, ej, hoy):
         if 'peso_recomendado_kg' in ej:
             ej['peso_recomendado_kg'] = peso
         ej['reps_objetivo_hoy'] = reps
-        frase = (f'Semana de descarga: {kg(peso)} kg ({cuando} {kg(peso_ref)} kg × {reps_ref}) '
-                 f'a por {reps}, sin apurar (RPE {kg(rpe)}). No se busca subir.')
+        sobra = ': que te sobren 3 o 4' if reps < reps_ref else ''
+        frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(peso_ref)} kg × {reps_ref}), '
+                 f'sin apurar (RPE {kg(rpe)}){sobra}. No se busca subir.')
     _limpiar_progresion(ej)
     ej['regla_carga'] = 'descarga'
     ej['deload'] = True

@@ -1735,11 +1735,13 @@ body{background:
       <div class="sd-info"><strong>{{ ejercicio.aproximaciones.peso2|stringformat:'.1f' }}kg</strong> × <strong>3-5 reps</strong></div>
       <div class="sd-rpe">RPE 6-7</div>
     </div>
+    {% if ejercicio.aproximaciones.peso3 %}
     <div class="aprox-row serie-row serie-aproximacion">
       <div class="sd-check" style="width:28px;height:28px;background:rgba(255,255,255,0.06);color:var(--td);font-size:11px;font-weight:700;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;">A3</div>
       <div class="sd-info"><strong>{{ ejercicio.aproximaciones.peso3|stringformat:'.1f' }}kg</strong> × <strong>1-2 reps</strong></div>
       <div class="sd-rpe">RPE 8</div>
     </div>
+    {% endif %}
   </div>
   {% endif %}
 

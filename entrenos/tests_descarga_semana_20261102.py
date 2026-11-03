@@ -55,7 +55,7 @@ class PesoYReps(Base):
         self.hacer(e, self.hack, [(100, 12, 8), (100, 12, 8), (100, 11, 9)])
         ej = self._ej(self.hack, '10-15')
         frase = ajustar_a_descarga(self.cliente, ej, LUNES)
-        self.assertEqual((ej['peso_kg'], ej['reps_objetivo_hoy']), (90.0, 12))
+        self.assertEqual((ej['peso_kg'], ej['reps_objetivo_hoy']), (90.0, 10))  # 3-nov: 3 menos (12 → 10, mínimo del rango)
         self.assertIn('Semana de descarga: 90 kg', frase)
         self.assertTrue(ej['deload'])
         self.assertFalse(ej.get('progresion_pospuesta'))

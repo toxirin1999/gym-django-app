@@ -1,4 +1,4 @@
-<!doctype html>
+{% load l10n %}<!doctype html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
@@ -7,7 +7,7 @@
   <title>Cómo responde tu cuerpo · {{ cliente.nombre|default:request.user.username }}</title>
   <style>
     :root{--ink:#030604;--panel:#08110d;--line:#284238;--paper:#f3f0e8;--muted:#a3ada7;--green:#42e4a0;--blue:#65caff;--amber:#f6c35b;--red:#ff7f6e}
-    *{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif"SF Pro Text","SF Pro Display",system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+    *{box-sizing:border-box}html,body{margin:0;background:var(--ink);color:var(--paper);font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','SF Pro Display',system-ui,sans-serif;-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
     .mono{font-family:"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;font-weight:700;letter-spacing:.14em;text-transform:uppercase}
     main{width:min(100%,520px);margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 16px calc(100px + env(safe-area-inset-bottom))}
     .back{color:var(--blue);font-size:10px;text-decoration:none}
@@ -86,6 +86,7 @@
       <span class="mono label" id="camino-titulo">Tu camino · 30 días</span>
       {% if frase_camino %}<p class="frase" style="margin-top:8px;font-size:14px">{{ frase_camino }}</p>{% endif %}
       {% if camino.hay_carga %}
+      {% localize off %}
       <svg viewBox="0 0 {{ camino.ancho }} {{ camino.alto }}" role="img" aria-label="Carga de los últimos 7 días frente a tu zona normal, 30 días">
         <polygon points="{{ camino.franja }}" fill="#42e4a0" fill-opacity="0.12" stroke="none"/>
         <polyline points="{{ camino.linea }}" fill="none" stroke="#f3f0e8" stroke-width="2" stroke-linejoin="round"/>
@@ -93,6 +94,7 @@
         <line x1="8" x2="332" y1="{{ camino.base_y }}" y2="{{ camino.base_y }}" stroke="#284238"/>
         {% for m in camino.marcas %}<text x="{{ m.x }}" y="{{ camino.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
+      {% endlocalize %}
       <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#f3f0e8;height:2px"></i>Tu carga de los últimos 7 días</span></div>
       <p class="nota">La línea suma lo que entrenas en 7 días: cuánto dura cada sesión por lo dura que fue. Por encima de la franja vas más cargado de lo habitual; por debajo, más suave. Lo que importa es cómo responde tu cuerpo a eso.</p>
       {% else %}
@@ -111,31 +113,45 @@
       <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#7d8a84"></i>Sin media aún</span><span><i style="background:none;border:1px dashed #4a5a53"></i>Sin dato</span></div>
 
       {% if variabilidad.puntos %}
-      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms (media de las 4 semanas anteriores){% endif %}</p>
-      <svg viewBox="0 0 {{ variabilidad.ancho }} {{ variabilidad.alto }}" role="img" aria-label="Variabilidad cardiaca de cada mañana, 30 días">
+      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana · 14 días{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms (media de las 4 semanas anteriores){% endif %}</p>
+      {% if variabilidad.hoy_valor %}<p class="valores">Hoy: <strong>{{ variabilidad.hoy_valor }} ms</strong>, {{ variabilidad.hoy_lectura }}.</p>{% endif %}
+      {% if variabilidad.tendencia_valor %}<p class="valores">Tendencia de 7 días: <strong>{{ variabilidad.tendencia_valor }} ms</strong>, {{ variabilidad.tendencia_lectura }}.</p>{% endif %}
+      {% localize off %}
+      <svg viewBox="0 0 {{ variabilidad.ancho }} {{ variabilidad.alto }}" role="img" aria-label="Variabilidad cardiaca de cada mañana, 14 días">
         {% if variabilidad.media %}<rect x="8" y="{{ variabilidad.franja_y1 }}" width="324" height="{{ variabilidad.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
         <line x1="8" x2="332" y1="{{ variabilidad.media_y }}" y2="{{ variabilidad.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}
-        {% for p in variabilidad.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"><title>{{ p.fecha }}: {{ p.valor }} ms</title></circle>{% endfor %}
+        {% if variabilidad.linea %}<polyline points="{{ variabilidad.linea }}" fill="none" stroke="#f3f0e8" stroke-opacity="0.22" stroke-width="1"/>{% endif %}
+        {% if variabilidad.tendencia %}<polyline points="{{ variabilidad.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
+        {% for p in variabilidad.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} ms</title></circle>{% endfor %}
         <line x1="8" x2="332" y1="{{ variabilidad.base_y }}" y2="{{ variabilidad.base_y }}" stroke="#284238"/>
         {% for m in variabilidad.marcas %}<text x="{{ m.x }}" y="{{ variabilidad.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
+      {% endlocalize %}
+      <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
       <p class="valores">Últimas mañanas: <strong>{{ variabilidad.ultimos }}</strong> ms</p>
-      <p class="nota">Cuanto más alta, mejor recuperado. Un punto rojo es una mañana claramente por debajo de lo normal en ti{% if not variabilidad.media %}; la franja de lo normal sale cuando haya 5 mañanas (llevo {{ variabilidad.dias_con_dato }}){% endif %}.</p>
+      <p class="nota">Cuanto más alta, mejor recuperado. Cada mañana sube y baja mucho (es normal): mira la línea verde. Un punto rojo suelto no es nada; si la línea se mete por debajo de la franja varios días, el cuerpo pide aflojar{% if not variabilidad.media %}; la franja de lo normal sale cuando haya 5 mañanas (llevo {{ variabilidad.dias_con_dato }}){% endif %}.</p>
       {% else %}
       <p class="nota">Aún no ha llegado ninguna medida de variabilidad del reloj.</p>
       {% endif %}
 
       {% if pulso.puntos %}
-      <p class="nota" style="margin-top:16px">Pulso en reposo cada mañana{% if pulso.media %} · lo normal en ti, unas {{ pulso.media }} pulsaciones{% endif %}</p>
-      <svg viewBox="0 0 {{ pulso.ancho }} {{ pulso.alto }}" role="img" aria-label="Pulso en reposo de cada mañana, 30 días">
+      <p class="nota" style="margin-top:16px">Pulso en reposo cada mañana · 14 días{% if pulso.media %} · lo normal en ti, unas {{ pulso.media }} pulsaciones{% endif %}</p>
+      {% if pulso.hoy_valor %}<p class="valores">Hoy: <strong>{{ pulso.hoy_valor }} pulsaciones</strong>, {{ pulso.hoy_lectura }}.</p>{% endif %}
+      {% if pulso.tendencia_valor %}<p class="valores">Tendencia de 7 días: <strong>{{ pulso.tendencia_valor }} pulsaciones</strong>, {{ pulso.tendencia_lectura }}.</p>{% endif %}
+      {% localize off %}
+      <svg viewBox="0 0 {{ pulso.ancho }} {{ pulso.alto }}" role="img" aria-label="Pulso en reposo de cada mañana, 14 días">
         {% if pulso.media %}<rect x="8" y="{{ pulso.franja_y1 }}" width="324" height="{{ pulso.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
         <line x1="8" x2="332" y1="{{ pulso.media_y }}" y2="{{ pulso.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}
-        {% for p in pulso.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="3.5" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"><title>{{ p.fecha }}: {{ p.valor }} pulsaciones</title></circle>{% endfor %}
+        {% if pulso.linea %}<polyline points="{{ pulso.linea }}" fill="none" stroke="#f3f0e8" stroke-opacity="0.22" stroke-width="1"/>{% endif %}
+        {% if pulso.tendencia %}<polyline points="{{ pulso.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
+        {% for p in pulso.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} pulsaciones</title></circle>{% endfor %}
         <line x1="8" x2="332" y1="{{ pulso.base_y }}" y2="{{ pulso.base_y }}" stroke="#284238"/>
         {% for m in pulso.marcas %}<text x="{{ m.x }}" y="{{ pulso.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
+      {% endlocalize %}
+      <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
       <p class="valores">Últimas mañanas: <strong>{{ pulso.ultimos }}</strong> pulsaciones</p>
-      <p class="nota">Al revés que la variabilidad: cuanto más bajo, mejor. Un punto rojo es una mañana con 5 pulsaciones o más por encima de lo normal en ti, que suele salir con cansancio acumulado, mal sueño, alcohol o cuando estás incubando algo.</p>
+      <p class="nota">Al revés que la variabilidad: cuanto más bajo, mejor. En rojo, una mañana con 5 pulsaciones o más por encima de lo normal en ti, que suele salir con cansancio acumulado, mal sueño, alcohol o cuando estás incubando algo.</p>
       {% endif %}
       <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cada mañana comparo tres cosas con tu media de las 4 semanas anteriores (necesito 5 mañanas del reloj para tenerla):</p><p>· <strong>Variabilidad cardiaca</strong> un 15 % o más por debajo de lo normal en ti.<br>· <strong>Pulso en reposo</strong> 5 pulsaciones o más por encima.<br>· <strong>Sueño</strong>: menos de 6 h, o 1 h 15 menos de lo que sueles.</p><p>Ninguna señal y algo mejor que lo normal: <strong>Fresco</strong>. Nada fuera de lo normal: <strong>Normal</strong>. Una señal: <strong>Algo por debajo</strong>. Dos señales (o la variabilidad un 25 % por debajo): <strong>Por debajo</strong>.</p><p><strong>Sin media aún</strong>: hay datos de esa mañana, pero todavía no con qué compararlos. <strong>Sin dato</strong>: no llegó nada del reloj.</p><p>También cuenta cómo llegas: si al empezar el entreno marcas la energía 1,5 puntos o más por debajo de lo habitual, ese día sale <strong>Algo por debajo</strong> aunque el reloj diga otra cosa.</p></div></details>
     </section>

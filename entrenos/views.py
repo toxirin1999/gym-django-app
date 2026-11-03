@@ -4080,6 +4080,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
                     peso_trabajo, ejercicio.get('usa_peso', True),
                     incremento=ejercicio.get('incremento_kg'),
+                    descarga=bool(ejercicio.get('deload')),
                 )
                 _motivo_peso_coherente(ejercicio)
                 _anotar_series_sin_carga(cliente, ejercicio, fecha_obj)
@@ -4543,6 +4544,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio['aproximaciones'] = get_aproximaciones_calentamiento(
                 peso_trabajo, ejercicio.get('usa_peso', True),
                 incremento=ejercicio.get('incremento_kg'),
+                descarga=bool(ejercicio.get('deload')),
             )
 
     except Exception as e:
@@ -10128,7 +10130,8 @@ def briefing_entrenamiento(request, cliente_id):
             _inc = ej.get('incremento_kg') or _salto(cliente, ej.get('nombre', ''))
         except Exception:
             _inc = None
-        ej['aproximaciones'] = get_aproximaciones_calentamiento(peso_trabajo, ej['usa_peso'], incremento=_inc)
+        ej['aproximaciones'] = get_aproximaciones_calentamiento(
+            peso_trabajo, ej['usa_peso'], incremento=_inc, descarga=bool(ej.get('deload')))
         # 30-oct-2026 (nota 1): el objetivo del dead hang ("hoy 36 s") ya en el briefing.
         if ej.get('usa_tiempo') and not ej.get('progresion_motivo'):
             try:
@@ -10156,6 +10159,26 @@ def briefing_entrenamiento(request, cliente_id):
             aviso_pierna_suave = aplicar_pierna_suave(cliente, ejercicios_mod, fecha_obj)
         except Exception:
             logger.exception('[briefing] pierna suave falló')
+        # 3-nov-2026 (nota 2): en versión suave el briefing enseña lo mismo que
+        # hará la sesión: los principales primero y los accesorios como
+        # opcionales (antes decía "los accesorios quedan para otro día" y la
+        # lista no cambiaba).
+        ejercicios_mod.sort(key=lambda e: (
+            1 if e.get('pierna_suave') else 0,
+            0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1,
+        ))
+        for ej in ejercicios_mod:
+            ej['opcional_hoy'] = not (
+                ej.get('tipo_ejercicio') == 'compuesto_principal' and not ej.get('pierna_suave')
+            )
+        if not all(ej['opcional_hoy'] for ej in ejercicios_mod):
+            for msg in briefing.get('mensajes') or []:
+                if msg.get('tipo') == 'ok':
+                    msg['texto'] = ('Sin alertas del plan en estas 2 semanas. Lo de hoy (versión suave) '
+                                    'va por cómo amaneces, no por el plan.')
+        else:
+            for ej in ejercicios_mod:
+                ej['opcional_hoy'] = False
 
     # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
     # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.

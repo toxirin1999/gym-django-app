@@ -11,7 +11,13 @@ sin cambiar sus valores: 50% / 70% / 85% del peso de trabajo, redondeados al
 PESO_MIN_CALENTAMIENTO = 10
 
 
-def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=None):
+# 3-nov-2026 (nota 4): en la semana de descarga las series de trabajo van a
+# RPE 6 y ya calientan. Dos escalones, y ninguno con poco peso (Pallof a 20 kg
+# salía 5 · 10 · 15).
+PESO_MIN_CALENTAMIENTO_DESCARGA = 25
+
+
+def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=None, descarga=False):
     """
     Series de aproximación (calentamiento) antes del peso de trabajo.
 
@@ -27,6 +33,8 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
         return None
 
     if peso_trabajo <= 0 or not usa_peso:
+        return None
+    if descarga and peso_trabajo < PESO_MIN_CALENTAMIENTO_DESCARGA:
         return None
     if peso_trabajo < PESO_MIN_CALENTAMIENTO:
         # 31-oct-2026: Y-raises en polea a 8 kg salía "4 · 5 · 6 kg". Con
@@ -72,4 +80,7 @@ def get_aproximaciones_calentamiento(peso_trabajo, usa_peso=True, incremento=Non
                 p1, p2 = _redondear(peso_trabajo * 0.50), _redondear(peso_trabajo * 0.70)
         if not (0 < p1 < p2 < p3 < peso_trabajo):
             return None  # 25-oct-2026: nunca escalones repetidos
+    if descarga:
+        # Descarga: el 50 % y el 70 %; el tercero sobra a RPE 6.
+        return {'peso1': p1, 'peso2': p2, 'peso3': None, 'descarga': True}
     return {'peso1': p1, 'peso2': p2, 'peso3': p3}
