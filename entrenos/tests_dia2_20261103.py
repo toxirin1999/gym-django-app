@@ -109,3 +109,20 @@ class DeadHangEnDescarga(BaseUltima):
         self.assertIn('30 s (la última vez 36 s)', frase)
         self.assertIn('No se busca marca', frase)
         _fijar_reps_descarga(dict(ej, reps_objetivo=37))
+
+
+class PanelesSeparados(SimpleTestCase):
+    """3-nov-2026 (tarde): petición de David."""
+
+    def test_memoria_sin_manual_de_david(self):
+        src = (Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes' / 'memoria_entrenador.html').read_text(
+            encoding='utf-8')
+        self.assertNotIn('Reglas que he anotado', src)
+        self.assertNotIn('Manual de David</div>', src)
+
+    def test_cuerpo_variabilidad_y_pulso_en_su_panel(self):
+        src = (Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes' / 'cuerpo.html').read_text(encoding='utf-8')
+        self.assertIn('aria-labelledby="variabilidad-titulo"', src)
+        self.assertIn('aria-labelledby="pulso-titulo"', src)
+        self.assertLess(src.index('id="cuerpo-titulo"'), src.index('id="variabilidad-titulo"'))
+        self.assertLess(src.index('id="variabilidad-titulo"'), src.index('id="pulso-titulo"'))

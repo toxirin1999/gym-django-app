@@ -112,8 +112,14 @@
       </div>
       <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i style="background:#2f7d5c"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#7d8a84"></i>Sin media aún</span><span><i style="background:none;border:1px dashed #4a5a53"></i>Sin dato</span></div>
 
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cada mañana comparo tres cosas con tu media de las 4 semanas anteriores (necesito 5 mañanas del reloj para tenerla):</p><p>· <strong>Variabilidad cardiaca</strong> un 15 % o más por debajo de lo normal en ti.<br>· <strong>Pulso en reposo</strong> 5 pulsaciones o más por encima.<br>· <strong>Sueño</strong>: menos de 6 h, o 1 h 15 menos de lo que sueles.</p><p>Ninguna señal y algo mejor que lo normal: <strong>Fresco</strong>. Nada fuera de lo normal: <strong>Normal</strong>. Una señal: <strong>Algo por debajo</strong>. Dos señales (o la variabilidad un 25 % por debajo): <strong>Por debajo</strong>.</p><p><strong>Sin media aún</strong>: hay datos de esa mañana, pero todavía no con qué compararlos. <strong>Sin dato</strong>: no llegó nada del reloj.</p><p>También cuenta cómo llegas: si al empezar el entreno marcas la energía 1,5 puntos o más por debajo de lo habitual, ese día sale <strong>Algo por debajo</strong> aunque el reloj diga otra cosa.</p></div></details>
+    </section>
+
+    <!-- 3-nov-2026: variabilidad y pulso, cada uno en su panel -->
+    <section class="card" aria-labelledby="variabilidad-titulo">
+      <span class="mono label" id="variabilidad-titulo">Variabilidad cardiaca cada mañana · 14 días</span>
       {% if variabilidad.puntos %}
-      <p class="nota" style="margin-top:16px">Variabilidad cardiaca cada mañana · 14 días{% if variabilidad.media %} · lo normal en ti, unos {{ variabilidad.media }} ms (media de las 4 semanas anteriores){% endif %}</p>
+      {% if variabilidad.media %}<p class="nota" style="margin-top:8px">Lo normal en ti, unos {{ variabilidad.media }} ms (media de las 4 semanas anteriores).</p>{% endif %}
       {% if variabilidad.hoy_valor %}<p class="valores">Hoy: <strong>{{ variabilidad.hoy_valor }} ms</strong>, {{ variabilidad.hoy_lectura }}.</p>{% endif %}
       {% if variabilidad.tendencia_valor %}<p class="valores">Tendencia de 7 días: <strong>{{ variabilidad.tendencia_valor }} ms</strong>, {{ variabilidad.tendencia_lectura }}.</p>{% endif %}
       {% localize off %}
@@ -133,9 +139,12 @@
       {% else %}
       <p class="nota">Aún no ha llegado ninguna medida de variabilidad del reloj.</p>
       {% endif %}
+    </section>
 
-      {% if pulso.puntos %}
-      <p class="nota" style="margin-top:16px">Pulso en reposo cada mañana · 14 días{% if pulso.media %} · lo normal en ti, unas {{ pulso.media }} pulsaciones{% endif %}</p>
+    {% if pulso.puntos %}
+    <section class="card" aria-labelledby="pulso-titulo">
+      <span class="mono label" id="pulso-titulo">Pulso en reposo cada mañana · 14 días</span>
+      {% if pulso.media %}<p class="nota" style="margin-top:8px">Lo normal en ti, unas {{ pulso.media }} pulsaciones (media de las 4 semanas anteriores).</p>{% endif %}
       {% if pulso.hoy_valor %}<p class="valores">Hoy: <strong>{{ pulso.hoy_valor }} pulsaciones</strong>, {{ pulso.hoy_lectura }}.</p>{% endif %}
       {% if pulso.tendencia_valor %}<p class="valores">Tendencia de 7 días: <strong>{{ pulso.tendencia_valor }} pulsaciones</strong>, {{ pulso.tendencia_lectura }}.</p>{% endif %}
       {% localize off %}
@@ -152,9 +161,8 @@
       <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
       <p class="valores">Últimas mañanas: <strong>{{ pulso.ultimos }}</strong> pulsaciones</p>
       <p class="nota">Al revés que la variabilidad: cuanto más bajo, mejor. En rojo, una mañana con 5 pulsaciones o más por encima de lo normal en ti, que suele salir con cansancio acumulado, mal sueño, alcohol o cuando estás incubando algo.</p>
-      {% endif %}
-      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cada mañana comparo tres cosas con tu media de las 4 semanas anteriores (necesito 5 mañanas del reloj para tenerla):</p><p>· <strong>Variabilidad cardiaca</strong> un 15 % o más por debajo de lo normal en ti.<br>· <strong>Pulso en reposo</strong> 5 pulsaciones o más por encima.<br>· <strong>Sueño</strong>: menos de 6 h, o 1 h 15 menos de lo que sueles.</p><p>Ninguna señal y algo mejor que lo normal: <strong>Fresco</strong>. Nada fuera de lo normal: <strong>Normal</strong>. Una señal: <strong>Algo por debajo</strong>. Dos señales (o la variabilidad un 25 % por debajo): <strong>Por debajo</strong>.</p><p><strong>Sin media aún</strong>: hay datos de esa mañana, pero todavía no con qué compararlos. <strong>Sin dato</strong>: no llegó nada del reloj.</p><p>También cuenta cómo llegas: si al empezar el entreno marcas la energía 1,5 puntos o más por debajo de lo habitual, ese día sale <strong>Algo por debajo</strong> aunque el reloj diga otra cosa.</p></div></details>
     </section>
+    {% endif %}
 
     <section class="card" aria-labelledby="parada-titulo">
       <span class="mono label" id="parada-titulo">¿Enfermo o de parada?</span>

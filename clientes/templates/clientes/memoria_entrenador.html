@@ -657,43 +657,7 @@
 
     {% endif %}{# /modelo.tiene_datos #}
 
-    {# ── §11 MANUAL DE DAVID ── #}
-    {% if manual_patrones %}
-    <article class="mem-node mem-node--plan">
-      <div class="mem-label">Manual de David</div>
-      <h2 class="mem-heading">Reglas que he anotado</h2>
-      <div class="mem-list">
-        {% for p in manual_patrones|slice:":3" %}
-        <div class="mem-row">
-          <div class="idx">{% if p.origen == 'patron_detectado' %}PAT{% else %}ERR{% endif %}</div>
-          <div>
-            <div class="name" style="font-size:12px;line-height:1.5;">{{ p.entrada }}</div>
-            <div class="meta">{{ p.creado_en|date:"d/m/Y" }}</div>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-      {% if manual_patrones|length > 3 %}
-      <details class="mem-collapse">
-        <summary>
-          Ver todas las anotaciones
-          <span class="mem-count">{{ manual_patrones|length }}</span>
-        </summary>
-        <div class="mem-list">
-          {% for p in manual_patrones|slice:"3:" %}
-          <div class="mem-row">
-            <div class="idx">{% if p.origen == 'patron_detectado' %}PAT{% else %}ERR{% endif %}</div>
-            <div>
-              <div class="name" style="font-size:12px;line-height:1.5;">{{ p.entrada }}</div>
-              <div class="meta">{{ p.creado_en|date:"d/m/Y" }}</div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </details>
-      {% endif %}
-    </article>
-    {% endif %}
+    {# 3-nov-2026: sin el «Manual de David»: eran reflexiones del diario, no reglas de entreno. #}
 
     {% if not perfil_atletico and not records and not estaciones_progreso and decisiones_total == 0 and not modelo.tiene_datos and not actividad_reciente %}
     <section class="mem-empty" aria-labelledby="memoria-sin-evidencia-title">

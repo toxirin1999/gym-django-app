@@ -214,7 +214,7 @@ class Panel(Base):
         self.assertContains(r, '¿Me estoy pasando?')
         self.assertContains(r, 'Carga alta')           # +50 % y el cuerpo aguanta
         self.assertContains(r, '<polyline')
-        self.assertContains(r, 'lo normal en ti, unos 50 ms')
+        self.assertContains(r, 'Lo normal en ti, unos 50 ms')
         self.assertContains(r, 'class="punto rojo"')
         from entrenos.services.panel_cuerpo_service import fecha_texto
         self.assertContains(r, fecha_texto(HOY).capitalize())

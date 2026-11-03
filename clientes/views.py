@@ -5904,18 +5904,8 @@ def memoria_entrenador(request, cliente_id):
         'revision_pendiente': revision_corporal is None or dias_desde_revision >= 28,
     }
 
-    # ── 9. MANUAL DE DAVID ────────────────────────────────────────────────────
+    # 3-nov-2026: el Manual de David (reflexiones del diario) ya no sale en la memoria del entrenador.
     manual_patrones = []
-    try:
-        from joi.models import ManualDavid
-        manual_patrones = list(
-            ManualDavid.objects
-            .filter(user=cliente.user, activa=True)
-            .order_by('-creado_en')[:10]
-            .values('entrada', 'origen', 'creado_en')
-        )
-    except Exception:
-        pass
 
     # La fecha no representa el render: es el último dato que alimenta este
     # expediente. Algunas secciones dependen de una fuente distinta.
