@@ -176,7 +176,7 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
         self.assertNotIn('Series y esfuerzo guardados para la próxima decisión del plan.', self.source)
 
     def test_calentamiento_indica_cuantos_pasos_abre_y_su_estado(self):
-        self.assertIn('Calentamiento · 3 pasos', self.source)
+        self.assertIn('Calentamiento · {% if ejercicio.aproximaciones.peso3 %}3{% else %}2{% endif %} pasos', self.source)
         self.assertIn('aria-controls="aprox-body-{{ ejercicio.form_id }}"', self.source)
         self.assertIn('aria-expanded="false"', self.source)
         self.assertIn('function toggleCalentamiento(button, formId)', self.source)

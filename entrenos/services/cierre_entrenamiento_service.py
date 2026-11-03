@@ -455,6 +455,9 @@ def calcular_metricas_unidades(entreno, ejercicios):
                 item.update(
                     repeticiones=valor,
                     tonelaje_kg=sum(float(serie.tonelaje_kg) for serie in series),
+                    # 3-nov-2026 (nota 8): Pallof y remo a una mano. Las reps son
+                    # de un lado y los kilos suman los dos: se dice.
+                    por_lado=any(serie.tipo_carga == 'por_lado' for serie in series),
                 )
             trabajo_por_tipo.append(item)
             continue

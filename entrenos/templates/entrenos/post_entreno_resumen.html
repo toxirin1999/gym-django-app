@@ -364,8 +364,8 @@
         {% elif trabajo.tipo == 'tiempo' %}
           <span class="unit-piece">{{ trabajo.segundos|floatformat:0 }} s</span>
         {% else %}
-          <span class="unit-piece">{{ trabajo.repeticiones|floatformat:0 }} reps</span>
-          {% if trabajo.tonelaje_kg %}<span class="unit-piece">{{ trabajo.tonelaje_kg|kg_miles }} kg</span>{% endif %}
+          <span class="unit-piece">{{ trabajo.repeticiones|floatformat:0 }} reps{% if trabajo.por_lado %} por lado{% endif %}</span>
+          {% if trabajo.tonelaje_kg %}<span class="unit-piece">{{ trabajo.tonelaje_kg|kg_miles }} kg{% if trabajo.por_lado %} (los dos lados){% endif %}</span>{% endif %}
         {% endif %}
       </span>
     </div>

@@ -185,8 +185,10 @@ def _unir(partes):
 def _frase_recuperacion(nivel, senales, buenas, datos):
     textos = [s['texto'] for s in senales]
     if nivel == 'rojo':
+        # 3-nov-2026 (nota 1): los accesorios no desaparecen, quedan como
+        # opcionales (así lo enseñan el briefing y la sesión).
         return (f'Hoy vas justo: {_unir(textos)}. Entrenamos, pero los principales sin apretar '
-                f'y los accesorios quedan para otro día. Hoy sumar es descansar bien.')
+                f'y los accesorios, solo si te ves bien. Hoy sumar es descansar bien.')
     if nivel == 'ambar':
         # 26-oct-2026: también lo bueno (el 26 dormiste poco, pero la variabilidad
         # era la mejor de la semana y la frase solo hablaba del sueño).
@@ -355,9 +357,25 @@ def comprobacion_cierre(cliente, entreno):
     que = ' y '.join(ajustes)
     hoy_txt = f'{rpe_hoy:.1f}'.replace('.', ',')
     antes_txt = f'{rpe_antes:.1f}'.replace('.', ',')
+    # 3-nov-2026 (nota 9): en la semana de descarga el esfuerzo ya venía
+    # rebajado (RPE 6); compararlo con tu media no dice nada.
+    try:
+        from entrenos.services.sesion_descarga_service import semana_plan_descarga
+        en_descarga = semana_plan_descarga(cliente.id, entreno.fecha)
+    except Exception:  # noqa: BLE001
+        en_descarga = False
+    if en_descarga:
+        if rpe_hoy <= 6.5:
+            return (f'Hoy ajusté la sesión: {que}. Era semana de descarga y todo iba a RPE 6: '
+                    f'lo hiciste a {hoy_txt}, justo lo que tocaba.')
+        return (f'Hoy ajusté la sesión: {que}. Era semana de descarga (RPE 6) y te costó {hoy_txt}: '
+                f'llegabas cansado de verdad. Mañana descansa bien.')
     if rpe_hoy >= rpe_antes + 0.5:
         return (f'Hoy ajusté la sesión: {que}. Aun así te costó más de lo normal '
                 f'(esfuerzo {hoy_txt} sobre 10; sueles estar en {antes_txt}). Bien hecho no forzar: '
                 f'mañana descansa bien.')
+    if rpe_hoy <= rpe_antes - 0.5:
+        return (f'Hoy ajusté la sesión: {que}. Te costó menos de lo normal (esfuerzo {hoy_txt} sobre 10; '
+                f'sueles estar en {antes_txt}): el ajuste fue justo y no pierdes nada.')
     return (f'Hoy ajusté la sesión: {que}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10, '
             f'como tus {antes_txt} de siempre): el ajuste fue justo y no pierdes nada.')

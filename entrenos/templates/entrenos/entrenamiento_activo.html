@@ -1598,7 +1598,7 @@ body{background:
         <h2 class="cyber-ejercicio-nombre">{{ ejercicio.nombre|nombre_visible }}</h2>
         {% if ejercicio.aproximaciones and not ejercicio.usa_distancia %}
         <button type="button" class="ex-aprox-pill" aria-controls="aprox-body-{{ ejercicio.form_id }}" aria-expanded="false" onclick="toggleCalentamiento(this, '{{ ejercicio.form_id }}')">
-          <span>Calentamiento · 3 pasos</span><span aria-hidden="true">›</span>
+          <span>Calentamiento · {% if ejercicio.aproximaciones.peso3 %}3{% else %}2{% endif %} pasos</span><span aria-hidden="true">›</span>
         </button>
         {% endif %}
       </div>
@@ -2632,9 +2632,16 @@ function tieneSeriesPendientes(card){
 // 26-oct-2026: primer ejercicio con series pendientes, mirando hacia delante y
 // después desde el principio (los que dejaste para después). -1 si no queda.
 // 2-nov-2026 (nota 5): "Te queda X" solo si es el último; si quedan más, se dice.
+// 3-nov-2026 (nota 6): si dejaste uno atrás (el Crunch estaba ocupado), se dice
+// ya al continuar, no solo al final: «Continuar con Pallof · el Crunch, al final».
 function textoSiguiente(idx,nombre){
   const quedan=cards.filter((c,i)=>i!==STATE.ejActual&&tieneSeriesPendientes(c)).length;
-  if(idx>=STATE.ejActual)return 'Continuar con '+nombre;
+  if(idx>=STATE.ejActual){
+    const atras=cards.filter((c,i)=>i<STATE.ejActual&&tieneSeriesPendientes(c))
+      .map(c=>c.querySelector('.cyber-ejercicio-nombre')?.textContent?.trim()).filter(Boolean);
+    if(!atras.length)return 'Continuar con '+nombre;
+    return 'Continuar con '+nombre+' · '+(atras.length===1?'el '+atras[0]+', al final':atras.length+' pendientes, al final');
+  }
   return quedan>1?'Vuelve a '+nombre+' (quedan '+quedan+')':'Te queda '+nombre;
 }
 
@@ -3103,7 +3110,9 @@ function guardarSeriePanel(fid,sn,total){
   const card=document.getElementById('card-'+fid);
   const descSeg=parseInt(card?.dataset.descansoSeg||'0');
   const descMin=parseFloat(card?.dataset.descanso)||2;
-  const descansoSeg=descSeg>0?descSeg:Math.round(descMin*60);
+  let descansoSeg=descSeg>0?descSeg:Math.round(descMin*60);
+  // 3-nov-2026 (nota 5): en descarga (RPE 6) basta con 2 minutos como mucho.
+  if(card?.dataset.descarga==='1')descansoSeg=Math.min(descansoSeg,120);
   const snDescanso = snFlujo - 1;
   iniciarDescanso(fid,descansoSeg,snDescanso,total);
   // 14-oct-2026: la técnica viene marcada "buena" por defecto; solo hay que

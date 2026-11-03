@@ -3589,6 +3589,42 @@ def _fecha_planificada_para_sesion(cliente, sesion_programada_id, fecha_por_defe
     return sesion.fecha_prevista if sesion else fecha_por_defecto
 
 
+def _fijar_reps_descarga(ejercicio):
+    """3-nov-2026 (nota 3): las reps de la descarga, también en el selector."""
+    if not _ej_en_descarga(ejercicio) or not ejercicio.get('reps_objetivo_hoy'):
+        return
+    if ejercicio.get('usa_tiempo') or ejercicio.get('usa_distancia'):
+        return
+    try:
+        reps = int(ejercicio['reps_objetivo_hoy'])
+    except (TypeError, ValueError):
+        return
+    ejercicio['reps_objetivo'] = reps
+    ejercicio['sugerencia_tope'] = False
+    ejercicio.pop('reps_sugeridas_tope', None)
+    try:
+        if int(ejercicio.get('reps_min') or reps) > reps:
+            ejercicio['reps_min'] = reps
+        if int(ejercicio.get('reps_max') or reps) < reps:
+            ejercicio['reps_max'] = reps
+    except (TypeError, ValueError):
+        pass
+
+
+def _es_principal_hoy(ejercicio):
+    """3-nov-2026 (nota 4): qué se queda en la versión suave.
+
+    Los multiarticulares (principales y secundarios) de cualquier grupo menos el
+    core. Antes solo contaba ``compuesto_principal`` y salía el Crunch como
+    principal y el Remo con mancuerna como accesorio.
+    """
+    if ejercicio.get('pierna_suave'):
+        return False
+    if (ejercicio.get('grupo_muscular') or '').lower() == 'core':
+        return False
+    return ejercicio.get('tipo_ejercicio') in ('compuesto_principal', 'compuesto_secundario')
+
+
 def _ej_en_descarga(ejercicio):
     """2-nov-2026: en la semana de descarga el tope de máquina no propone reps.
 
@@ -3842,7 +3878,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicios_planificados.sort(
                 key=lambda e: (
                     1 if e.get('pierna_suave') else 0,
-                    0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1,
+                    0 if _es_principal_hoy(e) else 1,
                 )
             )
 
@@ -3856,10 +3892,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
-            ejercicio['es_principal'] = (
-                ejercicio.get('tipo_ejercicio') == 'compuesto_principal'
-                and not ejercicio.get('pierna_suave')
-            )
+            ejercicio['es_principal'] = _es_principal_hoy(ejercicio)
             # Phase 11.1: set/merge origen_opcional for non-principal exercises
             if modo_reducido and not ejercicio.get('es_principal'):
                 existing = ejercicio.get('origen_opcional')
@@ -4546,6 +4579,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 incremento=ejercicio.get('incremento_kg'),
                 descarga=bool(ejercicio.get('deload')),
             )
+
+        # 3-nov-2026 (nota 3): en descarga manda el objetivo de la descarga.
+        # El Crunch salía a 13 en el selector con «65 kg × 12» en el plan.
+        for ejercicio in ejercicios_planificados:
+            _fijar_reps_descarga(ejercicio)
 
     except Exception as e:
         messages.error(request, f"Error al cargar los datos del entrenamiento: {e}")
@@ -10165,12 +10203,10 @@ def briefing_entrenamiento(request, cliente_id):
         # lista no cambiaba).
         ejercicios_mod.sort(key=lambda e: (
             1 if e.get('pierna_suave') else 0,
-            0 if e.get('tipo_ejercicio') == 'compuesto_principal' else 1,
+            0 if _es_principal_hoy(e) else 1,
         ))
         for ej in ejercicios_mod:
-            ej['opcional_hoy'] = not (
-                ej.get('tipo_ejercicio') == 'compuesto_principal' and not ej.get('pierna_suave')
-            )
+            ej['opcional_hoy'] = not _es_principal_hoy(ej)
         if not all(ej['opcional_hoy'] for ej in ejercicios_mod):
             for msg in briefing.get('mensajes') or []:
                 if msg.get('tipo') == 'ok':

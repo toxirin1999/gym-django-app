@@ -342,7 +342,7 @@ _MENSAJES_POR_CAUSA = {
     'futbol_reciente':    'Tus piernas ya recibieron carga del fútbol. Hoy conviene no confundir esfuerzo con progreso.',
     'hyrox_reciente':     'El Hyrox reciente dejó carga real — hoy conviene priorizar los principales y dejar los accesorios como opcionales.',
     'carga_alta':         'Esta semana llevas bastante más carga de la habitual. Hoy, los principales y sin forzar: los accesorios quedan como opcionales.',
-    'recuperacion_baja':  'Hoy vas justo de recuperación: conviene hacer los principales sin apretar y dejar los accesorios para otro día.',
+    'recuperacion_baja':  'Hoy vas justo de recuperación: conviene hacer los principales sin apretar y los accesorios, solo si te ves bien.',
     'pendiente_prioritaria': 'Esta sesión sostiene el bloque. Sigue siendo la siguiente pieza útil.',
     'pendiente_normal':   'Esta sesión quedó pendiente. El plan conserva el hilo.',
     'sesion_hoy':         'Esta es la sesión prevista para hoy.',
