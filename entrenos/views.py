@@ -3593,7 +3593,7 @@ def _fijar_reps_descarga(ejercicio):
     """3-nov-2026 (nota 3): las reps de la descarga, también en el selector."""
     if not _ej_en_descarga(ejercicio) or not ejercicio.get('reps_objetivo_hoy'):
         return
-    if ejercicio.get('usa_tiempo') or ejercicio.get('usa_distancia'):
+    if ejercicio.get('usa_distancia'):
         return
     try:
         reps = int(ejercicio['reps_objetivo_hoy'])

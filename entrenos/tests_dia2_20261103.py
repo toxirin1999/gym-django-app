@@ -84,3 +84,27 @@ class CierreEnDescarga(ComprobacionCierre):
         e = self._entreno(0, 'recuperacion_baja', 6)
         frase = rec.comprobacion_cierre(self.cliente, e)
         self.assertIn('Te costó menos de lo normal', frase)
+
+
+from entrenos.tests_ultima_sesion import Base as BaseUltima  # noqa: E402
+
+
+class DeadHangEnDescarga(BaseUltima):
+    """3-nov-2026: el briefing del Día 3 decía «Hoy a por 37 s» en la descarga."""
+
+    def test_menos_tiempo_y_sin_marca(self):
+        from rutinas.models import EjercicioBase
+        from entrenos.services.sesion_descarga_service import ajustar_a_descarga
+        hang = EjercicioBase.objects.create(nombre='Aguante en Barra (Dead Hang)', grupo_muscular='antebrazos',
+                                            tipo_progresion='progresion_tiempo')
+        e = self.entreno(HOY - timedelta(days=5), {hang.nombre: '30-60'})
+        self.hacer(e, hang, [(0, 36, 7), (0, 36, 7)])
+        ej = {'nombre': hang.nombre, 'tipo_progresion': 'progresion_tiempo', 'repeticiones': '30-60',
+              'reps_objetivo': 37, 'usa_tiempo': True}
+        frase = ajustar_a_descarga(self.cliente, ej, HOY)
+        self.assertEqual(ej['reps_objetivo'], 30)
+        self.assertEqual(ej['reps_objetivo_hoy'], 30)
+        self.assertTrue(ej['deload'])
+        self.assertIn('30 s (la última vez 36 s)', frase)
+        self.assertIn('No se busca marca', frase)
+        _fijar_reps_descarga(dict(ej, reps_objetivo=37))

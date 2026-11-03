@@ -131,6 +131,8 @@ def ajustar_a_descarga(cliente, ej, hoy):
 
     nombre = ej.get('nombre') or ''
     tipo = ej.get('tipo_progresion') or 'peso_reps'
+    if tipo == 'progresion_tiempo' and nombre:
+        return _ajustar_tiempo_a_descarga(cliente, ej, nombre, hoy)
     rango_txt = ej.get('repeticiones_plan') or ej.get('repeticiones')
     rango = rango_reps(rango_txt)
     if not nombre or not rango or tipo not in ('peso_reps', 'peso_corporal_lastre', 'progresion_reps'):
@@ -184,6 +186,42 @@ def ajustar_a_descarga(cliente, ej, hoy):
         sobra = ': que te sobren 3 o 4' if reps < reps_ref else ''
         frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(peso_ref)} kg × {reps_ref}), '
                  f'sin apurar (RPE {kg(rpe)}){sobra}. No se busca subir.')
+    _limpiar_progresion(ej)
+    ej['regla_carga'] = 'descarga'
+    ej['deload'] = True
+    ej['progresion_motivo'] = frase
+    ej['progresion_motivo_local'] = 'descarga'
+    return frase
+
+
+FACTOR_TIEMPO_DESCARGA = 0.8
+
+
+def _ajustar_tiempo_a_descarga(cliente, ej, nombre, hoy):
+    """3-nov-2026: ejercicios por tiempo (dead hang) en descarga.
+
+    El briefing del Día 3 decía «Hoy a por 37 s (la última vez 36)»: buscar
+    marca en la semana de bajar. Ahora, un 20 % menos que la última vez,
+    redondeado a 5 s (36 s → 30 s), y sin buscar marca.
+    """
+    from entrenos.services.ultima_sesion_service import ultima_sesion
+
+    lectura = ultima_sesion(cliente, nombre, hoy)
+    if not lectura or lectura.get('descarga'):
+        return None
+    valores = [int(s['reps']) for s in lectura.get('series') or [] if s.get('reps')]
+    if not valores:
+        return None
+    ref = max(valores)
+    segundos = max(10, int(round(ref * FACTOR_TIEMPO_DESCARGA / 5.0)) * 5)
+    if segundos >= ref:
+        segundos = max(5, ref - 5)
+    dias = (hoy - lectura['fecha']).days
+    cuando = 'la última vez' if dias <= 14 else f"el {lectura['fecha']:%d/%m}"
+    ej['reps_objetivo_hoy'] = segundos
+    ej['reps_objetivo'] = segundos
+    frase = (f'Semana de descarga: {segundos} s ({cuando} {ref} s), sin apurar. '
+             f'No se busca marca.')
     _limpiar_progresion(ej)
     ej['regla_carga'] = 'descarga'
     ej['deload'] = True
