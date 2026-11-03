@@ -220,6 +220,8 @@ def _ajustar_tiempo_a_descarga(cliente, ej, nombre, hoy):
     cuando = 'la última vez' if dias <= 14 else f"el {lectura['fecha']:%d/%m}"
     ej['reps_objetivo_hoy'] = segundos
     ej['reps_objetivo'] = segundos
+    # En tiempo, «repeticiones» son los segundos de la serie («2 series × 37 s»).
+    ej['repeticiones'] = segundos
     frase = (f'Semana de descarga: {segundos} s ({cuando} {ref} s), sin apurar. '
              f'No se busca marca.')
     _limpiar_progresion(ej)

@@ -104,6 +104,7 @@ class DeadHangEnDescarga(BaseUltima):
         frase = ajustar_a_descarga(self.cliente, ej, HOY)
         self.assertEqual(ej['reps_objetivo'], 30)
         self.assertEqual(ej['reps_objetivo_hoy'], 30)
+        self.assertEqual(ej['repeticiones'], 30)  # «2 series × 30 s» en el briefing
         self.assertTrue(ej['deload'])
         self.assertIn('30 s (la última vez 36 s)', frase)
         self.assertIn('No se busca marca', frase)
