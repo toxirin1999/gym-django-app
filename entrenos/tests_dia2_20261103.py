@@ -39,8 +39,8 @@ class Textos(SimpleTestCase):
 
     def test_nota8_por_lado_en_el_resumen(self):
         src = RESUMEN.read_text(encoding='utf-8')
-        self.assertIn('reps{% if trabajo.por_lado %} por lado{% endif %}', src)
-        self.assertIn('(los dos lados)', src)
+        self.assertIn("reps{% if trabajo.por_lado %} {{ trabajo.unidad_lado.reps|default:'por lado' }}{% endif %}", src)
+        self.assertIn("{{ trabajo.unidad_lado.kg|default:'los dos lados' }}", src)
 
 
 class RepsDescargaEnElSelector(SimpleTestCase):

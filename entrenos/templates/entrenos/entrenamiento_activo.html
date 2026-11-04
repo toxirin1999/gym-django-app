@@ -1038,10 +1038,11 @@ input{background:transparent!important;border:none!important;outline:none!import
 
 /* ── CONTINGENCIA — grid monocromo de 4 columnas ── */
 .contingencia-grid{
-  display:grid;grid-template-columns:repeat(4,1fr);gap:6px;
+  display:grid;grid-template-columns:repeat(5,1fr);gap:6px;
   margin:0 0 8px;
 }
 .contingencia-grid .btn-swap-maquina,
+.contingencia-grid .btn-despues,
 .contingencia-grid .btn-molestia,
 .contingencia-grid .btn-tope-maquina,
 .contingencia-grid .btn-fallo{
@@ -1051,6 +1052,7 @@ input{background:transparent!important;border:none!important;outline:none!import
   min-height:46px;padding:6px 4px;border-radius:12px;cursor:pointer;transition:all .15s;
 }
 .contingencia-grid .btn-swap-maquina:hover,
+.contingencia-grid .btn-despues:hover,
 .contingencia-grid .btn-molestia:hover,.contingencia-grid .btn-molestia.activa,
 .contingencia-grid .btn-fallo:hover,.contingencia-grid .btn-fallo.activo,
 .contingencia-grid .btn-tope-maquina:hover,.contingencia-grid .btn-tope-maquina.activo{
@@ -1257,15 +1259,17 @@ body{background:
 
 .contingencia-grid{margin:0 18px 7px;gap:6px;}
 /* 23-oct-2026: sin "Tope kg" (tiempo, peso corporal) tres botones a todo el ancho. */
-.contingencia-grid.sin-tope{grid-template-columns:repeat(3,1fr);}
+.contingencia-grid.sin-tope{grid-template-columns:repeat(4,1fr);}
+.aviso-despues{position:fixed;left:16px;right:16px;bottom:96px;z-index:60;padding:12px 14px;border-radius:12px;background:#0f1f19;border:1px solid rgba(16,185,129,.35);color:#d1fae5;font-size:13px;line-height:1.4;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:opacity .3s;}
 .contingencia-grid .btn-swap-maquina,
+.contingencia-grid .btn-despues,
 .contingencia-grid .btn-molestia,
 .contingencia-grid .btn-tope-maquina,
 .contingencia-grid .btn-fallo{
   min-height:43px;border-radius:7px;padding:4px 2px;gap:3px;
   background:#0d1418;border-color:#263842;color:#d5dce0;font-size:9px;
 }
-.contingencia-grid .btn-swap-maquina svg,.contingencia-grid .btn-molestia svg,
+.contingencia-grid .btn-swap-maquina svg,.contingencia-grid .btn-despues svg,.contingencia-grid .btn-molestia svg,
 .contingencia-grid .btn-tope-maquina svg,.contingencia-grid .btn-fallo svg{width:15px;height:15px;}
 .contingencia-grid .btn-tope-maquina.activo,
 .contingencia-grid .btn-tope-maquina:hover{background:rgba(0,203,154,.12);border-color:#00d6a4;color:#00e1aa;box-shadow:0 0 13px rgba(0,218,166,.14);}
@@ -1274,6 +1278,7 @@ body{background:
    pantallas táctiles solo se resalta lo que está activo de verdad. */
 @media (hover:none){
   .contingencia-grid .btn-swap-maquina:hover:not(.activo),
+  .contingencia-grid .btn-despues:hover,
   .contingencia-grid .btn-molestia:hover:not(.activa),
   .contingencia-grid .btn-fallo:hover:not(.activo),
   .contingencia-grid .btn-tope-maquina:hover:not(.activo){
@@ -1604,7 +1609,7 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{{ rango_vis }} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}
+        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{% if ejercicio.reps_objetivo %}{{ ejercicio.reps_objetivo }}{% else %}{{ rango_vis }}{% endif %} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
         {% endif %}
@@ -1701,6 +1706,13 @@ body{background:
             title="Máquina ocupada - buscar alternativa">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
       <span>Ocupada</span>
+    </button>
+    {# 4-nov-2026 (nota 7): «Ocupada» cambia el ejercicio; «Después» lo deja para el final. #}
+    <button type="button" class="btn-despues" id="despues-btn-{{ ejercicio.form_id }}"
+            onclick="dejarParaDespues('{{ ejercicio.form_id }}')"
+            title="Hacer este ejercicio al final">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l3 2m6-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>Después</span>
     </button>
     <button type="button" class="btn-molestia" id="mol-btn-{{ ejercicio.form_id }}"
             onclick="abrirModalMolestia('{{ ejercicio.form_id }}','{{ ejercicio.nombre|escapejs }}')">
@@ -2643,6 +2655,30 @@ function textoSiguiente(idx,nombre){
     return 'Continuar con '+nombre+' · '+(atras.length===1?'el '+atras[0]+', al final':atras.length+' pendientes, al final');
   }
   return quedan>1?'Vuelve a '+nombre+' (quedan '+quedan+')':'Te queda '+nombre;
+}
+
+// 4-nov-2026 (nota 7): «Después» manda el ejercicio al final de la cola sin
+// cambiarlo (para eso está «Ocupada») y lleva al siguiente que quede.
+function avisoDespues(texto){
+  let el=document.getElementById('aviso-despues');
+  if(!el){el=document.createElement('div');el.id='aviso-despues';el.className='aviso-despues';el.setAttribute('role','status');document.body.appendChild(el);}
+  el.textContent=texto;el.hidden=false;el.style.opacity='1';
+  clearTimeout(el._t);el._t=setTimeout(()=>{el.style.opacity='0';setTimeout(()=>{el.hidden=true;},300);},3500);
+}
+
+function dejarParaDespues(fid){
+  const card=document.getElementById('card-'+fid);
+  const idx=cards.indexOf(card);
+  if(idx<0)return;
+  const nombre=card.querySelector('.cyber-ejercicio-nombre')?.textContent?.trim()||'Este ejercicio';
+  let destino=-1;
+  for(let paso=1;paso<cards.length;paso++){
+    const i=(idx+paso)%cards.length;
+    if(tieneSeriesPendientes(cards[i])){destino=i;break;}
+  }
+  if(destino<0){avisoDespues('Es lo único que te queda: hazlo ahora o revisa y finaliza.');return;}
+  irEjercicio(destino);
+  avisoDespues(nombre+', al final: te lo vuelvo a proponer cuando acabes lo demás.');
 }
 
 function siguientePendiente(){

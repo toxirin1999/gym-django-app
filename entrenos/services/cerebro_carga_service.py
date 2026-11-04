@@ -444,6 +444,33 @@ def aplicar_decision_carga(ej, decision):
     return True
 
 
+def _proxima_vez_descarga_sin_carga(cliente, entreno, nombre, tipo_progresion, con_efecto):
+    """Tiempo o reps sin carga tras una sesión de descarga: vuelve a lo de antes."""
+    from datetime import timedelta as _td
+    from entrenos.models import EjercicioRealizado as _ER
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga
+    from entrenos.services.ultima_sesion_service import ultima_sesion
+
+    if not es_sesion_descarga(entreno, nombre):
+        return None
+    if _ER.objects.filter(
+        entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
+        entreno__fecha__gt=entreno.fecha,
+    ).exists():
+        return None
+    antes = ultima_sesion(cliente, nombre, entreno.fecha + _td(days=1))
+    valores = [int(s['reps']) for s in (antes or {}).get('series') or [] if s.get('reps')]
+    if not antes or antes.get('descarga') or not valores:
+        texto = 'Hoy era descarga: no cuenta como referencia.'
+        return (texto, 'Volver', None) if con_efecto else (texto, 'Volver')
+    uni = ' s' if tipo_progresion == 'progresion_tiempo' else ' reps'
+    ref = max(valores)
+    texto = (f'Hoy era descarga: no cuenta como referencia. La próxima vez se parte de lo de antes, '
+             f"el {antes['fecha']:%d/%m}: {ref}{uni}.")
+    efecto = f'Vuelve a {ref}{uni}'
+    return (texto, 'Volver', efecto) if con_efecto else (texto, 'Volver')
+
+
 def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=None, con_efecto=False):
     """(texto, acción) de "la próxima vez" para el cierre, según la regla única.
 
@@ -455,6 +482,10 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
     from entrenos.services.decision_log_service import _rpe_objetivo_snapshot, normalizar_ejercicio
     from entrenos.services.ultima_sesion_service import rango_de_sesion, ultima_sesion
 
+    if tipo_progresion in ('progresion_tiempo', 'progresion_reps'):
+        # 4-nov-2026 (nota 6): el dead hang de la descarga también dice de
+        # qué se parte la próxima vez («Vuelve a 36 s»).
+        return _proxima_vez_descarga_sin_carga(cliente, entreno, nombre, tipo_progresion, con_efecto)
     if tipo_progresion not in ('peso_reps', 'peso_corporal_lastre'):
         return None
     rango = rango_de_sesion(entreno, nombre)

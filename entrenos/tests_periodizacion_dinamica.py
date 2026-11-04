@@ -115,7 +115,7 @@ class DescargaProgramada(Base):
         info = self.resolver(LUNES, senales=[SENAL])
         self.assertEqual(info['semana_plan'], 13)
         self.assertTrue(info['descarga'])
-        self.assertEqual(info['motivo'], f"Semana de descarga del bloque: {SENAL['texto']}.")
+        self.assertEqual(info['motivo'], f"Toca la descarga del final del bloque y la hago: {SENAL['texto']}.")
 
     def test_tras_cinco_semanas_se_hace_aunque_no_haya_senales(self):
         self.preparar(5)

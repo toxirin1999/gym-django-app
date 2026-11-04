@@ -92,7 +92,7 @@ class PlantillaDia3b(SimpleTestCase):
 
     def test_cambios_visibles(self):
         for trozo in (
-            '.contingencia-grid.sin-tope{grid-template-columns:repeat(3,1fr);}',   # 7
+            '.contingencia-grid.sin-tope{grid-template-columns:repeat(4,1fr);}',   # 7 (4-nov: + «Después»)
             '@media (hover:none){',                                               # 3
             "|stringformat:'g' }}",                                               # 4
             "{% elif sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}",  # 12

@@ -216,8 +216,15 @@ def tipo_equipo_carga(nombre, equipo=None):
     return None
 
 
+# 4-nov-2026 (nota 4): la barra del hip thrust se carga con discos de 1,25
+# por lado: de 2,5 en 2,5 (hoy salía 115 en vez de 117,5).
+_SALTO_FINO_BARRA = ('hip thrust',)
+
+
 def salto_fisico(nombre, equipo=None):
     """Salto de la escala física del equipo, o None si no se reconoce."""
+    if any(t in (nombre or '').casefold() for t in _SALTO_FINO_BARRA):
+        return SALTO_DISCOS
     return {
         'maquina': SALTO_MAQUINA,
         'discos': SALTO_DISCOS,

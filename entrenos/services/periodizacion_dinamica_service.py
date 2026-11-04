@@ -211,9 +211,16 @@ def _decidir_semana(cliente, lunes, previo, registros, periodizacion):
     if es_semana_descarga(candidata, periodizacion):
         if senales or semanas_sin >= SEMANAS_MIN_DESCARGA_PROGRAMADA:
             razon = _lista(textos) if senales else f'{semanas_sin} semanas entrenando sin descargar'
+            # 4-nov-2026 (nota 1): primero que toca por el bloque y luego por
+            # qué no me la salto. Antes se leía como si la descarga saliera
+            # solo del RPE ("Semana de descarga del bloque: RPE alto…").
+            if senales:
+                motivo = f'Toca la descarga del final del bloque y la hago: {razon}.'
+            else:
+                motivo = f'Toca la descarga del final del bloque: llevas {razon}.'
             return {**base, 'semana_plan': candidata, 'descarga': True,
                     'origen': S.ORIGEN_DESCARGA_PROGRAMADA,
-                    'motivo': f'Semana de descarga del bloque: {razon}.'}
+                    'motivo': motivo}
         return {**base, 'semana_plan': _ciclar(candidata + 1), 'descarga': False,
                 'origen': S.ORIGEN_DESCARGA_SALTADA,
                 'motivo': (f'Me salto la descarga del bloque: sin señales de fatiga y solo '

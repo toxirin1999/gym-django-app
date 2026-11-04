@@ -458,6 +458,8 @@ def calcular_metricas_unidades(entreno, ejercicios):
                     # 3-nov-2026 (nota 8): Pallof y remo a una mano. Las reps son
                     # de un lado y los kilos suman los dos: se dice.
                     por_lado=any(serie.tipo_carga == 'por_lado' for serie in series),
+                    # 4-nov-2026 (nota 3): las zancadas se cuentan por pierna.
+                    unidad_lado=_unidad_lado(ejercicio.nombre_ejercicio),
                 )
             trabajo_por_tipo.append(item)
             continue
@@ -676,6 +678,14 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
             'en_rango_hoy': bool(minimo) and all(x['reps'] >= minimo for x in (hoy.get('validas') or []))}
 
 
+def _unidad_lado(nombre):
+    """('por pierna', 'las dos piernas') en zancadas y similares; si no, por lado."""
+    from entrenos.services.peso_semantica_service import _POR_PIERNA
+    if any(t in (nombre or '').casefold() for t in _POR_PIERNA):
+        return {'reps': 'por pierna', 'kg': 'las dos piernas'}
+    return {'reps': 'por lado', 'kg': 'los dos lados'}
+
+
 def _decisiones_de_descarga(cliente, entreno):
     """Las filas de "Decisión para la próxima sesión" de una sesión de descarga."""
     from rutinas.models import EjercicioBase
@@ -854,9 +864,12 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             detalle = f'{actual:g} s totales'
             if actual != previo:
                 detalle += f' (antes {previo:g} s)'
+            # 4-nov-2026 (nota 5): en descarga, menos tiempo es lo previsto.
+            if es_descarga_hoy and actual < previo:
+                detalle += ' · descarga'
             cambios.append({
                 'nombre': ej.nombre_ejercicio,
-                'tipo': 'tiempo',
+                'tipo': 'bajada_descarga' if es_descarga_hoy and actual < previo else 'tiempo',
                 'detalle': detalle,
             })
             continue
