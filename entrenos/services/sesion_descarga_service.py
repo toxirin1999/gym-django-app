@@ -80,6 +80,10 @@ def es_sesion_descarga(entreno, nombre, periodos=None):
 # siempre: una subida en la semana de bajar.
 
 FACTOR_PESO_DESCARGA = 0.9
+# 5-nov-2026 (nota 4): si bajar un salto quita más de un 20 % (laterales en
+# polea 10 → 5 kg, la mitad), se mantiene el peso y se quitan más reps.
+MAX_BAJADA_DESCARGA = 0.2
+REPS_MENOS_MISMO_PESO = 5
 # 3-nov-2026 (nota 1): con un 10 % menos de peso y las mismas reps de la última
 # vez (que salieron a RPE 8-9) la descarga sale a RPE 7-8, no a 6. Para que
 # sobren 3 o 4 reps, 3 menos que la última vez, sin bajar del mínimo del rango
@@ -166,6 +170,11 @@ def ajustar_a_descarga(cliente, ej, hoy):
             if peso >= peso_ref - 1e-6:
                 peso = peso_ref - salto
             reps = reps_descarga(reps_ref, minimo, maximo)
+            if (peso_ref - peso) / peso_ref > MAX_BAJADA_DESCARGA + 1e-9:
+                peso = peso_ref
+                techo = max(minimo, maximo - REPS_MENOS_DESCARGA)
+                reps = max(minimo, min(reps_ref - REPS_MENOS_MISMO_PESO, techo))
+                ej['_descarga_mismo_peso'] = True
         else:
             estimado = peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))
             peso = a_escala(estimado or peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
@@ -184,8 +193,13 @@ def ajustar_a_descarga(cliente, ej, hoy):
             ej['peso_recomendado_kg'] = peso
         ej['reps_objetivo_hoy'] = reps
         sobra = ': que te sobren 3 o 4' if reps < reps_ref else ''
-        frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(peso_ref)} kg × {reps_ref}), '
-                 f'sin apurar (RPE {kg(rpe)}){sobra}. No se busca subir.')
+        if ej.pop('_descarga_mismo_peso', False):
+            frase = (f'Semana de descarga: mismo peso y menos reps, {kg(peso)} kg × {reps} '
+                     f'({cuando} {kg(peso_ref)} kg × {reps_ref}); bajar un salto sería demasiado. '
+                     f'Sin apurar (RPE {kg(rpe)}): que te sobren 4 o 5. No se busca subir.')
+        else:
+            frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(peso_ref)} kg × {reps_ref}), '
+                     f'sin apurar (RPE {kg(rpe)}){sobra}. No se busca subir.')
     _limpiar_progresion(ej)
     ej['regla_carga'] = 'descarga'
     ej['deload'] = True

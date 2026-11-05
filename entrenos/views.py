@@ -3611,15 +3611,22 @@ def _fijar_reps_descarga(ejercicio):
         pass
 
 
-def _es_principal_hoy(ejercicio):
+def _es_principal_hoy(ejercicio, solo_pierna=False):
     """3-nov-2026 (nota 4): qué se queda en la versión suave.
 
     Los multiarticulares (principales y secundarios) de cualquier grupo menos el
     core. Antes solo contaba ``compuesto_principal`` y salía el Crunch como
     principal y el Remo con mancuerna como accesorio.
+
+    5-nov-2026 (nota 1): si la versión suave es por el fútbol o el Hyrox
+    (``solo_pierna``), solo la pierna pasa a opcional; lo demás queda como
+    lo pedía el plan (R10). El jalón con brazos rectos y las laterales salían
+    como opcionales el día después de un partido.
     """
     if ejercicio.get('pierna_suave'):
         return False
+    if solo_pierna:
+        return True
     if (ejercicio.get('grupo_muscular') or '').lower() == 'core':
         return False
     return ejercicio.get('tipo_ejercicio') in ('compuesto_principal', 'compuesto_secundario')
@@ -3878,7 +3885,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicios_planificados.sort(
                 key=lambda e: (
                     1 if e.get('pierna_suave') else 0,
-                    0 if _es_principal_hoy(e) else 1,
+                    0 if _es_principal_hoy(e, bool(aviso_pierna_suave)) else 1,
                 )
             )
 
@@ -3892,7 +3899,7 @@ def vista_entrenamiento_activo(request, cliente_id):
         # --- INICIO DE LA MODIFICACIÓN CLAVE ---
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
-            ejercicio['es_principal'] = _es_principal_hoy(ejercicio)
+            ejercicio['es_principal'] = _es_principal_hoy(ejercicio, bool(aviso_pierna_suave))
             # Phase 11.1: set/merge origen_opcional for non-principal exercises
             if modo_reducido and not ejercicio.get('es_principal'):
                 existing = ejercicio.get('origen_opcional')
@@ -10201,17 +10208,31 @@ def briefing_entrenamiento(request, cliente_id):
         # hará la sesión: los principales primero y los accesorios como
         # opcionales (antes decía "los accesorios quedan para otro día" y la
         # lista no cambiaba).
+        solo_pierna = bool(aviso_pierna_suave)
         ejercicios_mod.sort(key=lambda e: (
             1 if e.get('pierna_suave') else 0,
-            0 if _es_principal_hoy(e) else 1,
+            0 if _es_principal_hoy(e, solo_pierna) else 1,
         ))
         for ej in ejercicios_mod:
-            ej['opcional_hoy'] = not _es_principal_hoy(ej)
+            ej['opcional_hoy'] = not _es_principal_hoy(ej, solo_pierna)
         if not all(ej['opcional_hoy'] for ej in ejercicios_mod):
+            # 5-nov-2026 (nota 2): el porqué real de la versión suave (decía
+            # «por cómo amaneces» el día después del fútbol con la variabilidad +44 %).
+            causa = (autoridad_vigente or {}).get('causa_principal')
+            if solo_pierna or causa in ('futbol_reciente', 'hyrox_reciente'):
+                por_que = 'va por las piernas cargadas del partido'
+            elif causa == 'recuperacion_baja':
+                por_que = 'va por cómo amaneces'
+            elif causa == 'carga_alta':
+                por_que = 'va por la carga que llevas esta semana'
+            elif causa == 'energia_baja':
+                por_que = 'va por tu energía'
+            else:
+                por_que = 'va por cómo llegas hoy'
             for msg in briefing.get('mensajes') or []:
                 if msg.get('tipo') == 'ok':
-                    msg['texto'] = ('Sin alertas del plan en estas 2 semanas. Lo de hoy (versión suave) '
-                                    'va por cómo amaneces, no por el plan.')
+                    msg['texto'] = (f'Sin alertas del plan en estas 2 semanas. Lo de hoy (versión suave) '
+                                    f'{por_que}, no por el plan.')
         else:
             for ej in ejercicios_mod:
                 ej['opcional_hoy'] = False

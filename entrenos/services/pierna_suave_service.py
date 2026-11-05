@@ -75,4 +75,4 @@ def aplicar_pierna_suave(cliente, ejercicios, hoy):
     duracion = f' ({actividad.duracion_minutos} min)' if actividad.duracion_minutos else ''
     return (f'Por {que} de {_cuando(actividad.fecha, hoy)}{duracion}: primero lo que no es pierna; '
             f'la pierna va al final, con una serie menos y como opcional '
-            f'({len(rebajados)} ejercicios).')
+            f'({len(rebajados)} ejercicio{"s" if len(rebajados) != 1 else ""}).')
