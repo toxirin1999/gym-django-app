@@ -36,6 +36,7 @@ logger = logging.getLogger(__name__)
 # datos o un fallo). Un fallo nunca debe presentarse como orden de descanso.
 _SILENCIO_VISIBLE = {
     'descanso_planificado': 'DESCANSAR',
+    'pospuesto_usuario': 'DESCANSAR',  # 5-nov-2026: aplazaste la sesión de hoy
     'sesion_completada': 'HECHO',
 }
 
@@ -513,6 +514,11 @@ def _estado_silencio(usuario=None, decision_gym=None):
                 from entrenos.services.sesion_recomendada import obtener_sesion_recomendada_hoy
                 decision = obtener_sesion_recomendada_hoy(cliente)
         if decision and decision.get('estado') == 'descanso':
+            # 5-nov-2026: si el descanso es porque aplazaste la sesión, se dice así.
+            if decision.get('causa_principal') == 'pospuesto_usuario' and decision.get('mensaje'):
+                return _estado_dict(
+                    'SILENCIO', 'pospuesto_usuario', decision['mensaje'], None, None, None,
+                )
             return _estado_dict(
                 'SILENCIO',
                 'descanso_planificado',

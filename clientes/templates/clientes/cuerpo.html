@@ -21,7 +21,7 @@
     .nota{margin:10px 0 0;color:var(--muted);font-size:12px;line-height:1.45}
     /* 27-oct-2026 (nota 23): solo las gráficas; antes movía los iconos de la barra inferior. */
     main svg{display:block;width:100%;height:auto;margin-top:10px}
-    .leyenda{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;color:var(--muted);font-size:11px}
+    .leyenda{display:flex;flex-wrap:wrap;gap:12px;margin-top:8px;color:#c9d1cd;font-size:12px}
     .leyenda i{display:inline-block;width:14px;height:8px;margin-right:5px;border-radius:2px;vertical-align:middle}
     .pregunta{display:grid;grid-template-columns:1fr auto;gap:4px 10px;padding:12px 0;border-top:1px solid var(--line)}
     .pregunta:first-of-type{border-top:0}
@@ -92,7 +92,7 @@
         <polyline points="{{ camino.linea }}" fill="none" stroke="#f3f0e8" stroke-width="2" stroke-linejoin="round"/>
         <circle cx="{{ camino.hoy_x }}" cy="{{ camino.hoy_y }}" r="4" fill="#42e4a0"/>
         <line x1="8" x2="332" y1="{{ camino.base_y }}" y2="{{ camino.base_y }}" stroke="#284238"/>
-        {% for m in camino.marcas %}<text x="{{ m.x }}" y="{{ camino.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+        {% for m in camino.marcas %}<text x="{{ m.x }}" y="{{ camino.texto_y }}" fill="#d3dad6" font-size="11" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
       {% endlocalize %}
       <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#f3f0e8;height:2px"></i>Tu carga de los últimos 7 días</span></div>
@@ -129,8 +129,8 @@
         {% if variabilidad.linea %}<polyline points="{{ variabilidad.linea }}" fill="none" stroke="#f3f0e8" stroke-opacity="0.22" stroke-width="1"/>{% endif %}
         {% if variabilidad.tendencia %}<polyline points="{{ variabilidad.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
         {% for p in variabilidad.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} ms</title></circle>{% endfor %}
-        <line x1="8" x2="332" y1="{{ variabilidad.base_y }}" y2="{{ variabilidad.base_y }}" stroke="#284238"/>
-        {% for m in variabilidad.marcas %}<text x="{{ m.x }}" y="{{ variabilidad.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+        <line x1="8" x2="332" y1="{{ variabilidad.base_y }}" y2="{{ variabilidad.base_y }}" stroke="#3d5a4e"/>
+        {% for m in variabilidad.marcas %}<text x="{{ m.x }}" y="{{ variabilidad.texto_y }}" fill="#d3dad6" font-size="11" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
       {% endlocalize %}
       <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
@@ -154,8 +154,8 @@
         {% if pulso.linea %}<polyline points="{{ pulso.linea }}" fill="none" stroke="#f3f0e8" stroke-opacity="0.22" stroke-width="1"/>{% endif %}
         {% if pulso.tendencia %}<polyline points="{{ pulso.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
         {% for p in pulso.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} pulsaciones</title></circle>{% endfor %}
-        <line x1="8" x2="332" y1="{{ pulso.base_y }}" y2="{{ pulso.base_y }}" stroke="#284238"/>
-        {% for m in pulso.marcas %}<text x="{{ m.x }}" y="{{ pulso.texto_y }}" fill="#a3ada7" font-size="10" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+        <line x1="8" x2="332" y1="{{ pulso.base_y }}" y2="{{ pulso.base_y }}" stroke="#3d5a4e"/>
+        {% for m in pulso.marcas %}<text x="{{ m.x }}" y="{{ pulso.texto_y }}" fill="#d3dad6" font-size="11" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
       </svg>
       {% endlocalize %}
       <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>

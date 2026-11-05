@@ -2415,7 +2415,18 @@ def trayectoria_plan(request):
         'marcador_semanal': _marcador_semanal(cliente),
         # 31-oct-2026 (A4): "Ver por qué" desde Ahora; la propuesta en curso es un ajuste activo.
         'propuesta_plan': _propuesta_zona_visible(cliente, timezone.localdate()),
+        # 5-nov-2026: en vez de repetir fase y semana, lo que cambia esta semana.
+        'cambios_semana': _cambios_semana(cliente),
     })
+
+
+def _cambios_semana(cliente):
+    try:
+        from entrenos.services.cambios_semana_service import cambios_semana
+        return cambios_semana(cliente, timezone.localdate())
+    except Exception:
+        logger.exception('Plan: no se pudo calcular qué cambia esta semana')
+        return None
 
 
 def _marcador_semanal(cliente):

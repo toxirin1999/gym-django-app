@@ -5782,6 +5782,14 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
             'url': preview_hoy['url'],
             'cta': 'Ver el cierre',
         }
+    elif preview_hoy and preview_hoy.get('aplazada'):
+        hoy_card = {
+            'tipo': 'descanso',
+            'titulo': 'Hoy descansas',
+            'detalle': preview_hoy['detalle'],
+            'url': reverse('estiramientos:panel'),
+            'cta': 'Movilidad y estiramientos',
+        }
     else:
         hoy_card = {
             'tipo': 'descanso',
@@ -5821,9 +5829,9 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
         'fase': {
             'nombre': nombre_fase,
             'objetivo': objetivo,
-            'rpe': '{}–{}'.format(
-                parametros_fase['rpe_min'], parametros_fase['rpe_max'],
-            ),
+            # 5-nov-2026: «6», no «6–6», cuando el rango es un solo valor.
+            'rpe': (str(parametros_fase['rpe_min']) if parametros_fase['rpe_min'] == parametros_fase['rpe_max']
+                    else '{}–{}'.format(parametros_fase['rpe_min'], parametros_fase['rpe_max'])),
             'reps': parametros_fase['rep_range'],
         },
         'semana': semana,
@@ -5941,6 +5949,13 @@ def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
                     preview['sesion_programada_id'] = sp.pk
                 if f == hoy and d.get('atrasada'):
                     preview['detalle_hoy'] = 'Es la sesión que quedó atrasada esta semana: no se pierde, la haces hoy.'
+            elif d.get('aplazada'):
+                from entrenos.services.semana_rutina_service import texto_aplazada
+                preview = {
+                    'tipo': 'descanso', 'etiqueta': 'Aplazada', 'titulo': 'Hoy descansas',
+                    'detalle': texto_aplazada(d['aplazada'], d['hasta'], f),
+                    'aplazada': True, 'fecha_efectiva': f.isoformat(), 'ejercicios': [],
+                }
             else:
                 preview = {
                     'tipo': 'descanso', 'etiqueta': 'Recuperación', 'titulo': 'Día de descanso',

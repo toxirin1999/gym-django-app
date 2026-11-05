@@ -73,9 +73,18 @@ def semana_segun_cola(cliente, hoy):
             else:
                 dias[f] = {'tipo': 'sin_entreno'}
 
+    # 5-nov-2026: si hoy aplazaste la sesión («Hacer esta sesión mañana»),
+    # hoy es descanso y esa sesión no está disponible hasta la fecha nueva.
+    # Antes Ahora decía descanso y Rutina y Plan seguían con el Día 4 hoy.
+    aplazada = sesion_aplazada_hoy(cliente, hoy) if hoy not in dias else None
+
     # Hoy, si aún no se ha entrenado: exactamente lo que propone Ahora.
     elegida_hoy = None
-    if hoy not in dias:
+    if aplazada is not None:
+        siguiente = _siguiente_de_cola(cliente, hoy)
+        dias[hoy] = {'tipo': 'descanso', 'aplazada': aplazada['nombre'] or (siguiente or {}).get('nombre'),
+                     'hasta': aplazada['hasta']}
+    elif hoy not in dias:
         siguiente = _siguiente_de_cola(cliente, hoy)
         if siguiente is not None:
             elegida_hoy = siguiente
@@ -101,12 +110,15 @@ def semana_segun_cola(cliente, hoy):
         {'fecha': f, 'nombre': plan[f].get('rutina_nombre') or 'Sesión', 'entrenamiento': plan[f]}
         for f in futuros
     ]
+    if aplazada is not None and pendientes:
+        # La sesión aplazada (la primera de la cola) espera a su fecha nueva.
+        pendientes[0] = {**pendientes[0], 'desde': aplazada['hasta']}
     # Día a día, como Ahora: cada día toca la sesión más antigua cuya fecha ya
     # llegó (la atrasada o la del día), una por día, también en fin de semana.
     for f in fechas:
         if f <= hoy:
             continue
-        disponible = next((s for s in pendientes if s['fecha'] <= f), None)
+        disponible = next((s for s in pendientes if s['fecha'] <= f and s.get('desde', f) <= f), None)
         if disponible is None:
             dias[f] = {'tipo': 'descanso'}
             continue
@@ -122,6 +134,28 @@ def semana_segun_cola(cliente, hoy):
         'hechas': sum(1 for d in dias.values() if d['tipo'] == 'hecha'),
         'previstas': previstas,
     }
+
+
+def sesion_aplazada_hoy(cliente, hoy):
+    """{'nombre', 'hasta'} si hoy se aplazó una sesión pendiente a otro día; si no, None."""
+    from entrenos.models import SesionProgramada
+
+    sp = (
+        SesionProgramada.objects.filter(
+            cliente=cliente, estado=SesionProgramada.ESTADO_PENDIENTE,
+            fecha_prevista__lte=hoy, pospuesta_hasta__gt=hoy,
+        ).order_by('fecha_prevista', 'id').first()
+    )
+    if sp is None:
+        return None
+    return {'nombre': (sp.nombre_sesion or '').strip(), 'hasta': sp.pospuesta_hasta}
+
+
+def texto_aplazada(nombre, hasta, hoy):
+    """«Hoy descansas: pasaste el Día 4 a mañana.»"""
+    dias = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+    cuando = 'a mañana' if (hasta - hoy).days == 1 else f'al {dias[hasta.weekday()]} {hasta.day}'
+    return f'Hoy descansas: pasaste el {_etiqueta(nombre)} {cuando}.'
 
 
 def _etiqueta(nombre):

@@ -233,6 +233,27 @@
   <p class="mem-intro">Todo lo que el sistema ha aprendido de <strong>{{ cliente.nombre }}</strong> a partir de sus sesiones, patrones biométricos y respuestas subjetivas.</p>
   <p class="mem-meta">Datos más recientes{% if data_updated_source %} · {{ data_updated_source }}{% endif %} · <strong>{% if data_updated_at %}{{ data_updated_at|date:"d/m/Y" }}{% if data_updated_has_time %} · {{ data_updated_at|date:"H:i" }}{% endif %}{% else %}sin registros todavía{% endif %}</strong></p>
 
+  {# ── REGLA 4 · el entrenador comprueba si acertó (5-nov-2026: lo primero de la memoria) ── #}
+  {% if decisiones_evaluadas %}
+  <section class="mem-node mem-node--plan" aria-labelledby="memoria-acierto-title">
+    <div class="mem-label">Lo que decidí y si funcionó · {{ decisiones_evaluadas.dias }} días</div>
+    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.con_conclusion %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.con_conclusion }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
+    {% if decisiones_evaluadas.con_conclusion %}
+    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.sin_conclusion %} Otras {{ decisiones_evaluadas.sin_conclusion }} aún no dan para concluir (sobre todo consolidaciones de carga).{% endif %}</p>
+    <div class="mem-list">
+      {% for d in decisiones_evaluadas.items %}
+      <div class="mem-row" data-resultado="{{ d.resultado }}">
+        <div class="idx">{{ d.fecha|date:"d/m" }}</div>
+        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal">{{ d.texto }}</div></div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <p class="mem-desc">Cuando entrenes un ejercicio después de una decisión del plan, aquí verás si funcionó, con el dato de esa sesión.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+
   <section class="mem-hero" aria-labelledby="memoria-hoy-title">
     <div class="mem-label">Decisión canónica de hoy</div>
     <h2 class="mem-hero-title" id="memoria-hoy-title">{{ decision_hoy.estado }}</h2>
@@ -268,27 +289,6 @@
     {% endif %}
     <a class="mem-empty-link" href="{% url 'entrenos:timeline_atleta' cliente.id %}">Ver historial cronológico <span aria-hidden="true">→</span></a>
   </section>
-
-  {# ── REGLA 4 · el entrenador comprueba si acertó ── #}
-  {% if decisiones_evaluadas %}
-  <section class="mem-node mem-node--plan" aria-labelledby="memoria-acierto-title">
-    <div class="mem-label">Lo que decidí y si funcionó · {{ decisiones_evaluadas.dias }} días</div>
-    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.con_conclusion %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.con_conclusion }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
-    {% if decisiones_evaluadas.con_conclusion %}
-    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.sin_conclusion %} Otras {{ decisiones_evaluadas.sin_conclusion }} aún no dan para concluir (sobre todo consolidaciones de carga).{% endif %}</p>
-    <div class="mem-list">
-      {% for d in decisiones_evaluadas.items %}
-      <div class="mem-row" data-resultado="{{ d.resultado }}">
-        <div class="idx">{{ d.fecha|date:"d/m" }}</div>
-        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal">{{ d.texto }}</div></div>
-      </div>
-      {% endfor %}
-    </div>
-    {% else %}
-    <p class="mem-desc">Cuando entrenes un ejercicio después de una decisión del plan, aquí verás si funcionó, con el dato de esa sesión.</p>
-    {% endif %}
-  </section>
-  {% endif %}
 
   {# ── REGLA 4 A ESCALA DE BLOQUE (14-oct-2026): qué prometía, qué pasó, qué cambia ── #}
   {% if revision_bloque %}
@@ -409,9 +409,8 @@
     <article class="mem-node mem-node--system">
       <div class="mem-label">Tu RPE en fuerza</div>
       <h2 class="mem-heading">¿Tu esfuerzo marcado cuadra con lo que haces?</h2>
-      <div class="mem-big">
-        <div class="n">{{ rpe_gym.altos }} de {{ rpe_gym.casos }}<small>veces que no cuadró · {{ rpe_gym.dias }} días</small></div>
-        <div class="d">
+      {# 5-nov-2026: primero la conclusión; el recuento, debajo y en pequeño. #}
+      <div class="mem-desc" style="font-size:15px;line-height:1.5;color:var(--paper,#f4f0e9);margin-top:10px;">
           {% if rpe_gym.lectura == 'insuficiente' %}
             Aún hay pocas comparaciones para concluir. Cuento las veces que, con el mismo peso, a los pocos días hiciste 2 o más repeticiones por encima de lo que tu RPE dejaba en reserva.
           {% elif rpe_gym.lectura == 'alto' %}
@@ -422,8 +421,8 @@
             Tu RPE cuadra con lo que haces después: es una buena guía para las decisiones.
           {% endif %}
           {% if rpe_gym.ejemplo %}<span style="display:block;margin-top:6px;opacity:.75;">{% if rpe_gym.lectura == 'alto' or rpe_gym.lectura == 'algo_alto' %}Ejemplo{% else %}Una de las {{ rpe_gym.altos }} que no cuadraron{% endif %}: {{ rpe_gym.ejemplo }}</span>{% endif %}
-        </div>
       </div>
+      <p class="mem-desc" style="margin-top:10px;font-size:12px;opacity:.8;">Comparaciones en {{ rpe_gym.dias }} días: <strong>{{ rpe_gym.altos }} de {{ rpe_gym.casos }}</strong> no cuadraron.</p>
     </article>
     {% endif %}
 

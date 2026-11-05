@@ -588,6 +588,9 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     """
     decision = dict(decision_base)
 
+    if decision['tipo'] == 'descanso' and decision.get('causa_principal') == 'pospuesto_usuario':
+        decision.update({'estado': 'descanso', 'modo_reducido': False, 'contexto_fisico': contexto})
+        return decision
     if decision['tipo'] == 'descanso':
         decision.update({
             'estado': 'descanso',
@@ -1862,12 +1865,22 @@ def obtener_sesion_recomendada_hoy(cliente, fecha_hoy=None, physical_snapshot=No
         pospuesta_hasta__gt=fecha_hoy,
     ).exists()
     if hoy_pospuesto:
+        # 5-nov-2026: lo dice con la sesión y el día («Hoy descansas: pasaste
+        # el Día 4 a mañana»); antes la portada decía «el plan marca descanso».
+        mensaje_aplazada = 'La sesión está guardada para mañana. Hoy descansas.'
+        try:
+            from entrenos.services.semana_rutina_service import sesion_aplazada_hoy, texto_aplazada
+            aplazada = sesion_aplazada_hoy(cliente, fecha_hoy)
+            if aplazada:
+                mensaje_aplazada = texto_aplazada(aplazada['nombre'], aplazada['hasta'], fecha_hoy)
+        except Exception:  # noqa: BLE001
+            logger.exception('obtener_sesion_recomendada_hoy: texto de la sesión aplazada')
         decision = {
             'tipo': 'descanso',
             'estado': 'descanso',
             'sesion_programada': None,
             'entrenamiento': None,
-            'mensaje': 'La sesión está guardada para mañana. Hoy descansas.',
+            'mensaje': mensaje_aplazada,
             'causa_principal': 'pospuesto_usuario',
             'modo_reducido': False,
             'distribucion_aviso': None,
