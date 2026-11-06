@@ -381,11 +381,21 @@ def lo_que_viene(cliente, entreno):
         if siguiente:
             etiqueta = _etiqueta_dia(siguiente['nombre']) or siguiente['nombre']
             grupos = _grupos_texto(siguiente.get('entrenamiento'))
-            frase = f'Lo siguiente es el {etiqueta}' if etiqueta.startswith('Día') else f'Lo siguiente: {etiqueta}'
-            if grupos:
-                frase += f' ({grupos})'
-            if siguiente['fecha'] < manana:
-                frase += f', que era del {DIAS_SEMANA[siguiente["fecha"].weekday()]}'
+            if siguiente['fecha'] == fecha:
+                # 6-nov-2026 (nota 6): la de hoy pasa a mañana porque hoy hiciste
+                # otra (decía «que era del viernes» un viernes).
+                frase = f'Mañana, {DIAS_SEMANA[manana.weekday()]}: {etiqueta}'
+                if grupos:
+                    frase += f' ({grupos})'
+                hecha = _etiqueta_dia(getattr(entreno.rutina, 'nombre', '') or '')
+                frase += (f'. Pasa del {DIAS_SEMANA[fecha.weekday()]} al {DIAS_SEMANA[manana.weekday()]}'
+                          + (f' porque hoy hiciste el {hecha}' if hecha else ''))
+            else:
+                frase = f'Lo siguiente es el {etiqueta}' if etiqueta.startswith('Día') else f'Lo siguiente: {etiqueta}'
+                if grupos:
+                    frase += f' ({grupos})'
+                if siguiente['fecha'] < manana:
+                    frase += f', que era del {DIAS_SEMANA[siguiente["fecha"].weekday()]}'
             lineas.append(frase + '.')
         else:
             sesion = _normalizar_entrenamiento(

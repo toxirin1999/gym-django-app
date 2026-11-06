@@ -5948,7 +5948,14 @@ def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
                 if sp is not None and f == hoy:
                     preview['sesion_programada_id'] = sp.pk
                 if f == hoy and d.get('atrasada'):
-                    preview['detalle_hoy'] = 'Es la sesión que quedó atrasada esta semana: no se pierde, la haces hoy.'
+                    # 6-nov-2026 (nota 1): si la aplazaste tú, se dice así.
+                    from entrenos.services.semana_rutina_service import aplazada_a_hoy
+                    desde = aplazada_a_hoy(cliente, hoy)
+                    if desde is not None:
+                        preview['detalle_hoy'] = ('La pasaste de ayer a hoy.' if (hoy - desde).days == 1
+                                                  else f'La pasaste del {desde:%d/%m} a hoy.')
+                    else:
+                        preview['detalle_hoy'] = 'Es la sesión que quedó atrasada esta semana: no se pierde, la haces hoy.'
             elif d.get('aplazada'):
                 from entrenos.services.semana_rutina_service import texto_aplazada
                 preview = {

@@ -1588,7 +1588,8 @@ body{background:
   <div class="exname">
     <div class="exname-toprow">
       <span class="exname-counter">Ejercicio actual · {{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
-      {% if ejercicio.tipo_ejercicio != 'compuesto_principal' %}
+      {# 6-nov-2026 (nota 2): la misma regla que el briefing (con fútbol, solo la pierna). #}
+      {% if not ejercicio.es_principal %}
         {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' %}
         <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
         {% endif %}
@@ -1912,6 +1913,10 @@ body{background:
         {% elif ejercicio.diferencia_peso < 0 and sn == 1 %}
           {# 27-oct-2026 (nota 3): 75 × 16 arriba y 70 kg abajo, sin decir por qué. #}
           <span class="peso-ultima-vez__cue">{{ ejercicio.diferencia_peso|floatformat:"-1" }} kg hoy</span>
+          {% if ejercicio.progresion_motivo %}<span class="peso-ultima-vez__motivo" style="flex-basis:100%;font-size:10px;color:#b8c4be;line-height:1.35;">{{ ejercicio.progresion_motivo }}</span>{% endif %}
+        {% elif sn == 1 and ejercicio.deload and ejercicio.reps_objetivo < ejercicio.repeticiones_anterior %}
+          {# 6-nov-2026 (nota 3): descarga con el mismo peso (laterales 10 kg): se dice por qué. #}
+          <span class="peso-ultima-vez__cue">mismo peso · {{ ejercicio.reps_objetivo|subtract:ejercicio.repeticiones_anterior|floatformat:"0" }} reps</span>
           {% if ejercicio.progresion_motivo %}<span class="peso-ultima-vez__motivo" style="flex-basis:100%;font-size:10px;color:#b8c4be;line-height:1.35;">{{ ejercicio.progresion_motivo }}</span>{% endif %}
         {% elif sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
           {# 23-oct-2026: solo en la S1; desde la S2 manda la propuesta entre series. #}
@@ -2806,6 +2811,21 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   const panelSig = document.getElementById('reg-'+fid+'-'+snSig);
   if (!panelSig) return;
 
+  // 6-nov-2026 (nota 5): en la descarga, la siguiente serie repite el objetivo
+  // aunque la anterior saliera a RPE 5 (proponía 13 tras 12 @5).
+  if (document.getElementById('card-'+fid)?.dataset.descarga === '1') {
+    const objetivo = parseInt(panelSig.dataset.repsObj || reps, 10) || reps;
+    const hidD = document.getElementById('reps-hid-'+fid+'-'+snSig);
+    const dispD = document.getElementById('reps-disp-'+fid+'-'+snSig);
+    if (hidD) hidD.value = objetivo;
+    if (dispD) dispD.textContent = panelSig.dataset.usaTiempo === '1' ? objetivo+'s' : objetivo;
+    const pesoD = document.getElementById('peso-'+fid+'-'+snSig);
+    if (pesoD && panelSig.dataset.usaPeso === '1' && Number.isFinite(peso) && peso > 0) pesoD.value = String(Number(peso.toFixed(2)));
+    const bannerD = document.getElementById('sugerencia-'+fid+'-'+snSig);
+    if (bannerD) bannerD.style.display = 'none';
+    return;
+  }
+
   const rpeObj  = parseFloat(panelSig.dataset.rpeObj  || rpe);
   const repsObj = parseFloat(panelSig.dataset.repsObj || reps);
   const usaPeso = panelSig.dataset.usaPeso === '1';
@@ -3378,6 +3398,9 @@ function cambiarPicker(dispId,hidId,delta,min,max,fid,sn,tipo){
     disp.textContent=val;
   }
   hid.value=val;
+  // 6-nov-2026 (nota 4): el botón «Guardar · …» se quedaba con el número de
+  // antes (el picker no lanza click): marcaba 11 y el botón decía × 10.
+  if(typeof refrescarBotonesGuardar==='function')requestAnimationFrame(refrescarBotonesGuardar);
   if(fid&&sn)marcarSerieTocada(fid,sn);
   if(navigator.vibrate)navigator.vibrate(8);
   if(fid&&sn)actualizarORM(fid,sn);
@@ -3858,9 +3881,10 @@ function duracionRevisadaValida(){
 document.getElementById('duracion-real-input')?.addEventListener('input', e=>{
   document.getElementById('modal-tiempo').textContent=(e.target.value||'—')+'m';
 });
+let _minRevision=null;
 function duracionParaGuardar(){
   if(_revisandoDuracion()) return parseInt(document.getElementById('duracion-real-input').value,10);
-  return _duracionCruda();
+  return _minRevision!==null?_minRevision:_duracionCruda();
 }
 
 // ── TIMER TOTAL (sobrevive recargas de Safari via localStorage) ──────────
@@ -3874,7 +3898,7 @@ setInterval(()=>{
   const el=document.getElementById('tiempo-transcurrido');
   const hid=document.getElementById('hid-duracion');
   if(el)el.textContent=String(Math.floor(seg/60)).padStart(2,'0')+':'+String(seg%60).padStart(2,'0');
-  if(hid)hid.value=Math.floor(seg/60);
+  if(hid&&_minRevision===null)hid.value=Math.floor(seg/60);
 },1000);
 
 // Recalcular al volver de background (Page Visibility API)
@@ -3971,6 +3995,7 @@ function abrirResumen(){
 
 function cerrarResumen(){
   if(_envioCierreEnCurso)return;
+  _minRevision=null;
   resumenOverlay.classList.remove('active');
   resumenOverlay.setAttribute('aria-hidden','true');
   resumenOverlay.setAttribute('inert','');
@@ -4045,6 +4070,9 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('hid-rpe-medio').value=rpeAvg?rpeAvg.toFixed(1):'';
   const seg=Math.floor((Date.now()-t0)/1000);
   const mins=Math.floor(seg/60);
+  // 6-nov-2026 (nota 7): la duración que se ve al revisar es la que se guarda
+  // (mostraba 33 min y el cierre 34: se volvía a medir al pulsar Guardar).
+  _minRevision=mins;
   document.getElementById('modal-tiempo').textContent=mins+'m';
   document.getElementById('hid-duracion').value=mins;
   prepararRevisionDuracion(mins, comp);

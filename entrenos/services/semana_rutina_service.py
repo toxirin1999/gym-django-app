@@ -151,6 +151,17 @@ def sesion_aplazada_hoy(cliente, hoy):
     return {'nombre': (sp.nombre_sesion or '').strip(), 'hasta': sp.pospuesta_hasta}
 
 
+def aplazada_a_hoy(cliente, hoy):
+    """Fecha de la que la pasaste a hoy, si la sesión de hoy es una que aplazaste."""
+    from entrenos.models import SesionProgramada
+
+    sp = (
+        SesionProgramada.objects.filter(cliente=cliente, pospuesta_hasta=hoy, fecha_prevista__lt=hoy)
+        .order_by('-fecha_prevista', '-id').first()
+    )
+    return sp.fecha_prevista if sp else None
+
+
 def texto_aplazada(nombre, hasta, hoy):
     """«Hoy descansas: pasaste el Día 4 a mañana.»"""
     dias = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')

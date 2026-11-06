@@ -202,7 +202,8 @@ class LoQueViene(Base):
         }
         with patch('entrenos.services.sesion_recomendada._siguiente_de_cola', return_value=siguiente):
             lineas = lo_que_viene(self.cliente, e)
-        self.assertEqual(lineas[0], 'Lo siguiente es el Día 2 (pecho, espalda), que era del martes.')
+        # 6-nov-2026 (nota 6): la del mismo día pasa a mañana (decía «que era del martes» un martes).
+        self.assertTrue(lineas[0].startswith('Mañana, miércoles: Día 2 (pecho, espalda). Pasa del martes al miércoles'), lineas[0])
         self.assertEqual(
             lineas[1],
             'Desde el 14/10, +2 series semanales de Isquios por la propuesta que aceptaste (hasta el 10/11).',
