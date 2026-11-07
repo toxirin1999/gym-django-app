@@ -86,6 +86,12 @@ _UNILATERAL_PIERNA_COMPUESTO = ("zancada", "lunge", "búlgara", "bulgara", "step
 RANGO_UNILATERAL_PIERNA = "8-12"
 
 
+def es_unilateral_pierna(nombre):
+    """Zancadas, búlgaras, step-ups (7-nov-2026: no van a 4-6 en un bloque de fuerza)."""
+    nombre = str(nombre or "").casefold()
+    return any(t in nombre for t in _UNILATERAL_PIERNA_COMPUESTO)
+
+
 def rango_unilateral_pierna(nombre, rango):
     """'15-20' → '8-12' para zancadas y similares; el resto, sin tocar."""
     nombre = str(nombre or "").casefold()

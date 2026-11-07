@@ -19,7 +19,9 @@ from .periodizacion.generador import GeneradorPeriodizacion
 from .calculo.peso import CalculadorPeso
 from .calculo.compatibilidad_fase import resolver_peso_objetivo, resolver_ancla_historica, _bucket_desde_reps
 from .calculo.fatiga import GestorFatiga
-from .calculo.prescripcion_tipo import rpe_por_tipo, rango_por_tipo, unidad_por_tipo, carga_por_tipo
+from .calculo.prescripcion_tipo import (
+    rpe_por_tipo, rango_por_tipo, unidad_por_tipo, carga_por_tipo, es_multiarticular,
+)
 from .ejercicios.selector import SelectorEjercicios
 from .ejercicios.patrones import PatronManager
 from .ejercicios.variacion import derivar_rep_rpe_toque, construir_variantes_por_toque
@@ -378,6 +380,10 @@ class PlanificadorHelms:
             for j in range(min(numero_bloque - 1, len(periodizacion)) - 1, -1, -1):
                 if periodizacion[j].get('fase') != 'descarga':
                     previo = periodizacion[j]
+                    if previo.get('ejercicios_del_bloque_anterior') and j + 1 < numero_bloque:
+                        # 7-nov-2026: ese bloque usa a su vez los ejercicios del
+                        # anterior; se sigue hasta el que los eligió.
+                        return PlanificadorHelms._bloque_previo_a_descarga(j + 1)
                     return (previo.get('fase', 'hipertrofia'), j + 1,
                             previo.get('vol_fin', previo.get('volumen_multiplicador', 1.0)))
         except Exception:  # noqa: BLE001
@@ -420,7 +426,11 @@ class PlanificadorHelms:
         # bloque propio: rotaba el catálogo con su número y salían ejercicios
         # que no se estaban haciendo (push press, salto al cajón...).
         fase_sel, numero_sel, vol_mult_reparto = fase, numero_bloque, vol_mult
-        if fase == 'descarga':
+        # 7-nov-2026: un bloque marcado con 'ejercicios_del_bloque_anterior'
+        # (Fuerza — Hipertrofia) hace lo mismo: ejercicios y días del bloque
+        # anterior, para medir el progreso con los de siempre.
+        mismos_ejercicios = bool(bloque.get('ejercicios_del_bloque_anterior'))
+        if fase == 'descarga' or mismos_ejercicios:
             fase_sel, numero_sel, vol_mult_reparto = self._bloque_previo_a_descarga(numero_bloque)
         ejercicios_bloque = SelectorEjercicios.seleccionar_ejercicios_para_bloque(
             numero_sel, fase_sel, self.ejercicios_evitar, cliente=cliente_obj
@@ -451,7 +461,7 @@ class PlanificadorHelms:
             # Mismo redondeo que el reparto por toques (ceil): si no, el
             # asignador decidía la frecuencia con 8 series y la sesión llevaba 9.
             vol_efectivo = math.ceil(min(vol_base_grupo * vol_mult, mrv_g))
-            if fase == 'descarga':
+            if fase == 'descarga' or mismos_ejercicios:
                 # 2-nov-2026: en descarga se mantienen los días de cada músculo
                 # (los de la semana normal) y se reparte la mitad de las series.
                 # Con el volumen ya rebajado, todo cabía en una sesión y cada
@@ -539,7 +549,9 @@ class PlanificadorHelms:
                         max(1, math.ceil(mev_grupo / frecuencia_grupo)) if frecuencia_grupo > 0 else mev_grupo
                     )
 
-            gestor_fatiga = GestorFatiga(fase, grupos_dia=grupos_del_dia, pisos_minimos=pisos_minimos_dia)
+            gestor_fatiga = GestorFatiga(
+                bloque.get('limites_fatiga') or fase, grupos_dia=grupos_del_dia, pisos_minimos=pisos_minimos_dia,
+            )
             ejercicios_dia = []
 
             for grupo in grupos_del_dia:
@@ -611,6 +623,16 @@ class PlanificadorHelms:
                         rep_range if grupo in GRUPOS_GRANDES
                         else REP_RANGE_AJUSTE_PEQUENOS.get(rep_range, rep_range)
                     )
+                    # 7-nov-2026: en Fuerza — Hipertrofia, 4-6 solo en los
+                    # multiarticulares de músculo grande; aislamientos
+                    # (aperturas, curl femoral, abducción) y zancadas o
+                    # búlgaras van a su rango de siempre (8-12).
+                    from entrenos.services.peso_semantica_service import es_unilateral_pierna
+                    reps_secundarios = bloque.get('reps_secundarios')
+                    if reps_secundarios and grupo in GRUPOS_GRANDES and (
+                        not es_multiarticular(patron, nombre) or es_unilateral_pierna(nombre)
+                    ):
+                        rep_range_ej = reps_secundarios
 
                     # X.14: contraste por toque (toque 1 = identidad; toque ≥2 = reps más altas, RPE −1).
                     # Se aplica DESPUÉS del ajuste por tamaño de músculo para componer sin contradicción.

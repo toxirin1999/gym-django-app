@@ -1,7 +1,7 @@
-"""7-nov-2026 · Módulos archivados y Hyrox congelado.
+"""7-nov-2026 · Módulos archivados y Hyrox oculto.
 
 - Vida/diario, logros, estoico, nutrición y la habitación de JOI: archivados.
-- Hyrox: congelado (fuera de Memoria).
+- Hyrox: oculto (fuera de Memoria); sus tareas siguen activas.
 - Strava y lesiones se mantienen.
 """
 
@@ -14,7 +14,7 @@ from django.test import SimpleTestCase, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
-from core.modulos import archivado, hyrox_congelado
+from core.modulos import archivado, hyrox_oculto
 
 NAV = Path(settings.BASE_DIR) / 'templates' / 'includes' / 'bottom_nav.html'
 AHORA = Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes' / 'dashboard_silencioso_preview.html'
@@ -22,11 +22,11 @@ BRIEFING = Path(settings.BASE_DIR) / 'entrenos' / 'templates' / 'entrenos' / 'br
 
 
 class Ajustes(SimpleTestCase):
-    def test_modulos_archivados_y_hyrox_congelado(self):
+    def test_modulos_archivados_y_hyrox_oculto(self):
         for nombre in ('diario', 'logros', 'estoico', 'nutricion', 'joi_habitacion'):
             self.assertTrue(archivado(nombre), nombre)
         self.assertFalse(archivado('entrenos'))
-        self.assertTrue(hyrox_congelado())
+        self.assertTrue(hyrox_oculto())
 
 
 class Navegacion(SimpleTestCase):
@@ -77,11 +77,11 @@ class MemoriaSinHyrox(TestCase):
         self.assertEqual(r.status_code, 200)
         return r.context
 
-    def test_congelado_no_aparece(self):
+    def test_oculto_no_aparece(self):
         r = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
         self.assertIsNone(r.context['hyrox_obj'])
         self.assertNotContains(r, 'Hyrox · Perfil base')
 
-    @override_settings(HYROX_CONGELADO=False)
-    def test_descongelado_vuelve(self):
+    @override_settings(HYROX_OCULTO=False)
+    def test_visible_vuelve(self):
         self.assertIsNotNone(self._contexto()['hyrox_obj'])

@@ -121,8 +121,9 @@
     <div class="mm-row-body">
       <div class="mm-row-stats">
         <div><span class="k">Evolución · {{ evo.periodo_dias }} días</span><span class="v mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:1 }} %{% endif %}</span></div>
-        <div><span class="k">Volumen actual</span><span class="v">{{ g.series_semana|floatformat:1 }}<small> series/sem</small></span></div>
+        <div><span class="k">Media semanal</span><span class="v">{{ g.series_semana|floatformat:"-1" }}<small> series/sem</small></span></div>
       </div>
+      {% if evo.series_semanas %}<p class="mm-row-split">{{ g.series_directas|floatformat:"-1" }} directas{% if g.series_indirectas %} + {{ g.series_indirectas|floatformat:"-1" }} de indirectas (cuentan la mitad){% endif %}. Media de {{ evo.series_semanas }} semana{{ evo.series_semanas|pluralize }} completa{{ evo.series_semanas|pluralize }} sin descarga, del {{ evo.series_desde|date:"d/m" }} al {{ evo.series_hasta|date:"d/m" }}; Plan enseña la semana en curso.</p>{% endif %}
       <p class="mm-row-copy">{{ g.lectura }}</p>
       {% if g.mejor %}
       <p class="mm-row-best">Mejor: {{ g.mejor.ejercicio }} · {{ g.mejor.antes|floatformat:1 }} → {{ g.mejor.ahora|floatformat:1 }} kg (1RM est.) · {{ g.n_ejercicios }} ejercicio{{ g.n_ejercicios|pluralize }} comparable{{ g.n_ejercicios|pluralize }}</p>

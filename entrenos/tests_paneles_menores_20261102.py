@@ -27,11 +27,11 @@ class MarcadorDescarga(Base):
                                      origen='descarga_programada')
         llamadas = []
 
-        def hechas(cliente, hoy, dias=7):
-            llamadas.append(dias)
-            return Counter({'pecho': 2})
+        def hechas(cliente, desde, hasta):
+            llamadas.append((hasta - desde).days + 1)
+            return Counter({'pecho': 2}), Counter({'pecho': 2}), Counter()
         with patch.object(m, 'series_plan_semana', return_value=(Counter({'pecho': 7}), [])), \
-                patch.object(m, 'series_hechas', side_effect=hechas), \
+                patch.object(m, 'series_hechas_detalle', side_effect=hechas), \
                 patch.object(m, '_pendientes', return_value=[]):
             r = m.marcador_semanal(self.cliente, LUNES + timedelta(days=1))
         self.assertEqual(llamadas, [2])

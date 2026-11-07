@@ -1,7 +1,7 @@
-"""Módulos archivados y congelados (7-nov-2026).
+"""Módulos archivados y Hyrox oculto (7-nov-2026).
 
 Decisión de David: Vida/diario, logros, estoico, nutrición y la habitación de
-JOI se archivan, y Hyrox se congela. Archivar no es borrar: el código, las URLs
+JOI se archivan, y Hyrox queda oculto. Archivar no es borrar: el código, las URLs
 y los datos siguen donde estaban. Lo que cambia es que la app del entrenador
 (Ahora, Rutina, Plan, Memoria, Cuerpo) deja de enlazarlos y de mandarte a ellos.
 
@@ -21,5 +21,7 @@ def archivado(nombre):
     return nombre in getattr(settings, 'MODULOS_ARCHIVADOS', ())
 
 
-def hyrox_congelado():
-    return bool(getattr(settings, 'HYROX_CONGELADO', False))
+def hyrox_oculto():
+    """Hyrox fuera de la app del entrenador. «Oculto» y no «congelado»: sus
+    tareas y señales siguen activas (ver la lista de pendientes del 7-nov)."""
+    return bool(getattr(settings, 'HYROX_OCULTO', False))

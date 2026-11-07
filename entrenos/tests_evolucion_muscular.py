@@ -217,11 +217,17 @@ class EvolucionPorGrupoTests(_DatosEntrenoMixin, TestCase):
         self.assertIn('poco volumen', r['grupos'][0]['lectura'])
 
     def test_series_por_semana_ultimas_cuatro_semanas(self):
-        self._ej(3, 'Press francés', 20, 10, 'Tríceps')
-        self._ej(10, 'Press francés', 20, 10, 'Triceps')
-        self._ej(60, 'Press francés', 20, 10, 'Tríceps')  # fuera de las 4 semanas
-        triceps = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'triceps')
-        self.assertAlmostEqual(triceps['series_semana'], 1.5, places=1)  # 6 series / 4
+        # 7-nov-2026: la media sale del marcador (semanas completas sin descarga,
+        # directas enteras e indirectas a la mitad); ver tests_contador_series_20261107.
+        from unittest.mock import patch
+        media = {'grupos': {'tríceps': {'total': 12.5, 'directas': 9.0, 'indirectas': 3.5}},
+                 'semanas': 4, 'desde': self.HOY, 'hasta': self.HOY}
+        with patch('entrenos.services.marcador_semanal_service.media_semanal_series', return_value=media):
+            r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
+        triceps = self._grupo(r, 'triceps')
+        self.assertEqual((triceps['series_semana'], triceps['series_directas'], triceps['series_indirectas']),
+                         (12.5, 9.0, 3.5))
+        self.assertEqual(r['series_semanas'], 4)
 
 
 class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):

@@ -704,8 +704,9 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         # Un punto menos de RPE si el grupo se trabajó ayer, o si has dormido
         # poco con la carga alta. Lo dice en una frase con el dato.
         try:
-            from entrenos.services.criterios_entrenador_service import aplicar_criterios
-            for _c in aplicar_criterios(cliente, ejercicios_mod, hoy):
+            from entrenos.services.criterios_entrenador_service import aplicar_criterios, aplicar_vispera_futbol
+            for _c in aplicar_criterios(cliente, ejercicios_mod, hoy) + aplicar_vispera_futbol(
+                    cliente, ejercicios_mod, hoy):
                 cambios.append({'tipo': 'criterio_entrenador', 'ejercicio_original': _c['ejercicio'],
                                 'ejercicio_nuevo': None, 'razon': _c['frase']})
         except Exception:

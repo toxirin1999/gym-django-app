@@ -380,13 +380,19 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         }
     """
     hoy = hoy or date.today()
-    inicio_series = hoy - timedelta(days=28)
 
-    series_por_zona = defaultdict(float)
-    for fecha, nombre, grupo, *_resto, series, _rec, _eid in _filas(cliente, inicio_series, hoy):
-        zona = normalizar_zona(grupo, nombre)
+    # 7-nov-2026: la media semanal se cuenta como en Plan (directas enteras,
+    # indirectas a la mitad) y solo con semanas completas sin descarga.
+    from entrenos.services.marcador_semanal_service import media_semanal_series
+    media_series = media_semanal_series(cliente, hoy)
+    series_por_zona, directas_por_zona, indirectas_por_zona = (
+        defaultdict(float), defaultdict(float), defaultdict(float))
+    for g, v in ((media_series or {}).get('grupos') or {}).items():
+        zona = normalizar_zona(g, '')
         if zona:
-            series_por_zona[zona] += series or 0
+            series_por_zona[zona] += v['total']
+            directas_por_zona[zona] += v['directas']
+            indirectas_por_zona[zona] += v['indirectas']
 
     fiables = defaultdict(list)
     dudosos = defaultdict(list)
@@ -412,7 +418,9 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
             'pct': pct,
             'estado': _estado(pct),
             'n_ejercicios': len(cambios),
-            'series_semana': round(series_por_zona.get(zona, 0) / 4.0, 1),
+            'series_semana': round(series_por_zona.get(zona, 0), 1),
+            'series_directas': round(directas_por_zona.get(zona, 0), 1),
+            'series_indirectas': round(indirectas_por_zona.get(zona, 0), 1),
             'mejor': max(cambios, key=lambda c: c['pct']) if cambios else None,
             'dudosos': sorted(dudosos.get(zona, []), key=lambda c: -abs(c['pct'])),
             'ligeros': sorted(ligeros.get(zona, []), key=lambda c: -abs(c['pct'])),
@@ -430,6 +438,10 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
 
     return {
         'periodo_dias': dias,
+        # 7-nov-2026: de qué semanas sale la media de series.
+        'series_semanas': (media_series or {}).get('semanas', 0),
+        'series_desde': (media_series or {}).get('desde'),
+        'series_hasta': (media_series or {}).get('hasta'),
         'media_pct': media,
         'n_con_datos': len(con_datos),
         'n_dudosos': sum(len(g['dudosos']) for g in grupos),

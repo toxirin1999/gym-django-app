@@ -13,6 +13,12 @@ el orden de la semana (eso se propone, no se impone).
    debajo.
 
 Los dos juntos no suman: como mucho, un punto menos.
+
+3. Víspera de fútbol (7-nov-2026, bloque Fuerza — Hipertrofia): si mañana
+   juegas (el fútbol cayó ese mismo día de la semana en 3 de las últimas 4
+   semanas), los ejercicios de pierna van con una serie menos (mínimo 2) y a
+   RPE 7 como mucho. El día después del fútbol ya lo cubren la cola (no
+   repite pierna) y la versión suave del briefing.
 """
 
 from collections import Counter
@@ -23,6 +29,10 @@ SERIES_AYER_MIN = 4
 RPE_SUELO = 7
 SUENO_CORTO_H = 6.5
 CARGA_ALTA = 1.3
+FUTBOL_SEMANAS = 4
+FUTBOL_MIN_SEMANAS = 3
+GRUPOS_PIERNA = frozenset({'cuádriceps', 'isquios', 'glúteos', 'gemelos'})
+_DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos')
 
 GRUPOS = (
     ('pecho', 'pecho'), ('pector', 'pecho'),
@@ -121,6 +131,70 @@ def aplicar_criterios(cliente, ejercicios, hoy):
         ej['rpe_objetivo'] = nuevo
         ej['criterio_entrenador'] = (f'Hoy RPE {nuevo} en vez de {antes}: '
                                      f'{" y ".join(motivos)}. Deja una o dos reps en reserva.')
+        aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
+    return aplicadas
+
+
+def futbol_manana(cliente, hoy):
+    """'los miércoles, 4 de las últimas 4 semanas' si mañana toca fútbol, o None.
+
+    Se deduce del historial: el fútbol cayó ese día de la semana en
+    ``FUTBOL_MIN_SEMANAS`` de las últimas ``FUTBOL_SEMANAS``.
+    """
+    from django.db.models.functions import Coalesce
+    from entrenos.models import ActividadRealizada
+
+    manana = hoy + timedelta(days=1)
+    fechas = set(
+        ActividadRealizada.objects.filter(cliente=cliente, tipo='futbol')
+        .annotate(f=Coalesce('fecha_realizado', 'fecha'))
+        .filter(f__gte=manana - timedelta(days=7 * FUTBOL_SEMANAS), f__lt=manana)
+        .values_list('f', flat=True)
+    )
+    semanas = sum(1 for k in range(1, FUTBOL_SEMANAS + 1) if manana - timedelta(days=7 * k) in fechas)
+    if semanas < FUTBOL_MIN_SEMANAS:
+        return None
+    return f'los {_DIAS[manana.weekday()]}, {semanas} de las últimas {FUTBOL_SEMANAS} semanas'
+
+
+def aplicar_vispera_futbol(cliente, ejercicios, hoy):
+    """Pierna con una serie menos y RPE 7 como mucho si mañana juegas al fútbol."""
+    try:
+        patron = futbol_manana(cliente, hoy)
+    except Exception:  # noqa: BLE001
+        return []
+    if not patron:
+        return []
+    aplicadas = []
+    for ej in ejercicios:
+        if ej.get('_deload_aplicado') or ej.get('deload'):
+            continue
+        grupo = _grupo_ejercicio(ej.get('nombre') or '', ej.get('grupo_muscular'))
+        if grupo not in GRUPOS_PIERNA:
+            continue
+        cambios = []
+        try:
+            series = int(ej.get('series') or 0)
+        except (TypeError, ValueError):
+            series = 0
+        if series > 2:
+            ej['series'] = series - 1
+            cambios.append(f'{series - 1} series en vez de {series}')
+        try:
+            rpe = float(ej.get('rpe_objetivo') or 0)
+        except (TypeError, ValueError):
+            rpe = 0
+        if rpe > RPE_SUELO:
+            ej.setdefault('rpe_objetivo_plan', ej.get('rpe_objetivo'))
+            ej['rpe_objetivo'] = RPE_SUELO
+            cambios.append(f'RPE {RPE_SUELO} en vez de {int(rpe) if rpe.is_integer() else rpe}')
+        if not cambios:
+            continue
+        ej['vispera_futbol'] = True
+        frase = (f'Mañana juegas al fútbol ({patron}): hoy {" y ".join(cambios)} '
+                 f'en pierna, para llegar con piernas.')
+        previa = ej.get('criterio_entrenador')
+        ej['criterio_entrenador'] = f'{previa} {frase}' if previa else frase
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
     return aplicadas
 

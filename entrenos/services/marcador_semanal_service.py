@@ -8,6 +8,12 @@ Solo muestra: series de los últimos 7 días por músculo frente a su objetivo.
 - **Hechas**: series de trabajo reales de los últimos 7 días. Las indirectas
   cuentan la mitad (un press de pecho es medio tríceps; un remo, medio bíceps).
 - **Frase**: solo si hay algo que decir (falta llegar al mínimo, o te pasas).
+
+7-nov-2026: el plan y lo hecho se cuentan igual (antes el plan solo contaba
+directas y lo hecho sumaba las indirectas: tríceps "17 de 9–14" con 9
+directas). Cada fila dice cuántas son directas y cuántas indirectas. El
+Farmer Walk cuenta como antebrazo y medio trapecio, en el plan y en lo hecho
+(antes el plan lo ponía en trapecio un día y lo hecho, en antebrazo).
 """
 
 from collections import Counter, defaultdict
@@ -51,6 +57,25 @@ def _indirecto(nombre, directo):
     return None
 
 
+def es_farmer(nombre):
+    n = _limpio(nombre)
+    return 'farmer' in n or 'granjero' in n
+
+
+def grupos_de_serie(nombre, grupo):
+    """[(grupo, peso)]: el directo cuenta 1 y el indirecto 0,5 (7-nov-2026)."""
+    if es_farmer(nombre):
+        return [('antebrazos', 1.0), ('trapecio', 0.5)]
+    g = _canon(grupo, nombre)
+    if not g:
+        return []
+    out = [(g, 1.0)]
+    recibe = _indirecto(nombre, g)
+    if recibe:
+        out.append((recibe, 0.5))
+    return out
+
+
 def _visible(grupo):
     return NOMBRES.get(grupo, grupo[:1].upper() + grupo[1:])
 
@@ -69,30 +94,38 @@ def series_plan_semana(cliente, hoy):
             continue
         grupos = set()
         for ej in ent.get('ejercicios') or []:
-            g = _canon(ej.get('grupo_muscular'), ej.get('nombre'))
-            if g:
-                plan[g] += int(ej.get('series') or 0)
-                grupos.add(g)
+            try:
+                n = int(ej.get('series') or 0)
+            except (TypeError, ValueError):
+                n = 0
+            for g, peso in grupos_de_serie(ej.get('nombre'), ej.get('grupo_muscular')):
+                plan[g] += n * peso
+                if peso == 1.0:
+                    grupos.add(g)
         sesiones.append({'nombre': (ent.get('rutina_nombre') or '').strip(), 'grupos': grupos})
     return plan, sesiones
 
 
-def series_hechas(cliente, hoy, dias=7):
+def series_hechas_detalle(cliente, desde, hasta):
+    """(total, directas, indirectas) por grupo entre ``desde`` y ``hasta``, ambos incluidos.
+
+    Series de trabajo confirmadas; las indirectas ya van a la mitad.
+    """
     from entrenos.models import SerieRealizada
 
-    hechas = Counter()
+    total, directas, indirectas = Counter(), Counter(), Counter()
     for s in SerieRealizada.objects.filter(
         entreno__cliente=cliente, completado=True, es_aproximacion=False,
-        entreno__fecha__gte=hoy - timedelta(days=dias - 1), entreno__fecha__lte=hoy,
+        entreno__fecha__gte=desde, entreno__fecha__lte=hasta,
     ).select_related('ejercicio'):
-        g = _canon(s.ejercicio.grupo_muscular, s.ejercicio.nombre)
-        if not g:
-            continue
-        hechas[g] += 1
-        recibe = _indirecto(s.ejercicio.nombre, g)
-        if recibe:
-            hechas[recibe] += 0.5
-    return hechas
+        for g, peso in grupos_de_serie(s.ejercicio.nombre, s.ejercicio.grupo_muscular):
+            total[g] += peso
+            (directas if peso == 1.0 else indirectas)[g] += peso
+    return total, directas, indirectas
+
+
+def series_hechas(cliente, hoy, dias=7):
+    return series_hechas_detalle(cliente, hoy - timedelta(days=dias - 1), hoy)[0]
 
 
 def _pendientes(cliente, hoy, sesiones):
@@ -138,20 +171,24 @@ def marcador_semanal(cliente, hoy):
         descarga = semana_plan_descarga(cliente.id, hoy)
     except Exception:  # noqa: BLE001
         pass
-    hechas = series_hechas(cliente, hoy, dias=hoy.weekday() + 1) if descarga else series_hechas(cliente, hoy)
+    dias = hoy.weekday() + 1 if descarga else 7
+    desde = hoy - timedelta(days=dias - 1)
+    hechas, directas, indirectas = series_hechas_detalle(cliente, desde, hoy)
     pendientes = _pendientes(cliente, hoy, sesiones)
 
     filas = []
     for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
-        minimo = min(MINIMO_EVIDENCIA, en_plan)
-        maximo = min(MAXIMO_EVIDENCIA, max(en_plan, MINIMO_EVIDENCIA) + MARGEN)
+        ref = int(en_plan + 0.5)  # el margen, en series enteras
+        minimo = min(MINIMO_EVIDENCIA, ref)
+        maximo = min(MAXIMO_EVIDENCIA, max(ref, MINIMO_EVIDENCIA) + MARGEN)
         if descarga:
-            minimo, maximo = 0, en_plan + 2
+            minimo, maximo = 0, ref + 2
         h = hechas.get(grupo, 0)
         estado = 'bajo' if h < minimo else ('alto' if h > maximo else 'ok')
         cubren = [_dia(s['nombre']) for s in pendientes if grupo in s['grupos']]
         filas.append({
             'grupo': _visible(grupo), 'clave': grupo, 'hechas': h, 'minimo': minimo, 'maximo': maximo,
+            'directas': directas.get(grupo, 0), 'indirectas': indirectas.get(grupo, 0),
             'plan': en_plan, 'estado': estado, 'cubren': cubren,
             'pct': min(100, round(h / maximo * 100)) if maximo else 0,
             'pct_min': min(100, round(minimo / maximo * 100)) if maximo else 0,
@@ -160,8 +197,14 @@ def marcador_semanal(cliente, hoy):
         sobra = _frase_sobra(filas)
         frase = ('Semana de descarga: aquí no hay mínimos que cumplir, se cuenta desde el lunes '
                  'frente a lo que pide la descarga.' + (f' {sobra}' if sobra else ''))
-        return {'filas': filas, 'frase': frase, 'descarga': True, 'sobra': sobra, 'periodo': 'Esta semana (descarga)'}
-    return {'filas': filas, 'frase': _frase(filas), 'descarga': False, 'periodo': 'Últimos 7 días'}
+        return {'filas': filas, 'frase': frase, 'descarga': True, 'sobra': sobra,
+                'periodo': f'Esta semana (descarga) · {_rango(desde, hoy)}'}
+    return {'filas': filas, 'frase': _frase(filas), 'descarga': False,
+            'periodo': f'Últimos 7 días · {_rango(desde, hoy)}'}
+
+
+def _rango(desde, hasta):
+    return f'{desde:%d/%m}–{hasta:%d/%m}'
 
 
 def _num(valor):
@@ -232,3 +275,48 @@ def marcador_cacheado(cliente, hoy):
             datos = {'filas': [], 'frase': None}
         cache.set(clave, datos, 600)
     return datos
+
+
+SEMANAS_MEDIA = 4
+
+
+def media_semanal_series(cliente, hoy, semanas=SEMANAS_MEDIA):
+    """Media semanal de series por grupo en las últimas semanas completas sin descarga (7-nov-2026).
+
+    Memoria enseñaba "series/sem" con las directas de los últimos 28 días
+    divididas entre 4, con la descarga y las semanas a medias dentro (tríceps
+    4,2 cuando una semana completa del bloque llevaba 9-10 directas). Ahora:
+    semanas de lunes a domingo ya cerradas, sin las de descarga, contadas como
+    el marcador de Plan (directas enteras, indirectas a la mitad).
+
+    Devuelve {'grupos': {grupo: {'total', 'directas', 'indirectas'}},
+              'semanas': n, 'desde': date, 'hasta': date} o None sin semanas.
+    """
+    from entrenos.models import SemanaPlanGym
+
+    lunes_actual = hoy - timedelta(days=hoy.weekday())
+    descarga = set(SemanaPlanGym.objects.filter(
+        cliente=cliente, descarga=True, lunes__lt=lunes_actual,
+    ).values_list('lunes', flat=True))
+    lunes = []
+    k = 1
+    while len(lunes) < semanas and k <= semanas * 3:
+        candidato = lunes_actual - timedelta(days=7 * k)
+        if candidato not in descarga:
+            lunes.append(candidato)
+        k += 1
+    if not lunes:
+        return None
+    total, directas, indirectas = Counter(), Counter(), Counter()
+    for l in lunes:
+        t, d, i = series_hechas_detalle(cliente, l, l + timedelta(days=6))
+        total.update(t)
+        directas.update(d)
+        indirectas.update(i)
+    n = len(lunes)
+    grupos = {
+        g: {'total': round(total[g] / n, 1), 'directas': round(directas[g] / n, 1),
+            'indirectas': round(indirectas[g] / n, 1)}
+        for g in total
+    }
+    return {'grupos': grupos, 'semanas': n, 'desde': min(lunes), 'hasta': max(lunes) + timedelta(days=6)}

@@ -41,8 +41,8 @@ class GeneradorPeriodizacion:
           Hipertrofia Especialización 7 sem + 1 = 8
           Fuerza Avanzada             4 sem + 1 = 5
           Hipertrofia Metabólica      5 sem + 1 = 6
-          Potencia Peaking            4 sem + 1 = 5
-          Potencia Peaking (última descarga al final) = 4 + 1 = 5 ← pero no sumamos doble
+          Fuerza Hipertrofia          4 sem + 1 = 5   (7-nov-2026: antes Potencia Peaking 7 + 1)
+          Hipertrofia Puente          2 sem + 1 = 3
           ─────────────────────────────────────────────────────
           Total: 43 semanas contenido + 9 descargas = 52 semanas exactas
 
@@ -135,15 +135,44 @@ class GeneradorPeriodizacion:
                 'tempo': '2-0-2-0', 'descanso': 60,
                 'descripcion': 'Alto volumen con descansos cortos, enfoque en pump',
             },
+            # 7-nov-2026 (decisión de David): sin «Potencia — Peaking». Era un
+            # pico para tests que no se hacen: 7 semanas a la mitad de series,
+            # 2–4 reps en máquinas y ejercicios nuevos (nórdico 5 × 2-4 el
+            # lunes antes del fútbol). Objetivo de David: ganar músculo de forma
+            # equilibrada y seguir progresando en fuerza sin quedarse sin
+            # piernas para el fútbol y el pádel.
+            #
+            # Fuerza con hipertrofia: los mismos ejercicios del bloque anterior
+            # (se mide el progreso con los de siempre), 4-6 reps en los
+            # multiarticulares de músculos grandes y 8-12 en el resto, y las
+            # series de la Metabólica un 15 % menos la primera semana (a 4-6 reps
+            # cada serie cansa más), subiendo hasta un 5 % menos.
             {
-                'fase': 'potencia',
-                'nombre': 'Potencia — Peaking',
-                'semanas': 7,
-                'vol_inicio': 0.5, 'vol_fin': 0.6,
-                'rpe_inicio': 8, 'rpe_fin': 9,
-                'reps': '2-4',
-                'tempo': 'X-0-X-0', 'descanso': 180,
-                'descripcion': 'Realización de fuerza, preparación para tests',
+                'fase': 'fuerza',
+                'nombre': 'Fuerza — Hipertrofia',
+                'semanas': 4,
+                'vol_inicio': 0.85, 'vol_fin': 0.95,
+                'rpe_inicio': 7, 'rpe_fin': 8,
+                'reps': '4-6',
+                'reps_secundarios': '8-12',
+                'limites_fatiga': 'fuerza_hipertrofia',
+                'ejercicios_del_bloque_anterior': True,
+                'tempo': '2-0-X-0', 'descanso': 150,
+                'descripcion': 'Fuerza en los básicos sin perder volumen, con los ejercicios de siempre',
+            },
+            # Las 2 semanas que quedan hasta cerrar el año del plan: vuelta a
+            # reps medias con los mismos ejercicios, antes de que la Acumulación
+            # (semana 1) rote el catálogo.
+            {
+                'fase': 'hipertrofia',
+                'nombre': 'Hipertrofia — Puente',
+                'semanas': 2,
+                'vol_inicio': 0.9, 'vol_fin': 0.95,
+                'rpe_inicio': 7, 'rpe_fin': 8,
+                'reps': '10-12',
+                'ejercicios_del_bloque_anterior': True,
+                'tempo': '2-0-X-0', 'descanso': 90,
+                'descripcion': 'Vuelta a reps medias con los mismos ejercicios',
             },
         ]
 
@@ -224,6 +253,12 @@ class GeneradorPeriodizacion:
                     'tempo': bloque.get('tempo', '2-0-X-0'),
                     'descanso': bloque.get('descanso', 90),
                     'descripcion': bloque['descripcion'],
+                    # 7-nov-2026: rango de los ejercicios que no son
+                    # multiarticulares de músculo grande, y reutilizar los
+                    # ejercicios (y el reparto de días) del bloque anterior.
+                    'reps_secundarios': bloque.get('reps_secundarios'),
+                    'limites_fatiga': bloque.get('limites_fatiga'),
+                    'ejercicios_del_bloque_anterior': bool(bloque.get('ejercicios_del_bloque_anterior')),
                 })
 
             # ── Descarga activa tras cada bloque ─────────────────────────────

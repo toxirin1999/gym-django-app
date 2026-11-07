@@ -29,6 +29,16 @@ REDONDEO = {
 # LÍMITES DE FATIGA POR FASE
 # ============================================================
 LIMITES_FATIGA = {
+    # 7-nov-2026: Fuerza — Hipertrofia. Las series de cada grupo ya salen del
+    # volumen de la semana; aquí solo se limita la rodilla y la bisagra
+    # pesadas del día. El cupo de pesadas se reparte entre los grupos del día
+    # y con 16 (fuerza pura) a 6-7 grupos tocaba a 2-4: la prensa se quedaba
+    # en 1 serie o desaparecía. Con 60 no recorta a ningún grupo.
+    'fuerza_hipertrofia': {
+        'series_pesadas_max': 60,
+        'bisagra_pesada_max': 8,
+        'rodilla_pesada_max': 8
+    },
     'hipertrofia': {
         'series_pesadas_max': 10,
         'bisagra_pesada_max': 3,
