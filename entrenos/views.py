@@ -7048,6 +7048,20 @@ def _calcular_ejercicios_dia(cliente_id, fecha_obj):
     return [_norm(ej, i) for i, ej in enumerate(ejercicios)]
 
 
+def _fechas_hechas_mes(cliente, año, mes):
+    from django.db.models import Q
+    from entrenos.models import EntrenoRealizado
+    try:
+        filas = EntrenoRealizado.objects.filter(cliente=cliente).filter(
+            Q(fecha_ejecucion__year=año, fecha_ejecucion__month=mes)
+            | Q(fecha_ejecucion__isnull=True, fecha__year=año, fecha__month=mes)
+        ).values_list('fecha_ejecucion', 'fecha')
+        return sorted({(fe or f).isoformat() for fe, f in filas})
+    except Exception:
+        logger.exception('Calendario: no se pudieron leer las sesiones hechas')
+        return []
+
+
 def ajax_obtener_entrenamientos_mes(request, cliente_id):
     """
     Vista AJAX que devuelve TODOS los entrenamientos de un mes.
@@ -7203,6 +7217,9 @@ def ajax_obtener_entrenamientos_mes(request, cliente_id):
 
         return JsonResponse({
             'entrenamientos': entrenamientos_mes,
+            # 7-nov-2026: días con sesión de gym registrada, para marcar las
+            # hechas sin tocar las previstas (un partido no cuenta).
+            'hechas': _fechas_hechas_mes(cliente, año, mes),
             'año': año,
             'mes': mes,
             'success': True

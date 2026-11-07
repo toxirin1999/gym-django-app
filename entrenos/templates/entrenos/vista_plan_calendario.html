@@ -2112,6 +2112,13 @@
         text-shadow: 0 0 20px rgba(255, 255, 255, 0.8) !important;
     }
 
+    .day-done {
+        margin-top: 0.25rem;
+        font-size: 0.6rem;
+        color: #4ade80;
+        letter-spacing: 0.02em;
+    }
+
     /* Indicador de entrenamiento */
     .day-dot {
         width: 6px;
@@ -4900,8 +4907,8 @@
                     <div class="cp-stat-val">El de cada ejercicio</div>
                     <div class="cp-stat-sub">Rebajado; el objetivo exacto, en la sesión</div>
                     {% elif parametros_fase.reps_secundarios %}
-                    <div class="cp-stat-val">{{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }} · {{ parametros_fase.reps_secundarios }}</div>
-                    <div class="cp-stat-sub">Básicos · resto de ejercicios</div>
+                    <div class="cp-stat-val">Básicos: {{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }} reps</div>
+                    <div class="cp-stat-sub">Resto: según ejercicio; el rango exacto, en la sesión</div>
                     {% else %}
                     <div class="cp-stat-val">{{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }}</div>
                     <div class="cp-stat-sub">Pauta general de la fase</div>
@@ -5006,16 +5013,16 @@
                 </div>
                 <div class="summary-stats">
                     <div class="summary-stat">
-                        <div class="summary-value" id="summaryWorkouts">0</div>
-                        <div class="summary-label">Entrenos</div>
+                        <div class="summary-value" id="summaryWorkouts">…</div>
+                        <div class="summary-label">Sesiones previstas</div>
                     </div>
                     <div class="summary-stat">
-                        <div class="summary-value" id="summarySeries">0</div>
-                        <div class="summary-label">Series</div>
+                        <div class="summary-value" id="summaryDone">…</div>
+                        <div class="summary-label">Hechas</div>
                     </div>
                     <div class="summary-stat">
-                        <div class="summary-value" id="summaryMinutes">0</div>
-                        <div class="summary-label">Minutos</div>
+                        <div class="summary-value" id="summarySeries">…</div>
+                        <div class="summary-label">Series previstas</div>
                     </div>
                 </div>
             </div>
@@ -5054,6 +5061,8 @@
         const semanaInicial = parseInt(appContainer.dataset.semanaInicial) || 0;
 
         let entrenamientosCache = {};
+        let fechasHechas = new Set();
+        let datosCargados = false;
         let selectedDate = null;
         let currentWeekDates = [];
         let currentWeekIndex = 0;
@@ -5185,11 +5194,12 @@
                 const faseClass = fase ? `fase-${fase}` : '';
 
                 return `
-                <button type="button" class="week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${faseClass}"
+                <button type="button" class="week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''} ${faseClass} ${fechasHechas.has(dateStr) ? 'hecha' : ''}"
                      data-date="${dateStr}" aria-label="Ver entrenamiento del ${getDayName(date)} ${date.getDate()}" aria-pressed="${isSelected}">
                     <div class="day-name">${getDayName(date)}</div>
                     <div class="day-number">${date.getDate()}</div>
                     <div class="day-dot"></div>
+                    ${fechasHechas.has(dateStr) ? '<div class="day-done" aria-label="Hecha">✓ hecha</div>' : ''}
                 </button>
             `;
             }).join('');
@@ -5318,29 +5328,35 @@
 
         // ========== UPDATE WEEKLY SUMMARY ==========
         function updateWeeklySummary() {
+            // 7-nov-2026: el calendario dice qué está programado. Las sesiones
+            // previstas no cambian al hacerlas; las hechas se cuentan aparte y
+            // se marcan en su día. Sin minutos estimados.
+            const elWorkouts = document.getElementById('summaryWorkouts');
+            const elSeries = document.getElementById('summarySeries');
+            const elDone = document.getElementById('summaryDone');
+            const elWeekLabel = document.getElementById('summaryWeekLabel');
+            if (elWeekLabel) elWeekLabel.textContent = `Semana ${currentWeekIndex + 1} del mes`;
+            if (!datosCargados) {
+                [elWorkouts, elSeries, elDone].forEach(el => { if (el) el.textContent = '–'; });
+                return;
+            }
             let totalWorkouts = 0;
             let totalSeries = 0;
-            let totalMinutes = 0;
+            let totalHechas = 0;
 
             currentWeekDates.forEach(date => {
                 const dateStr = formatDate(date);
                 const entrenamiento = entrenamientosCache[dateStr];
                 if (entrenamiento && entrenamiento.ejercicios) {
                     totalWorkouts++;
-                    const series = entrenamiento.ejercicios.reduce((sum, ej) => sum + (ej.series || 0), 0);
-                    totalSeries += series;
-                    totalMinutes += Math.round(5 + (series * 2.5));
+                    totalSeries += entrenamiento.ejercicios.reduce((sum, ej) => sum + (ej.series || 0), 0);
                 }
+                if (fechasHechas.has(dateStr)) totalHechas++;
             });
 
-            const elWorkouts = document.getElementById('summaryWorkouts');
-            const elSeries = document.getElementById('summarySeries');
-            const elMinutes = document.getElementById('summaryMinutes');
-            const elWeekLabel = document.getElementById('summaryWeekLabel');
             if (elWorkouts) elWorkouts.textContent = totalWorkouts;
             if (elSeries) elSeries.textContent = totalSeries;
-            if (elMinutes) elMinutes.textContent = totalMinutes;
-            if (elWeekLabel) elWeekLabel.textContent = `Semana ${currentWeekIndex + 1} del mes`;
+            if (elDone) elDone.textContent = totalHechas;
         }
 
         // ========== SELECT DATE ==========
@@ -5396,6 +5412,8 @@
 
                 if (data.success) {
                     entrenamientosCache = data.entrenamientos;
+                    fechasHechas = new Set(data.hechas || []);
+                    datosCargados = true;
                     console.log('✅ Datos cargados:', Object.keys(entrenamientosCache).length, 'días');
                 } else {
                     throw new Error(data.error || 'Error desconocido');

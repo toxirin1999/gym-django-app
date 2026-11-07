@@ -5,7 +5,12 @@
   esta semana, como Plan, y que es la pauta general (el objetivo exacto, en la sesión).
 - P3/P4: sin «Máximos registrados» ni objetivos teóricos Helms (+7,5 %).
   Los máximos siguen para el cálculo de respaldo cuando falta historial.
-- P5: en descarga, el rango de cada ejercicio; en Fuerza — Hipertrofia, 4–6 · 8–12.
+- P5: en descarga, el rango de cada ejercicio; en Fuerza — Hipertrofia,
+  «Básicos: 4–6 reps» y «Resto: según ejercicio» (brazos, hombros y gemelos
+  tienen sus rangos; el exacto, en la sesión).
+- P6: el resumen semanal dice «Sesiones previstas» (no «Entrenos»), cuenta las
+  hechas aparte y las marca en su día; sin minutos estimados; «…»/«–» mientras
+  carga, no un cero.
 """
 
 from datetime import date
@@ -40,7 +45,17 @@ class Plantilla(SimpleTestCase):
         self.assertIn('{% if parametros_fase.rpe_min == parametros_fase.rpe_max %}{{ parametros_fase.rpe_min }}',
                       self.src)
         self.assertIn('<div class="cp-stat-val">El de cada ejercicio</div>', self.src)
-        self.assertIn('{{ parametros_fase.reps_secundarios }}', self.src)
+        self.assertIn('Básicos: {{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }} reps', self.src)
+        self.assertIn('Resto: según ejercicio; el rango exacto, en la sesión', self.src)
+
+    def test_resumen_semanal_previstas_y_hechas(self):
+        self.assertIn('<div class="summary-label">Sesiones previstas</div>', self.src)
+        self.assertIn('<div class="summary-label">Hechas</div>', self.src)
+        self.assertNotIn('Minutos', self.src)
+        self.assertNotIn('summaryMinutes', self.src)
+        self.assertNotIn('<div class="summary-label">Entrenos</div>', self.src)
+        self.assertIn('<div class="summary-value" id="summaryWorkouts">…</div>', self.src)
+        self.assertIn("fechasHechas = new Set(data.hechas || []);", self.src)
 
 
 class Parametros(SimpleTestCase):
@@ -50,6 +65,20 @@ class Parametros(SimpleTestCase):
                                    'reps_secundarios': '8-12'}, {})
         self.assertEqual((p['reps_min'], p['reps_max'], p['reps_secundarios']), (4, 6, '8-12'))
         self.assertIsNone(_parametros_fase_plan({'rep_range': '10-15'}, {})['reps_secundarios'])
+
+
+class FechasHechas(TestCase):
+    def test_solo_sesiones_de_gym_del_mes(self):
+        from entrenos.models import ActividadRealizada, EntrenoRealizado
+        from entrenos.views import _fechas_hechas_mes
+        from rutinas.models import Rutina
+        cliente = User.objects.create_user('plan_anual_hechas_20261107', password='x').cliente_perfil
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha=date(2026, 11, 2))
+        EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha=date(2026, 10, 31))
+        ActividadRealizada.objects.create(cliente=cliente, tipo='futbol', titulo='Fútbol',
+                                          fecha=date(2026, 11, 4), duracion_minutos=60)
+        self.assertEqual(_fechas_hechas_mes(cliente, 2026, 11), ['2026-11-02'])
 
 
 class Descarga(TestCase):
