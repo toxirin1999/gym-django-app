@@ -238,14 +238,27 @@
   {% if decisiones_evaluadas %}
   <section class="mem-node mem-node--plan" aria-labelledby="memoria-acierto-title">
     <div class="mem-label">Lo que decidí y si funcionó · {{ decisiones_evaluadas.dias }} días</div>
-    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.con_conclusion %}{{ decisiones_evaluadas.funcionaron }} de {{ decisiones_evaluadas.con_conclusion }} funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
-    {% if decisiones_evaluadas.con_conclusion %}
-    <p class="mem-desc">Cada decisión se comprueba con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.sin_conclusion %} Otras {{ decisiones_evaluadas.sin_conclusion }} aún no dan para concluir (sobre todo consolidaciones de carga).{% endif %}</p>
+    <h2 class="mem-heading" id="memoria-acierto-title">{% if decisiones_evaluadas.cambios_concluyentes %}{{ decisiones_evaluadas.cambios_funcionaron }} de {{ decisiones_evaluadas.cambios_concluyentes }} cambios funcionaron{% else %}Aún sin comprobar{% endif %}</h2>
+    {% if decisiones_evaluadas.cambios_concluyentes %}
+    <p class="mem-desc">Cuenta solo los cambios (subir, bajar, cambiar variante) ya comprobados con tu siguiente sesión de ese ejercicio.{% if decisiones_evaluadas.cambios_pendientes %} Pendientes de comprobar: {{ decisiones_evaluadas.cambios_pendientes }}.{% endif %}{% if decisiones_evaluadas.cambios_sin_evidencia %} Sin evidencia suficiente: {{ decisiones_evaluadas.cambios_sin_evidencia }}.{% endif %}{% if decisiones_evaluadas.consolidaciones %} Las {{ decisiones_evaluadas.consolidaciones }} consolidaciones (mantener la carga) no entran en la cuenta.{% endif %}</p>
     <div class="mem-list">
       {% for d in decisiones_evaluadas.items %}
       <div class="mem-row" data-resultado="{{ d.resultado }}">
         <div class="idx">{{ d.fecha|date:"d/m" }}</div>
-        <div><div class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal">{{ d.texto }}</div></div>
+        <div>
+          {% if d.detalle %}
+          <details class="mem-decision">
+            <summary class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal;cursor:pointer">{{ d.texto }}</summary>
+            <div class="meta" style="font-family:inherit;font-size:12px;line-height:1.5;text-transform:none;letter-spacing:normal;margin-top:6px">
+              {% if d.detalle.esperado %}<p style="margin:0 0 4px"><strong>Qué se esperaba:</strong> {{ d.detalle.esperado }}</p>{% endif %}
+              {% if d.detalle.ocurrido %}<p style="margin:0 0 4px"><strong>Qué ocurrió:</strong> {{ d.detalle.ocurrido }}</p>{% endif %}
+              <p style="margin:0"><strong>Se comprobó en:</strong> <a href="{% url 'entrenos:post_entreno_resumen' cliente.id d.detalle.entreno_id %}">la sesión del {{ d.detalle.sesion_fecha|date:"d/m" }}</a></p>
+            </div>
+          </details>
+          {% else %}
+          <div class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal">{{ d.texto }}</div>
+          {% endif %}
+        </div>
       </div>
       {% endfor %}
     </div>
@@ -514,54 +527,13 @@
     </article>
     {% endif %}
 
-    {# ── §07 DECISIONES DEL PLAN ── #}
+    {# ── §07 DECISIONES DEL PLAN (7-nov-2026: una línea; el detalle vive en el Centro) ── #}
     {% if decisiones_total > 0 %}
     <article class="mem-node mem-node--plan">
       <div class="mem-label">Decisiones del plan · 90 días</div>
       <h2 class="mem-heading">Lo que el plan ha decidido</h2>
-      <div class="mem-quads">
-        {% if decisiones_agrupadas.subir_peso %}
-        <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.subir_peso }}</div>
-          <div class="k">Subidas de peso</div>
-        </div>
-        {% endif %}
-        {% if decisiones_agrupadas.cambiar_variante %}
-        <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.cambiar_variante }}</div>
-          <div class="k">Cambios de estímulo</div>
-        </div>
-        {% endif %}
-        {% if decisiones_agrupadas.mantener %}
-        <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.mantener }}</div>
-          <div class="k">Consolidaciones</div>
-        </div>
-        {% endif %}
-        {% if decisiones_agrupadas.deload %}
-        <div class="mem-quad">
-          <div class="v">{{ decisiones_agrupadas.deload }}</div>
-          <div class="k">Descargas</div>
-        </div>
-        {% endif %}
-      </div>
-      <details class="mem-collapse">
-        <summary>
-          Ver decisiones recientes
-          <span class="mem-count">{{ decisiones_recientes|length }} de {{ decisiones_total }}</span>
-        </summary>
-        <div class="mem-list">
-          {% for decision in decisiones_recientes %}
-          <div class="mem-row">
-            <div class="idx">{{ decision.fecha_creacion|date:"d/m" }}</div>
-            <div>
-              <div class="name">{{ decision.ejercicio }}</div>
-              <div class="meta">{{ decision.accion_label }} · {{ decision.motivo|truncatechars:80 }}</div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-      </details>
+      <p class="mem-desc">En 90 días: {{ decisiones_resumen }}.</p>
+      <p class="mem-desc"><a href="{% url 'clientes:plan_decisiones' %}#evidencia-tecnica">Ver historial en el Centro →</a> El historial del Centro va por fecha y ejercicio{% if inicio_bloque_centro %} desde el inicio del bloque actual ({{ inicio_bloque_centro|date:"d/m" }}){% else %} desde el inicio del bloque actual{% endif %}; este resumen cubre 90 días.</p>
     </article>
     {% endif %}
 

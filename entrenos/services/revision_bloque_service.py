@@ -22,6 +22,12 @@ from datetime import timedelta
 from django.utils import timezone
 
 
+# 7-nov-2026: zonas cuyo volumen se mantiene por decisión, con su motivo.
+VOLUMEN_MANTENIDO = {'tríceps': 'Tríceps', 'trapecios': 'Trapecio', 'trapecio': 'Trapecio'}
+MOTIVO_VOLUMEN_MANTENIDO = ('El recuento corregido no justifica añadir series. '
+                            'Volveré a revisarlo con los datos del nuevo bloque.')
+
+
 def _bloques_de_registros(registros, periodizacion):
     """Agrupa semanas consecutivas del mismo bloque de contenido.
 
@@ -167,13 +173,21 @@ def revisar_bloque(cliente, grupo):
     ]
 
     siguen = [e['nombre'] for e in equilibrar if not e['recuperada']] or [g['nombre'] for g in bajan]
-    if siguen:
-        cambia = (
-            f"En el siguiente bloque el foco es {', '.join(siguen[:3]).lower()}: "
+    # 7-nov-2026 (decisión de David): tríceps y trapecio mantienen el volumen;
+    # se dice con su motivo en vez de prometer series que no se van a añadir.
+    mantenidas = [n for n in siguen if n.casefold() in VOLUMEN_MANTENIDO]
+    foco = [n for n in siguen if n.casefold() not in VOLUMEN_MANTENIDO]
+    partes = []
+    if foco:
+        partes.append(
+            f"En el siguiente bloque el foco es {', '.join(foco[:3]).lower()}: "
             'si una zona sigue cayendo, el plan propondrá subirle volumen.'
         )
-    else:
-        cambia = 'Ninguna zona retrocede: el siguiente bloque sigue el plan sin ajustes de foco.'
+    if mantenidas:
+        nombres = [VOLUMEN_MANTENIDO[n.casefold()] for n in mantenidas]
+        sujeto = nombres[0] if len(nombres) == 1 else ', '.join(nombres[:-1]) + ' y ' + nombres[-1].lower()
+        partes.append(f'{sujeto}: mantengo el volumen actual. {MOTIVO_VOLUMEN_MANTENIDO}')
+    cambia = ' '.join(partes) or 'Ninguna zona retrocede: el siguiente bloque sigue el plan sin ajustes de foco.'
 
     return {
         'nombre': grupo['bloque'].get('nombre'),

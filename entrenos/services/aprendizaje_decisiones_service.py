@@ -89,12 +89,16 @@ def _sesion_evaluadora(log):
     }
 
 
-def frase_decision(log, etiqueta='Después'):
+_SIN_DESPUES = object()
+
+
+def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
     """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'
 
     En el cierre de la sesión que la evaluó, ``etiqueta='Hoy'``.
     """
-    despues = _sesion_evaluadora(log)
+    if despues is _SIN_DESPUES:
+        despues = _sesion_evaluadora(log)
     accion = describir_accion(log)
     if despues and log.accion in ('subir_peso', 'bajar_peso', 'deload'):
         # 31-oct-2026 (nota 11): el peso que se propuso de verdad ese día (el
@@ -126,6 +130,65 @@ def frase_decision(log, etiqueta='Después'):
     return ' '.join(partes)
 
 
+def _objetivo_registrado(entreno_id, nombre):
+    """Reps y RPE que se prescribieron ese día para el ejercicio (snapshot guardado), o None."""
+    from entrenos.models import EntrenoRealizado
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+    try:
+        entreno = EntrenoRealizado.objects.select_related('gym_decision_version').get(pk=entreno_id)
+        snapshot = getattr(getattr(entreno, 'gym_decision_version', None), 'snapshot', None) or {}
+    except Exception:  # noqa: BLE001
+        return None
+    clave = normalizar_ejercicio(nombre)
+    for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ej.get('nombre')) == clave:
+            partes = []
+            if ej.get('repeticiones'):
+                partes.append(f"{ej['repeticiones']} reps")
+            rpe = ej.get('rpe_objetivo') or ej.get('rpe')
+            if rpe not in (None, ''):
+                try:
+                    partes.append(f'RPE {_rpe(rpe)}')
+                except (TypeError, ValueError):
+                    pass
+            return ', '.join(partes) or None
+    return None
+
+
+def detalle_decision(log, despues):
+    """Qué se esperaba, qué ocurrió y en qué sesión se comprobó (7-nov-2026).
+
+    Solo lo registrado: el objetivo de esa sesión sale de su snapshot; si no
+    quedó guardado, basta con la sesión y lo que se observó.
+    """
+    if not despues:
+        return None
+    esperado = []
+    accion = describir_accion(log)
+    if accion:
+        esperado.append(_capitalizar(accion) + '.')
+    objetivo = _objetivo_registrado(despues['entreno_id'], log.ejercicio)
+    if objetivo:
+        esperado.append(f'Objetivo de esa sesión: {objetivo}.')
+    ocurrido = None
+    if despues.get('peso') is not None and despues.get('reps'):
+        if float(despues['peso'] or 0) > 0:
+            ocurrido = f"{_kg(despues['peso'])} kg × {despues['reps']}"
+        else:
+            ocurrido = f"{despues['reps']} reps"
+        if despues.get('rpe') is not None:
+            ocurrido += f" con RPE {_rpe(despues['rpe'])}"
+        ocurrido += '.'
+    if log.notas_resultado:
+        ocurrido = f"{ocurrido + ' ' if ocurrido else ''}{_capitalizar(log.notas_resultado).rstrip('.')}."
+    return {
+        'esperado': ' '.join(esperado) or None,
+        'ocurrido': ocurrido,
+        'sesion_fecha': despues['fecha'],
+        'entreno_id': despues['entreno_id'],
+    }
+
+
 def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
     """Resumen de las decisiones ya comprobadas en las últimas ``dias``."""
     from entrenos.models import GymDecisionLog
@@ -151,10 +214,19 @@ def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
             continue
         vistos.add(clave)
         relevantes.append(l)
-    items = [
-        {'fecha': l.fecha_evaluacion, 'resultado': l.resultado, 'texto': frase_decision(l)}
-        for l in relevantes[:limite]
-    ]
+    items = []
+    for l in relevantes[:limite]:
+        despues = _sesion_evaluadora(l)
+        items.append({'fecha': l.fecha_evaluacion, 'resultado': l.resultado,
+                      'texto': frase_decision(l, despues=despues), 'detalle': detalle_decision(l, despues)})
+    # 7-nov-2026: la cuenta de Memoria es solo de cambios (subir, bajar, variante,
+    # descarga): «mantener» casi siempre sale validada y hinchaba el acierto.
+    cambios = [l for l in logs if l.accion != 'mantener']
+    cambios_conteo = {clave: sum(1 for l in cambios if l.resultado == clave) for clave in VEREDICTO}
+    cambios_pendientes = GymDecisionLog.objects.filter(
+        cliente=cliente, resultado__isnull=True, fecha_creacion__gte=ahora - timedelta(days=dias),
+    ).exclude(accion='mantener').count()
+    consolidaciones = sum(1 for l in logs if l.accion == 'mantener')
     # Las propuestas por iniciativa también se comprueban: van primero.
     from entrenos.models import PropuestaZonaGym
     from entrenos.services.propuesta_zona_service import frase_evaluacion
@@ -165,6 +237,7 @@ def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
     for p in propuestas:
         if p.resultado in conteo:
             conteo[p.resultado] += 1
+            cambios_conteo[p.resultado] += 1
     items = [
         {'fecha': p.evaluada_en, 'resultado': p.resultado, 'texto': frase_evaluacion(p)}
         for p in propuestas
@@ -175,6 +248,11 @@ def decisiones_evaluadas(cliente, dias=28, limite=6, hoy=None):
         'funcionaron': conteo['validada'],
         'no_funcionaron': conteo['fallida'],
         'sin_conclusion': conteo['neutra'],
+        'cambios_funcionaron': cambios_conteo['validada'],
+        'cambios_concluyentes': cambios_conteo['validada'] + cambios_conteo['fallida'],
+        'cambios_sin_evidencia': cambios_conteo['neutra'],
+        'cambios_pendientes': cambios_pendientes,
+        'consolidaciones': consolidaciones,
         'dias': dias,
         'items': items,
     }

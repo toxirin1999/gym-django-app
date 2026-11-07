@@ -128,7 +128,10 @@ class MemoriaEntrenadorUITests(TestCase):
         self.assertEqual(response.context['decisiones_total'], 25)
         self.assertEqual(len(response.context['decisiones_recientes']), 20)
         self.assertEqual(response.context['decisiones_agrupadas']['mantener'], 25)
-        self.assertContains(response, '20 de 25')
+        # 7-nov-2026: una línea en Memoria; el detalle por fecha y ejercicio está en el Centro.
+        self.assertContains(response, 'En 90 días: 25 consolidaciones (mantener la carga).')
+        self.assertContains(response, 'Ver historial en el Centro')
+        self.assertNotContains(response, '20 de 25')
 
     def test_perfil_filtra_metadatos_no_numericos_y_muestra_caveat(self):
         self.cliente.one_rm_data = {

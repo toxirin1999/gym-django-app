@@ -2007,6 +2007,34 @@ def _propuesta_zona_visible(cliente, hoy):
         return None
 
 
+_ETIQUETAS_DECISION_90 = (
+    ('subir_peso', 'subida de peso', 'subidas de peso'),
+    ('subir_reps', 'subida de repeticiones', 'subidas de repeticiones'),
+    ('bajar_peso', 'bajada de peso', 'bajadas de peso'),
+    ('cambiar_variante', 'cambio de estímulo', 'cambios de estímulo'),
+    ('deload', 'descarga', 'descargas'),
+    ('mantener', 'consolidación (mantener la carga)', 'consolidaciones (mantener la carga)'),
+)
+
+
+def _resumen_decisiones_90(agrupadas):
+    """'65 subidas de peso, 4 cambios de estímulo, 1 descarga y 223 consolidaciones (mantener la carga)'."""
+    partes = [f'{agrupadas[c]} {uno if agrupadas[c] == 1 else varios}'
+              for c, uno, varios in _ETIQUETAS_DECISION_90 if agrupadas.get(c)]
+    if not partes:
+        return ''
+    return partes[0] if len(partes) == 1 else ', '.join(partes[:-1]) + ' y ' + partes[-1]
+
+
+def _inicio_bloque_centro(cliente):
+    """El inicio del bloque con el que empieza el historial del Centro (mismo estado que Plan)."""
+    try:
+        from entrenos.services.centro_decisiones_service import _estado_como_plan
+        return (_estado_como_plan(cliente, timezone.localdate()) or {}).get('inicio')
+    except Exception:
+        return None
+
+
 def _decisiones_evaluadas_memoria(cliente):
     try:
         from entrenos.services.aprendizaje_decisiones_service import decisiones_evaluadas
@@ -6011,6 +6039,9 @@ def memoria_entrenador(request, cliente_id):
         # Regla 4 del rumbo: qué decidió el plan y si funcionó.
         'decisiones_evaluadas': _decisiones_evaluadas_memoria(cliente),
         'decisiones_recientes': decisiones_recientes,
+        # 7-nov-2026: Memoria resume en una línea; el detalle está en el Centro.
+        'decisiones_resumen': _resumen_decisiones_90(decisiones_agrupadas),
+        'inicio_bloque_centro': _inicio_bloque_centro(cliente),
         'records': records,
         'sesiones_semana': sesiones_semana,
         'actividad_reciente': actividad_reciente,

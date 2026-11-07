@@ -96,7 +96,9 @@ class Revision(Base):
         self.assertEqual(r['suben'], ['Gemelos +12 %'])
         self.assertEqual(r['bajan'], ['Tríceps -6 %'])
         self.assertEqual(r['equilibrar'][0]['texto'], 'Isquios: -17 % al empezar → +3 % al acabar · recuperada')
-        self.assertIn('tríceps', r['cambia'])
+        # 7-nov-2026: tríceps mantiene el volumen, con su motivo (no se promete subirle series).
+        self.assertEqual(r['cambia'], 'Tríceps: mantengo el volumen actual. El recuento corregido no justifica '
+                                      'añadir series. Volveré a revisarlo con los datos del nuevo bloque.')
         self.assertEqual(r['decisiones'], {'funcionaron': 2, 'total': 3})
 
 

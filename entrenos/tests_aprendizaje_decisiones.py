@@ -81,7 +81,7 @@ class AprendizajeDecisionesTests(TestCase):
         self.client.force_login(self.user)
         response = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
         self.assertContains(response, 'Lo que decidí y si funcionó')
-        self.assertContains(response, '1 de 1 funcionaron')
+        self.assertContains(response, '1 de 1 cambios funcionaron')
         self.assertContains(response, 'Después: 62,5 kg × 10 con RPE 7.')
 
     def test_la_lista_omite_consolidaciones_y_repite_un_ejercicio_una_vez(self):
@@ -100,3 +100,57 @@ class AprendizajeDecisionesTests(TestCase):
         texto = frase_decision(log)
         self.assertIn('Después: 7 reps con RPE 6.', texto)
         self.assertNotIn('0 kg', texto)
+
+
+class CambiosYEvidencia20261107(AprendizajeDecisionesTests):
+    """7-nov-2026 · M1/M2: cuenta solo cambios concluyentes y enseña la sesión que lo comprobó."""
+
+    def test_la_cuenta_es_de_cambios(self):
+        self._log(self._entreno(14, 60, 10, 7), 'validada', accion='mantener')
+        self._log(self._entreno(13, 60, 10, 7), 'validada', accion='mantener')
+        self._log(self._entreno(12, 60, 10, 7), 'validada')
+        self._log(self._entreno(11, 60, 10, 7), 'fallida', 'x')
+        self._log(self._entreno(10, 60, 10, 7), 'neutra', 'Falta el RPE', accion='bajar_peso')
+        pendiente = self._log(self._entreno(9, 60, 10, 7), None)
+        GymDecisionLog.objects.filter(pk=pendiente.pk).update(fecha_evaluacion=None)
+        r = decisiones_evaluadas(self.cliente)
+        self.assertEqual((r['cambios_funcionaron'], r['cambios_concluyentes']), (1, 2))
+        self.assertEqual((r['cambios_sin_evidencia'], r['cambios_pendientes'], r['consolidaciones']), (1, 1, 2))
+        self.assertEqual(r['funcionaron'], 3)  # la cuenta antigua (Centro) sigue igual
+
+    def test_detalle_con_la_sesion_que_lo_comprobo(self):
+        origen = self._entreno(10, 60, 10, 7)
+        despues = self._entreno(5, 62.5, 10, 7)
+        self._log(origen, 'validada', 'Completado con RPE controlado')
+        d = decisiones_evaluadas(self.cliente)['items'][0]['detalle']
+        self.assertEqual(d['entreno_id'], despues.id)
+        self.assertEqual(d['sesion_fecha'], despues.fecha)
+        self.assertTrue(d['esperado'].startswith('Subí el peso a '))
+        self.assertNotIn('Objetivo de esa sesión', d['esperado'])  # no quedó registrado: no se inventa
+        self.assertEqual(d['ocurrido'], '62,5 kg × 10 con RPE 7. Completado con RPE controlado.')
+
+    def test_objetivo_registrado_si_hay_snapshot(self):
+        from entrenos.models import GymDecisionVersion
+        origen = self._entreno(10, 60, 10, 7)
+        despues = self._entreno(5, 62.5, 10, 7)
+        version = GymDecisionVersion.objects.create(
+            cliente=self.cliente, fecha=despues.fecha, version=1,
+            decision_id='regla4-objetivo', schema_version=2, origen=GymDecisionVersion.ORIGEN_MOTOR,
+            vigente=True, fingerprint='a' * 64, base_fingerprint='a' * 64,
+            postura='empujar', causa_principal='sesion_hoy',
+            snapshot={'entrenamiento': {'ejercicios': [
+                {'nombre': 'Press banca', 'repeticiones': '8-12', 'rpe_objetivo': 8}]}},
+        )
+        EntrenoRealizado.objects.filter(pk=despues.pk).update(gym_decision_version=version)
+        self._log(origen, 'validada')
+        d = decisiones_evaluadas(self.cliente)['items'][0]['detalle']
+        self.assertIn('Objetivo de esa sesión: 8-12 reps, RPE 8.', d['esperado'])
+
+    def test_memoria_enlaza_la_sesion(self):
+        origen = self._entreno(10, 60, 10, 7)
+        despues = self._entreno(5, 62.5, 10, 7)
+        self._log(origen, 'validada')
+        self.client.force_login(self.user)
+        r = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
+        self.assertContains(r, 'Qué se esperaba:')
+        self.assertContains(r, reverse('entrenos:post_entreno_resumen', args=[self.cliente.id, despues.id]))
