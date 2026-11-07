@@ -14,6 +14,8 @@ CONTRATO:
 
 from datetime import timedelta
 
+from django.utils import timezone
+
 from entrenos.models import ContratoSemanalGym, SesionProgramada
 
 
@@ -32,6 +34,10 @@ def construir_resumen_operativo_centro(
     ausencia se expresa como desconocida.
     """
     periodizacion = _periodizacion_en_curso(cliente, fecha_ref)
+    # 7-nov-2026: el bloque y la semana salen del mismo estado que Plan
+    # (proyectar_trayectoria_plan). En la semana de descarga no hay bloque «en
+    # curso» de contenido y el Centro decía «Bloque sin semana actual».
+    como_plan = _estado_como_plan(cliente, fecha_ref)
     bloque = (bloque_colaborativo or {}).get('bloque')
     bloque_dto = {
         'estado': None,
@@ -47,7 +53,18 @@ def construir_resumen_operativo_centro(
             'semana_actual': semana_actual,
             'semanas_total': bloque.semanas_previstas,
         }
-    if bloque_dto['semana_actual'] is None and periodizacion and periodizacion.get('semana'):
+    if bloque_dto['semana_actual'] is None and como_plan and como_plan.get('semana'):
+        bloque_dto = {
+            'estado': 'periodizacion',
+            'semana_actual': como_plan['semana'],
+            'semanas_total': como_plan['de'],
+            'nombre': como_plan['nombre'],
+            'descarga': como_plan['descarga'],
+            'siguiente_nombre': como_plan.get('siguiente_nombre'),
+            'siguiente_inicio': como_plan.get('siguiente_inicio'),
+            'inicio': como_plan.get('inicio'),
+        }
+    elif bloque_dto['semana_actual'] is None and periodizacion and periodizacion.get('semana'):
         bloque_dto = {
             'estado': 'periodizacion',
             'semana_actual': periodizacion['semana'],
@@ -63,7 +80,18 @@ def construir_resumen_operativo_centro(
         .order_by('-id')
         .first()
     )
-    if contrato is None and periodizacion:
+    if contrato is None and como_plan and como_plan.get('previstas') is not None:
+        semana_dto = {
+            'estado': 'periodizacion',
+            'completadas': como_plan['hechas'],
+            'sesiones_completadas': como_plan['hechas'],
+            'sesiones_parciales': None,
+            'sesiones_realizadas': como_plan['hechas'],
+            'objetivo': como_plan['previstas'],
+            'minimo': None,
+            'hecha_hoy': como_plan.get('hecha_hoy'),
+        }
+    elif contrato is None and periodizacion:
         from entrenos.services.revision_bloque_service import semana_en_curso
         semana = semana_en_curso(cliente, fecha_ref)
         semana_dto = {
@@ -162,6 +190,46 @@ def construir_resumen_operativo_centro(
         'carga': carga_dto,
     }
 
+def _estado_como_plan(cliente, fecha_ref):
+    """Fase, semana y sesiones tal y como las enseña Plan, o None.
+
+    Solo con periodización dinámica (``SemanaPlanGym``): sin ella el Centro
+    sigue con los acuerdos o dice que no lo sabe.
+    """
+    try:
+        from entrenos.models import SemanaPlanGym
+        from entrenos.services.periodizacion_dinamica_service import lunes_de
+        from entrenos.services.trayectoria_plan_service import proyectar_trayectoria_plan
+
+        lunes = lunes_de(fecha_ref)
+        if not SemanaPlanGym.objects.filter(cliente=cliente, lunes__lte=lunes).exists():
+            return None
+        registro = SemanaPlanGym.objects.filter(cliente=cliente, lunes=lunes).first()
+        trayectoria = proyectar_trayectoria_plan(cliente, fecha=fecha_ref)
+    except Exception:
+        return None
+    fase = trayectoria.get('periodizacion') or {}
+    semana = trayectoria.get('semana') or {}
+    siguiente = (trayectoria.get('macrociclo') or {}).get('siguiente_fase') or {}
+    sesiones = semana.get('sesiones') or []
+    hecha_hoy = next((s for s in sesiones if s.get('realizada') and s.get('fecha_realizada') == fecha_ref), None)
+    return {
+        'nombre': fase.get('nombre'),
+        'inicio': fase.get('inicio'),
+        'semana': fase.get('semana_actual'),
+        'de': fase.get('semanas'),
+        'descarga': bool(registro and registro.descarga),
+        'siguiente_nombre': siguiente.get('nombre'),
+        'siguiente_inicio': siguiente.get('inicio'),
+        'hechas': sum(1 for s in sesiones if s.get('realizada')) if semana else None,
+        'previstas': semana.get('objetivo_sesiones') if semana else None,
+        'hecha_hoy': {
+            'nombre': (hecha_hoy.get('nombre') or '').split(' - ')[0].strip(),
+            'completa': bool(hecha_hoy.get('completa')),
+        } if hecha_hoy else None,
+    }
+
+
 def _periodizacion_en_curso(cliente, fecha_ref):
     """Bloque en curso de la periodización, o None (nunca rompe el Centro)."""
     try:
@@ -182,6 +250,63 @@ _ACCION_GROUP_LABELS = {
     'deload': 'Descarga',
     'cambiar_variante': 'Cambiar variante',
 }
+
+
+# 7-nov-2026 · «Carga por ejercicio»: vigente frente a historial.
+_ACCIONES_QUE_CAMBIAN = ('subir_peso', 'subir_reps', 'bajar_peso', 'cambiar_variante')
+_ESTADO_VIGENTE = {'pospuesta': 'pospuesta', 'aplicada': 'aplicada', 'pendiente': 'para la próxima sesión'}
+
+
+def _fecha_entreno(entreno):
+    return getattr(entreno, 'fecha_ejecucion', None) or getattr(entreno, 'fecha', None)
+
+
+def decisiones_por_vigencia(cliente, decisiones, desde, hoy):
+    """Separa las decisiones de carga en vigentes e historial.
+
+    Vigente: la última decisión de cada ejercicio, si cambia algo (sube,
+    baja o cambia la variante), aún no se ha evaluado y el ejercicio no se ha
+    vuelto a hacer después (si se hizo, la sesión siguiente ya la sustituyó).
+    No importa su fecha: una anterior al bloque puede seguir vigente.
+    Historial: el resto, desde que empezó el bloque (``desde``), con fecha.
+
+    ``decisiones``: GymDecisionLog, más reciente primero.
+    """
+    from django.db.models import Q
+    from entrenos.models import EjercicioRealizado
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+
+    ultima_vez = {}
+    for nombre, fe, f in EjercicioRealizado.objects.filter(entreno__cliente=cliente).filter(
+        Q(entreno__fecha_ejecucion__lte=hoy) | Q(entreno__fecha_ejecucion__isnull=True, entreno__fecha__lte=hoy)
+    ).values_list('nombre_ejercicio', 'entreno__fecha_ejecucion', 'entreno__fecha'):
+        clave, fecha = normalizar_ejercicio(nombre), fe or f
+        if fecha and (clave not in ultima_vez or fecha > ultima_vez[clave]):
+            ultima_vez[clave] = fecha
+
+    vistos, vigentes, historial = set(), [], []
+    for log in decisiones:
+        clave = log.ejercicio_normalizado or normalizar_ejercicio(log.ejercicio)
+        fecha = _fecha_entreno(log.entreno_origen) if log.entreno_origen_id else None
+        fecha = fecha or timezone.localtime(log.fecha_creacion).date()
+        item = {
+            'ejercicio': log.ejercicio.title() if log.ejercicio.islower() else log.ejercicio,
+            'accion': log.accion,
+            'label': _ACCION_GROUP_LABELS.get(log.accion, log.accion_label),
+            'motivo': log.motivo,
+            'fecha': fecha,
+            'estado': None,
+            'motivo_postergacion': log.motivo_postergacion if log.estado_aplicacion == 'pospuesta' else None,
+        }
+        primera = clave not in vistos
+        vistos.add(clave)
+        if (primera and log.accion in _ACCIONES_QUE_CAMBIAN and log.resultado is None
+                and not (ultima_vez.get(clave) and ultima_vez[clave] > fecha)):
+            item['estado'] = _ESTADO_VIGENTE.get(log.estado_aplicacion, 'para la próxima sesión')
+            vigentes.append(item)
+        elif desde is None or fecha >= desde:
+            historial.append(item)
+    return {'vigentes': vigentes, 'historial': historial, 'desde': desde}
 
 
 def agrupar_traces_recientes(traces: list[dict]) -> list[dict]:

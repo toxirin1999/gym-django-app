@@ -78,12 +78,13 @@ class PlanDecisionesBase(TestCase):
 
 
 class TestSiguientePasoOperable(PlanDecisionesBase):
-    def test_sin_bloque_el_siguiente_paso_ancla_el_formulario_de_preparacion(self):
+    def test_sin_bloque_no_pide_preparar_un_bloque(self):
+        # 7-nov-2026: los bloques los decide el entrenador; el Centro no ofrece el formulario.
         response = self._get()
 
-        self.assertContains(response, 'href="#preparar-bloque-gym"')
-        self.assertContains(response, 'id="preparar-bloque-gym"')
-        self.assertContains(response, 'aria-label="Preparar bloque Gym"')
+        self.assertNotContains(response, 'href="#preparar-bloque-gym"')
+        self.assertNotContains(response, 'id="preparar-bloque-gym"')
+        self.assertNotContains(response, 'aria-label="Preparar bloque Gym"')
 
     def test_bloque_sin_proxima_sesion_lleva_a_la_rutina(self):
         estrategia = EstrategiaSemanalGym.objects.create(

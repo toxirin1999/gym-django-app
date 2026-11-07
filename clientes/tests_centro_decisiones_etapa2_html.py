@@ -131,16 +131,14 @@ class CentroDecisionesEtapa2HTMLTests(SimpleTestCase):
         activo_inicio = source.index('id="activo-ahora"')
         siguiente = source[siguiente_inicio:activo_inicio]
 
-        self.assertIn('href="#preparar-bloque-gym"', siguiente)
-        self.assertIn('aria-label="Preparar bloque Gym"', siguiente)
+        # 7-nov-2026: sin formularios de bloque; la salida útil es la rutina.
+        self.assertNotIn('href="#preparar-bloque-gym"', siguiente)
         self.assertIn("{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}", siguiente)
-        # 14-oct-2026: "Ver rutina" se ofrece siempre que hay bloque, de acuerdo
-        # o de la periodización (la próxima sesión ya sale de la cola semanal).
         self.assertIn(
-            "{% elif bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}",
+            "{% if bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}",
             siguiente,
         )
-        self.assertIn('id="preparar-bloque-gym"', source)
+        self.assertNotIn('id="preparar-bloque-gym"', source)
 
     def test_layout_cubre_375_y_escritorio_sin_overflow(self):
         source = self.source

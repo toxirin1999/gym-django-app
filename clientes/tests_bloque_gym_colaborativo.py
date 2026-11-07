@@ -47,7 +47,8 @@ class BloqueGymColaborativoCentroTests(TestCase):
         )
         response = self.client.get(reverse("clientes:plan_decisiones"))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Preparar bloque Gym")
+        # 7-nov-2026: el Centro ya no pide preparar bloques; lo decide el entrenador.
+        self.assertNotContains(response, "Preparar bloque Gym")
         self.assertEqual(antes, (
             EstrategiaSemanalGym.objects.count(), ContratoBloqueGym.objects.count(),
             ContratoSemanalGym.objects.count(), SesionProgramada.objects.count(),

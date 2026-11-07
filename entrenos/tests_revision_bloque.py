@@ -193,6 +193,7 @@ class CentroSigueLaPeriodizacion(Base):
         self.assertEqual(r['semana'], {
             'estado': 'periodizacion', 'completadas': 1, 'sesiones_completadas': 1,
             'sesiones_parciales': None, 'sesiones_realizadas': 1, 'objetivo': 4, 'minimo': None,
+            'hecha_hoy': None,
         })
 
     def test_sin_periodizacion_sigue_desconocido(self):
@@ -246,6 +247,6 @@ class CentroSigueLaPeriodizacion(Base):
         self.assertNotIn('Bloque sin semana actual', html)
         self.assertNotIn('Semana pendiente de programar', html)
         self.assertIn('1 de 4 sesiones', html)
-        self.assertIn('El bloque lo lleva la periodización', html)
+        self.assertNotIn('El bloque lo lleva la periodización', html)  # 7-nov-2026: sin formulario de prioridad
         self.assertIn('Ver rutina', html)
         self.assertNotIn('aria-label="Preparar bloque Gym"', html)

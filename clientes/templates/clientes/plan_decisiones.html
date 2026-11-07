@@ -1358,8 +1358,9 @@
         <div class="dc-next-cell">
           <span class="dc-next-label">Bloque y carga</span>
           {% if resumen_operativo.bloque.semana_actual %}
-          <strong class="dc-next-value">Semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}</strong>
-          {% if resumen_operativo.bloque.nombre %}<span class="dc-next-meta">{{ resumen_operativo.bloque.nombre }}{% if resumen_operativo.bloque.descarga %} · semana de descarga{% endif %}</span>{% endif %}
+          <strong class="dc-next-value">{% if resumen_operativo.bloque.descarga %}Descarga · {% endif %}Semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}</strong>
+          {% if resumen_operativo.bloque.nombre and not resumen_operativo.bloque.descarga %}<span class="dc-next-meta">{{ resumen_operativo.bloque.nombre }}</span>{% endif %}
+          {% if resumen_operativo.bloque.siguiente_nombre and resumen_operativo.bloque.semana_actual == resumen_operativo.bloque.semanas_total %}<span class="dc-next-meta">El lunes {{ resumen_operativo.bloque.siguiente_inicio|date:"d/m" }} empieza {{ resumen_operativo.bloque.siguiente_nombre }}</span>{% endif %}
           {% else %}
           <strong class="dc-next-value">Bloque sin semana actual</strong>
           {% endif %}
@@ -1372,11 +1373,7 @@
           {% endif %}
         </div>
       </div>
-      {% if not bloque_colaborativo.bloque and not bloque_colaborativo.cierre_pendiente and resumen_operativo.bloque.estado != 'periodizacion' %}
-      <div class="dc-actions">
-        <a class="dc-button is-primary" href="#preparar-bloque-gym" aria-label="Preparar bloque Gym">Preparar bloque Gym</a>
-      </div>
-      {% elif bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}
+      {% if bloque_colaborativo.bloque or resumen_operativo.bloque.estado == 'periodizacion' %}
       <div class="dc-actions">
         <a class="dc-button is-primary" href="{% url 'entrenos:rutina_silenciosa_preview' cliente.id %}">Ver rutina</a>
       </div>
@@ -1425,30 +1422,6 @@
           </form>
         </details>
         {% endif %}
-      </article>
-      {% elif not bloque_colaborativo.cierre_pendiente and resumen_operativo.bloque.estado == 'periodizacion' %}
-      <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
-        <h3 id="preparar-bloque-titulo" class="dc-card-text">Priorizar un grupo muscular</h3>
-        <p class="dc-card-meta">El bloque lo lleva la periodización ({{ resumen_operativo.bloque.nombre }}, semana {{ resumen_operativo.bloque.semana_actual }} de {{ resumen_operativo.bloque.semanas_total }}) y el plan ya sube series solo cuando una zona se queda atrás. Esto es para cuando tú quieras priorizar algo más.</p>
-        <details class="dc-accordion">
-          <summary>Elegir grupos <span aria-hidden="true">⌄</span></summary>
-          <div class="dc-accordion-body">
-            <p class="dc-card-meta">Cada grupo que marques gana 2 series por semana durante las semanas que elijas (brazos: bíceps y tríceps). El total por grupo nunca pasa de +4.</p>
-            <form class="dc-form-grid" id="preparar-bloque-gym" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
-              {% csrf_token %}{{ form_bloque_gym.as_p }}
-              <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
-            </form>
-          </div>
-        </details>
-      </article>
-      {% elif not bloque_colaborativo.cierre_pendiente %}
-      <article class="dc-card" aria-labelledby="preparar-bloque-titulo">
-        <h3 id="preparar-bloque-titulo" class="dc-card-text">Preparar bloque Gym</h3>
-        <p class="dc-card-meta">Define la dirección. El plan mantiene internamente el acuerdo semanal de 5 sesiones y mínimo 3.</p>
-        <form class="dc-form-grid" id="preparar-bloque-gym" method="post" action="{% url 'clientes:preparar_bloque_gym' %}">
-          {% csrf_token %}{{ form_bloque_gym.as_p }}
-          <button class="dc-button is-primary" type="submit">Preparar propuesta</button>
-        </form>
       </article>
       {% endif %}
 
@@ -1883,7 +1856,7 @@
           <h3 class="dc-subtitle">Lectura de la semana</h3>
           <article class="dc-joi-reading">
             <p class="dc-joi-text">{{ lectura_semanal_joi.texto }}</p>
-            {% if lectura_semanal_joi.estado %}
+            {% if lectura_semanal_joi.estado and lectura_semanal_joi.estado != 'minima' %}
             <p class="dc-joi-state">
               JOI:
               {% if lectura_semanal_joi.estado == 'serena' %}calma y continuidad
@@ -1896,44 +1869,55 @@
         </div>
         {% endif %}
 
-        {% if decisiones_agrupadas %}
+        {% if carga_vigencia.vigentes or carga_vigencia.historial %}
         <div class="dc-subsection is-wide">
           <h3 class="dc-subtitle">Carga por ejercicio</h3>
-          <p class="dc-subtitle-meta">Qué decidió el plan para cada ejercicio en los últimos 30 días.</p>
-          <div class="dc-load-list">
-            {% for g in decisiones_agrupadas %}
-            <article class="dc-group">
-              <details class="dc-load-detail">
-              <summary class="dc-load-head">
-                <h4 class="dc-group-title">{{ g.label }}</h4>
-                <div class="dc-load-badges">
-                  {% if g.pospuestas_count %}
-                  <span class="dc-badge is-postponed">
-                    {{ g.pospuestas_count }} pospuesta{{ g.pospuestas_count|pluralize }}
-                  </span>
-                  {% endif %}
-                  <span class="dc-badge
-                    {% if g.accion == 'mantener' %} is-hold
-                    {% elif g.accion == 'bajar_peso' %} is-down
-                    {% elif g.accion == 'cambiar_variante' %} is-variant
-                    {% elif g.accion == 'deload' %} is-deload
-                    {% elif g.accion == 'subir_peso' or g.accion == 'subir_reps' %} is-up{% endif %}">
-                    {{ g.count }} ejercicio{{ g.count|pluralize }}
-                  </span>
-                </div>
-              </summary>
-              <p class="dc-group-detail">{{ g.ejercicios|join:", " }}</p>
-              {% if g.motivo_principal %}
-              <p class="dc-group-meta">{{ g.motivo_principal }}</p>
-              {% endif %}
-              </details>
+          <p class="dc-subtitle-meta">Vigente: lo que todavía cambia tu próximo entreno. Historial: lo que decidió desde que empezó el bloque{% if carga_vigencia.desde %} ({{ carga_vigencia.desde|date:"d/m" }}){% endif %}, ya aplicado o sustituido.</p>
+          <div class="dc-load-list" aria-label="Decisiones vigentes">
+            {% for d in carga_vigencia.vigentes %}
+            <article class="dc-technical-card dc-detail-row">
+              <div>
+                <p class="dc-detail-name">{{ d.ejercicio }}</p>
+                {% if d.motivo %}<p class="dc-card-meta">{{ d.motivo }}</p>{% endif %}
+                {% if d.motivo_postergacion %}<p class="dc-card-note">{{ d.motivo_postergacion }}</p>{% endif %}
+              </div>
+              <div class="dc-detail-side">
+                <span class="dc-badge{% if d.accion == 'bajar_peso' %} is-down{% elif d.accion == 'cambiar_variante' %} is-variant{% elif d.estado == 'pospuesta' or d.pausa %} is-postponed{% else %} is-up{% endif %}">{{ d.label }} · {{ d.estado }}</span>
+                {% if d.fecha %}<span class="dc-date">{{ d.fecha|date:"d M" }}</span>{% endif %}
+              </div>
             </article>
+            {% empty %}
+            <div class="dc-empty">Ninguna decisión de carga pendiente: el próximo entreno sale de tu última sesión.</div>
             {% endfor %}
           </div>
+          {% if carga_vigencia.historial %}
+          <details class="dc-accordion">
+            <summary>
+              <span>Historial ({{ carga_vigencia.historial|length }})</span>
+              <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
+              </svg>
+            </summary>
+            <div class="dc-accordion-body">
+              {% for d in carga_vigencia.historial %}
+              <article class="dc-technical-card dc-detail-row">
+                <div>
+                  <p class="dc-detail-name">{{ d.ejercicio }}</p>
+                  {% if d.motivo %}<p class="dc-card-meta">{{ d.motivo }}</p>{% endif %}
+                </div>
+                <div class="dc-detail-side">
+                  <span class="dc-badge">{{ d.label }}</span>
+                  <span class="dc-date">{{ d.fecha|date:"d M" }}</span>
+                </div>
+              </article>
+              {% endfor %}
+            </div>
+          </details>
+          {% endif %}
         </div>
         {% endif %}
 
-        {% if traces_recientes or decisiones_carga or sesiones_esenciales %}
+        {% if traces_recientes or sesiones_esenciales %}
         <div class="dc-subsection is-wide">
           <h3 class="dc-subtitle">Detalle completo</h3>
 
@@ -1978,47 +1962,6 @@
                 {% if t.lesion_label %}
                 <p class="dc-card-meta">Lesión: {{ t.lesion_label }}.</p>
                 {% endif %}
-              </article>
-              {% endfor %}
-            </div>
-          </details>
-          {% endif %}
-
-          {% if decisiones_carga %}
-          <details class="dc-accordion">
-            <summary>
-              <span>Ver decisiones por ejercicio ({{ decisiones_carga|length }})</span>
-              <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
-              </svg>
-            </summary>
-            <div class="dc-accordion-body">
-              {% for d in decisiones_carga %}
-              <article class="dc-technical-card dc-detail-row">
-                <div>
-                  <p class="dc-detail-name">{{ d.ejercicio }}</p>
-                  {% if d.motivo %}
-                  <p class="dc-card-meta">{{ d.motivo }}</p>
-                  {% endif %}
-                  {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' and d.motivo_postergacion %}
-                  <p class="dc-card-note">{{ d.motivo_postergacion }}</p>
-                  {% endif %}
-                </div>
-                <div class="dc-detail-side">
-                  <span class="dc-badge
-                    {% if d.accion == 'subir_peso' and d.estado_aplicacion == 'pospuesta' %} is-postponed
-                    {% elif d.accion == 'mantener' %} is-hold
-                    {% elif d.accion == 'bajar_peso' %} is-down
-                    {% elif d.accion == 'deload' %} is-deload
-                    {% elif d.accion == 'subir_peso' %} is-up{% endif %}">
-                    {% if d.accion == 'subir_peso' %}
-                      {% if d.estado_aplicacion == 'pospuesta' %}Subida pospuesta{% else %}Progresión sugerida{% endif %}
-                    {% else %}
-                      {{ d.get_accion_display }}
-                    {% endif %}
-                  </span>
-                  <span class="dc-date">{{ d.fecha_creacion|date:"d M" }}</span>
-                </div>
               </article>
               {% endfor %}
             </div>

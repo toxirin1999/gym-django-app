@@ -6690,6 +6690,8 @@ def plan_decisiones_view(request):
         analisis_semanal,
         hoy,
     )
+    cambios_ahora = _hoy_segun_sesion(cliente, hoy, cambios_ahora, resumen_operativo)
+    carga_vigencia = _carga_por_vigencia(cliente, hoy, resumen_operativo)
     bloque_visible = bloque_colaborativo.get('bloque')
     siguiente_lunes = hoy + timedelta(days=(-hoy.weekday()) % 7)
     inicial_bloque = {
@@ -6732,6 +6734,7 @@ def plan_decisiones_view(request):
         'estado_plan': estado_plan,
         'traces_agrupados': traces_agrupados,
         'decisiones_agrupadas': decisiones_agrupadas,
+        'carga_vigencia': carga_vigencia,
         'cierre_semanal': cierre_semanal,
         'balance_semana': balance_semana,
         'cierre_metricas_ui': cierre_metricas_ui,
@@ -6767,6 +6770,60 @@ _ESTADO_HOY = {
 }
 
 
+def _carga_por_vigencia(cliente, hoy, resumen_operativo):
+    """«Carga por ejercicio»: lo vigente y el historial del bloque (7-nov-2026)."""
+    from entrenos.models import GymDecisionLog
+    from entrenos.services.centro_decisiones_service import decisiones_por_vigencia
+    desde = ((resumen_operativo or {}).get('bloque') or {}).get('inicio')
+    try:
+        logs = GymDecisionLog.objects.filter(
+            cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=90),
+        ).select_related('entreno_origen').order_by('-fecha_creacion')
+        vigencia = decisiones_por_vigencia(cliente, logs, desde or hoy - timedelta(days=30), hoy)
+    except Exception:
+        logger.exception('Centro: no se pudo separar la carga vigente del historial')
+        return None
+    # La propuesta por zona en curso también cambia el entreno; en la descarga
+    # sigue visible, con su estado (en pausa).
+    visible = _propuesta_zona_visible(cliente, hoy)
+    if visible and visible.get('tipo') == 'en_curso':
+        pres, p = visible['presentacion'], visible['propuesta']
+        if visible.get('pausa'):
+            lunes = hoy + timedelta(days=7 - hoy.weekday())
+            estado = f'en pausa por la descarga hasta el lunes {lunes:%d/%m}'
+        else:
+            estado = f"semana {visible['semana']} de {pres['semanas']}" if visible.get('semana') else 'en curso'
+        vigencia['vigentes'].insert(0, {
+            'ejercicio': pres.get('zona') or 'Zona', 'accion': 'propuesta_zona',
+            'label': f"{pres['ajuste_texto']} series por semana", 'estado': estado, 'pausa': visible.get('pausa'),
+            'motivo': ('Se mide en ' + ' y '.join(pres['ejercicios']) + '. ' if pres.get('ejercicios') else '')
+                      + (f'Lo compruebo el {p.fin:%d/%m}.' if getattr(p, 'fin', None) else ''),
+            'fecha': None, 'motivo_postergacion': None,
+        })
+    return vigencia
+
+
+def _hoy_segun_sesion(cliente, hoy, cambios, resumen_operativo):
+    """«Hoy: Día 5 hecho» si la sesión de hoy está registrada, aunque haya un descanso guardado.
+
+    7-nov-2026: sale de la sesión de gym registrada (la misma semana que Plan),
+    no de actividades importadas: un partido no da por hecho el Día 5.
+    """
+    hecha = ((resumen_operativo or {}).get('semana') or {}).get('hecha_hoy')
+    if hecha:
+        titulo = f"Hoy: {hecha['nombre'] or 'sesión'} {'hecho' if hecha['completa'] else 'registrado en parte'}"
+    else:
+        from django.db.models import Q
+        from entrenos.models import EntrenoRealizado
+        if not EntrenoRealizado.objects.filter(cliente=cliente).filter(
+            Q(fecha_ejecucion=hoy) | Q(fecha_ejecucion__isnull=True, fecha=hoy)
+        ).exists():
+            return cambios
+        titulo = 'Hoy: sesión de gym hecha'
+    resto = [c for c in cambios if not str(c.get('titulo', '')).startswith('Hoy:')]
+    return [{'titulo': titulo, 'porque': None}] + resto
+
+
 def _cambios_plan_ahora(cliente, hoy):
     """Lo que el plan está cambiando ahora, cada cosa con su porqué y su fecha.
 
@@ -6795,6 +6852,10 @@ def _cambios_plan_ahora(cliente, hoy):
         p, pres = visible['propuesta'], visible['presentacion']
         zona_en_curso = (pres.get('zona') or '').casefold()
         semana = f" · semana {visible['semana']} de {pres['semanas']}" if visible.get('semana') else ''
+        if visible.get('pausa'):
+            # 7-nov-2026: el mismo estado que Plan (propuesta_visible): en la
+            # descarga la propuesta no suma series ni cuenta.
+            semana = ' · en pausa esta semana por la descarga'
         porque = None
         if pres.get('variacion_texto'):
             signo = '+' if float(pres['variacion_pct']) > 0 else ''
@@ -6802,7 +6863,11 @@ def _cambios_plan_ahora(cliente, hoy):
         detalle = []
         if pres.get('ejercicios'):
             detalle.append('Se mide en ' + ' y '.join(pres['ejercicios']) + '.')
-        if getattr(p, 'fin', None):
+        if visible.get('pausa'):
+            lunes = hoy + timedelta(days=7 - hoy.weekday())
+            detalle.append(f"Se reanuda el lunes {lunes:%d/%m}"
+                           + (f" y lo compruebo el {p.fin:%d/%m}." if getattr(p, 'fin', None) else '.'))
+        elif getattr(p, 'fin', None):
             detalle.append(f"Lo compruebo al terminar, el {p.fin:%d/%m}.")
         cambios.append({
             'titulo': f"{pres['ajuste_texto']} series por semana de {pres['zona'].lower()}{semana}",
