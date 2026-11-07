@@ -419,9 +419,17 @@ def _check_observando(usuario):
     Señales de OBSERVANDO:
     1. JOI Habitación está OBSERVANDO (principal)
     2. Diario: apertura hecha sin cierre (manana_hecha)
+
+    7-nov-2026: con la habitación de JOI y el diario archivados, Ahora ya no
+    manda allí (core/modulos.py).
     """
+    from core.modulos import archivado
+    if archivado('joi_habitacion') and archivado('diario'):
+        return None
     try:
         # Check 1: ¿JOI Habitación está OBSERVANDO?
+        if archivado('joi_habitacion'):
+            raise LookupError('habitación de JOI archivada')  # va al except, sin aviso
         from joi.services import determinar_estado_habitacion_joi
         estado, motivo = determinar_estado_habitacion_joi(usuario)
         if estado == 'OBSERVANDO':
@@ -437,6 +445,8 @@ def _check_observando(usuario):
         logger.debug(f"_check_observando (JOI): {e}")
 
     # Check 2: ¿Diario: apertura hecha, cierre pendiente?
+    if archivado('diario'):
+        return None
     try:
         from diario.models import ProsocheDiario
         from diario.services.estado_diario import calcular_estado_diario_hoy

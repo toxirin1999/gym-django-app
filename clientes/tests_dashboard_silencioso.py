@@ -40,7 +40,8 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertContains(response, "Rutina")
         self.assertContains(response, "Plan")
         self.assertContains(response, "Memoria")
-        self.assertContains(response, "Vida")
+        # 7-nov-2026: Vida (diario) archivado; la barra ya no lo enlaza.
+        self.assertNotContains(response, "<strong>Vida</strong>", html=False)
         self.assertContains(
             response,
             reverse("entrenos:rutina_silenciosa_preview", args=[self.cliente.id]),

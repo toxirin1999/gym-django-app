@@ -103,6 +103,14 @@ JOI_VOZ_ACTIVA = os.environ.get('JOI_VOZ_ACTIVA', 'False') == 'True'
 # y las pantallas siguen ahí. Para reactivar: variable de entorno a 'True'.
 GAMIFICACION_ACTIVA = os.environ.get('GAMIFICACION_ACTIVA', 'False') == 'True'
 NUTRICION_ACTIVA = os.environ.get('NUTRICION_ACTIVA', 'False') == 'True'
+# 7-nov-2026 (decisión de David): Vida/diario, logros, estoico, nutrición y la
+# habitación de JOI quedan archivados, y Hyrox congelado. Archivar = sin
+# enlaces ni avisos desde la app del entrenador; el código, las URLs y los
+# datos siguen ahí. Se mantienen Strava (conexión, reconciliación y aviso del
+# briefing) y lo que el entrenador de fuerza sigue usando (lesiones y
+# recuperación). Ver core/modulos.py.
+MODULOS_ARCHIVADOS = ('diario', 'logros', 'estoico', 'nutricion', 'joi_habitacion')
+HYROX_CONGELADO = os.environ.get('HYROX_CONGELADO', 'True') == 'True'
 
 from celery.schedules import crontab
 CELERY_BEAT_SCHEDULE = {

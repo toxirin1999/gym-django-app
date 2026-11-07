@@ -198,7 +198,9 @@ class PanelMovilidadFidelidadVisualTests(TestCase):
         ).read_text()
 
         self.assertIn("{% include 'includes/bottom_nav.html' with activo='rutina' %}", plantilla)
-        self.assertIn("diario:dashboard_diario", componente)
+        # 7-nov-2026: Vida (diario) archivado; la barra ya no lo enlaza.
+        self.assertNotIn("diario:dashboard_diario", componente)
+        self.assertIn("clientes:memoria_entrenador", componente)
         self.assertNotIn("#memoria", plantilla)
         self.assertNotIn("#vida", plantilla)
 

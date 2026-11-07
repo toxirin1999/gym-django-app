@@ -8,7 +8,7 @@ Valida que:
 4. Fallback graceful si Diario no está disponible
 """
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth.models import User
 from django.utils import timezone
 
@@ -17,6 +17,7 @@ from diario.models import ProsocheMes, ProsocheDiario
 from core.organismo import resolver_estado_sistema_hoy
 
 
+@override_settings(MODULOS_ARCHIVADOS=())  # 7-nov-2026: el diario está archivado; aquí se prueba sin archivar
 class TestDiarioOrganismo40(TestCase):
     """Tests para Phase Diario/Org 4.0 — Integración canónica"""
 

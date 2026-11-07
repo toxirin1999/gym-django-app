@@ -14,8 +14,10 @@ class BottomNavigationAccessibilityTests(SimpleTestCase):
     def test_nav_expone_nombre_estado_actual_y_destinos_principales(self):
         self.assertIn('aria-label="Navegación principal"', self.template)
         self.assertIn('aria-current="page"', self.template)
-        for label in ("Ahora", "Rutina", "Plan", "Memoria", "Vida"):
+        for label in ("Ahora", "Rutina", "Plan", "Memoria"):
             self.assertIn(f"<strong>{label}</strong>", self.template)
+        # 7-nov-2026: Vida (diario) archivado.
+        self.assertNotIn("<strong>Vida</strong>", self.template)
 
     def test_enlaces_cumplen_area_tactil_y_foco_visible(self):
         self.assertIn("min-height:44px", self.template)

@@ -5750,7 +5750,11 @@ def memoria_entrenador(request, cliente_id):
         from hyrox.models import HyroxObjective, HyroxActivity
         from hyrox.training_engine import RPECalibrator, StagnationEngine
 
-        hyrox_obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
+        # 7-nov-2026: Hyrox congelado (core/modulos.py): fuera de Memoria su perfil,
+        # sus estaciones y la calibración de RPE en cardio.
+        from core.modulos import hyrox_congelado
+        if not hyrox_congelado():
+            hyrox_obj = HyroxObjective.objects.filter(cliente=cliente, estado='activo').first()
         if hyrox_obj:
             # Calibración RPE
             bias_info = RPECalibrator.get_bias(hyrox_obj)
