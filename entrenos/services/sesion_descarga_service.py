@@ -165,6 +165,7 @@ def ajustar_a_descarga(cliente, ej, hoy):
         if peso_ref <= 0:
             return None
         salto = salto_carga(cliente, nombre)
+        cita = None
         if son_rangos_compatibles(reps_ref, rango_txt):
             peso = a_escala(peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
             if peso >= peso_ref - 1e-6:
@@ -179,21 +180,29 @@ def ajustar_a_descarga(cliente, ej, hoy):
             # 7-nov-2026 (nota 2): la estimación más prudente de todas las series.
             # Con 15 × 4 @10 y luego 10 × 7 @9 salía 12,5 × 10 (desde el fallo);
             # desde la de 10 kg sale 7,5.
-            estimados = [peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))]
+            estimados = [(peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe)),
+                          peso_ref, reps_ref)]
             for serie in lectura.get('series') or []:
                 try:
                     if float(serie.get('peso') or 0) > 0 and int(serie.get('reps') or 0) > 0:
-                        estimados.append(peso_para_reps(float(serie['peso']), int(serie['reps']),
-                                                        serie.get('rpe'), minimo, float(rpe)))
+                        estimados.append((peso_para_reps(float(serie['peso']), int(serie['reps']),
+                                                         serie.get('rpe'), minimo, float(rpe)),
+                                          float(serie['peso']), int(serie['reps'])))
                 except (TypeError, ValueError):
                     continue
-            estimados = [e for e in estimados if e]
-            estimado = min(estimados) if estimados else None
+            estimados = [e for e in estimados if e[0]]
+            elegida = min(estimados, key=lambda e: e[0]) if estimados else None
+            estimado = elegida[0] if elegida else None
+            if elegida:
+                # 7-nov-2026 (nota 2 del Día 5): la frase cita la serie de la que
+                # sale el peso (10 kg × 7), no la fallida (15 kg × 4).
+                cita = (elegida[1], elegida[2])
             peso = a_escala(estimado or peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
             reps = minimo
         tope = tope_de(cliente, nombre)
         if tope:
             peso = min(peso, float(tope))
+        cita_peso, cita_reps = cita or (peso_ref, reps_ref)
         suelo = peso_minimo(nombre)
         if suelo:
             peso = max(peso, suelo)
@@ -210,7 +219,7 @@ def ajustar_a_descarga(cliente, ej, hoy):
                      f'({cuando} {kg(peso_ref)} kg × {reps_ref}); bajar un salto sería demasiado. '
                      f'Sin apurar (RPE {kg(rpe)}): que te sobren 4 o 5. No se busca subir.')
         else:
-            frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(peso_ref)} kg × {reps_ref}), '
+            frase = (f'Semana de descarga: {kg(peso)} kg × {reps} ({cuando} {kg(cita_peso)} kg × {cita_reps}), '
                      f'sin apurar (RPE {kg(rpe)}){sobra}. No se busca subir.')
     _limpiar_progresion(ej)
     ej['regla_carga'] = 'descarga'

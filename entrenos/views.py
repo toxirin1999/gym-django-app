@@ -33,6 +33,17 @@ from .utils.utils import normalizar_nombre_ejercicio, nombres_ejercicio_equivale
 from .services.tempo_service import resolver_tempo_sesion
 from .services.calentamiento_service import get_aproximaciones_calentamiento
 from .services.progreso_service import calcular_sugerencia_tope, detectar_estancamiento
+
+
+def _es_semana_descarga(cliente, fecha):
+    """7-nov-2026: True si la semana de ``fecha`` es de descarga en el plan."""
+    try:
+        from entrenos.services.sesion_descarga_service import semana_plan_descarga
+        return semana_plan_descarga(cliente.id, fecha)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 from types import SimpleNamespace
 import copy
 from types import SimpleNamespace
@@ -4083,6 +4094,9 @@ def vista_entrenamiento_activo(request, cliente_id):
                 ejercicio['estancado'] = detectar_estancamiento(
                     cliente, ejercicio.get('nombre', ''), fecha_obj,
                 )
+                # 7-nov-2026 (nota 1 del Día 5): sin ⚡ Estancado en descarga.
+                if ejercicio.get('deload') or ejercicio.get('regla_carga') == 'descarga' or _es_semana_descarga(cliente, fecha_obj):
+                    ejercicio['estancado'] = False
                 # 13-oct-2026: tope de máquina guardado y salto real de peso.
                 from entrenos.services.maquina_service import a_escala, salto_carga, tope_de
                 # 17-oct-2026: escala real del equipo (máquina 5, discos 2,5).
@@ -4572,6 +4586,9 @@ def vista_entrenamiento_activo(request, cliente_id):
             ejercicio['estancado'] = detectar_estancamiento(
                 cliente, ejercicio.get('nombre', ''), fecha_obj
             )
+            # 7-nov-2026 (nota 1 del Día 5): sin ⚡ Estancado en descarga.
+            if ejercicio.get('deload') or ejercicio.get('regla_carga') == 'descarga' or _es_semana_descarga(cliente, fecha_obj):
+                ejercicio['estancado'] = False
 
             _motivo_peso_coherente(ejercicio)
             _anotar_series_sin_carga(cliente, ejercicio, fecha_obj)

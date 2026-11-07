@@ -444,6 +444,43 @@ def aplicar_decision_carga(ej, decision):
     return True
 
 
+def _referencia_mas_cercana(lectura, nombre):
+    """La referencia de esa sesión; si ninguna serie llegó a su rango, la que más se acercó.
+
+    7-nov-2026 (nota 5 del Día 5): extensiones 15 × 4 @10 y 10 × 7 @9 en 10-15.
+    «Vuelve a 15 kg» repetía el fallo; se parte de 10 kg × 7.
+    """
+    from entrenos.services.ultima_sesion_service import rango_de_sesion, serie_referencia
+    ref = lectura['referencia']
+    series = [s for s in lectura.get('series') or [] if int(s.get('reps') or 0) > 0]
+    rango = rango_de_sesion(lectura['entreno'], nombre) if lectura.get('entreno') else None
+    if not series or not rango:
+        return ref
+    en_rango = serie_referencia(series, rango[0])
+    if en_rango and en_rango.get('en_rango'):
+        return ref
+    mas = max(int(s['reps']) for s in series)
+    peso = max(float(s['peso']) for s in series if int(s['reps']) == mas)
+    return dict(ref, peso=peso, reps=mas, reps_mediana=mas)
+
+
+def _aviso_rango_nuevo(cliente, nombre, fecha, rango_antes):
+    """' Con Fuerza — Hipertrofia va a 6-8 reps: el peso sale para ese rango.' o ''."""
+    try:
+        from entrenos.services.bloque_siguiente_service import bloque_nuevo, rango_proximo
+        from entrenos.services.ultima_sesion_service import rango_reps
+        nuevo = bloque_nuevo(cliente, fecha)
+        if not nuevo:
+            return ''
+        proximo = rango_proximo(cliente, nombre, fecha)
+        rango = rango_reps(proximo) if proximo else None
+        if not rango or tuple(rango) == tuple(rango_antes or ()):
+            return ''
+        return f' Con {nuevo["nombre"]} va a {proximo} reps: el peso sale para ese rango.'
+    except Exception:  # noqa: BLE001
+        return ''
+
+
 def _proxima_vez_descarga_sin_carga(cliente, entreno, nombre, tipo_progresion, con_efecto):
     """Tiempo o reps sin carga tras una sesión de descarga: vuelve a lo de antes."""
     from datetime import timedelta as _td
@@ -516,7 +553,7 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         if not antes or antes.get('descarga'):
             texto = 'Hoy era descarga: no cuenta como referencia.'
             return (texto, 'Volver', None) if con_efecto else (texto, 'Volver')
-        ref = antes['referencia']
+        ref = _referencia_mas_cercana(antes, nombre)
         reps_antes = ref.get('reps_mediana') if ref.get('reps_mediana') is not None else ref['reps']
         reps_antes = int(round(float(reps_antes)))
         peso_antes = float(ref['peso'])
@@ -525,6 +562,10 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
             texto = (f'Hoy era descarga: no cuenta como referencia. La próxima vez se parte de lo de antes, '
                      f'{cuando}: {_kg(peso_antes)} kg × {reps_antes}.')
             efecto = f'Vuelve a {_kg(peso_antes)} kg'
+            # 7-nov-2026 (nota 6 del Día 5): si el bloque nuevo le cambia el
+            # rango, el peso de la próxima vez sale para ese rango.
+            texto += _aviso_rango_nuevo(cliente, nombre, entreno.fecha,
+                                        rango_de_sesion(antes['entreno'], nombre) if antes.get('entreno') else rango)
         else:
             texto = (f'Hoy era descarga: no cuenta como referencia. La próxima vez se parte de lo de antes, '
                      f'{cuando}: {reps_antes} reps.')

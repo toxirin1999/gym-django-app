@@ -427,4 +427,10 @@ def lo_que_viene(cliente, entreno):
                           f'descarga; sigue después y acaba el {p.fin:%d/%m}.')
         else:
             lineas.append(f'Sigue la propuesta: {cambio} hasta el {p.fin:%d/%m}.')
+    # 7-nov-2026 (nota 7 del Día 5): si la semana que viene empieza otro bloque,
+    # se dice. Al final: leer la semana del plan puede crear su registro.
+    from entrenos.services.bloque_siguiente_service import bloque_nuevo
+    nuevo = bloque_nuevo(cliente, fecha)
+    if nuevo:
+        lineas.append(nuevo['frase'])
     return lineas

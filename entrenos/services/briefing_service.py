@@ -354,7 +354,9 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
         })
 
     # Ejercicios estancados hoy
-    estancados_hoy = [n for n in nombres_hoy if any(
+    # 7-nov-2026 (nota 1 del Día 5): en descarga no se busca progresar; ni
+    # aviso de estancamiento ni consejo de cambiar el tempo.
+    estancados_hoy = [n for n in nombres_hoy if n not in en_descarga and any(
         a['tipo'] == 'estancado' for a in alertas_por_ejercicio.get(n, [])
     )]
     if estancados_hoy:

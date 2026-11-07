@@ -785,7 +785,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 candidato.entreno, candidato.nombre_ejercicio,
                 candidato.peso_kg, candidato.repeticiones,
             )
-            if reps_compatibles_con_objetivo(reps_candidato, reps_hoy):
+            # 7-nov-2026 (nota 4 del Día 5): en descarga se compara con la
+            # última vez de verdad, aunque sus reps no se parezcan a las de hoy.
+            # Buscando unas reps compatibles, las extensiones (7,5 × 10) daban con
+            # una sesión antigua de 7,5 kg y salían «carga mantenida».
+            if es_descarga_hoy or reps_compatibles_con_objetivo(reps_candidato, reps_hoy):
                 anterior = candidato
                 peso_anterior = peso_candidato
                 break
