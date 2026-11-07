@@ -4891,34 +4891,30 @@
             <div class="cp-stats-grid">
                 <div class="cp-stat-box">
                     <div class="cp-label">RPE Objetivo</div>
-                    <div class="cp-stat-val">{{ parametros_fase.rpe_min }}–{{ parametros_fase.rpe_max }}</div>
+                    <div class="cp-stat-val">{% if parametros_fase.rpe_min == parametros_fase.rpe_max %}{{ parametros_fase.rpe_min }}{% else %}{{ parametros_fase.rpe_min }}–{{ parametros_fase.rpe_max }}{% endif %}</div>
                     <div class="cp-stat-sub">Intensidad controlada</div>
                 </div>
                 <div class="cp-stat-box">
                     <div class="cp-label">Rango de reps</div>
+                    {% if es_descarga %}
+                    <div class="cp-stat-val">El de cada ejercicio</div>
+                    <div class="cp-stat-sub">Rebajado; el objetivo exacto, en la sesión</div>
+                    {% elif parametros_fase.reps_secundarios %}
+                    <div class="cp-stat-val">{{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }} · {{ parametros_fase.reps_secundarios }}</div>
+                    <div class="cp-stat-sub">Básicos · resto de ejercicios</div>
+                    {% else %}
                     <div class="cp-stat-val">{{ parametros_fase.reps_min }}–{{ parametros_fase.reps_max }}</div>
-                    <div class="cp-stat-sub">Adaptación progresiva</div>
+                    <div class="cp-stat-sub">Pauta general de la fase</div>
+                    {% endif %}
                 </div>
             </div>
 
-            {% if rpe_reciente or rm_display %}
+            {% if cambios_semana %}
             <div style="margin-top:14px;padding:10px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;">
-                <div class="cp-label" style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-                    <i class="fas fa-brain" style="color:var(--phase-primary,#C8AA6E);font-size:0.7rem;"></i>
-                    ¿Por qué esta fase?
-                </div>
+                <div class="cp-label" style="margin-bottom:6px;">{{ cambios_semana.titulo }}: qué cambia</div>
                 <div style="font-size:0.78rem;color:rgba(255,255,255,0.55);line-height:1.5;">
-                    {% if rpe_reciente %}
-                        {% if rpe_reciente >= 8.5 %}
-                        El sistema detectó una media de RPE {{ rpe_reciente }} en tus últimas sesiones — carga alta sostenida. Esta fase mantiene el estímulo con rangos controlados para permitir supercompensación.
-                        {% elif rpe_reciente <= 6.0 %}
-                        Tu RPE medio reciente es {{ rpe_reciente }}, indicando margen de progresión. El plan incrementa la exigencia esta fase para seguir generando adaptación.
-                        {% else %}
-                        Con un RPE reciente de {{ rpe_reciente }}, estás en zona óptima de trabajo. Esta fase consolida ese estímulo y añade progresión gradual.
-                        {% endif %}
-                    {% else %}
-                        Fase seleccionada por el planificador Helms según tu objetivo y historial de entrenamiento.
-                    {% endif %}
+                    {% for linea in cambios_semana.lineas %}<p style="margin:0 0 4px;">{{ linea }}</p>{% endfor %}
+                    <p style="margin:6px 0 0;color:rgba(255,255,255,0.4);">Es la pauta general de la semana; el objetivo exacto de cada ejercicio está en su sesión.</p>
                 </div>
             </div>
             {% endif %}
@@ -4989,119 +4985,7 @@
 
     </div>
 
-    {% if rm_display %}
-    <!-- PANEL: LO QUE EL PLAN SABE DE TI -->
-    <div style="margin-bottom:1.5rem;padding:16px 20px;background:rgba(10,22,40,0.7);backdrop-filter:blur(18px);border:1px solid rgba(200,170,110,0.15);border-radius:16px;">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
-            <i class="fas fa-brain" style="color:#C8AA6E;font-size:0.9rem;"></i>
-            <span style="font-family:var(--font-mono);font-size:0.72rem;font-weight:700;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.45);">Lo que el plan sabe de ti · Máximos registrados</span>
-        </div>
-        <div style="display:flex;flex-wrap:wrap;gap:10px;">
-            {% for rm in rm_display %}
-            <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(200,170,110,0.12);border-radius:10px;">
-                <i class="fas {{ rm.icon }}" style="color:#C8AA6E;font-size:0.75rem;opacity:0.8;"></i>
-                <span style="font-size:0.8rem;color:rgba(255,255,255,0.6);">{{ rm.nombre }}</span>
-                <span style="font-family:var(--font-mono);font-size:0.9rem;font-weight:700;color:#C8AA6E;">{{ rm.rm }} kg</span>
-            </div>
-            {% endfor %}
-        </div>
-        <div style="margin-top:10px;font-size:0.72rem;color:rgba(255,255,255,0.3);line-height:1.4;">
-            Estos valores son tu máximo histórico registrado. El plan los usa para calcular cargas y proyectar objetivos de fase.
-            {% if rpe_reciente %}· RPE medio últimas sesiones: <span style="color:#C8AA6E;font-weight:700;">{{ rpe_reciente }}</span>{% endif %}
-        </div>
-    </div>
-    {% endif %}
-
-    <!-- Contenedor Principal de Fases y Proyecciones -->
-    <div id="projections-container" class="proj-panel"
-        style="display: {% if fase_actual %}block{% else %}none{% endif %};">
-        <div class="proj-header">
-            <div>
-                <div class="header-sub">Objetivos</div>
-                <div class="header-title-text">Esta Fase</div>
-            </div>
-            <div class="phase-badge">
-                <div class="phase-badge-dot"
-                    style="background: {{ tema_fase.primary }}; box-shadow: 0 0 6px {{ tema_fase.primary }};"></div>
-                <span class="phase-badge-text" style="color: {{ tema_fase.primary }};">
-                    {{ fase_actual.tipo_fase|default:"En curso" }}</span>
-            </div>
-        </div>
-
-        <div class="header-line"
-            style="background: linear-gradient(90deg, {{ tema_fase.primary }} 0%, rgba(0,212,255,0.1) 60%, transparent 100%);">
-        </div>
-
-        {% if proyecciones_fase %}
-        <div style="font-size:0.75rem;color:rgba(255,255,255,0.4);margin-bottom:12px;display:flex;align-items:center;gap:6px;">
-            <i class="fas fa-circle-info" style="font-size:0.7rem;"></i>
-            Objetivos calculados con incremento teórico Helms ({{ proyecciones_fase.0.incremento_porcentaje }}%) sobre tu máximo histórico registrado en cada ejercicio.
-        </div>
-        {% endif %}
-
-        <div class="proj-cards" id="projections-cards" {% if not proyecciones_fase %}style="display: none;" {% endif %}>
-            {% if proyecciones_fase %}
-            {% for proj in proyecciones_fase %}
-            <div class="proj-card">
-                <div class="card-accent"
-                    style="background: radial-gradient(circle at top right, {{ tema_fase.primary }}1F, transparent 70%);">
-                </div>
-                <div class="card-top">
-                    <div>
-                        <div class="card-name">{{ proj.nombre }}</div>
-                        <div class="card-weights"
-                            style="display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; gap: 5px; align-items: center;">
-
-                            <div class="weight-block" style="align-items: center;">
-                                <span class="weight-label" style="font-size: 0.55rem;">INICIO</span>
-                                <span class="weight-value" style="font-size: 1rem;">
-                                    {{ proj.peso_inicial|default:proj.peso_actual }}<small
-                                        style="font-size:.6em;opacity:.6">kg</small></span>
-                            </div>
-
-                            <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
-
-                            <div class="weight-block" style="align-items: center;">
-                                <span class="weight-label" style="font-size: 0.55rem;">ACTUAL</span>
-                                <span class="weight-value" style="font-size: 1.1rem; color: #fff;">
-                                    {{ proj.peso_actual }}<small style="font-size:.6em;opacity:.6">kg</small></span>
-                            </div>
-
-                            <div class="arrow-icon-proj" style="font-size: 0.8rem; opacity: 0.4;">→</div>
-
-                            <div class="weight-block" style="align-items: center;">
-                                <span class="weight-label" style="font-size: 0.55rem;">OBJETIVO</span>
-                                <span class="weight-value target"
-                                    style="font-size: 1rem; color: {{ tema_fase.primary }};">
-                                    {{ proj.peso_objetivo|default:proj.peso_proyectado }}<small
-                                        style="font-size:.6em;opacity:.7">kg</small></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="delta">
-                        <span class="delta-kg" style="color: #f5a623;">+{{ proj.incremento }}kg</span>
-                        <span class="delta-pct" style="color: rgba(245, 166, 35, 0.7);">+
-                            {{ proj.incremento_porcentaje }}%</span>
-                    </div>
-                </div>
-                <!-- Progress Section -->
-                <div style="margin-top: 12px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-                        <span class="progress-label" style="font-size: 0.65rem;">Progreso de Fase</span>
-                        <span class="progress-label right" style="color: {{ tema_fase.primary }}; font-size: 0.65rem;">
-                            {{ proj.progreso_pct|default:"0" }}%</span>
-                    </div>
-                    <div class="progress-wrap">
-                        <div class="progress-track"
-                            style="width: 0%; height: 100%; background: linear-gradient(90deg, {{ tema_fase.primary }}66, {{ tema_fase.primary }});"
-                            data-width="{{ proj.progreso_pct|default:'0' }}%"></div>
-                    </div>
-                </div>
-                {% endfor %}
-                {% endif %}
-            </div>
-
-        </div>
+    <!-- 7-nov-2026: sin máximos ni objetivos teóricos; la tendencia real va en Memoria y en la revisión de fin de bloque. -->
 
         <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">

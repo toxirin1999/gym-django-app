@@ -5574,6 +5574,8 @@ def _parametros_fase_plan(fase, plan):
         'reps_max': reps_max,
         'rep_range': rango_reps or '{}-{}'.format(reps_min, reps_max),
         'series': fase.get('series', detalle.get('series', '3-5')),
+        # 7-nov-2026: Fuerza — Hipertrofia: 4-6 en los básicos y 8-12 en el resto.
+        'reps_secundarios': fase.get('reps_secundarios') or detalle.get('reps_secundarios'),
     }
 
 
@@ -6071,6 +6073,23 @@ def rutina_silenciosa_preview(request, cliente_id):
     })
 
 
+def _semana_de_descarga_plan_anual(cliente, hoy, fase_actual):
+    from entrenos.models import SemanaPlanGym
+    lunes = hoy - timedelta(days=hoy.weekday())
+    if SemanaPlanGym.objects.filter(cliente=cliente, lunes=lunes, descarga=True).exists():
+        return True
+    return 'descarga' in str((fase_actual or {}).get('nombre') or '').casefold()
+
+
+def _cambios_semana_plan_anual(cliente, hoy):
+    try:
+        from entrenos.services.cambios_semana_service import cambios_semana
+        return cambios_semana(cliente, hoy)
+    except Exception:
+        logger.exception('Plan anual: no se pudo calcular qué cambia esta semana')
+        return None
+
+
 @login_required
 def vista_plan_anual(request, cliente_id):
     """
@@ -6566,6 +6585,10 @@ def vista_plan_anual(request, cliente_id):
             # Datos de aprendizaje — lo que el plan sabe del atleta
             'rpe_reciente': rpe_reciente,
             'rm_display': rm_display,
+            # 7-nov-2026: en vez de un porqué genérico, lo que de verdad cambia
+            # esta semana (lo mismo que Plan) y, en descarga, el rango de cada ejercicio.
+            'es_descarga': _semana_de_descarga_plan_anual(cliente_obj, hoy, fase_actual),
+            'cambios_semana': _cambios_semana_plan_anual(cliente_obj, hoy),
         }
 
         return render(request, 'entrenos/vista_plan_calendario.html', context)
