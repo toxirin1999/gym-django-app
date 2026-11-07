@@ -21,11 +21,13 @@ SERIES_MINIMAS = 2
 def actividad_de_piernas(cliente, hoy):
     """El partido (o Hyrox) de los dos días anteriores, o None."""
     from entrenos.models import ActividadRealizada
+    from entrenos.services.actividad_jugada import q_jugada
+    # 8-nov-2026: solo lo jugado; un partido apuntado y cancelado no cuenta.
     return (
         ActividadRealizada.objects.filter(
             cliente=cliente, tipo__in=('futbol', 'hyrox'),
             fecha__gte=hoy - timedelta(days=2), fecha__lt=hoy,
-        ).order_by('-fecha').first()
+        ).filter(q_jugada()).order_by('-fecha').first()
     )
 
 

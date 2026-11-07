@@ -245,6 +245,7 @@ class SnapshotFisicoSesionEquivalenciaTests(TestCase):
             cliente=self.cliente,
             tipo="futbol",
             fecha=self.hoy - timedelta(days=1),
+            duracion_minutos=60,  # 8-nov-2026: jugado, no solo apuntado
         )
         objective = HyroxObjective.objects.create(
             cliente=self.cliente,

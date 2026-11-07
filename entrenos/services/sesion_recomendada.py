@@ -464,10 +464,11 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
         else:
             # Fallback exclusivamente operativo si el snapshot no está disponible.
             hace_48h = fecha_hoy - timedelta(days=2)
+            from entrenos.services.actividad_jugada import q_jugada
             hay_futbol = ActividadRealizada.objects.filter(
                 cliente=cliente, tipo='futbol',
                 fecha__gte=hace_48h, fecha__lt=fecha_hoy,
-            ).exists()
+            ).filter(q_jugada()).exists()
             hay_hyrox_intenso = ActividadRealizada.objects.filter(
                 cliente=cliente, tipo='hyrox',
                 fecha__gte=hace_48h, fecha__lt=fecha_hoy,
@@ -1618,8 +1619,10 @@ def _grupos_trabajados_ayer(cliente, fecha_hoy):
     grupos = [g for g, n in cuenta.most_common() if n >= 2]
     partes = list(grupos)
     ayer = fecha_hoy - _td(days=1)
+    from entrenos.services.actividad_jugada import es_jugada
+    # 8-nov-2026: solo el partido jugado (no el apuntado y cancelado).
     futbol = any(
-        (a.fecha_realizado or a.fecha) == ayer
+        (a.fecha_realizado or a.fecha) == ayer and es_jugada(a)
         for a in ActividadRealizada.objects.filter(
             cliente=cliente, tipo='futbol', fecha__gte=ayer - _td(days=1), fecha__lte=fecha_hoy,
         )

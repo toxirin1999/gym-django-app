@@ -139,33 +139,40 @@ def aplicar_criterios(cliente, ejercicios, hoy):
     return aplicadas
 
 
-def _fechas_futbol(cliente, desde, hasta):
+def _partidos(cliente, desde, hasta):
     from django.db.models.functions import Coalesce
     from entrenos.models import ActividadRealizada
 
-    return set(
+    return list(
         ActividadRealizada.objects.filter(cliente=cliente, tipo='futbol')
         .annotate(f=Coalesce('fecha_realizado', 'fecha'))
         .filter(f__gte=desde, f__lte=hasta)
-        .values_list('f', flat=True)
     )
 
 
 def futbol_previsto(cliente, dia):
-    """¿Hay fútbol el ``dia``? {'confirmado': bool, 'frase': ...} o None (8-nov-2026).
+    """¿Hay fútbol el ``dia``? {'estado', 'frase', 'actividad'} o None (8-nov-2026).
 
-    - Confirmado: hay un partido apuntado ese día (línea de tiempo o Strava).
-    - Previsto por costumbre: ese día de la semana hubo fútbol en
+    - 'jugado': ya está registrado con datos (Strava, carga o RPE).
+    - 'apuntado': está anotado ese día, sin datos todavía.
+    - 'costumbre': ese día de la semana hubo fútbol jugado en
       ``FUTBOL_MIN_SEMANAS`` de las últimas ``FUTBOL_SEMANAS``. Es una
       inferencia y se dice así («Sueles jugar…»).
     """
-    fechas = _fechas_futbol(cliente, dia - timedelta(days=7 * FUTBOL_SEMANAS), dia)
-    if dia in fechas:
-        return {'confirmado': True, 'frase': None}
+    from entrenos.services.actividad_jugada import es_jugada
+
+    partidos = _partidos(cliente, dia - timedelta(days=7 * FUTBOL_SEMANAS), dia)
+    del_dia = [a for a in partidos if a.f == dia]
+    jugados = [a for a in del_dia if es_jugada(a)]
+    if jugados:
+        return {'estado': 'jugado', 'frase': None, 'actividad': jugados[-1]}
+    if del_dia:
+        return {'estado': 'apuntado', 'frase': None, 'actividad': del_dia[-1]}
+    fechas = {a.f for a in partidos if es_jugada(a)}
     semanas = sum(1 for k in range(1, FUTBOL_SEMANAS + 1) if dia - timedelta(days=7 * k) in fechas)
     if semanas < FUTBOL_MIN_SEMANAS:
         return None
-    return {'confirmado': False,
+    return {'estado': 'costumbre', 'actividad': None,
             'frase': (f'Sueles jugar al fútbol los {_DIAS[dia.weekday()]} ({semanas} de las últimas '
                       f'{FUTBOL_SEMANAS} semanas)')}
 
@@ -176,9 +183,14 @@ def futbol_manana(cliente, hoy):
     previsto = futbol_previsto(cliente, manana)
     if not previsto:
         return None
-    if previsto['confirmado']:
+    if previsto['estado'] in ('apuntado', 'jugado'):
         return 'Mañana tienes fútbol (lo tienes apuntado)'
     return f'{previsto["frase"]} y mañana es {_DIA[manana.weekday()]}'
+
+
+def _n(v):
+    v = float(v)
+    return str(int(v)) if v.is_integer() else f'{v:.1f}'.replace('.', ',')
 
 
 def _es_pierna(ej):
@@ -236,11 +248,14 @@ def aplicar_vispera_futbol(cliente, ejercicios, hoy):
 
 
 def aplicar_futbol_hoy(cliente, ejercicios, hoy):
-    """El mismo día del fútbol (8-nov-2026): la pierna, al final y opcional.
+    """El mismo día del fútbol (8-nov-2026).
 
-    - Partido apuntado: además, una serie menos y RPE 7 como mucho.
-    - Solo por costumbre: nada más que eso, que es reversible; si hoy no
-      juegas, la haces como siempre.
+    - Por costumbre: la pierna, al final y opcional; nada más, que es
+      reversible (si hoy no juegas, la haces como siempre).
+    - Apuntado y aún sin jugar (vas al gimnasio antes): se protege la pierna
+      para el partido; al final, opcional, una serie menos y RPE 7.
+    - Ya jugado (vas después): decide el esfuerzo registrado. Si fue duro
+      (RPE 7 o más), igual que apuntado; si fue suave, solo opcional.
     """
     try:
         previsto = futbol_previsto(cliente, hoy)
@@ -248,18 +263,30 @@ def aplicar_futbol_hoy(cliente, ejercicios, hoy):
         return []
     if not previsto:
         return []
+    estado = previsto['estado']
+    act = previsto.get('actividad')
+    rpe = getattr(act, 'rpe_medio', None) if act else None
+    duro = estado == 'apuntado' or (estado == 'jugado' and (rpe is None or float(rpe) >= RPE_SUELO))
     aplicadas = []
     for ej in ejercicios:
         if not _es_pierna(ej):
             continue
         ej['opcional_futbol'] = True
-        if previsto['confirmado']:
-            cambios = _rebajar_pierna(ej)
-            detalle = f', con {" y ".join(cambios)}' if cambios else ''
-            frase = f'Hoy tienes fútbol (lo tienes apuntado): la pierna va al final y es opcional{detalle}.'
-        else:
+        if estado == 'costumbre':
             frase = (f'{previsto["frase"]}: la pierna de hoy va al final y es opcional. '
                      f'Si hoy no juegas, hazla como siempre.')
+        else:
+            cambios = _rebajar_pierna(ej) if duro else []
+            detalle = f', con {" y ".join(cambios)}' if cambios else ''
+            if estado == 'apuntado':
+                frase = f'Hoy tienes fútbol (lo tienes apuntado): la pierna va al final y es opcional{detalle}.'
+            else:
+                datos = ', '.join(x for x in (
+                    f'{act.duracion_minutos} min' if act and act.duracion_minutos else '',
+                    f'RPE {_n(rpe)}' if rpe is not None else '',
+                ) if x)
+                frase = (f'Hoy ya jugaste al fútbol{f" ({datos})" if datos else ""}: '
+                         f'la pierna va al final y es opcional{detalle}.')
         _anadir_frase(ej, frase)
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
     if aplicadas:

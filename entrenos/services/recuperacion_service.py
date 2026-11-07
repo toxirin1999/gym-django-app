@@ -254,11 +254,12 @@ def esfuerzo_futbol(cliente, hoy):
     def _fecha_real(a):
         return a.fecha_realizado or a.fecha
 
+    from entrenos.services.actividad_jugada import q_jugada
     recientes = [
         a for a in ActividadRealizada.objects.filter(
             cliente=cliente, tipo='futbol',
             fecha__gte=hoy - timedelta(days=FUTBOL_VENTANA_DIAS), fecha__lte=hoy,
-        ).order_by('fecha', 'id')
+        ).filter(q_jugada()).order_by('fecha', 'id')
     ]
     ultimos = [a for a in recientes if hoy - timedelta(days=2) <= _fecha_real(a) < hoy]
     if not ultimos:

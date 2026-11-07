@@ -167,6 +167,37 @@ def decidir_carga(cliente, ej, hoy):
     return decision
 
 
+DISPERSION_PRUDENTE = 0.10  # 10 % entre la serie más fuerte y la más floja
+
+
+def _techo_prudente(validas, peso_ref, minimo, rpe_obj, salto):
+    """(peso, serie floja) si las series de la última vez discrepan claramente, o None.
+
+    8-nov-2026 (decisión de David): al cambiar de rango, si las series no
+    cuentan lo mismo (convergent 62,5 × 14 @8 y 62,5 × 8 @10), se parte de la
+    más prudente y no se sube por encima del peso de referencia salvo que
+    hasta la serie floja lo pida. Convergent 70 → 62,5; aperturas 30 → 25.
+    Con series regulares (prensa 145 × 14 × 3 @8) no cambia nada.
+    """
+    from entrenos.services.maquina_service import a_escala
+    from entrenos.services.ultima_sesion_service import peso_para_reps
+
+    estimados = []
+    for x in validas:
+        if x.get('rpe') is None or x['reps'] <= 0 or x['peso'] <= 0:
+            continue
+        e = peso_para_reps(x['peso'], x['reps'], x['rpe'], minimo, rpe_obj)
+        if e:
+            estimados.append((e, x))
+    if len(estimados) < 2:
+        return None
+    alto = max(e for e, _ in estimados)
+    bajo, floja = min(estimados, key=lambda t: t[0])
+    if alto <= 0 or (alto - bajo) / alto <= DISPERSION_PRUDENTE:
+        return None
+    return a_escala(max(bajo, peso_ref), salto, 'cerca'), floja
+
+
 def _decidir_carga(cliente, ej, hoy):
     """{'peso', 'reps', 'regla', 'frase'} para un ejercicio del plan de hoy, o None."""
     from analytics.planificador_helms.calculo.compatibilidad_fase import son_rangos_compatibles
@@ -322,12 +353,23 @@ def _decidir_carga(cliente, ej, hoy):
         # 24-oct-2026: al más cercano; hacia abajo, con pesos pequeños y saltos
         # de 5 kg, se quedaba en la mitad (curl inclinado 10 → 5 kg).
         peso = a_escala(estimado, salto, 'cerca')
+        prudente = None if antigua else _techo_prudente(validas, peso_ref, minimo, rpe_obj, salto)
+        if prudente and prudente[0] < peso:
+            peso = prudente[0]
+        else:
+            prudente = None
         if tope:
             peso = min(peso, float(tope))
         cuando = f"El {lectura['fecha'].strftime('%d/%m')}" if antigua else 'La última vez'
+        frase = f'{cuando} {_kg(peso_ref)} kg × {reps_ref}; para {minimo}-{maximo}, hoy {_kg(peso)} kg.'
+        if prudente:
+            floja = prudente[1]
+            frase = (f'La última vez las series no fueron parejas ({_kg(peso_ref)} kg × {reps_ref} y '
+                     f'{_kg(floja["peso"])} kg × {floja["reps"]} a RPE {_kg(floja["rpe"])}): para {minimo}-{maximo} '
+                     f'parto de la más prudente, {_kg(peso)} kg. Con el RPE de la primera serie ajusto la siguiente.')
         return {
             'peso': peso, 'reps': minimo, 'regla': 'antigua' if antigua else 'recalcular',
-            'frase': f'{cuando} {_kg(peso_ref)} kg × {reps_ref}; para {minimo}-{maximo}, hoy {_kg(peso)} kg.',
+            'frase': frase, 'prudente': bool(prudente),
         }
 
     # 4. Techo de la última sesión + regla C.
@@ -350,6 +392,22 @@ def _decidir_carga(cliente, ej, hoy):
         peso = a_escala(peso_ref + salto, salto, 'cerca')
         if tope:
             peso = min(peso, float(tope))
+        # 8-nov-2026: si además cambió el rango y las series no fueron parejas
+        # (aperturas 25 × 14 @9, 25 × 14 @10 y 20 × 12 @9, de 10-15 a 8-12), no se
+        # sube: se repite el peso y la primera serie dice si toca más.
+        from entrenos.services.ultima_sesion_service import rango_de_sesion
+        cambio_rango = rango_de_sesion(lectura['entreno'], nombre) not in (None, (minimo, maximo))
+        prudente = _techo_prudente(validas, peso_ref, minimo, rpe_obj, salto) if cambio_rango else None
+        if prudente and prudente[0] < peso:
+            peso_p = prudente[0]
+            floja = prudente[1]
+            return {
+                'peso': peso_p, 'reps': minimo, 'regla': 'mantener' if abs(peso_p - peso_ref) < 1e-6 else 'ajustar',
+                'prudente': True,
+                'frase': (f'La última vez llegaste a {reps_ref} con {_kg(peso_ref)} kg, pero las series no fueron '
+                          f'parejas ({_kg(floja["peso"])} kg × {floja["reps"]} a RPE {_kg(floja["rpe"])}): '
+                          f'hoy {_kg(peso_p)} kg a por {minimo} y con el RPE de la primera serie ajusto la siguiente.'),
+            }
         return {
             'peso': peso, 'reps': minimo, 'regla': 'subir',
             'frase': (f'{reps_ref} reps con {_kg(peso_ref)} kg, arriba del rango: '

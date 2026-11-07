@@ -21,6 +21,7 @@ from django.contrib.auth.models import User
 from django.test import SimpleTestCase, TestCase
 
 from entrenos.models import ActividadRealizada
+from entrenos.tests_ultima_sesion import Base
 
 MIERCOLES = date(2026, 11, 11)
 
@@ -29,11 +30,14 @@ class Futbol(TestCase):
     def setUp(self):
         self.cliente = User.objects.create_user('futbol_mismo_dia_20261107', password='x').cliente_perfil
         for k in (1, 2, 3):
-            self._partido(MIERCOLES - timedelta(days=7 * k))
+            self._jugado(MIERCOLES - timedelta(days=7 * k))
 
-    def _partido(self, fecha):
+    def _jugado(self, fecha, rpe=8, minutos=60):
         ActividadRealizada.objects.create(cliente=self.cliente, tipo='futbol', titulo='Fútbol', fecha=fecha,
-                                          duracion_minutos=60, carga_ua=480)
+                                          duracion_minutos=minutos, rpe_medio=rpe, carga_ua=minutos * rpe)
+
+    def _apuntado(self, fecha):
+        ActividadRealizada.objects.create(cliente=self.cliente, tipo='futbol', titulo='Fútbol', fecha=fecha)
 
     def _ejercicios(self):
         return [
@@ -41,37 +45,64 @@ class Futbol(TestCase):
             {'nombre': 'Curl con Barra Z', 'grupo_muscular': 'biceps', 'series': 2, 'rpe_objetivo': 8},
         ]
 
-    def test_mismo_dia_por_costumbre_solo_opcional(self):
+    def _hoy(self):
         from entrenos.services.criterios_entrenador_service import aplicar_futbol_hoy
         ejs = self._ejercicios()
         aplicar_futbol_hoy(self.cliente, ejs, MIERCOLES)
-        curl, zancadas = ejs
+        return ejs
+
+    def test_por_costumbre_solo_opcional(self):
+        curl, zancadas = self._hoy()
         self.assertEqual(curl['nombre'], 'Curl con Barra Z')
+        self.assertNotIn('opcional_futbol', curl)
         self.assertTrue(zancadas['opcional_futbol'])
         self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (3, 8))
         self.assertEqual(zancadas['criterio_entrenador'],
                          'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas): la pierna de hoy va '
                          'al final y es opcional. Si hoy no juegas, hazla como siempre.')
-        self.assertNotIn('opcional_futbol', curl)
 
-    def test_mismo_dia_apuntado_tambien_rebaja(self):
-        from entrenos.services.criterios_entrenador_service import aplicar_futbol_hoy
-        self._partido(MIERCOLES)
-        ejs = self._ejercicios()
-        aplicar_futbol_hoy(self.cliente, ejs, MIERCOLES)
-        zancadas = ejs[1]
+    def test_apuntado_gimnasio_antes_del_partido(self):
+        self._apuntado(MIERCOLES)
+        zancadas = self._hoy()[1]
         self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (2, 7))
         self.assertEqual(zancadas['criterio_entrenador'],
                          'Hoy tienes fútbol (lo tienes apuntado): la pierna va al final y es opcional, '
                          'con 2 series en vez de 3 y RPE 7 en vez de 8.')
+
+    def test_ya_jugado_decide_el_esfuerzo(self):
+        self._jugado(MIERCOLES)
+        self.assertEqual(self._hoy()[1]['criterio_entrenador'],
+                         'Hoy ya jugaste al fútbol (60 min, RPE 8): la pierna va al final y es opcional, '
+                         'con 2 series en vez de 3 y RPE 7 en vez de 8.')
+
+    def test_ya_jugado_suave_solo_opcional(self):
+        self._jugado(MIERCOLES, rpe=5, minutos=40)
+        zancadas = self._hoy()[1]
+        self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (3, 8))
+        self.assertTrue(zancadas['opcional_futbol'])
+
+    def test_apuntado_y_cancelado_no_rebaja_el_jueves(self):
+        from entrenos.services.pierna_suave_service import actividad_de_piernas
+        self._apuntado(MIERCOLES)
+        self.assertIsNone(actividad_de_piernas(self.cliente, MIERCOLES + timedelta(days=1)))
+        self._jugado(MIERCOLES)
+        self.assertIsNotNone(actividad_de_piernas(self.cliente, MIERCOLES + timedelta(days=1)))
 
     def test_vispera_apuntado_o_por_costumbre(self):
         from entrenos.services.criterios_entrenador_service import futbol_manana
         martes = MIERCOLES - timedelta(days=1)
         self.assertEqual(futbol_manana(self.cliente, martes),
                          'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas) y mañana es miércoles')
-        self._partido(MIERCOLES)
+        self._apuntado(MIERCOLES)
         self.assertEqual(futbol_manana(self.cliente, martes), 'Mañana tienes fútbol (lo tienes apuntado)')
+
+    def test_la_costumbre_solo_cuenta_lo_jugado(self):
+        from entrenos.services.criterios_entrenador_service import futbol_previsto
+        otro = User.objects.create_user('futbol_cancelados_20261107', password='x').cliente_perfil
+        for k in (1, 2, 3):
+            ActividadRealizada.objects.create(cliente=otro, tipo='futbol', titulo='Fútbol',
+                                              fecha=MIERCOLES - timedelta(days=7 * k))
+        self.assertIsNone(futbol_previsto(otro, MIERCOLES))
 
     def test_sin_futbol_nada(self):
         from entrenos.services.criterios_entrenador_service import aplicar_futbol_hoy
@@ -130,3 +161,43 @@ class SesionComoElBriefing(SimpleTestCase):
         src = (Path(settings.BASE_DIR) / 'entrenos' / 'templates' / 'entrenos' / 'entrenamiento_activo.html').read_text(
             encoding='utf-8')
         self.assertIn("or ejercicio.opcional_futbol %}", src)
+
+
+class EstimacionPrudente(Base):
+    """Regresión del lunes 9-nov: convergent y aperturas irregulares; prensa estable."""
+
+    def setUp(self):
+        super().setUp()
+        from rutinas.models import EjercicioBase
+        self.convergent = EjercicioBase.objects.create(nombre='Convergent Machine Press', grupo_muscular='pecho',
+                                                       tipo_progresion='peso_reps', equipo='Discos')
+        self.fly = EjercicioBase.objects.create(nombre='Low-to-High Cable Fly', grupo_muscular='pecho',
+                                                tipo_progresion='peso_reps', equipo='Polea')
+        self.lunes = date(2026, 11, 9)
+        e = self.entreno(date(2026, 10, 26), {self.convergent.nombre: '12-15', self.fly.nombre: '10-15',
+                                              self.prensa.nombre: '12-15'})
+        self.hacer(e, self.convergent, [(62.5, 14, 8), (62.5, 8, 10), (60, 10, 9), (60, 8, 9)])
+        self.hacer(e, self.fly, [(25, 14, 9), (25, 14, 10), (20, 12, 9)])
+        self.hacer(e, self.prensa, [(145, 14, 8), (145, 14, 8), (145, 14, 8)])
+
+    def _decidir(self, nombre, rango, rpe):
+        from entrenos.services.cerebro_carga_service import decidir_carga
+        return decidir_carga(self.cliente, {'nombre': nombre, 'repeticiones': rango, 'rpe_objetivo': rpe,
+                                            'tipo_progresion': 'peso_reps'}, self.lunes)
+
+    def test_convergent_parte_de_la_serie_prudente(self):
+        d = self._decidir('Convergent Machine Press', '4-6', 7)
+        self.assertEqual((d['peso'], d['regla']), (62.5, 'recalcular'))
+        self.assertTrue(d['prudente'])
+        self.assertIn('parto de la más prudente, 62,5 kg', d['frase'])
+
+    def test_aperturas_no_suben_con_series_irregulares(self):
+        d = self._decidir('Low-to-High Cable Fly', '8-12', 8)
+        self.assertEqual((d['peso'], d['regla']), (25, 'mantener'))
+        self.assertIn('con el RPE de la primera serie ajusto la siguiente', d['frase'])
+
+    def test_prensa_estable_sin_cambios(self):
+        d = self._decidir('Prensa de Piernas', '4-6', 7)
+        self.assertEqual(d['regla'], 'recalcular')
+        self.assertFalse(d.get('prudente'))
+        self.assertGreater(d['peso'], 145)
