@@ -35,6 +35,22 @@ from .services.calentamiento_service import get_aproximaciones_calentamiento
 from .services.progreso_service import calcular_sugerencia_tope, detectar_estancamiento
 
 
+def _alinear_con_briefing(ejercicio):
+    """8-nov-2026: la sesión arranca en el peso que decidió la regla única en el briefing."""
+    if not ejercicio.get('regla_carga') or ejercicio.get('usa_tiempo') or ejercicio.get('usa_distancia'):
+        return
+    try:
+        peso = float(ejercicio.get('peso_kg') or 0)
+    except (TypeError, ValueError):
+        return
+    if peso <= 0:
+        return
+    tope = ejercicio.get('tope_maquina_kg')
+    if tope:
+        peso = min(peso, float(tope))
+    ejercicio['peso_inicial_kg'] = peso
+
+
 def _es_semana_descarga(cliente, fecha):
     """7-nov-2026: True si la semana de ``fecha`` es de descarga en el plan."""
     try:
@@ -3911,6 +3927,9 @@ def vista_entrenamiento_activo(request, cliente_id):
         for i, ejercicio in enumerate(ejercicios_planificados):
             ejercicio['form_id'] = f'ejercicio_{i}'
             ejercicio['es_principal'] = _es_principal_hoy(ejercicio, bool(aviso_pierna_suave))
+            if ejercicio.get('opcional_futbol'):
+                # 8-nov-2026: el día del fútbol, la pierna es opcional (como en el briefing).
+                ejercicio['es_principal'] = False
             # Phase 11.1: set/merge origen_opcional for non-principal exercises
             if modo_reducido and not ejercicio.get('es_principal'):
                 existing = ejercicio.get('origen_opcional')
@@ -4123,6 +4142,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicio['sugerencia_tope'] = not _ej_en_descarga(ejercicio)
                     _peso_ini = float(ejercicio.get('peso_inicial_kg') or _tope_guardado)
                     ejercicio['peso_inicial_kg'] = min(_peso_ini, _tope_guardado)
+                _alinear_con_briefing(ejercicio)
                 try:
                     peso_trabajo = float(
                         ejercicio.get('peso_inicial_kg')
@@ -4528,6 +4548,12 @@ def vista_entrenamiento_activo(request, cliente_id):
                     _peso_rec_motivo = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
                     if _peso_rec_motivo > 0:
                         ejercicio['peso_inicial_kg'] = _peso_rec_motivo
+
+            # 8-nov-2026: si la regla única decidió el peso en el briefing, la
+            # sesión arranca en ese mismo peso (convergent 70 en el briefing y 72,5
+            # aquí por un segundo cálculo de rango; gemelos de pie 100 en el briefing
+            # y 90 aquí, el peso de la descarga).
+            _alinear_con_briefing(ejercicio)
 
             # --- PROGRESIÓN PARA EJERCICIOS DE TIEMPO ---
             # Si hay dato anterior: propone anterior+1s (éxito) o anterior-1s (no completado).
@@ -10275,6 +10301,10 @@ def briefing_entrenamiento(request, cliente_id):
         else:
             for ej in ejercicios_mod:
                 ej['opcional_hoy'] = False
+    # 8-nov-2026: el día del fútbol la pierna va opcional aunque no sea versión suave.
+    for ej in ejercicios_mod:
+        if ej.get('opcional_futbol'):
+            ej['opcional_hoy'] = True
 
     # Salto 2: guardar ejercicios modificados en cache con token corto (fix 414).
     # El token reemplaza al JSON serializado en la query string hacia entrenamiento_activo.

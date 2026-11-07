@@ -358,7 +358,13 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 # (el objetivo en metros ya lo da el tope).
                 _tipo = ej.get('tipo_progresion') or ''
                 _unidad = 'm' if _tipo == 'progresion_distancia' else ('s' if _tipo == 'progresion_tiempo' else 'reps')
-                if _unidad != 'reps' and (reps_sugeridas or 0) < 5:
+                if (_unidad == 'm' and log.reps_anteriores and reps_sugeridas
+                        and reps_sugeridas < log.reps_anteriores):
+                    # 8-nov-2026: con el tope de peso, el log guarda el salto de
+                    # metros (+5), no el objetivo: decía «Hoy a por 5 m».
+                    ej['progresion_motivo'] = (f'Hoy a por {log.reps_anteriores + reps_sugeridas} m '
+                                               f'(la última vez {log.reps_anteriores}).')
+                elif _unidad != 'reps' and (reps_sugeridas or 0) < 5:
                     ej.pop('progresion_motivo', None)
                 else:
                     ej['progresion_motivo'] = (
@@ -598,6 +604,45 @@ def rango_de_paso(peor_serie, rango):
     return None
 
 
+_TIPOS_PROGRESION = ('progresion_aplicada', 'progresion_pospuesta')
+
+
+def _reconciliar_con_regla_unica(ejercicios, cambios):
+    """Una sola línea de cambio por ejercicio, la de la regla única, y su etiqueta a juego."""
+    for ej in ejercicios:
+        regla = ej.get('regla_carga')
+        if not regla or regla == 'descarga' or ej.get('deload'):
+            continue
+        nombre = ej.get('nombre')
+        cambios[:] = [c for c in cambios
+                      if not (c.get('tipo') in _TIPOS_PROGRESION and c.get('ejercicio_original') == nombre)]
+        try:
+            peso = float(ej.get('peso_kg') or 0)
+            antes = float(ej.get('peso_kg_anterior') or 0)
+        except (TypeError, ValueError):
+            continue
+        motivo = ej.get('progresion_motivo') or ''
+        if regla in ('recalcular', 'antigua', 'fatiga'):
+            ej['progresion_aplicada'] = False
+            ej.pop('progresion_accion', None)
+            continue
+        if peso > 0 and antes > 0 and abs(peso - antes) >= 0.01:
+            accion = 'subir_peso' if peso > antes else 'bajar_peso'
+            ej['progresion_aplicada'] = True
+            ej['progresion_accion'] = accion
+            ej['progresion_pospuesta'] = False
+            cambios.append({'tipo': 'progresion_aplicada', 'ejercicio_original': nombre, 'ejercicio_nuevo': None,
+                            'accion': accion, 'peso_sugerido': peso, 'razon': motivo})
+        else:
+            ej['progresion_aplicada'] = False
+            ej.pop('progresion_accion', None)
+            if motivo:
+                ej['progresion_pospuesta'] = True
+                cambios.append({'tipo': 'progresion_pospuesta', 'ejercicio_original': nombre,
+                                'ejercicio_nuevo': None, 'accion': 'subir_reps',
+                                'reps_sugeridas': ej.get('reps_objetivo_hoy'), 'razon': motivo})
+
+
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     """
     Modifica la lista de ejercicios del plan basándose en señales del sistema.
@@ -690,6 +735,13 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 except Exception:
                     logger.exception('[plan_dinamico] regla única de carga falló')
 
+        # 8-nov-2026: la lista «El plan ha cambiado» y la etiqueta de cada
+        # ejercicio salen de lo que decidió la regla única, no de las capas de
+        # antes (prensa «→ 182,5 kg» con la tarjeta en 180; aperturas «→ 20 kg ·
+        # reducir carga» y «↓ BAJAR» con 30 kg; encogimientos «→ 100 kg · lejos
+        # de 15-20» con el rango ya en 8-12).
+        _reconciliar_con_regla_unica(ejercicios_mod, cambios)
+
         # ── Semana de descarga del plan (2-nov-2026) ────────────────────────
         # Después de la regla única: en descarga manda la descarga (menos peso,
         # las reps de la última vez como mucho), no la progresión.
@@ -704,9 +756,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         # Un punto menos de RPE si el grupo se trabajó ayer, o si has dormido
         # poco con la carga alta. Lo dice en una frase con el dato.
         try:
-            from entrenos.services.criterios_entrenador_service import aplicar_criterios, aplicar_vispera_futbol
-            for _c in aplicar_criterios(cliente, ejercicios_mod, hoy) + aplicar_vispera_futbol(
-                    cliente, ejercicios_mod, hoy):
+            from entrenos.services.criterios_entrenador_service import (
+                aplicar_criterios, aplicar_futbol_hoy, aplicar_vispera_futbol,
+            )
+            for _c in (aplicar_criterios(cliente, ejercicios_mod, hoy)
+                       + aplicar_vispera_futbol(cliente, ejercicios_mod, hoy)
+                       + aplicar_futbol_hoy(cliente, ejercicios_mod, hoy)):
                 cambios.append({'tipo': 'criterio_entrenador', 'ejercicio_original': _c['ejercicio'],
                                 'ejercicio_nuevo': None, 'razon': _c['frase']})
         except Exception:

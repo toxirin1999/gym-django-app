@@ -1590,7 +1590,7 @@ body{background:
       <span class="exname-counter">Ejercicio actual · {{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
       {# 6-nov-2026 (nota 2): la misma regla que el briefing (con fútbol, solo la pierna). #}
       {% if not ejercicio.es_principal %}
-        {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' %}
+        {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' or ejercicio.opcional_futbol %}
         <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
         {% endif %}
       {% endif %}

@@ -15,10 +15,13 @@ el orden de la semana (eso se propone, no se impone).
 Los dos juntos no suman: como mucho, un punto menos.
 
 3. Víspera de fútbol (7-nov-2026, bloque Fuerza — Hipertrofia): si mañana
-   juegas (el fútbol cayó ese mismo día de la semana en 3 de las últimas 4
-   semanas), los ejercicios de pierna van con una serie menos (mínimo 2) y a
-   RPE 7 como mucho. El día después del fútbol ya lo cubren la cola (no
-   repite pierna) y la versión suave del briefing.
+   juegas (apuntado, o por costumbre: ese mismo día de la semana en 3 de las
+   últimas 4 semanas), los ejercicios de pierna van con una serie menos
+   (mínimo 2) y a RPE 7 como mucho. El día después del fútbol ya lo cubren
+   la cola (no repite pierna) y la versión suave del briefing.
+
+4. El mismo día del fútbol (8-nov-2026): la pierna va al final y es
+   opcional. Si el partido está apuntado, además una serie menos y RPE 7.
 """
 
 from collections import Counter
@@ -136,28 +139,79 @@ def aplicar_criterios(cliente, ejercicios, hoy):
     return aplicadas
 
 
-def futbol_manana(cliente, hoy):
-    """La frase de por qué mañana probablemente juegas, o None.
-
-    Se deduce del historial: el fútbol cayó ese día de la semana en
-    ``FUTBOL_MIN_SEMANAS`` de las últimas ``FUTBOL_SEMANAS``.
-    """
+def _fechas_futbol(cliente, desde, hasta):
     from django.db.models.functions import Coalesce
     from entrenos.models import ActividadRealizada
 
-    manana = hoy + timedelta(days=1)
-    fechas = set(
+    return set(
         ActividadRealizada.objects.filter(cliente=cliente, tipo='futbol')
         .annotate(f=Coalesce('fecha_realizado', 'fecha'))
-        .filter(f__gte=manana - timedelta(days=7 * FUTBOL_SEMANAS), f__lt=manana)
+        .filter(f__gte=desde, f__lte=hasta)
         .values_list('f', flat=True)
     )
-    semanas = sum(1 for k in range(1, FUTBOL_SEMANAS + 1) if manana - timedelta(days=7 * k) in fechas)
+
+
+def futbol_previsto(cliente, dia):
+    """¿Hay fútbol el ``dia``? {'confirmado': bool, 'frase': ...} o None (8-nov-2026).
+
+    - Confirmado: hay un partido apuntado ese día (línea de tiempo o Strava).
+    - Previsto por costumbre: ese día de la semana hubo fútbol en
+      ``FUTBOL_MIN_SEMANAS`` de las últimas ``FUTBOL_SEMANAS``. Es una
+      inferencia y se dice así («Sueles jugar…»).
+    """
+    fechas = _fechas_futbol(cliente, dia - timedelta(days=7 * FUTBOL_SEMANAS), dia)
+    if dia in fechas:
+        return {'confirmado': True, 'frase': None}
+    semanas = sum(1 for k in range(1, FUTBOL_SEMANAS + 1) if dia - timedelta(days=7 * k) in fechas)
     if semanas < FUTBOL_MIN_SEMANAS:
         return None
-    # 8-nov-2026: es una inferencia del historial, no un partido apuntado: se dice así.
-    return (f'Sueles jugar al fútbol los {_DIAS[manana.weekday()]} ({semanas} de las últimas '
-            f'{FUTBOL_SEMANAS} semanas) y mañana es {_DIA[manana.weekday()]}')
+    return {'confirmado': False,
+            'frase': (f'Sueles jugar al fútbol los {_DIAS[dia.weekday()]} ({semanas} de las últimas '
+                      f'{FUTBOL_SEMANAS} semanas)')}
+
+
+def futbol_manana(cliente, hoy):
+    """La frase de por qué mañana hay (o probablemente hay) fútbol, o None."""
+    manana = hoy + timedelta(days=1)
+    previsto = futbol_previsto(cliente, manana)
+    if not previsto:
+        return None
+    if previsto['confirmado']:
+        return 'Mañana tienes fútbol (lo tienes apuntado)'
+    return f'{previsto["frase"]} y mañana es {_DIA[manana.weekday()]}'
+
+
+def _es_pierna(ej):
+    if ej.get('_deload_aplicado') or ej.get('deload'):
+        return False
+    return _grupo_ejercicio(ej.get('nombre') or '', ej.get('grupo_muscular')) in GRUPOS_PIERNA
+
+
+def _rebajar_pierna(ej):
+    """Una serie menos (mínimo 2) y RPE 7 como mucho. Devuelve lo que cambió."""
+    cambios = []
+    try:
+        series = int(ej.get('series') or 0)
+    except (TypeError, ValueError):
+        series = 0
+    if series > 2:
+        ej.setdefault('series_plan', series)
+        ej['series'] = series - 1
+        cambios.append(f'{series - 1} series en vez de {series}')
+    try:
+        rpe = float(ej.get('rpe_objetivo') or 0)
+    except (TypeError, ValueError):
+        rpe = 0
+    if rpe > RPE_SUELO:
+        ej.setdefault('rpe_objetivo_plan', ej.get('rpe_objetivo'))
+        ej['rpe_objetivo'] = RPE_SUELO
+        cambios.append(f'RPE {RPE_SUELO} en vez de {int(rpe) if rpe.is_integer() else rpe}')
+    return cambios
+
+
+def _anadir_frase(ej, frase):
+    previa = ej.get('criterio_entrenador')
+    ej['criterio_entrenador'] = f'{previa} {frase}' if previa else frase
 
 
 def aplicar_vispera_futbol(cliente, ejercicios, hoy):
@@ -170,34 +224,46 @@ def aplicar_vispera_futbol(cliente, ejercicios, hoy):
         return []
     aplicadas = []
     for ej in ejercicios:
-        if ej.get('_deload_aplicado') or ej.get('deload'):
+        if not _es_pierna(ej):
             continue
-        grupo = _grupo_ejercicio(ej.get('nombre') or '', ej.get('grupo_muscular'))
-        if grupo not in GRUPOS_PIERNA:
-            continue
-        cambios = []
-        try:
-            series = int(ej.get('series') or 0)
-        except (TypeError, ValueError):
-            series = 0
-        if series > 2:
-            ej['series'] = series - 1
-            cambios.append(f'{series - 1} series en vez de {series}')
-        try:
-            rpe = float(ej.get('rpe_objetivo') or 0)
-        except (TypeError, ValueError):
-            rpe = 0
-        if rpe > RPE_SUELO:
-            ej.setdefault('rpe_objetivo_plan', ej.get('rpe_objetivo'))
-            ej['rpe_objetivo'] = RPE_SUELO
-            cambios.append(f'RPE {RPE_SUELO} en vez de {int(rpe) if rpe.is_integer() else rpe}')
+        cambios = _rebajar_pierna(ej)
         if not cambios:
             continue
         ej['vispera_futbol'] = True
-        frase = f'{patron}: hoy {" y ".join(cambios)} en pierna, para llegar con piernas.'
-        previa = ej.get('criterio_entrenador')
-        ej['criterio_entrenador'] = f'{previa} {frase}' if previa else frase
+        _anadir_frase(ej, f'{patron}: hoy {" y ".join(cambios)} en pierna, para llegar con piernas.')
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
+    return aplicadas
+
+
+def aplicar_futbol_hoy(cliente, ejercicios, hoy):
+    """El mismo día del fútbol (8-nov-2026): la pierna, al final y opcional.
+
+    - Partido apuntado: además, una serie menos y RPE 7 como mucho.
+    - Solo por costumbre: nada más que eso, que es reversible; si hoy no
+      juegas, la haces como siempre.
+    """
+    try:
+        previsto = futbol_previsto(cliente, hoy)
+    except Exception:  # noqa: BLE001
+        return []
+    if not previsto:
+        return []
+    aplicadas = []
+    for ej in ejercicios:
+        if not _es_pierna(ej):
+            continue
+        ej['opcional_futbol'] = True
+        if previsto['confirmado']:
+            cambios = _rebajar_pierna(ej)
+            detalle = f', con {" y ".join(cambios)}' if cambios else ''
+            frase = f'Hoy tienes fútbol (lo tienes apuntado): la pierna va al final y es opcional{detalle}.'
+        else:
+            frase = (f'{previsto["frase"]}: la pierna de hoy va al final y es opcional. '
+                     f'Si hoy no juegas, hazla como siempre.')
+        _anadir_frase(ej, frase)
+        aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
+    if aplicadas:
+        ejercicios.sort(key=lambda e: 1 if e.get('opcional_futbol') else 0)
     return aplicadas
 
 
