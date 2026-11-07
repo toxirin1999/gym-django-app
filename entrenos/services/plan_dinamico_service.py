@@ -497,6 +497,28 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
             _persistir_estado_aplicacion(log, 'aplicada', None)
 
 
+def _semana_descarga(cliente, hoy):
+    try:
+        from entrenos.services.sesion_descarga_service import semana_plan_descarga
+        return semana_plan_descarga(cliente.id, hoy)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _variante_en_descarga(cliente, ej, hoy):
+    """7-nov-2026: una variante que entra por molestia en la descarga, también en descarga."""
+    if not _semana_descarga(cliente, hoy):
+        return
+    try:
+        from entrenos.services.sesion_descarga_service import ajustar_a_descarga
+        frase = ajustar_a_descarga(cliente, ej, hoy)
+        if frase:
+            ej['deload'] = True
+            ej['regla_carga'] = 'descarga'
+    except Exception:  # noqa: BLE001
+        logger.exception('[plan_dinamico] descarga de la variante falló')
+
+
 def _rehacer_peso_variante(cliente, ej, hoy):
     """18-oct-2026: al cambiar de ejercicio, el peso sale del ejercicio NUEVO.
 
@@ -768,6 +790,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     ej['sustitucion_texto'] = f'Molestia con {nombre}: hoy {alternativa}, más seguro para esa zona.'
                     ej['intervencion_molestia_id'] = intervencion.pk
                     _rehacer_peso_variante(cliente, ej, hoy)
+                    _variante_en_descarga(cliente, ej, hoy)
                     cambios.append({'tipo': 'sustitucion_molestia', 'ejercicio_original': nombre,
                                     'ejercicio_nuevo': alternativa, 'razon': 'Intervención leve acotada.'})
                     if intervencion.decision_origen_id:
@@ -797,6 +820,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                 _match_nombre(nombre_norm, log_norm)
                 for log_norm in logs_molestia_norm
             )
+
+            # 7-nov-2026 (nota 1): en la semana de descarga no se cambia de
+            # variante por estancamiento: el cambio espera a la semana siguiente
+            # (el curl martillo entraba sin descarga, «a por 15 reps»).
+            if es_estancado and not es_molestia and _semana_descarga(cliente, hoy):
+                es_estancado = False
 
             # Estancamiento → sustituir ejercicio
             if es_estancado and not es_molestia:
@@ -854,6 +883,7 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                     )
                     recientes.add(alternativa)
                     _rehacer_peso_variante(cliente, ej, hoy)
+                    _variante_en_descarga(cliente, ej, hoy)
                     cambios.append({
                         'tipo': 'sustitucion_molestia',
                         'ejercicio_original': nombre,

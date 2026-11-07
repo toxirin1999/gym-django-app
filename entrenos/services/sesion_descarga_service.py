@@ -176,7 +176,19 @@ def ajustar_a_descarga(cliente, ej, hoy):
                 reps = max(minimo, min(reps_ref - REPS_MENOS_MISMO_PESO, techo))
                 ej['_descarga_mismo_peso'] = True
         else:
-            estimado = peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))
+            # 7-nov-2026 (nota 2): la estimación más prudente de todas las series.
+            # Con 15 × 4 @10 y luego 10 × 7 @9 salía 12,5 × 10 (desde el fallo);
+            # desde la de 10 kg sale 7,5.
+            estimados = [peso_para_reps(peso_ref, reps_ref, ref.get('rpe'), minimo, float(rpe))]
+            for serie in lectura.get('series') or []:
+                try:
+                    if float(serie.get('peso') or 0) > 0 and int(serie.get('reps') or 0) > 0:
+                        estimados.append(peso_para_reps(float(serie['peso']), int(serie['reps']),
+                                                        serie.get('rpe'), minimo, float(rpe)))
+                except (TypeError, ValueError):
+                    continue
+            estimados = [e for e in estimados if e]
+            estimado = min(estimados) if estimados else None
             peso = a_escala(estimado or peso_ref * FACTOR_PESO_DESCARGA, salto, 'cerca')
             reps = minimo
         tope = tope_de(cliente, nombre)
