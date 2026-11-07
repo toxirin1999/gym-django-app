@@ -271,6 +271,20 @@ def dias_recientes(estado):
     return out
 
 
+def _mananas(n):
+    return f'{n} mañana' if n == 1 else f'{n} mañanas'
+
+
+def descanso_del_plan(cliente, hoy):
+    """8-nov-2026: True si hoy el plan marca descanso (no tus señales)."""
+    try:
+        from entrenos.services.semana_rutina_service import semana_segun_cola
+        dia = semana_segun_cola(cliente, hoy)['dias'].get(hoy) or {}
+    except Exception:  # noqa: BLE001
+        return False
+    return dia.get('tipo') == 'descanso' and not dia.get('aplazada')
+
+
 def tres_preguntas(estado):
     """¿Descanso? ¿Me paso? ¿Puedo dar más? Respuesta corta + por qué, con el dato."""
     from entrenos.services.estado_carga_service import DAR_MAS_BUENOS, PASAS_RATIO
@@ -287,43 +301,51 @@ def tres_preguntas(estado):
                  'porque': 'Estás de parada: no juzgo nada hasta que vuelvas.'}
                 for p in ('¿Necesito descansar?', '¿Me estoy pasando?', '¿Puedo dar más?')]
 
+    # 8-nov-2026: cuántas mañanas cuentan, en qué periodo y si deben ser seguidas.
+    mananas5 = f'{malos} de {_mananas(dias5)} con dato de los últimos 5 días'
     descanso = {'pregunta': '¿Necesito descansar?'}
     if r == 'descansa':
         descanso.update(respuesta='Sí', tono='alerta',
-                        porque=f'{malos} de los últimos {dias5} días por debajo de lo normal en ti.')
+                        porque=f'Tus señales piden descanso: {mananas5} por debajo de lo normal en ti.')
     elif conociendo:
         descanso.update(respuesta='Aún no lo sé', tono='neutro',
                         porque=f'Me faltan mañanas comparadas con tu media ({dias14} de 5).')
     else:
         descanso.update(respuesta='No', tono='bien',
-                        porque=f'{malos} de los últimos {dias5} días por debajo de lo normal (salta con 3).')
+                        porque=(f'Tus señales no piden descanso extra: {mananas5} por debajo de lo normal. '
+                                f'Lo pediría con 3, seguidas o no.'))
 
     pasas = {'pregunta': '¿Me estoy pasando?'}
     if r == 'te_pasas':
         pasas.update(respuesta='Sí', tono='alerta',
-                     porque=f'{pct} % más de carga que tu semana normal y el cuerpo empieza a notarlo.')
+                     porque=(f'Últimos 7 días: un {pct} % más que tu media de las 4 semanas anteriores, '
+                             f'y el cuerpo empieza a notarlo.'))
     elif ratio is not None and ratio >= PASAS_RATIO:
         pasas.update(respuesta='Carga alta', tono='aviso',
-                     porque=f'{pct} % más que tu semana normal. '
+                     porque=f'Últimos 7 días: un {pct} % más que tu media de las 4 semanas anteriores. '
                             + ('Aún no sé cómo lo lleva tu cuerpo.' if conociendo else 'De momento tu cuerpo lo aguanta.'))
     elif ratio is None:
         pasas.update(respuesta='Aún no lo sé', tono='neutro', porque='Me falta historial de carga.')
     else:
         pasas.update(respuesta='No', tono='bien',
-                     porque=('Carga como en tus semanas normales.' if abs(pct) < 10 else
-                             f'Carga un {abs(pct)} % {"por encima" if pct > 0 else "por debajo"} de tu semana normal.'))
+                     porque=('Últimos 7 días: como tu media de las 4 semanas anteriores.' if abs(pct) < 10 else
+                             f'Últimos 7 días: un {abs(pct)} % {"por encima" if pct > 0 else "por debajo"} '
+                             f'de tu media de las 4 semanas anteriores.'))
 
     mas = {'pregunta': '¿Puedo dar más?'}
     if r == 'dar_mas':
         mas.update(respuesta='Sí', tono='bien',
-                   porque=f'{buenos} de {dias14} días recuperándote bien y la carga en lo tuyo.')
+                   porque=(f'{buenos} mañanas buenas en los últimos 14 días (hacían falta 10, seguidas o no) '
+                           f'y la carga en lo tuyo.'))
     elif conociendo:
         mas.update(respuesta='Aún no lo sé', tono='neutro',
                    porque='Necesito un par de semanas viéndote recuperar.')
     else:
         motivos = []
         if buenos < DAR_MAS_BUENOS:
-            motivos.append(f'{buenos} de {dias14} días buenos (pido 10)')
+            sin_dato = f'; el reloj solo pudo comparar {dias14} de los 14' if dias14 < 14 else ''
+            motivos.append(f'{buenos} mañanas buenas en los últimos 14 días; hacen falta 10, '
+                           f'seguidas o no{sin_dato}')
         if ratio is not None and ratio > 1.3:
             motivos.append('la carga ya va alta')
         if estado['esfuerzo']['subiendo']:
@@ -353,6 +375,7 @@ def contexto_panel(cliente, hoy):
         'estado': estado,
         'titulo': TITULOS[estado['respuesta']],
         'preguntas': tres_preguntas(estado),
+        'descanso_plan': descanso_del_plan(cliente, hoy),
         'camino': camino(cliente, hoy),
         'variabilidad': variabilidad(cliente, hoy),
         'pulso': pulso(cliente, hoy),

@@ -2214,15 +2214,14 @@ def dashboard_silencioso_preview(request):
     if acwr is None:
         carga = 'Sin historial'
         carga_detalle = 'Aún no hay suficiente carga para leer una tendencia.'
-    elif acwr < 0.8:
-        carga = 'Baja'
-        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
-    elif acwr <= 1.3:
-        carga = 'Estable'
-        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
     else:
-        carga = 'Alta'
-        carga_detalle = f'ACWR {acwr:.2f}'.replace('.', ',')
+        # 8-nov-2026: el ACWR no mide cuánta carga llevas sino hacia dónde va:
+        # tus 7 días frente a tus 42, ponderados (lo reciente pesa más). Por eso
+        # se llama «tendencia» y lleva su propia referencia; el porcentaje de
+        # arriba es el que dice cuánto llevas frente a tus 4 semanas anteriores.
+        # Mismos umbrales que antes (0,8 y 1,3).
+        carga = 'Bajando' if acwr < 0.8 else ('Estable' if acwr <= 1.3 else 'Subiendo rápido')
+        carga_detalle = f'7 días frente a 42, ponderados · {acwr:.2f}'.replace('.', ',')
 
     # Es una lectura de carga, no un marcador de salud. Solo se enseña una
     # cifra cuando el sistema ha podido calcularla; la ausencia de historial
@@ -2246,7 +2245,8 @@ def dashboard_silencioso_preview(request):
         quiet_load = {
             'valor': f'{pct:+d} %'.replace('-', '−'),
             'estado': 'Baja' if ratio < 0.8 else ('Estable' if ratio <= 1.3 else 'Alta'),
-            'frase': f'Esta semana vas {_texto_ratio(float(ratio))}',
+            # 8-nov-2026: con su referencia, para leerlo de un vistazo.
+            'frase': f'Últimos 7 días: {_texto_ratio(float(ratio))}',
         }
 
     # Organismo usa estados internos de coordinación. La portada, en cambio,

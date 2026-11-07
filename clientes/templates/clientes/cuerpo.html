@@ -58,7 +58,8 @@
       <span class="mono label" id="hoy-titulo">Hoy</span>
       <p class="titulo {{ estado.respuesta }}">{{ titulo }}</p>
       <p class="frase">{{ estado.frase }}</p>
-      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Es el resumen de lo de abajo: cómo amaneces (lo que mide el reloj por la noche) y cuánta carga llevas (tus últimos 7 días frente a tus 4 semanas anteriores).</p><p>Hasta tener 5 mañanas del reloj te estoy conociendo: te cuento lo que veo, pero no saco conclusiones.</p></div></details>
+      {% if descanso_plan %}<p class="frase">Hoy toca descanso según el plan: es el día libre de la semana, no una señal de tu cuerpo.</p>{% endif %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Es el resumen de lo de abajo: cómo amaneces (lo que mide el reloj por la noche) y cuánta carga llevas (tus últimos 7 días frente a tu media de las 4 semanas anteriores).</p>{% if estado.respuesta == 'conociendote' %}<p>Hasta tener 5 mañanas del reloj comparadas te estoy conociendo: te cuento lo que veo, pero no saco conclusiones.</p>{% endif %}</div></details>
     </section>
 
     <section class="card" aria-labelledby="preguntas-titulo">
@@ -70,7 +71,7 @@
           <p>{{ p.porque }}</p>
         </div>
       {% endfor %}
-      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p><strong>¿Necesito descansar?</strong> Sí, si 3 de tus últimas 5 mañanas están por debajo de lo normal en ti y sigues entrenando como siempre.</p><p><strong>¿Me estoy pasando?</strong> «Carga alta» es un 30 % o más por encima de tus semanas normales; pasa a «Sí» cuando además el cuerpo lo nota (2 mañanas malas).</p><p><strong>¿Puedo dar más?</strong> Sí, cuando 10 de 14 mañanas estás bien, la carga está en lo tuyo, tu esfuerzo medio no sube y no hay molestias.</p></div></details>
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p><strong>¿Necesito descansar?</strong> Es lo que piden tus señales, no el plan. Sí, si 3 de las mañanas con dato de los últimos 5 días (seguidas o no) están por debajo de lo normal en ti y tu carga no ha bajado más de un 20 %.</p><p><strong>¿Me estoy pasando?</strong> «Carga alta» es que tus últimos 7 días van un 30 % o más por encima de tu media de las 4 semanas anteriores; pasa a «Sí» cuando además 2 de las mañanas con dato de los últimos 5 días salen por debajo.</p><p><strong>¿Puedo dar más?</strong> Sí, cuando en los últimos 14 días hay 10 mañanas buenas (seguidas o no; un día sin dato del reloj no cuenta como buena), la carga está entre un 20 % menos y un 30 % más que tu media, tu esfuerzo medio no sube y no hay molestias.</p></div></details>
     </section>
 
     {% if frase_musculos %}

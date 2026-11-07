@@ -236,7 +236,8 @@ def estado_carga(cliente, hoy):
 
     def _te_pasas():
         return {**base, 'respuesta': 'te_pasas', 'frase': (
-            f'Esta semana llevas un {_pct(ratio)} % más de carga que en tus semanas normales y tu cuerpo '
+            f'En los últimos 7 días llevas un {_pct(ratio)} % más de carga que tu media de las 4 semanas '
+            f'anteriores y tu cuerpo '
             f'empieza a notarlo ({_detalle_malos()}). Aflojamos un par de días.')}
 
     if parada:
@@ -260,7 +261,7 @@ def estado_carga(cliente, hoy):
                      f'{"día" if con_reloj == 1 else "días"} con datos del reloj y necesito '
                      f'{MIN_DIAS_RELOJ} para saber qué es lo normal en ti.')
         if ratio is not None:
-            frase += f' Tu carga de esta semana va {_texto_ratio(ratio)}.'
+            frase += f' Tu carga de los últimos 7 días va {_texto_ratio(ratio)}.'
         return {**base, 'respuesta': 'conociendote', 'frase': frase}
 
     if malos5 >= DESCANSA_MALOS and (ratio is None or ratio >= 0.8):
@@ -284,7 +285,8 @@ def estado_carga(cliente, hoy):
 
     frase = 'Vas bien: tu cuerpo y tu carga están donde deben.'
     if ratio is not None:
-        frase = f'Vas bien: carga {_texto_ratio(ratio)} y tu cuerpo respondiendo como siempre.'
+        frase = (f'Vas bien: tus últimos 7 días, {_texto_ratio(ratio)}, '
+                 f'y tu cuerpo respondiendo como siempre.')
     return {**base, 'respuesta': 'vas_bien', 'frase': frase}
 
 
@@ -293,12 +295,13 @@ def _n(x):
 
 
 def _texto_ratio(ratio):
+    """Los últimos 7 días frente a la media de las 4 semanas anteriores (8-nov: con su referencia)."""
     pct = _pct(ratio)
     if abs(pct) < 10:
-        return 'como en tus semanas normales'
+        return 'como tu media de las 4 semanas anteriores'
     if pct > 0:
-        return f'un {pct} % por encima de tus semanas normales'
-    return f'un {-pct} % por debajo de tus semanas normales'
+        return f'un {pct} % por encima de tu media de las 4 semanas anteriores'
+    return f'un {-pct} % por debajo de tu media de las 4 semanas anteriores'
 
 
 # ── Parada declarada ───────────────────────────────────────────────────────

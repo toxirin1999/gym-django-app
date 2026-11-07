@@ -33,6 +33,7 @@ FUTBOL_SEMANAS = 4
 FUTBOL_MIN_SEMANAS = 3
 GRUPOS_PIERNA = frozenset({'cuádriceps', 'isquios', 'glúteos', 'gemelos'})
 _DIAS = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábados', 'domingos')
+_DIA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
 
 GRUPOS = (
     ('pecho', 'pecho'), ('pector', 'pecho'),
@@ -136,7 +137,7 @@ def aplicar_criterios(cliente, ejercicios, hoy):
 
 
 def futbol_manana(cliente, hoy):
-    """'los miércoles, 4 de las últimas 4 semanas' si mañana toca fútbol, o None.
+    """La frase de por qué mañana probablemente juegas, o None.
 
     Se deduce del historial: el fútbol cayó ese día de la semana en
     ``FUTBOL_MIN_SEMANAS`` de las últimas ``FUTBOL_SEMANAS``.
@@ -154,7 +155,9 @@ def futbol_manana(cliente, hoy):
     semanas = sum(1 for k in range(1, FUTBOL_SEMANAS + 1) if manana - timedelta(days=7 * k) in fechas)
     if semanas < FUTBOL_MIN_SEMANAS:
         return None
-    return f'los {_DIAS[manana.weekday()]}, {semanas} de las últimas {FUTBOL_SEMANAS} semanas'
+    # 8-nov-2026: es una inferencia del historial, no un partido apuntado: se dice así.
+    return (f'Sueles jugar al fútbol los {_DIAS[manana.weekday()]} ({semanas} de las últimas '
+            f'{FUTBOL_SEMANAS} semanas) y mañana es {_DIA[manana.weekday()]}')
 
 
 def aplicar_vispera_futbol(cliente, ejercicios, hoy):
@@ -191,8 +194,7 @@ def aplicar_vispera_futbol(cliente, ejercicios, hoy):
         if not cambios:
             continue
         ej['vispera_futbol'] = True
-        frase = (f'Mañana juegas al fútbol ({patron}): hoy {" y ".join(cambios)} '
-                 f'en pierna, para llegar con piernas.')
+        frase = f'{patron}: hoy {" y ".join(cambios)} en pierna, para llegar con piernas.'
         previa = ej.get('criterio_entrenador')
         ej['criterio_entrenador'] = f'{previa} {frase}' if previa else frase
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})

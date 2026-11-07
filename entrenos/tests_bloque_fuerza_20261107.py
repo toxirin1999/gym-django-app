@@ -105,7 +105,8 @@ class VisperaFutbol(TestCase):
 
     def test_patron_de_los_miercoles(self):
         from entrenos.services.criterios_entrenador_service import futbol_manana
-        self.assertEqual(futbol_manana(self.cliente, self.martes), 'los miércoles, 3 de las últimas 4 semanas')
+        self.assertEqual(futbol_manana(self.cliente, self.martes),
+                         'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas) y mañana es miércoles')
         self.assertIsNone(futbol_manana(self.cliente, self.martes + timedelta(days=1)))
 
     def test_pierna_con_una_serie_menos_y_rpe_7(self):
@@ -122,7 +123,7 @@ class VisperaFutbol(TestCase):
         self.assertEqual((curl['series'], curl['rpe_objetivo']), (2, 7))
         self.assertEqual(len(frases), 1)
         self.assertEqual(rumano['criterio_entrenador'],
-                         'Mañana juegas al fútbol (los miércoles, 3 de las últimas 4 semanas): '
+                         'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas) y mañana es miércoles: '
                          'hoy 3 series en vez de 4 y RPE 7 en vez de 8 en pierna, para llegar con piernas.')
 
     def test_sin_patron_no_toca_nada(self):

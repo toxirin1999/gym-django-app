@@ -104,7 +104,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         # 26-oct-2026: en palabras y en porcentaje, no "ACWR 0,93".
         self.assertEqual(response.context["quiet_load"], {
             "valor": "−7 %", "estado": "Estable",
-            "frase": "Esta semana vas como en tus semanas normales",
+            "frase": "Últimos 7 días: como tu media de las 4 semanas anteriores",
         })
         self.assertContains(response, 'class="load-chip"')
         self.assertContains(response, "Carga física")
@@ -182,7 +182,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
 
         self.assertContains(response, 'class="decision-signal"')
         self.assertContains(response, "Señal de carga")
-        self.assertContains(response, "Esta semana vas como en tus semanas normales")
+        self.assertContains(response, "Últimos 7 días: como tu media de las 4 semanas anteriores")
 
     @patch('clientes.views._aviso_decision_pendiente')
     def test_muestra_unico_aviso_del_centro_solo_cuando_hay_accion_pendiente(self, aviso):

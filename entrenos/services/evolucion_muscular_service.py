@@ -254,10 +254,15 @@ def tramo_reps(reps):
     return 'alto'
 
 
-def comparar_ejercicios(cliente, hoy=None, dias=90):
+def comparar_ejercicios(cliente, hoy=None, dias=90, estricto=False):
     """
     Detalle por ejercicio de las dos ventanas. Lo usan el mapa y el comando
     ``diagnosticar_evolucion_muscular``.
+
+    ``estricto`` (8-nov-2026, para evaluar propuestas): sin las semanas de
+    descarga y comparando siempre el mismo tramo de reps (≤ 8, 9-14, ≥ 15). Si
+    no hay ningún tramo en común, no se compara: mejor «sin evidencia» que
+    comparar 4-6 reps con 12-15.
 
     Devuelve una lista de dicts::
 
@@ -288,6 +293,12 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
         if rec or (eid, _plano(nombre)) in con_series:
             continue
         candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'media'))
+    if estricto:
+        from entrenos.models import SemanaPlanGym
+        descarga = set(SemanaPlanGym.objects.filter(
+            cliente=cliente, descarga=True,
+        ).values_list('lunes', flat=True))
+        candidatos = [c for c in candidatos if (c[0] - timedelta(days=c[0].weekday())) not in descarga]
     candidatos.sort(key=lambda c: c[0])
 
     por_ejercicio = {}
@@ -335,7 +346,8 @@ def comparar_ejercicios(cliente, hoy=None, dias=90):
             # mismo tramo de reps; si no hay ninguno en común, no se compara.
             # Solo cuando los dos extremos no se parecen (≤ 8 frente a ≥ 15); tramos
             # vecinos (8 y 12) se comparan como siempre.
-            lejos = {tramo_reps(info['antes']['reps']), tramo_reps(info['ahora']['reps'])} == {'fuerza', 'alto'}
+            tramos_extremos = {tramo_reps(info['antes']['reps']), tramo_reps(info['ahora']['reps'])}
+            lejos = tramos_extremos == {'fuerza', 'alto'} or (estricto and len(tramos_extremos) > 1)
             if lejos:
                 comunes = [t for t in tramos['ahora'] if t in tramos['antes']]
                 if comunes:

@@ -664,7 +664,9 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
         # hicieron.
         dias = ((p.fin - p.inicio).days + 1) if p.inicio else p.semanas * 7
         comparables = [
-            e for e in comparar_ejercicios(cliente, p.fin, dias)
+            # 8-nov-2026: solo sesiones comparables (sin descarga y en el mismo
+            # tramo de reps): el bloque de fuerza cambia reps y esfuerzo.
+            e for e in comparar_ejercicios(cliente, p.fin, dias, estricto=True)
             if e['pct'] is not None and not e['dudoso']
         ]
         filas = [e for e in comparables if _plano(e['ejercicio']) in objetivo]
@@ -672,7 +674,8 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
             filas = [e for e in comparables if e.get('zona') == p.zona and not e.get('ligero')]
         if not filas:
             resultado = 'neutra'
-            notas = 'No hubo sesiones suficientes de esos ejercicios para comparar'
+            notas = ('Sin evidencia suficiente: no hubo sesiones comparables de esos ejercicios '
+                     '(mismo tramo de reps y fuera de la descarga) antes y durante la propuesta')
         else:
             pct = round(median(e['pct'] for e in filas), 1)
             pct_txt = f"{'+' if pct > 0 else ''}{str(pct).replace('.', ',')} %"

@@ -80,6 +80,20 @@ def _visible(grupo):
     return NOMBRES.get(grupo, grupo[:1].upper() + grupo[1:])
 
 
+def _grupos_catalogo(nombres):
+    """{nombre limpio: grupo_muscular} del catálogo (EjercicioBase) para esos nombres."""
+    from rutinas.models import EjercicioBase
+    nombres = {n for n in nombres if n}
+    if not nombres:
+        return {}
+    limpios = {_limpio(n) for n in nombres}
+    out = {}
+    for nombre, grupo in EjercicioBase.objects.filter(nombre__in=nombres).values_list('nombre', 'grupo_muscular'):
+        if grupo and _limpio(nombre) in limpios:
+            out[_limpio(nombre)] = grupo
+    return out
+
+
 def series_plan_semana(cliente, hoy):
     """{grupo: series} que pide el plan de la semana de ``hoy`` (lunes a domingo)."""
     from entrenos.services.sesion_recomendada import _build_planificador, _es_descanso, _normalizar_entrenamiento
@@ -88,17 +102,26 @@ def series_plan_semana(cliente, hoy):
     lunes = hoy - timedelta(days=hoy.weekday())
     plan = Counter()
     sesiones = []
+    entrenos = []
     for i in range(7):
         ent = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(lunes + timedelta(days=i)))
         if not ent or _es_descanso(ent):
             continue
+        entrenos.append(ent)
+    # 8-nov-2026: el grupo de cada ejercicio sale de donde sale en lo hecho (el
+    # catálogo de ejercicios); el planificador puede tenerlo en otro (búlgara:
+    # glúteo en el plan y cuádriceps al registrarla).
+    grupo_catalogo = _grupos_catalogo(
+        {ej.get('nombre') for ent in entrenos for ej in (ent.get('ejercicios') or [])})
+    for ent in entrenos:
         grupos = set()
         for ej in ent.get('ejercicios') or []:
             try:
                 n = int(ej.get('series') or 0)
             except (TypeError, ValueError):
                 n = 0
-            for g, peso in grupos_de_serie(ej.get('nombre'), ej.get('grupo_muscular')):
+            grupo = grupo_catalogo.get(_limpio(ej.get('nombre'))) or ej.get('grupo_muscular')
+            for g, peso in grupos_de_serie(ej.get('nombre'), grupo):
                 plan[g] += n * peso
                 if peso == 1.0:
                     grupos.add(g)

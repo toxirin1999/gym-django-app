@@ -111,7 +111,7 @@ class Respuestas(Base):
                      'bien', 'bien', 'bien'])
         e = ec.estado_carga(self.cliente, HOY)
         self.assertEqual(e['respuesta'], 'vas_bien')
-        self.assertIn('como en tus semanas normales', e['frase'])
+        self.assertIn('como tu media de las 4 semanas anteriores', e['frase'])
         json.dumps(e)
 
 
