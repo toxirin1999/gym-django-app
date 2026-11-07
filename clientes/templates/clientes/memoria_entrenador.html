@@ -317,7 +317,7 @@
       {% if r.equilibrar %}
       <div class="mem-row"><div class="idx">03</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Equilibrar (zonas que caían al empezar, a 90 días como «Cómo has evolucionado»):{% for e in r.equilibrar %}<br>{{ e.texto }}{% endfor %}</div></div></div>
       {% endif %}
-      <div class="mem-row"><div class="idx">04</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Decisiones comprobadas en el bloque: {% if r.decisiones.total %}{{ r.decisiones.funcionaron }} de {{ r.decisiones.total }} funcionaron{% else %}ninguna con conclusión{% endif %}.{% for p in r.propuestas %}<br>{{ p }}{% endfor %}</div></div></div>
+      <div class="mem-row"><div class="idx">04</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">Cambios comprobados en el bloque ({{ r.inicio|date:"d/m" }}–{{ r.fin|date:"d/m" }}): {% if r.decisiones.total %}{{ r.decisiones.funcionaron }} de {{ r.decisiones.total }} funcionaron{% else %}ninguno con conclusión{% endif %}.{% for p in r.propuestas %}<br>{{ p }}{% endfor %}</div></div></div>
       <div class="mem-row"><div class="idx">05</div><div><div class="meta" style="text-transform:none;letter-spacing:normal;font-size:12px;">{{ r.cambia }}</div></div></div>
     </div>
     {% endif %}

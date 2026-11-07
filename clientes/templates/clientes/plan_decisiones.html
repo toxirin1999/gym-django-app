@@ -1645,7 +1645,13 @@
             Expira automáticamente al terminar su ventana.
             {% endif %}
           </p>
-          {% if iv.tipo == 'vigilar_senal' %}
+          {# 7-nov-2026: la señal del Diario también es «vigilar_senal»; su salida es dejar de compartirla, va primero. #}
+          {% if iv.origen_patron == 'diario_tendencia_corporal' and iv.senal_autorizada %}
+          <form method="post" action="{% url 'clientes:revocar_senal_diario' iv.senal_autorizada.id %}">
+            {% csrf_token %}
+            <button class="dc-button is-danger" type="submit">Dejar de compartir</button>
+          </form>
+          {% elif iv.tipo == 'vigilar_senal' %}
           <form method="post" action="{% url 'clientes:cancelar_experimento_hipotesis' iv.id %}">
             {% csrf_token %}<button class="dc-button is-danger" type="submit">Cancelar experimento</button>
           </form>
@@ -1653,11 +1659,6 @@
           <form method="post" action="{% url 'clientes:cancelar_intervencion_esenciales' iv.id %}">
             {% csrf_token %}
             <button class="dc-button is-danger" type="submit">Cancelar ajuste</button>
-          </form>
-          {% elif iv.origen_patron == 'diario_tendencia_corporal' and iv.senal_autorizada %}
-          <form method="post" action="{% url 'clientes:revocar_senal_diario' iv.senal_autorizada.id %}">
-            {% csrf_token %}
-            <button class="dc-button is-danger" type="submit">Dejar de compartir</button>
           </form>
           {% endif %}
         </article>
@@ -1728,9 +1729,10 @@
     <section class="dc-section" id="decisiones-recientes" aria-labelledby="titulo-decisiones">
       <div class="dc-label">Comprobado con tus sesiones</div>
       <h2 class="dc-heading" id="titulo-decisiones">Qué decidí y si funcionó</h2>
-      {% if aprendizaje_plan and aprendizaje_plan.con_conclusion %}
-      <p class="dc-card-text"><strong>{{ aprendizaje_plan.funcionaron }} de {{ aprendizaje_plan.con_conclusion }} funcionaron</strong> en los últimos {{ aprendizaje_plan.dias }} días.</p>
-      <p class="dc-card-meta">Cada cambio de peso o reps se comprueba en tu siguiente sesión de ese ejercicio.{% if aprendizaje_plan.sin_conclusion %} Otras {{ aprendizaje_plan.sin_conclusion }} aún no dan para concluir.{% endif %}</p>
+      {% if aprendizaje_plan and aprendizaje_plan.cambios_concluyentes %}
+      {# 7-nov-2026: el mismo cálculo y periodo que Memoria (decisiones_evaluadas, 28 días). #}
+      <p class="dc-card-text"><strong>{{ aprendizaje_plan.cambios_funcionaron }} de {{ aprendizaje_plan.cambios_concluyentes }} cambios funcionaron</strong> en los últimos {{ aprendizaje_plan.dias }} días.</p>
+      <p class="dc-card-meta">Cuenta solo los cambios (subir, bajar, cambiar variante) ya comprobados con tu siguiente sesión de ese ejercicio.{% if aprendizaje_plan.cambios_pendientes %} Pendientes de comprobar: {{ aprendizaje_plan.cambios_pendientes }}.{% endif %}{% if aprendizaje_plan.cambios_sin_evidencia %} Sin evidencia suficiente: {{ aprendizaje_plan.cambios_sin_evidencia }}.{% endif %}{% if aprendizaje_plan.consolidaciones %} Las {{ aprendizaje_plan.consolidaciones }} consolidaciones (mantener la carga) no entran en la cuenta.{% endif %}</p>
       <ul class="dc-aprendido">
         {% for item in aprendizaje_plan.items %}
         <li class="{% if item.resultado == 'validada' %}is-ok{% elif item.resultado == 'fallida' %}is-bad{% endif %}"><span class="dc-date">{{ item.fecha|date:"d/m" }}</span> {{ item.texto }}</li>

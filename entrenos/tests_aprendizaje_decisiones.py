@@ -154,3 +154,20 @@ class CambiosYEvidencia20261107(AprendizajeDecisionesTests):
         r = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
         self.assertContains(r, 'Qué se esperaba:')
         self.assertContains(r, reverse('entrenos:post_entreno_resumen', args=[self.cliente.id, despues.id]))
+
+
+class MismoContadorCentroYMemoria(TestCase):
+    """7-nov-2026: Centro y Memoria cuentan igual («X de Y cambios funcionaron», 28 días)."""
+
+    def test_plantillas(self):
+        from pathlib import Path
+        from django.conf import settings
+        base = Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes'
+        centro = (base / 'plan_decisiones.html').read_text(encoding='utf-8')
+        memoria = (base / 'memoria_entrenador.html').read_text(encoding='utf-8')
+        self.assertIn('{{ aprendizaje_plan.cambios_funcionaron }} de {{ aprendizaje_plan.cambios_concluyentes }} '
+                      'cambios funcionaron</strong> en los últimos {{ aprendizaje_plan.dias }} días', centro)
+        self.assertNotIn('aprendizaje_plan.con_conclusion', centro)
+        self.assertIn('{{ decisiones_evaluadas.cambios_funcionaron }} de '
+                      '{{ decisiones_evaluadas.cambios_concluyentes }} cambios funcionaron', memoria)
+        self.assertIn('Cambios comprobados en el bloque ({{ r.inicio|date:"d/m" }}–{{ r.fin|date:"d/m" }})', memoria)
