@@ -309,6 +309,13 @@ def decisiones_por_vigencia(cliente, decisiones, desde, hoy, en_plan=None):
                 and not (ultima_vez.get(clave) and ultima_vez[clave] > origen)):
             item['estado'] = _ESTADO_VIGENTE.get(log.estado_aplicacion, 'para la próxima sesión')
             item['rango_proximo'] = (en_plan or {}).get(clave)
+            item['rango_anterior'] = None
+            if log.entreno_origen_id:
+                try:
+                    from entrenos.services.ultima_sesion_service import rango_de_sesion
+                    item['rango_anterior'] = rango_de_sesion(log.entreno_origen, log.ejercicio)
+                except Exception:  # noqa: BLE001
+                    item['rango_anterior'] = None
             vigentes.append(item)
         elif desde is None or fecha >= desde:
             historial.append(item)

@@ -6791,10 +6791,19 @@ def _carga_por_vigencia(cliente, hoy, resumen_operativo):
             nuevo = bloque_nuevo(cliente, hoy)
         except Exception:
             nuevo = None
+        from entrenos.services.ultima_sesion_service import rango_reps
         for d in vigencia['vigentes']:
-            if nuevo and d.get('rango_proximo'):
-                d['nota'] = (f"Con {nuevo['nombre']} vuelve a {d['rango_proximo']} reps: "
-                             'el peso se recalcula para ese rango.')
+            proximo = rango_reps(d.get('rango_proximo')) if d.get('rango_proximo') else None
+            antes = d.get('rango_anterior')
+            if not (nuevo and proximo) or (antes and tuple(antes) == tuple(proximo)):
+                continue
+            d['nota'] = (f"Con {nuevo['nombre']} vuelve a {d['rango_proximo']} reps: "
+                         'el peso se recalcula para ese rango.')
+            if antes:
+                # La decisión se tomó para otro rango: queda como antecedente,
+                # no como objetivo de la próxima sesión.
+                d['recalcula'] = True
+                d['rango_anterior_texto'] = f'{antes[0]}-{antes[1]}' if antes[0] != antes[1] else str(antes[0])
     except Exception:
         logger.exception('Centro: no se pudo separar la carga vigente del historial')
         return None

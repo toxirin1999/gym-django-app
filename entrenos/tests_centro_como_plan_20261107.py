@@ -201,3 +201,39 @@ class Plantilla(SimpleTestCase):
         self.assertIn("lectura_semanal_joi.estado != 'minima'", src)
         self.assertIn('carga_vigencia.vigentes', src)
         self.assertNotIn('Ver decisiones por ejercicio', src)
+
+
+class CambioDeRango(Base):
+    """La decisión tomada para otro rango queda como antecedente, no como objetivo."""
+
+    def _vigencia(self, rango_anterior):
+        from clientes.views import _carga_por_vigencia
+        vig = {'vigentes': [{'ejercicio': 'Y-Raises', 'accion': 'subir_reps', 'label': 'Subir repeticiones',
+                             'motivo': 'Media 15 frente al objetivo 15 — objetivo cumplido en todas: una rep más',
+                             'fecha': date(2026, 10, 31), 'estado': 'para la próxima sesión',
+                             'motivo_postergacion': None, 'rango_proximo': '8-12',
+                             'rango_anterior': rango_anterior}],
+               'historial': [], 'desde': LUNES}
+        with patch('entrenos.services.centro_decisiones_service.decisiones_por_vigencia', return_value=vig), \
+                patch('entrenos.services.centro_decisiones_service.ejercicios_en_plan', return_value={}), \
+                patch('entrenos.services.bloque_siguiente_service.bloque_nuevo',
+                      return_value={'nombre': 'Fuerza — Hipertrofia'}), \
+                patch('clientes.views._propuesta_zona_visible', return_value=None):
+            return _carga_por_vigencia(self.cliente, SABADO, {'bloque': {'inicio': LUNES}})['vigentes'][0]
+
+    def test_rango_distinto_se_recalcula(self):
+        d = self._vigencia((15, 20))
+        self.assertTrue(d['recalcula'])
+        self.assertEqual(d['rango_anterior_texto'], '15-20')
+        self.assertEqual(d['nota'], 'Con Fuerza — Hipertrofia vuelve a 8-12 reps: el peso se recalcula para ese rango.')
+
+    def test_mismo_rango_sigue_vigente(self):
+        d = self._vigencia((8, 12))
+        self.assertNotIn('recalcula', d)
+        self.assertNotIn('nota', d)
+
+    def test_plantilla_no_destaca_el_valor_antiguo(self):
+        src = PLANTILLA.read_text(encoding='utf-8')
+        self.assertIn('Decisión anterior ({{ d.fecha|date:"d/m" }}, con {{ d.rango_anterior_texto }} reps)', src)
+        self.assertIn('Se recalcula · {{ d.rango_proximo }} reps', src)
+        self.assertIn('Historial{% if carga_vigencia.desde %} del {{ carga_vigencia.desde|date:"d/m" }} a hoy', src)

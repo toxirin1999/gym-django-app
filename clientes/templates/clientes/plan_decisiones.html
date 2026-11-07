@@ -1878,12 +1878,21 @@
             <article class="dc-technical-card dc-detail-row">
               <div>
                 <p class="dc-detail-name">{{ d.ejercicio }}</p>
+                {% if d.recalcula %}
+                <p class="dc-card-note">{{ d.nota }}</p>
+                <p class="dc-card-meta">Decisión anterior ({{ d.fecha|date:"d/m" }}, con {{ d.rango_anterior_texto }} reps): {{ d.motivo }}</p>
+                {% else %}
                 {% if d.motivo %}<p class="dc-card-meta">{{ d.motivo }}</p>{% endif %}
                 {% if d.motivo_postergacion %}<p class="dc-card-note">{{ d.motivo_postergacion }}</p>{% endif %}
                 {% if d.nota %}<p class="dc-card-note">{{ d.nota }}</p>{% endif %}
+                {% endif %}
               </div>
               <div class="dc-detail-side">
+                {% if d.recalcula %}
+                <span class="dc-badge is-postponed">Se recalcula · {{ d.rango_proximo }} reps</span>
+                {% else %}
                 <span class="dc-badge{% if d.accion == 'bajar_peso' %} is-down{% elif d.accion == 'cambiar_variante' %} is-variant{% elif d.estado == 'pospuesta' or d.pausa %} is-postponed{% else %} is-up{% endif %}">{{ d.label }} · {{ d.estado }}</span>
+                {% endif %}
                 {% if d.fecha %}<span class="dc-date">{{ d.fecha|date:"d M" }}</span>{% endif %}
               </div>
             </article>
@@ -1894,7 +1903,7 @@
           {% if carga_vigencia.historial %}
           <details class="dc-accordion">
             <summary>
-              <span>Historial ({{ carga_vigencia.historial|length }})</span>
+              <span>Historial{% if carga_vigencia.desde %} del {{ carga_vigencia.desde|date:"d/m" }} a hoy{% endif %} ({{ carga_vigencia.historial|length }})</span>
               <svg class="dc-chevron" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></path>
               </svg>
