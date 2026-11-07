@@ -1880,6 +1880,7 @@
                 <p class="dc-detail-name">{{ d.ejercicio }}</p>
                 {% if d.motivo %}<p class="dc-card-meta">{{ d.motivo }}</p>{% endif %}
                 {% if d.motivo_postergacion %}<p class="dc-card-note">{{ d.motivo_postergacion }}</p>{% endif %}
+                {% if d.nota %}<p class="dc-card-note">{{ d.nota }}</p>{% endif %}
               </div>
               <div class="dc-detail-side">
                 <span class="dc-badge{% if d.accion == 'bajar_peso' %} is-down{% elif d.accion == 'cambiar_variante' %} is-variant{% elif d.estado == 'pospuesta' or d.pausa %} is-postponed{% else %} is-up{% endif %}">{{ d.label }} · {{ d.estado }}</span>

@@ -346,7 +346,10 @@ class TestCase12_EstadoOperativoProgresiones(PlanDecisionesBase):
             accion='subir_peso', estado_aplicacion='pospuesta',
             motivo_postergacion='El plan detecta carga alta esta semana. No se sube peso.',
         )
-        response = self._get()
+        # 7-nov-2026: «Vigente» solo enseña ejercicios que siguen en el plan; aquí no se filtra.
+        from unittest.mock import patch
+        with patch('entrenos.services.centro_decisiones_service.ejercicios_en_plan', return_value={}):
+            response = self._get()
         self.assertContains(response, 'pospuesta')
         self.assertContains(response, 'El plan detecta carga alta esta semana. No se sube peso.')
 

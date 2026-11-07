@@ -6773,13 +6773,28 @@ _ESTADO_HOY = {
 def _carga_por_vigencia(cliente, hoy, resumen_operativo):
     """«Carga por ejercicio»: lo vigente y el historial del bloque (7-nov-2026)."""
     from entrenos.models import GymDecisionLog
-    from entrenos.services.centro_decisiones_service import decisiones_por_vigencia
+    from entrenos.services.centro_decisiones_service import decisiones_por_vigencia, ejercicios_en_plan
     desde = ((resumen_operativo or {}).get('bloque') or {}).get('inicio')
     try:
+        try:
+            en_plan = ejercicios_en_plan(cliente, hoy + timedelta(days=1)) or None
+        except Exception:
+            logger.exception('Centro: no se pudo leer qué ejercicios siguen en el plan')
+            en_plan = None
         logs = GymDecisionLog.objects.filter(
             cliente=cliente, fecha_creacion__date__gte=hoy - timedelta(days=90),
         ).select_related('entreno_origen').order_by('-fecha_creacion')
-        vigencia = decisiones_por_vigencia(cliente, logs, desde or hoy - timedelta(days=30), hoy)
+        vigencia = decisiones_por_vigencia(cliente, logs, desde or hoy - timedelta(days=30), hoy, en_plan=en_plan)
+        nuevo = None
+        try:
+            from entrenos.services.bloque_siguiente_service import bloque_nuevo
+            nuevo = bloque_nuevo(cliente, hoy)
+        except Exception:
+            nuevo = None
+        for d in vigencia['vigentes']:
+            if nuevo and d.get('rango_proximo'):
+                d['nota'] = (f"Con {nuevo['nombre']} vuelve a {d['rango_proximo']} reps: "
+                             'el peso se recalcula para ese rango.')
     except Exception:
         logger.exception('Centro: no se pudo separar la carga vigente del historial')
         return None

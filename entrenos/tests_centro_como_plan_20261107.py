@@ -145,6 +145,8 @@ class CargaPorVigencia(Base):
                                             ejercicio_normalizado=ejercicio.lower(), entreno_origen=e,
                                             accion=accion, motivo=motivo, resultado=resultado,
                                             estado_aplicacion=estado)
+        GymDecisionLog.objects.filter(pk=log.pk).update(
+            fecha_creacion=timezone.make_aware(datetime.combine(dia, datetime.min.time().replace(hour=20))))
         return log
 
     def test_vigente_e_historial(self):
@@ -164,6 +166,23 @@ class CargaPorVigencia(Base):
         historial = {(d['ejercicio'], d['accion']) for d in r['historial']}
         self.assertEqual(historial, {('Encogimientos', 'mantener'), ('Pallof Press', 'mantener')})
         self.assertTrue(all(d['fecha'] for d in r['historial']))
+
+    def test_fuera_del_plan_no_es_vigente(self):
+        from entrenos.services.centro_decisiones_service import decisiones_por_vigencia
+        self.log('Katana Extensions', 'subir_peso', LUNES - timedelta(days=40))
+        self.log('Y-Raises', 'subir_reps', LUNES - timedelta(days=2))
+        logs = GymDecisionLog.objects.filter(cliente=self.cliente).select_related('entreno_origen')
+        r = decisiones_por_vigencia(self.cliente, logs, LUNES, SABADO, en_plan={'y-raises': '8-12'})
+        self.assertEqual([(d['ejercicio'], d['rango_proximo']) for d in r['vigentes']], [('Y-Raises', '8-12')])
+
+    def test_el_historial_usa_la_fecha_de_la_decision(self):
+        from entrenos.services.centro_decisiones_service import decisiones_por_vigencia
+        # Decisión tomada hoy sobre una sesión antigua: entra en el historial del bloque.
+        log = self.log('Pallof Press', 'mantener', LUNES - timedelta(days=10))
+        GymDecisionLog.objects.filter(pk=log.pk).update(fecha_creacion=timezone.now())
+        logs = GymDecisionLog.objects.filter(cliente=self.cliente).select_related('entreno_origen')
+        r = decisiones_por_vigencia(self.cliente, logs, LUNES, timezone.localdate())
+        self.assertEqual([d['ejercicio'] for d in r['historial']], ['Pallof Press'])
 
     def test_ya_evaluada_no_es_vigente(self):
         from entrenos.services.centro_decisiones_service import decisiones_por_vigencia

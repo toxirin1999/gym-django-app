@@ -261,14 +261,17 @@ def _fecha_entreno(entreno):
     return getattr(entreno, 'fecha_ejecucion', None) or getattr(entreno, 'fecha', None)
 
 
-def decisiones_por_vigencia(cliente, decisiones, desde, hoy):
+def decisiones_por_vigencia(cliente, decisiones, desde, hoy, en_plan=None):
     """Separa las decisiones de carga en vigentes e historial.
 
     Vigente: la última decisión de cada ejercicio, si cambia algo (sube,
     baja o cambia la variante), aún no se ha evaluado y el ejercicio no se ha
     vuelto a hacer después (si se hizo, la sesión siguiente ya la sustituyó).
-    No importa su fecha: una anterior al bloque puede seguir vigente.
-    Historial: el resto, desde que empezó el bloque (``desde``), con fecha.
+    No importa su fecha: una anterior al bloque puede seguir vigente, pero
+    solo si el ejercicio sigue en el plan (``en_plan``: {nombre normalizado:
+    rango de reps de la próxima vez}); un ejercicio que ya no se programa no
+    cambia nada. Historial: el resto, desde que empezó el bloque (``desde``),
+    con la fecha en que se decidió.
 
     ``decisiones``: GymDecisionLog, más reciente primero.
     """
@@ -287,8 +290,9 @@ def decisiones_por_vigencia(cliente, decisiones, desde, hoy):
     vistos, vigentes, historial = set(), [], []
     for log in decisiones:
         clave = log.ejercicio_normalizado or normalizar_ejercicio(log.ejercicio)
-        fecha = _fecha_entreno(log.entreno_origen) if log.entreno_origen_id else None
-        fecha = fecha or timezone.localtime(log.fecha_creacion).date()
+        decidida = timezone.localtime(log.fecha_creacion).date()
+        origen = (_fecha_entreno(log.entreno_origen) if log.entreno_origen_id else None) or decidida
+        fecha = decidida
         item = {
             'ejercicio': log.ejercicio.title() if log.ejercicio.islower() else log.ejercicio,
             'accion': log.accion,
@@ -300,13 +304,32 @@ def decisiones_por_vigencia(cliente, decisiones, desde, hoy):
         }
         primera = clave not in vistos
         vistos.add(clave)
-        if (primera and log.accion in _ACCIONES_QUE_CAMBIAN and log.resultado is None
-                and not (ultima_vez.get(clave) and ultima_vez[clave] > fecha)):
+        sigue_en_plan = en_plan is None or clave in en_plan
+        if (primera and sigue_en_plan and log.accion in _ACCIONES_QUE_CAMBIAN and log.resultado is None
+                and not (ultima_vez.get(clave) and ultima_vez[clave] > origen)):
             item['estado'] = _ESTADO_VIGENTE.get(log.estado_aplicacion, 'para la próxima sesión')
+            item['rango_proximo'] = (en_plan or {}).get(clave)
             vigentes.append(item)
         elif desde is None or fecha >= desde:
             historial.append(item)
     return {'vigentes': vigentes, 'historial': historial, 'desde': desde}
+
+
+def ejercicios_en_plan(cliente, desde, dias=14):
+    """{nombre normalizado: rango de reps} de lo que el plan programa en los próximos ``dias``."""
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+    from entrenos.services.sesion_recomendada import _build_planificador, _normalizar_entrenamiento
+
+    planificador = _build_planificador(cliente)
+    en_plan = {}
+    for i in range(dias):
+        try:
+            ent = _normalizar_entrenamiento(planificador.generar_entrenamiento_para_fecha(desde + timedelta(days=i)))
+        except Exception:  # noqa: BLE001
+            continue
+        for ej in (ent or {}).get('ejercicios') or []:
+            en_plan.setdefault(normalizar_ejercicio(ej.get('nombre') or ''), str(ej.get('repeticiones') or '') or None)
+    return en_plan
 
 
 def agrupar_traces_recientes(traces: list[dict]) -> list[dict]:
