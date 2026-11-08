@@ -308,6 +308,12 @@ LOGGING = {
             'format': '{levelname} {message}',
             'style': '{',
         },
+        # 8-nov-2026: una línea por error 500 («fecha|mensaje»), seguida de su traza.
+        'errores_500': {
+            'format': '{asctime}|{message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
         'gamificacion': {
             'format': '🎮 {asctime} - {levelname} - {message}',
             'style': '{',
@@ -315,6 +321,13 @@ LOGGING = {
         },
     },
     'handlers': {
+        'errores_500': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(LOGS_DIR, 'errores_500.log'),
+            'formatter': 'errores_500',
+            'encoding': 'utf-8',
+        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -364,6 +377,12 @@ LOGGING = {
         'django': {
             'handlers': ['console'],
             'level': 'INFO',
+            'propagate': True,
+        },
+        # 8-nov-2026: los 500 quedan registrados y se ven en /clientes/errores/.
+        'django.request': {
+            'handlers': ['errores_500'],
+            'level': 'ERROR',
             'propagate': True,
         },
     },

@@ -1297,6 +1297,10 @@
     </div>
     {% endif %}
 
+    {% if errores_servidor %}
+    {# 8-nov-2026: los 500 de producción ya no pasan desapercibidos. #}
+    <div class="dc-message" role="status">Errores del servidor: {{ errores_servidor.total }} en los últimos {{ errores_servidor.dias }} días{% if errores_servidor.por_ruta %} (la última vez, {{ errores_servidor.ultimo.ruta|default:"sin ruta" }}, {{ errores_servidor.ultimo.fecha|date:"d/m H:i" }}){% endif %}. <a href="{% url 'clientes:errores_servidor' %}">Ver el detalle →</a></div>
+    {% endif %}
     {% if incidencias_contexto %}
     <div class="dc-message" role="status">Parte de la evidencia no pudo cargarse. No se interpreta como ausencia de señales; vuelve a intentarlo más tarde.</div>
     {% endif %}

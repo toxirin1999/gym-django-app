@@ -3263,6 +3263,16 @@ def lista_clientes(request):
 
 @login_required
 def dashboard(request):
+    """/panel/ y /clientes/panel/ (8-nov-2026): llevan a la portada (Ahora).
+
+    El panel antiguo daba error 500 y, además, listaba a todos los clientes a
+    cualquier usuario con sesión. Su código sigue en ``_dashboard_antiguo``.
+    """
+    return redirigir_usuario(request)
+
+
+@login_required
+def _dashboard_antiguo(request):
     """
     Dashboard principal con integración estoica DINÁMICA corregida
     """
@@ -6792,6 +6802,7 @@ def plan_decisiones_view(request):
         'traces_agrupados': traces_agrupados,
         'decisiones_agrupadas': decisiones_agrupadas,
         'carga_vigencia': carga_vigencia,
+        'errores_servidor': _errores_servidor_centro(),
         'cierre_semanal': cierre_semanal,
         'balance_semana': balance_semana,
         'cierre_metricas_ui': cierre_metricas_ui,
@@ -6825,6 +6836,16 @@ _ESTADO_HOY = {
     'recuperar': 'Hoy: recuperar',
     'posponer': 'Hoy: sesión aplazada',
 }
+
+
+def _errores_servidor_centro():
+    """8-nov-2026: aviso de errores 500 de los últimos 7 días, o None."""
+    try:
+        from core.errores import resumen_errores
+        return resumen_errores(7)
+    except Exception:
+        logger.exception('Centro: no se pudieron leer los errores del servidor')
+        return None
 
 
 def _carga_por_vigencia(cliente, hoy, resumen_operativo):

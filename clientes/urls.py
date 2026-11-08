@@ -3,6 +3,7 @@
 from django.urls import path
 from . import views
 from . import views_salud
+from . import views_errores
 from .views import calendario_bitacoras
 from .views import registrar_bitacora
 from clientes import views as clientes_views
@@ -137,6 +138,7 @@ urlpatterns = [
 
     # Phase 26 — Decision center
     path('plan/decisiones/', views.plan_decisiones_view, name='plan_decisiones'),
+    path('errores/', views_errores.errores_servidor, name='errores_servidor'),
     path('plan/bloque/preparar/', views.preparar_bloque_gym_view, name='preparar_bloque_gym'),
     path('plan/bloque/<int:bloque_id>/revisar/', views.revisar_bloque_gym_view, name='revisar_bloque_gym_colaborativo'),
     path('plan/bloque/<int:bloque_id>/activar/', views.activar_bloque_gym_colaborativo_view, name='activar_bloque_gym_colaborativo'),

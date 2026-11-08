@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errores del servidor</title>
+<style>
+  body{margin:0;background:#0b1114;color:#e8ece9;font:14px/1.5 system-ui,-apple-system,sans-serif;}
+  main{max-width:720px;margin:0 auto;padding:20px 16px 60px;}
+  h1{font-size:20px;margin:0 0 4px;}
+  .sub{opacity:.7;margin:0 0 18px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{text-align:left;padding:8px 6px;border-bottom:1px solid rgba(255,255,255,.08);vertical-align:top;}
+  th{font-weight:600;opacity:.7;font-size:11px;text-transform:uppercase;letter-spacing:.08em;}
+  code{font-size:12px;word-break:break-all;}
+  a{color:#7dd3fc;}
+</style>
+</head>
+<body>
+<main>
+  <p><a href="{% url 'clientes:plan_decisiones' %}">← Centro</a></p>
+  <h1>Errores del servidor</h1>
+  {% if resumen %}
+  <p class="sub">{{ resumen.total }} error{{ resumen.total|pluralize:"es" }} 500 en los últimos {{ dias }} días{% if resumen.por_ruta %} · {% for ruta, n in resumen.por_ruta|slice:":5" %}{{ ruta }} ({{ n }}){% if not forloop.last %}, {% endif %}{% endfor %}{% endif %}.</p>
+  <table>
+    <thead><tr><th>Cuándo</th><th>Ruta</th><th>Mensaje</th></tr></thead>
+    <tbody>
+    {% for e in errores %}
+      <tr><td>{{ e.fecha|date:"d/m H:i" }}</td><td><code>{{ e.ruta|default:"—" }}</code></td><td>{{ e.mensaje }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="sub">Ningún error 500 en los últimos {{ dias }} días.</p>
+  {% endif %}
+</main>
+</body>
+</html>
