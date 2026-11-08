@@ -92,13 +92,8 @@ def _sesion_evaluadora(log):
 _SIN_DESPUES = object()
 
 
-def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
-    """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'
-
-    En el cierre de la sesión que la evaluó, ``etiqueta='Hoy'``.
-    """
-    if despues is _SIN_DESPUES:
-        despues = _sesion_evaluadora(log)
+def _accion_real(log, despues):
+    """La acción con el peso que se propuso de verdad en la sesión que la comprobó."""
     accion = describir_accion(log)
     if despues and log.accion in ('subir_peso', 'bajar_peso', 'deload'):
         # 31-oct-2026 (nota 11): el peso que se propuso de verdad ese día (el
@@ -112,6 +107,17 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
         if propuesto and (log.peso_sugerido is None or abs(float(log.peso_sugerido) - propuesto) > 0.01):
             verbo = {'subir_peso': 'subí el peso a', 'bajar_peso': 'bajé el peso a', 'deload': 'metí una descarga a'}
             accion = f'{verbo[log.accion]} {_kg(propuesto)} kg'
+    return accion
+
+
+def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
+    """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'
+
+    En el cierre de la sesión que la evaluó, ``etiqueta='Hoy'``.
+    """
+    if despues is _SIN_DESPUES:
+        despues = _sesion_evaluadora(log)
+    accion = _accion_real(log, despues)
     partes = [f'{_capitalizar(log.ejercicio)}: {accion}.']
     if despues and despues['peso'] is not None and despues['reps']:
         if float(despues['peso'] or 0) > 0:
@@ -164,7 +170,8 @@ def detalle_decision(log, despues):
     if not despues:
         return None
     esperado = []
-    accion = describir_accion(log)
+    # 8-nov-2026: la misma acción que el titular (el peso propuesto de verdad).
+    accion = _accion_real(log, despues)
     if accion:
         esperado.append(_capitalizar(accion) + '.')
     objetivo = _objetivo_registrado(despues['entreno_id'], log.ejercicio)

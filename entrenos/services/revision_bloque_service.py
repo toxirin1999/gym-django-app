@@ -186,11 +186,8 @@ def revisar_bloque(cliente, grupo):
     if mantenidas:
         nombres = [VOLUMEN_MANTENIDO[n.casefold()] for n in mantenidas]
         sujeto = nombres[0] if len(nombres) == 1 else ', '.join(nombres[:-1]) + ' y ' + nombres[-1].lower()
-        from entrenos.services.propuesta_zona_service import pausa_subir_volumen
-        pausa = pausa_subir_volumen(cliente, timezone.localdate())
-        hasta = (f" Hasta que cierre {pausa['bloque']} (previsto el {pausa['fin_previsto']:%d/%m}) no propongo "
-                 'series para ellos; los sigo observando.') if pausa else ''
-        partes.append(f'{sujeto}: mantengo el volumen actual. {MOTIVO_VOLUMEN_MANTENIDO}{hasta}')
+        # 8-nov-2026: la pausa (hasta cuándo y lo observado) la cuenta Memoria justo debajo.
+        partes.append(f'{sujeto}: mantengo el volumen actual. {MOTIVO_VOLUMEN_MANTENIDO}')
     cambia = ' '.join(partes) or 'Ninguna zona retrocede: el siguiente bloque sigue el plan sin ajustes de foco.'
 
     return {

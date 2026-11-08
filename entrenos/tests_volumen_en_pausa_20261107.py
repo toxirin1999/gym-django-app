@@ -93,5 +93,5 @@ class MemoriaLoAnota(Base):
         from django.conf import settings
         src = (Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes' / 'memoria_entrenador.html'
                ).read_text(encoding='utf-8')
-        self.assertIn('hasta que cierre {{ volumen_en_pausa.bloque }} (previsto el '
-                      '{{ volumen_en_pausa.fin_previsto|date:"d/m" }})', src)
+        self.assertIn('No propongo subirles series hasta que cierre {{ volumen_en_pausa.bloque }} (previsto el '
+                      '{{ volumen_en_pausa.fin_previsto|date:"d/m" }}).', src)

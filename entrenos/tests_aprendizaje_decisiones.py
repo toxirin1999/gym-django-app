@@ -171,3 +171,17 @@ class MismoContadorCentroYMemoria(TestCase):
         self.assertIn('{{ decisiones_evaluadas.cambios_funcionaron }} de '
                       '{{ decisiones_evaluadas.cambios_concluyentes }} cambios funcionaron', memoria)
         self.assertIn('Cambios comprobados en el bloque ({{ r.inicio|date:"d/m" }}–{{ r.fin|date:"d/m" }})', memoria)
+
+
+class EsperadoComoElTitular20261108(AprendizajeDecisionesTests):
+    """8-nov-2026: «Qué se esperaba» usa el mismo peso que el titular (el propuesto de verdad)."""
+
+    def test_peso_propuesto_de_verdad(self):
+        from unittest.mock import patch
+        origen = self._entreno(10, 45, 10, 9)
+        self._entreno(5, 35, 15, 8)
+        self._log(origen, 'validada', accion='bajar_peso', valor=-10.0)  # el log dice 54 kg
+        with patch('entrenos.services.cerebro_carga_service._peso_plan', return_value=35.0):
+            item = decisiones_evaluadas(self.cliente)['items'][0]
+        self.assertIn('bajé el peso a 35 kg', item['texto'])
+        self.assertTrue(item['detalle']['esperado'].startswith('Bajé el peso a 35 kg.'))

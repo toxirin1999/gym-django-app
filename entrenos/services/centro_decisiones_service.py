@@ -316,6 +316,9 @@ def decisiones_por_vigencia(cliente, decisiones, desde, hoy, en_plan=None):
                     item['rango_anterior'] = rango_de_sesion(log.entreno_origen, log.ejercicio)
                 except Exception:  # noqa: BLE001
                     item['rango_anterior'] = None
+                # 8-nov-2026: un rango que empieza en 1 (Farmer «1-30») no es de reps: no se cita.
+                if item['rango_anterior'] and item['rango_anterior'][0] <= 1:
+                    item['rango_anterior'] = None
             vigentes.append(item)
         elif desde is None or fecha >= desde:
             historial.append(item)
