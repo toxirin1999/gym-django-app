@@ -338,7 +338,13 @@ def ejercicios_en_plan(cliente, desde, dias=14):
         except Exception:  # noqa: BLE001
             continue
         for ej in (ent or {}).get('ejercicios') or []:
-            en_plan.setdefault(normalizar_ejercicio(ej.get('nombre') or ''), str(ej.get('repeticiones') or '') or None)
+            rango = str(ej.get('repeticiones') or '') or None
+            # 8-nov-2026: el Farmer va en metros (y otros en segundos): la
+            # unidad viaja con el rango para no llamarlo «reps».
+            unidad = ej.get('unidad')
+            if rango and unidad in ('m', 's'):
+                rango = f'{rango} {unidad}'
+            en_plan.setdefault(normalizar_ejercicio(ej.get('nombre') or ''), rango)
     return en_plan
 
 

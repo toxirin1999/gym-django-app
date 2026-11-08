@@ -237,3 +237,33 @@ class CambioDeRango(Base):
         self.assertIn('Decisión anterior ({{ d.fecha|date:"d/m" }}, con {{ d.rango_anterior_texto }} reps)', src)
         self.assertIn('Se recalcula · {{ d.rango_proximo }} reps', src)
         self.assertIn('Historial{% if carga_vigencia.desde %} del {{ carga_vigencia.desde|date:"d/m" }} a hoy', src)
+
+
+class FarmerEnMetros(Base):
+    """8-nov-2026: el Farmer va en metros; no se le avisa de «reps»."""
+
+    def test_rango_con_unidad_y_sin_aviso(self):
+        from entrenos.services import centro_decisiones_service as c
+
+        class P:
+            def generar_entrenamiento_para_fecha(self, fecha):
+                return {'ejercicios': [{'nombre': 'Farmer Walk (Paseo del Granjero)', 'repeticiones': '20-30',
+                                        'unidad': 'm'},
+                                       {'nombre': 'Y-Raises', 'repeticiones': '12-15', 'unidad': 'reps'}]}
+        with patch('entrenos.services.sesion_recomendada._build_planificador', return_value=P()):
+            en_plan = c.ejercicios_en_plan(self.cliente, SABADO, dias=1)
+        self.assertEqual(en_plan['farmer walk (paseo del granjero)'], '20-30 m')
+        self.assertEqual(en_plan['y-raises'], '12-15')
+
+        from clientes.views import _carga_por_vigencia
+        vig = {'vigentes': [{'ejercicio': 'Farmer Walk', 'accion': 'subir_reps', 'label': 'Subir repeticiones',
+                             'motivo': 'x', 'fecha': date(2026, 10, 31), 'estado': 'aplicada',
+                             'motivo_postergacion': None, 'rango_proximo': '20-30 m', 'rango_anterior': None}],
+               'historial': [], 'desde': LUNES}
+        with patch('entrenos.services.centro_decisiones_service.decisiones_por_vigencia', return_value=vig), \
+                patch('entrenos.services.centro_decisiones_service.ejercicios_en_plan', return_value={}), \
+                patch('entrenos.services.bloque_siguiente_service.bloque_nuevo',
+                      return_value={'nombre': 'Fuerza — Hipertrofia'}), \
+                patch('clientes.views._propuesta_zona_visible', return_value=None):
+            d = _carga_por_vigencia(self.cliente, SABADO, {'bloque': {'inicio': LUNES}})['vigentes'][0]
+        self.assertNotIn('nota', d)

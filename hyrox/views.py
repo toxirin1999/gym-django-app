@@ -3420,6 +3420,33 @@ def strava_reconciliacion(request):
     })
 
 
+def _msg_futbol_importado(cliente, actividad, origen):
+    """Confirmación al importar un partido: qué hace el plan con él (8-nov-2026).
+
+    Solo dice lo que es seguro: que cuenta como jugado y dónde se tiene en
+    cuenta. Si cambia la sesión, lo dice el briefing de esa sesión.
+    """
+    from django.utils import timezone as _tz
+    from entrenos.models import EntrenoRealizado
+    from entrenos.services.actividad_jugada import es_jugada
+
+    partes = []
+    if actividad.duracion_minutos:
+        partes.append(f'{actividad.duracion_minutos} min')
+    if actividad.rpe_medio:
+        rpe = f'{float(actividad.rpe_medio):.1f}'.rstrip('0').rstrip('.').replace('.', ',')
+        partes.append(f"RPE {rpe}{' estimado del pulso' if origen == 'RPE estimado desde FC' else ''}")
+    datos = f" ({', '.join(partes)})" if partes else ''
+    if not es_jugada(actividad):
+        return f'Fútbol registrado{datos}, sin datos del partido: lo trato como apuntado.'
+    hoy = _tz.localdate()
+    frase = (f'Fútbol registrado{datos}: cuenta como partido jugado. La carga de la semana y la pierna '
+             'de los dos días siguientes ya lo tienen en cuenta; el briefing de tu próxima sesión dirá si cambia algo.')
+    if actividad.fecha == hoy and not EntrenoRealizado.objects.filter(cliente=cliente, fecha=hoy).exists():
+        frase += ' Si entrenas hoy después, la pierna se ajusta a este esfuerzo.'
+    return frase
+
+
 @login_required
 @require_POST
 def strava_procesar(request, actividad_id):
@@ -3677,6 +3704,9 @@ def strava_procesar(request, actividad_id):
         act.actividad_hub = actividad_hub
         act.save(update_fields=['estado', 'actividad_hub'])
         origen = 'RPE estimado desde FC' if not rpe_manual and rpe_efectivo else ('RPE manual' if rpe_manual else 'sin RPE')
+        if tipo_actividad == 'futbol':
+            # 8-nov-2026: cerrar el circuito de Strava: qué hace el plan con el partido.
+            return JsonResponse({'ok': True, 'msg': _msg_futbol_importado(cliente, actividad_hub, origen)})
         return JsonResponse({'ok': True, 'msg': f'Actividad registrada · {origen}'})
 
     return JsonResponse({'ok': False, 'msg': 'Acción no reconocida.'}, status=400)
