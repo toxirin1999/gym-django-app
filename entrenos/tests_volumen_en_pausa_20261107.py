@@ -95,3 +95,16 @@ class MemoriaLoAnota(Base):
                ).read_text(encoding='utf-8')
         self.assertIn('No propongo subirles series hasta que cierre {{ volumen_en_pausa.bloque }} (previsto el '
                       '{{ volumen_en_pausa.fin_previsto|date:"d/m" }}).', src)
+
+
+class BajarSigueDisponible(Base):
+    """La pausa solo frena subir: las vías de bajar (fatiga, por encima del máximo) no la miran."""
+
+    def test_bajar_no_consulta_la_pausa(self):
+        import inspect
+        for funcion in (pz.detectar_zona_con_fatiga, pz.detectar_zona_por_encima):
+            src = inspect.getsource(funcion)
+            self.assertNotIn('pausa', src)
+            self.assertNotIn('subir_en_pausa', src)
+        self.assertIn('pausa_subir_volumen', inspect.getsource(pz.detectar_zona_en_retroceso))
+        self.assertIn('subir_en_pausa', inspect.getsource(pz.detectar_zona_con_margen))
