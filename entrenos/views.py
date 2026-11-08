@@ -3668,6 +3668,16 @@ def _ej_en_descarga(ejercicio):
     return bool(ejercicio.get('deload') or ejercicio.get('regla_carga') == 'descarga')
 
 
+def _serie_testigo_hoy(cliente, fecha):
+    """El protocolo si hoy toca la serie testigo y aún no está hecha, o None."""
+    try:
+        from entrenos.services.serie_testigo_service import toca_hoy
+        return toca_hoy(cliente, fecha)
+    except Exception:
+        logger.exception('[entreno activo] serie testigo falló')
+        return None
+
+
 @login_required
 def vista_entrenamiento_activo(request, cliente_id):
     """
@@ -4761,6 +4771,8 @@ def vista_entrenamiento_activo(request, cliente_id):
         'retorno_tras_ausencia': _retorno_tras_ausencia,
         'aviso_energia': aviso_energia,
         'aviso_pierna_suave': aviso_pierna_suave,
+        # 8-nov-2026: la serie testigo de los lunes (jalón, peso fijo).
+        'serie_testigo': _serie_testigo_hoy(cliente, fecha_obj),
         # 17-oct-2026: la energía se pregunta en el briefing y llega aquí.
         'energia_inicial': (
             int(request.GET['energia'])
@@ -8574,10 +8586,20 @@ def post_entreno_resumen(request, cliente_id, entreno_id):
     except Exception:  # noqa: BLE001
         logger.exception('recuperación: no se pudo comprobar la rebaja en el cierre')
         comprobacion_rebaja = None
+    serie_testigo_frase = None
+    try:
+        from .models import SerieTestigo
+        from .services import serie_testigo_service as _st
+        _serie = SerieTestigo.objects.filter(cliente=cliente, fecha=entreno.fecha).select_related('protocolo').first()
+        if _serie:
+            serie_testigo_frase = _st.frase_serie(_serie, _st.resumen(cliente, hasta=entreno.fecha))
+    except Exception:  # noqa: BLE001
+        logger.exception('serie testigo: no se pudo leer para el cierre')
 
     return render(request, 'entrenos/post_entreno_resumen.html', {
         'cliente': cliente,
         'entreno': entreno,
+        'serie_testigo_frase': serie_testigo_frase,
         'sensaciones': sensaciones,
         'sensaciones_con_molestia': any(f.get('molestia') for f in sensaciones),
         'comprobacion_rebaja': comprobacion_rebaja,

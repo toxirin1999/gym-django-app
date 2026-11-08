@@ -142,4 +142,20 @@ def cuerpo(request):
         # 2-nov-2026: en descarga, Cuerpo solo avisa si te pasas de lo que pide.
         'frase_musculos': (lambda m: m.get('sobra') if m.get('descarga') else m['frase'])(
             marcador_cacheado(cliente, hoy)),
+        **_serie_testigo_cuerpo(cliente, hoy),
     })
+
+
+def _serie_testigo_cuerpo(cliente, hoy):
+    """8-nov-2026: la serie testigo en Cuerpo (dato objetivo de forma y calibración del RPE)."""
+    import logging
+    try:
+        from entrenos.services import serie_testigo_service as st
+        res = st.resumen(cliente, hasta=hoy)
+        if not res:
+            return {}
+        return {'serie_testigo': res, 'serie_testigo_frase': st.frase_serie(res['ultima'], res),
+                'serie_testigo_calibracion': st.frase_calibracion(res)}
+    except Exception:
+        logging.getLogger(__name__).exception('cuerpo: serie testigo')
+        return {}

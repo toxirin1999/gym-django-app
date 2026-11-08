@@ -8,6 +8,7 @@ from django.urls import path
 from . import views
 from . import views_liftin
 from . import views_propuesta_zona
+from . import views_serie_testigo
 from .views import ejercicios_realizados_view
 from clientes import views as vistas_clientes
 from .views import evaluacion_profesional_view
@@ -150,6 +151,7 @@ urlpatterns = [
     # ============================================================================
     path('cliente/<int:cliente_id>/dashboard-evolucion/', views.dashboard_evolucion, name='dashboard_evolucion'),
     path('cliente/<int:cliente_id>/entreno/<int:entreno_id>/cierre/', views.post_entreno_resumen, name='post_entreno_resumen'),
+    path('cliente/<int:cliente_id>/serie-testigo/', views_serie_testigo.registrar_serie_testigo, name='registrar_serie_testigo'),
     path('cliente/<int:cliente_id>/entreno/<int:entreno_id>/sensaciones/', views.guardar_sensacion_zona, name='guardar_sensacion_zona'),
     path('cliente/<int:cliente_id>/actualizar-fase/', views.actualizar_fase_cliente, name='actualizar_fase_cliente'),
     path('cliente/<int:cliente_id>/evaluacion-profesional/', evaluacion_profesional_view,

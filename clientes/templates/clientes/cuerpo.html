@@ -83,6 +83,15 @@
     </section>
     {% endif %}
 
+    {% if serie_testigo %}
+    <section class="card" aria-labelledby="testigo-titulo">
+      <span class="mono label" id="testigo-titulo">Serie testigo · {{ serie_testigo.protocolo.ejercicio }} {{ serie_testigo.protocolo.peso_kg|floatformat:"-1" }} kg</span>
+      <p class="frase" style="margin-top:8px;font-size:14px">Último lunes ({{ serie_testigo.ultima.fecha|date:"d/m" }}): {{ serie_testigo_frase }}</p>
+      {% if serie_testigo_calibracion %}<p class="nota">{{ serie_testigo_calibracion }}</p>{% endif %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Una serie fija cada lunes, después de calentar: mismo ejercicio, mismo peso. Al llegar a la repetición {{ serie_testigo.protocolo.rep_pregunta }} dices cuántas te quedan y sigues hasta la primera que no sale limpia.</p><p>Tu referencia es la mediana de las 3 primeras semanas sin descarga; una repetición arriba o abajo es ruido, cuentan 2 o más. Lo que dijiste frente a lo que de verdad te quedaba mide cuánto acierta tu sensación de esfuerzo. No cuenta como serie de trabajo ni cambia tu plan.</p></div></details>
+    </section>
+    {% endif %}
+
     <section class="card" aria-labelledby="camino-titulo">
       <span class="mono label" id="camino-titulo">Tu camino · 30 días</span>
       {% if frase_camino %}<p class="frase" style="margin-top:8px;font-size:14px">{{ frase_camino }}</p>{% endif %}

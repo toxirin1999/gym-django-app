@@ -2758,3 +2758,55 @@ class ParadaDeclarada(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} {self.tipo} {self.inicio}–{self.fin or "…"}'
+
+
+class ProtocoloTestigo(models.Model):
+    """8-nov-2026: la serie testigo, como acuerdo guardado (no como constante).
+
+    Una serie fija a la semana (mismo ejercicio, peso, día y momento de la
+    sesión) para tener un dato objetivo de forma y calibrar el RPE: al llegar
+    a ``rep_pregunta`` se estima cuántas quedan y se sigue hasta la primera
+    repetición no limpia. ``hasta`` vacío = en vigor.
+    """
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='protocolos_testigo',
+    )
+    ejercicio = models.CharField(max_length=120)
+    peso_kg = models.FloatField()
+    dia_semana = models.PositiveSmallIntegerField(default=0)  # 0 = lunes
+    rep_pregunta = models.PositiveSmallIntegerField(default=8)
+    desde = models.DateField()
+    hasta = models.DateField(null=True, blank=True)
+    motivo = models.TextField(blank=True, default='')
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-desde', '-id']
+
+    def __str__(self):
+        return f'{self.cliente_id} {self.ejercicio} {self.peso_kg} kg desde {self.desde}'
+
+
+class SerieTestigo(models.Model):
+    """Un registro de la serie testigo. Va aparte: no cuenta como serie de trabajo."""
+
+    protocolo = models.ForeignKey(ProtocoloTestigo, on_delete=models.CASCADE, related_name='series')
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='series_testigo',
+    )
+    fecha = models.DateField()
+    reps = models.PositiveSmallIntegerField()
+    quedaban_estimadas = models.PositiveSmallIntegerField(null=True, blank=True)
+    descarga = models.BooleanField(default=False)
+    creado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha', 'id']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'fecha'], name='serie_testigo_una_por_dia'),
+        ]
+
+    def __str__(self):
+        return f'{self.cliente_id} {self.fecha} {self.reps} reps'
+

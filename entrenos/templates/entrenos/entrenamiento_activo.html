@@ -1363,6 +1363,47 @@ body{background:
 
 <div class="wrap">
 
+{% if serie_testigo %}
+<!-- 8-nov-2026: serie testigo de los lunes. Va aparte: no es una serie de trabajo. -->
+<section id="serie-testigo" style="margin:14px 16px 6px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.03);">
+  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;">Serie testigo · antes del primer ejercicio</div>
+  <p style="margin:6px 0 4px;font-size:15px;"><strong>{{ serie_testigo.ejercicio }} · {{ serie_testigo.peso_kg|floatformat:"-1" }} kg</strong></p>
+  <p style="margin:0 0 10px;font-size:12px;line-height:1.5;opacity:.8;">Después de calentar. Tempo controlado. Al llegar a la repetición {{ serie_testigo.rep_pregunta }}, piensa cuántas te quedan (sin parar) y sigue hasta la primera que no salga limpia. No cuenta como serie de trabajo.</p>
+  <div id="st-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+    <label style="font-size:11px;display:flex;flex-direction:column;gap:4px;">Repeticiones limpias
+      <input id="st-reps" type="number" inputmode="numeric" min="1" max="60" style="width:110px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0e161a;color:inherit;">
+    </label>
+    <label style="font-size:11px;display:flex;flex-direction:column;gap:4px;">En la {{ serie_testigo.rep_pregunta }}, ¿cuántas te quedaban?
+      <input id="st-quedaban" type="number" inputmode="numeric" min="0" max="40" style="width:110px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0e161a;color:inherit;">
+    </label>
+    <button type="button" id="st-guardar" style="padding:9px 14px;border-radius:8px;border:0;background:#4ade80;color:#04130d;font-weight:600;">Guardar</button>
+  </div>
+  <p id="st-resultado" style="margin:10px 0 0;font-size:12px;line-height:1.5;" aria-live="polite"></p>
+</section>
+<script>
+(function () {
+  var btn = document.getElementById('st-guardar');
+  if (!btn) return;
+  btn.addEventListener('click', function () {
+    var reps = document.getElementById('st-reps').value;
+    var quedaban = document.getElementById('st-quedaban').value;
+    var out = document.getElementById('st-resultado');
+    if (!reps) { out.textContent = 'Escribe cuántas repeticiones limpias salieron.'; return; }
+    btn.disabled = true;
+    fetch('{% url "entrenos:registrar_serie_testigo" cliente.id %}', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
+      body: JSON.stringify({fecha: '{{ fecha }}', reps: reps, quedaban: quedaban})
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      out.textContent = d.msg || (d.ok ? 'Guardada.' : 'No se pudo guardar.');
+      if (d.ok) { document.getElementById('st-form').style.display = 'none'; }
+      else { btn.disabled = false; }
+    }).catch(function () { out.textContent = 'Sin conexión: vuelve a intentarlo.'; btn.disabled = false; });
+  });
+})();
+</script>
+{% endif %}
+
 <!-- FORMULARIO — envuelve todo para que los inputs se envíen -->
 <form action="{% url 'entrenos:guardar_entrenamiento_activo' cliente.id %}" method="POST" id="workout-form">
 {% csrf_token %}
