@@ -2026,6 +2026,31 @@ def _resumen_decisiones_90(agrupadas):
     return partes[0] if len(partes) == 1 else ', '.join(partes[:-1]) + ' y ' + partes[-1]
 
 
+def _volumen_en_pausa(cliente, hoy, evolucion_90=None):
+    """Zonas sin propuestas de subir hasta que cierre el bloque, con lo que se observa hoy a 90 días.
+
+    7-nov-2026: el entrenador las sigue mirando y deja constancia si caen.
+    """
+    try:
+        from entrenos.services.propuesta_zona_service import pausa_subir_volumen
+        pausa = pausa_subir_volumen(cliente, hoy)
+        if not pausa:
+            return None
+        if evolucion_90 is None:
+            from entrenos.services.evolucion_muscular_service import calcular_evolucion_por_grupo
+            evolucion_90 = calcular_evolucion_por_grupo(cliente, hoy=hoy, dias=90)
+        por_zona = {g['zona']: g for g in (evolucion_90 or {}).get('grupos') or []}
+        filas = []
+        for z in pausa['zonas']:
+            g = por_zona.get(z) or {}
+            filas.append({'nombre': g.get('nombre') or z.title(), 'pct': g.get('pct'),
+                          'cae': g.get('estado') == 'retrocede'})
+        return {'bloque': pausa['bloque'], 'fin_previsto': pausa['fin_previsto'], 'zonas': filas}
+    except Exception:
+        logger.exception('memoria_entrenador: no se pudo leer la vigilancia de volumen')
+        return None
+
+
 def _inicio_bloque_centro(cliente):
     """El inicio del bloque con el que empieza el historial del Centro (mismo estado que Plan)."""
     try:
@@ -6042,6 +6067,7 @@ def memoria_entrenador(request, cliente_id):
         # 7-nov-2026: Memoria resume en una línea; el detalle está en el Centro.
         'decisiones_resumen': _resumen_decisiones_90(decisiones_agrupadas),
         'inicio_bloque_centro': _inicio_bloque_centro(cliente),
+        'volumen_en_pausa': _volumen_en_pausa(cliente, hoy, evolucion_muscular if periodo_evolucion == 90 else None),
         'records': records,
         'sesiones_semana': sesiones_semana,
         'actividad_reciente': actividad_reciente,

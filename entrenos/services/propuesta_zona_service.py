@@ -22,7 +22,7 @@ molestias, dos señales sacadas solo de lo que ya se registra:
   su fuerza estimada, con la zona por debajo de su máximo → +2.
 """
 
-from datetime import timedelta
+from datetime import date, timedelta
 from statistics import median
 
 from django.db import transaction
@@ -40,6 +40,40 @@ MAX_EJERCICIOS = 2
 SESIONES_MARGEN = 3          # sesiones seguidas con margen y sin progreso
 VENTANA_MARGEN_DIAS = 35
 MARGEN_RPE = 1.0             # al menos un punto por debajo del RPE pedido
+
+# 7-nov-2026 (decisión de David): tríceps y trapecio mantienen su volumen hasta
+# que cierre el bloque Fuerza — Hipertrofia (semanas 45-48 de la
+# periodización; previsto el domingo 06/12/2026). La pausa va ligada al
+# cierre, no a una fecha: si el bloque se retrasa, sigue hasta su revisión.
+# Mientras, el entrenador los observa (Memoria anota si caen) pero no propone
+# añadirles series; bajar volumen sí puede. Termina en cuanto el plan pasa a
+# una semana fuera del bloque, y no se reactiva.
+ZONAS_SUBIR_EN_PAUSA = ('triceps', 'trapecios')
+PAUSA_DESDE = date(2026, 11, 2)              # semana de la decisión (descarga, semana 44)
+PAUSA_SEMANAS = range(44, 49)                # la descarga previa y el bloque (45-48)
+PAUSA_BLOQUE = 'Fuerza — Hipertrofia'
+
+
+def pausa_subir_volumen(cliente, hoy):
+    """{'zonas', 'fin_previsto', 'bloque'} mientras dura la pausa, o None.
+
+    Sin periodización dinámica (``SemanaPlanGym``) no hay pausa.
+    """
+    from entrenos.models import SemanaPlanGym
+
+    if cliente is None or hoy < PAUSA_DESDE:
+        return None
+    registros = SemanaPlanGym.objects.filter(cliente=cliente, lunes__gte=PAUSA_DESDE, lunes__lte=hoy)
+    actual = registros.order_by('-lunes').first()
+    if actual is None or registros.exclude(semana_plan__in=PAUSA_SEMANAS).exists():
+        return None
+    fin_previsto = actual.lunes + timedelta(days=7 * (PAUSA_SEMANAS[-1] - actual.semana_plan) + 6)
+    return {'zonas': ZONAS_SUBIR_EN_PAUSA, 'fin_previsto': fin_previsto, 'bloque': PAUSA_BLOQUE}
+
+
+def subir_en_pausa(cliente, zona, hoy):
+    pausa = pausa_subir_volumen(cliente, hoy)
+    return bool(pausa and zona in pausa['zonas'])
 
 
 def _kg(valor):
@@ -60,7 +94,10 @@ def detectar_zona_en_retroceso(cliente, hoy=None):
 
     hoy = hoy or timezone.localdate()
     evolucion = calcular_evolucion_por_grupo(cliente, hoy, 90)
-    zonas = [z for z, estado in (evolucion.get('estado_por_zona') or {}).items() if estado == 'retrocede']
+    pausa = pausa_subir_volumen(cliente, hoy)
+    pausadas = set(pausa['zonas']) if pausa else set()
+    zonas = [z for z, estado in (evolucion.get('estado_por_zona') or {}).items()
+             if estado == 'retrocede' and z not in pausadas]
     if not zonas:
         return None
     ejercicios = comparar_ejercicios(cliente, hoy, 90)
@@ -284,7 +321,7 @@ def detectar_zona_con_margen(cliente, hoy=None):
             por_zona[zona].append(nombre)
     candidatas = []
     for zona, nombres in por_zona.items():
-        if zona in llenas or frena_subir(cliente, zona, hoy):
+        if zona in llenas or subir_en_pausa(cliente, zona, hoy) or frena_subir(cliente, zona, hoy):
             continue
         con_margen = {}
         for nombre in nombres:
