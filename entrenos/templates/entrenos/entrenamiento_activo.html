@@ -1651,7 +1651,7 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{% if ejercicio.reps_objetivo %}{{ ejercicio.reps_objetivo }}{% else %}{{ rango_vis }}{% endif %} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}
+        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{% if ejercicio.reps_objetivo %}{{ ejercicio.reps_objetivo }}{% else %}{{ rango_vis }}{% endif %} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}{% if ejercicio.regla_parada %}<span class="exname-meta-line exname-regla" style="display:block;margin-top:3px;opacity:.85;">{{ ejercicio.regla_parada }}</span>{% endif %}
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
         {% endif %}
@@ -1936,7 +1936,7 @@ body{background:
         {% endif %}
       {% if ejercicio.usa_distancia and ejercicio.peso_anterior_kg > 0 %}
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
-        <span class="peso-ultima-vez__label">Última vez</span>
+        <span class="peso-ultima-vez__label">Última vez{% if ejercicio.fecha_anterior %} · {{ ejercicio.fecha_anterior|date:"d/m" }}{% endif %}{% if ejercicio.anterior_descarga %} · descarga{% endif %}</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg · {{ ejercicio.repeticiones_anterior }} m</span>
         <span class="peso-ultima-vez__rpe" aria-label="RPE objetivo de hoy">RPE {{ ejercicio.rpe_objetivo }}</span>
         {% if sn == 1 and ejercicio.reps_objetivo > ejercicio.repeticiones_anterior %}
@@ -1945,7 +1945,8 @@ body{background:
       </div>
       {% elif ejercicio.usa_peso and ejercicio.peso_anterior_kg > 0 %}
       <div class="peso-ultima-vez" aria-label="Referencia de la última sesión">
-        <span class="peso-ultima-vez__label">Última vez</span>
+        {# 9-nov-2026 (idea de David, nota 14): con su fecha, y la descarga marcada. #}
+        <span class="peso-ultima-vez__label">Última vez{% if ejercicio.fecha_anterior %} · {{ ejercicio.fecha_anterior|date:"d/m" }}{% endif %}{% if ejercicio.anterior_descarga %} · descarga{% endif %}</span>
         <span class="peso-ultima-vez__value">{{ ejercicio.peso_anterior_kg|floatformat:"-1" }} kg × {{ ejercicio.repeticiones_anterior }} reps</span>
         {# 17-oct-2026: el RPE de la última vez, no el objetivo de hoy (que ya está en la tarjeta). #}
         {% if ejercicio.rpe_anterior %}<span class="peso-ultima-vez__rpe" aria-label="RPE de la última vez">RPE {{ ejercicio.rpe_anterior|floatformat:"-1" }}</span>{% endif %}
@@ -2969,6 +2970,29 @@ function aEscalaJS(peso, salto, hacia){
   return +(Math.max(n, 1) * salto).toFixed(2);
 }
 
+// 9-nov-2026 (notas 2, 3, 8, 9, 16, 18, 20, 24): el salto y las reps de la
+// siguiente serie salen de lo que se estima con la serie hecha (Epley + reps en
+// recámara), no de un escalón fijo. Convergent 62,5 × 8 a RPE 5 subía 2,5 kg por
+// serie; prensa 180 × 8 a RPE 7 en 4-6 no subía nada; y tras subir, las reps
+// volvían siempre al mínimo del rango.
+function estimarSerieJS(peso, reps, rpe, rpeObj, repsMin, repsMax, salto, hacia) {
+  const rir = Math.max(0, 10 - rpe);
+  const rirObj = Math.max(0, 10 - rpeObj);
+  const e1rm = peso * (1 + (reps + rir) / 30);
+  const repsCon = (p) => Math.floor(30 * (e1rm / p - 1) - rirObj + 1e-9);
+  const meta = Math.ceil((repsMin + repsMax) / 2);
+  let p = e1rm / (1 + (meta + rirObj) / 30);
+  // Prudencia: como mucho un 12,5 % arriba o un 15 % abajo en una serie.
+  p = Math.min(p, peso * 1.125);
+  p = Math.max(p, peso * 0.85);
+  // Subiendo, al escalón de abajo (prudente); bajando, al de arriba (lo justo).
+  p = hacia === 'arriba' ? Math.floor(p / salto + 1e-6) * salto : Math.ceil(p / salto - 1e-6) * salto;
+  if (hacia === 'arriba') p = Math.max(p, aEscalaJS(peso, salto, 'arriba'));
+  else p = Math.min(p, aEscalaJS(peso, salto, 'abajo'));
+  const r = Math.max(repsMin, Math.min(repsMax, repsCon(p)));
+  return { peso: +p.toFixed(2), reps: r };
+}
+
 function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
   const salto = incrementoPeso(fid);
   const tope = parseFloat(document.getElementById('card-'+fid)?.dataset.topeKg || '');
@@ -2976,14 +3000,26 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
   if (!peso || peso <= 0 || !Number.isFinite(rpe)) return mismo;
 
   const bajar = () => {
-    let p = aEscalaJS(peso, salto, 'abajo');
+    let p, r;
+    if (salto > 0 && reps > 0) ({ peso: p, reps: r } = estimarSerieJS(peso, reps, rpe, rpeObj, repsMin, repsMax, salto, 'abajo'));
+    else { p = aEscalaJS(peso, salto, 'abajo'); r = repsMin; }
     // 31-oct-2026 (nota 6): si la serie se hizo por encima del peso del plan
     // (encogimientos 120 × 10 con 110 propuesto), se vuelve directo al del plan.
     const pesoPlan = parseFloat(document.getElementById('peso-'+fid+'-1')?.dataset.planWeight || '');
     if (pesoPlan > 0 && pesoPlan < peso - 1e-6 && pesoPlan < p) p = pesoPlan;
     if (!(p > 0) || p >= peso) return mismo;
-    return { peso: p, reps: repsMin, tipo: 'bajar',
-             texto: `${reps} reps a RPE ${rpe}: bajo a ${fmtKg(p)} kg para entrar en ${repsMin}-${repsMax}.` };
+    return { peso: p, reps: r, tipo: 'bajar',
+             texto: `${reps} reps a RPE ${rpe}: bajo a ${fmtKg(p)} kg; con ese peso calculo unas ${r} reps a RPE ${rpeObj}.` };
+  };
+
+  const subir = () => {
+    if (!(salto > 0)) return null;
+    let { peso: p, reps: r } = estimarSerieJS(peso, reps, rpe, rpeObj, repsMin, repsMax, salto, 'arriba');
+    if (Number.isFinite(tope) && p > tope) p = tope;
+    if (!(p > peso)) return null;
+    const enRango = reps <= repsMax ? 'tope del rango' : 'por encima del rango';
+    return { peso: p, reps: r, tipo: 'subir',
+             texto: `${reps} reps a RPE ${rpe}, ${enRango}: subes a ${fmtKg(p)} kg; calculo unas ${r} reps a RPE ${rpeObj}.` };
   };
 
   // 26-oct-2026: el peso se baja como mucho una vez por ejercicio. Si ya se
@@ -2991,7 +3027,7 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
   // (Convergent 62,5 → 60 → 57,5 persiguiendo el rango).
   const pesoPrimera = parseFloat(document.getElementById('peso-'+fid+'-1')?.value || '');
   const yaBajado = pesoPrimera > 0 && peso < pesoPrimera - 1e-6;
-  const sostener = { peso, reps: repsMin, tipo: 'reps',
+  const sostener = { peso, reps: Math.max(repsMin, Math.min(repsMax, reps)), tipo: 'reps',
                      texto: `Ya bajé el peso una vez: mantén ${fmtKg(peso)} kg y para en RPE ${rpeObj}, salgan las reps que salgan.` };
 
   if (reps < repsMin) {
@@ -3007,6 +3043,12 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
     return { peso, reps: objetivo, tipo: 'reps',
              texto: `${reps} reps a RPE ${rpe}, un punto por encima de lo que pide: mismo peso, a por ${objetivo} sin llegar al fallo.` };
   }
+  // 9-nov-2026 (prensa 180 × 8 a RPE 7 en 4-6): por encima del rango sin pasar
+  // del RPE pedido también es subir, no solo con un punto de margen.
+  if (reps > repsMax && rpe <= rpeObj) {
+    const s = subir();
+    if (s) return s;
+  }
   if (rpe <= rpeObj - 1) {
     if (reps < repsMax) {
       // 20-oct-2026: una rep por cada punto de RPE de margen (RPE 7 con objetivo 8 = 1 rep en reserva).
@@ -3015,12 +3057,8 @@ function planSiguienteSerie(fid, peso, rpe, reps, rpeObj, repsMin, repsMax) {
       return { peso, reps: objetivo, tipo: 'reps',
                texto: `RPE ${rpe} con margen: mismo peso, a por ${objetivo} reps.` };
     }
-    let p = aEscalaJS(peso, salto, 'arriba');
-    if (Number.isFinite(tope) && p > tope) p = tope;
-    if (p > peso) {
-      return { peso: p, reps: repsMin, tipo: 'subir',
-               texto: `${reps} reps a RPE ${rpe}, arriba del rango: subes a ${fmtKg(p)} kg.` };
-    }
+    const s = subir();
+    if (s) return s;
     // 23-oct-2026: en el tope de la máquina no se puede subir peso; el margen
     // de RPE se suma en reps (abducción 21 a RPE 6 con objetivo 9 → 24).
     if (Number.isFinite(tope) && peso >= tope - 1e-6) {
@@ -3345,7 +3383,12 @@ function resumenDeEjercicio(fid){
       .map(x=>(x.s.peso>0?fmtKg(x.s.peso)+' kg × ':'')+x.s.reps);
     const lectura=enRango
       ? `${enRango} de ${scs.length} series en rango`+(fuera.length?`; fuera: ${fuera.join(', ')}.`:'.')
-      : `Ninguna de las ${scs.length} series llegó al rango previsto.`;
+      // 9-nov-2026 (nota 21): prensa 180 × 8 en 4-6 no «no llegó»: se pasó.
+      : (resultados.every(r=>r.clase==='por-encima')
+          ? `Las ${scs.length} series pasaron del rango previsto (${fuera.join(', ')}).`
+          : resultados.every(r=>r.clase==='por-debajo')
+            ? `Ninguna de las ${scs.length} series llegó al rango previsto.`
+            : `Ninguna serie quedó dentro del rango (${fuera.join(', ')}).`);
     // 17-oct-2026: lo que pasará la próxima vez, en vez de "exigente".
     if(fueraDeRango){
       // 19-oct-2026: el título dice hacia dónde se salió (25 × 25 en 15-20 es por encima).
@@ -3402,7 +3445,7 @@ function resumenDeEjercicio(fid){
   const pesoTopeEj=Math.max(...scs.map(s=>s.peso||0));
   const peorEj=Math.min(...scs.filter(s=>(s.peso||0)===pesoTopeEj).map(s=>s.reps||0));
   if(repsMaxEj>0 && peorEj>=repsMaxEj && !cardEj?.dataset.topeKg){
-    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y vuelves al mínimo del rango.`};
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y te digo cuántas reps calculo con él.`};
   }
   let objSig=mejorEj+(conMargen?2:1);
   if(repsMaxEj>0 && objSig>=repsMaxEj){
@@ -3618,15 +3661,10 @@ function actualizarORM(fid,sn){
   const ormEl=document.getElementById('orm-'+fid+'-'+sn);
   const module=document.getElementById('orm-module-'+fid);
   if(!ormEl||!module)return;
-  const peso=parseFloat(pesoInp?.value)||0;
-  const reps=parseInt(repsInp?.value)||1;
-  // 30-oct-2026 (nota 16): por encima de 10 reps (gemelos a 13) la cifra no
-  // dice nada; y sin siglas: "fuerza máxima estimada".
-  if(peso<=0||reps>10){ormEl.textContent='';module.hidden=true;return;}
-  const factor=1.0278-0.0278*Math.max(1,reps);
-  const orm=factor>0?Math.round(peso/factor):Math.round(peso);
-  ormEl.textContent='Fuerza máxima estimada: '+orm+' kg (una rep)';
-  module.hidden=false;
+  // 9-nov-2026 (notas 12, 22, 23): fuera de la sesión. Saltaba al tocar las
+  // reps, antes de guardar y sin el RPE (10 reps a RPE 6 daba la misma cifra que
+  // al fallo), y no ayuda a decidir la serie. La fuerza estimada vive en Progreso.
+  ormEl.textContent='';module.hidden=true;
 }
 
 // ── CALCULADORA DISCOS INLINE ───────────────────────────────────

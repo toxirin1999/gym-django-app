@@ -408,10 +408,14 @@ def _decidir_carga(cliente, ej, hoy):
                           f'parejas ({_kg(floja["peso"])} kg × {floja["reps"]} a RPE {_kg(floja["rpe"])}): '
                           f'hoy {_kg(peso_p)} kg a por {minimo} y con el RPE de la primera serie ajusto la siguiente.'),
             }
+        # 9-nov-2026 (notas 18 y 24): las reps con el peso nuevo se estiman con
+        # el RPE de la última vez, en vez de volver siempre al mínimo.
+        from entrenos.services.ultima_sesion_service import reps_para_peso
+        reps_n = reps_para_peso(peso_ref, reps_ref, ref.get('rpe'), peso, rpe_obj, rango) or minimo
         return {
-            'peso': peso, 'reps': minimo, 'regla': 'subir',
+            'peso': peso, 'reps': reps_n, 'regla': 'subir',
             'frase': (f'{reps_ref} reps con {_kg(peso_ref)} kg, arriba del rango: '
-                      f'hoy {_kg(peso)} kg y vuelta a {minimo}.'),
+                      f'hoy {_kg(peso)} kg, a por {reps_n}.'),
         }
     from entrenos.services.maquina_service import tipo_equipo_carga
     if abs(float(techo) - peso_ref) < 1e-6 and tipo_equipo_carga(nombre) not in (

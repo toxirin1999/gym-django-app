@@ -26,11 +26,12 @@ class ReglaUnica(Base):
         d = decidir_carga(self.cliente, self._ej('Sentadilla Hack', '12-15'), HOY)
         self.assertEqual((d['peso'], d['reps'], d['regla']), (60, 13, 'mantener'))
 
-    def test_tope_del_rango_sube_y_vuelve_al_minimo(self):
+    def test_tope_del_rango_sube_y_estima_las_reps(self):
+        # 9-nov-2026: con el peso nuevo, las reps que salen por estimación (13), no el mínimo.
         e = self.entreno(HOY - timedelta(days=3), {'Sentadilla Hack': '12-15'})
         self.hacer(e, self.hack, [(60, 15, 7), (60, 15, 8)])
         d = decidir_carga(self.cliente, self._ej('Sentadilla Hack', '12-15'), HOY)
-        self.assertEqual((d['reps'], d['regla']), (12, 'subir'))
+        self.assertEqual((d['reps'], d['regla']), (13, 'subir'))
         self.assertGreater(d['peso'], 60)
 
     def test_hundimiento_baja(self):

@@ -209,8 +209,25 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
         nombre_ejercicio__icontains=nombre_icontains,
     ).select_related('entreno').order_by('-entreno__fecha')
 
-    for ej in candidatos:
-        if nombres_ejercicio_equivalentes(ej.nombre_ejercicio, nombre_ejercicio):
+    # 9-nov-2026 (notas 6, 10, 14, 17 y 19): el primer día después de la
+    # descarga, «Última vez» enseñaba la sesión de descarga (hack 17,5 × 14 y
+    # «+7,5 kg hoy») mientras el briefing citaba la última normal (20 × 14 el
+    # 26/10). Se salta la descarga, como ultima_sesion(); si no hay otra, se
+    # usa y se marca. En una semana de descarga, la anterior de descarga vale.
+    from .models import SemanaPlanGym
+    _descargas = set(SemanaPlanGym.objects.filter(cliente=cliente, descarga=True).values_list('lunes', flat=True))
+
+    def _lunes(fecha):
+        return fecha - timedelta(days=fecha.weekday())
+
+    _hoy_descarga = _lunes(fecha_actual) in _descargas
+    _equivalentes = [ej for ej in candidatos if nombres_ejercicio_equivalentes(ej.nombre_ejercicio, nombre_ejercicio)]
+    _normales = [ej for ej in _equivalentes if _hoy_descarga or _lunes(ej.entreno.fecha) not in _descargas]
+    _elegido = (_normales or _equivalentes)[:1]
+    _es_descarga = bool(_elegido) and not _normales
+
+    for ej in _elegido:
+        if True:
             peso = round(float(ej.peso_kg or 0), 2)
             series = ej.series or 1
             repeticiones = ej.repeticiones or 0
@@ -261,6 +278,7 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
                 'tempo': ej.tempo,
                 'rpe': rpe_ref,
                 'es_distancia': mejor_distancia is not None,
+                'descarga': _es_descarga,
             }
 
     # --- OPCIÓN 2: Buscar en EjercicioLiftinDetallado ---
@@ -4000,6 +4018,7 @@ def vista_entrenamiento_activo(request, cliente_id):
                     ejercicio['peso_anterior_kg'] = datos_anterior['peso']
                     ejercicio['rpe_anterior'] = datos_anterior.get('rpe')
                     ejercicio['fecha_anterior'] = datos_anterior['fecha']
+                    ejercicio['anterior_descarga'] = bool(datos_anterior.get('descarga'))
                     ejercicio['series_anterior'] = datos_anterior['series']
                     ejercicio['repeticiones_anterior'] = datos_anterior['repeticiones']
                     ejercicio['volumen_anterior'] = datos_anterior['volumen']
@@ -4394,6 +4413,7 @@ def vista_entrenamiento_activo(request, cliente_id):
             if datos_anterior:
                 ejercicio['peso_anterior_kg'] = datos_anterior['peso']
                 ejercicio['rpe_anterior'] = datos_anterior.get('rpe')
+                ejercicio['anterior_descarga'] = bool(datos_anterior.get('descarga'))
                 # --- PESO INICIAL PARA INPUTS (prioriza última vez si existe) ---
                 try:
                     peso_rec = float(ejercicio.get('peso_recomendado_kg', 0) or 0)
@@ -4721,6 +4741,21 @@ def vista_entrenamiento_activo(request, cliente_id):
         _rango = _rango_reps(_ej.get('repeticiones'))
         if _rango:
             _ej['reps_min'], _ej['reps_max'] = _rango
+
+    # 9-nov-2026 (nota 15): el método dicho en la tarjeta. David paró en 8 en
+    # el cable fly creyendo que el peso era orientativo y las reps las elegía él.
+    for _ej in ejercicios_planificados:
+        _ej['regla_parada'] = None
+        if (_ej.get('sugerencia_tope') or _ej.get('usa_tiempo') or _ej.get('usa_distancia')
+                or _ej_en_descarga(_ej) or not _ej.get('reps_max') or not _ej.get('rpe_objetivo')):
+            continue
+        try:
+            _rpe = float(_ej['rpe_objetivo'])
+        except (TypeError, ValueError):
+            continue
+        _rpe_txt = str(int(_rpe)) if _rpe.is_integer() else f'{_rpe:g}'.replace('.', ',')
+        _ej['regla_parada'] = (f"Para al llegar a {_ej['reps_max']} reps o a RPE {_rpe_txt}, "
+                               f"lo que llegue antes. Luego apunta el RPE real.")
 
     # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
     _sep = ' - ' if ' - ' in rutina_nombre else (' · ' if ' · ' in rutina_nombre else None)

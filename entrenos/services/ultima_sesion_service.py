@@ -136,7 +136,13 @@ def dia_de_fatiga(cliente, nombre, entreno, reps_min=None):
     ref = previa['referencia']
     if not ref['en_rango'] or ref['peso'] <= 0:
         return None
-    al_peso = [s['reps'] for s in series if s['peso'] >= ref['peso'] - 1e-6 and s['reps'] > 0]
+    # 9-nov-2026 (nota 26): con otro rango no hay hundimiento que leer. Hack
+    # 20 × 14 (15-20) y luego 30 × 6 (4-6): menos reps es lo pedido, no cansancio.
+    rango_hoy, rango_antes = rango_de_sesion(entreno, nombre), rango_de_sesion(previa['entreno'], nombre)
+    if rango_hoy and rango_antes and tuple(rango_hoy) != tuple(rango_antes):
+        return None
+    # Y solo al mismo peso: con más peso salen menos reps (prensa 145 × 14 y luego 180 × 8).
+    al_peso = [s['reps'] for s in series if abs(s['peso'] - ref['peso']) < 1e-6 and s['reps'] > 0]
     if not al_peso:
         return None
     mejor = max(al_peso)
@@ -255,6 +261,23 @@ def peso_para_reps(peso, reps, rpe, reps_objetivo, rpe_objetivo):
         return None
     reps_al_fallo = reps_objetivo + max(0.0, 10 - float(rpe_objetivo or 8))
     return e1rm / (1 + reps_al_fallo / 30)
+
+
+def reps_para_peso(peso, reps, rpe, peso_nuevo, rpe_objetivo, rango):
+    """Reps que saldrían con ``peso_nuevo`` a ``rpe_objetivo`` (Epley + RIR), dentro del rango.
+
+    9-nov-2026: tras subir el peso ya no se vuelve siempre al mínimo del rango.
+    """
+    import math
+    from analytics.utils import estimar_1rm_con_rpe
+
+    if not rpe or not peso_nuevo or not rango:
+        return None
+    e1rm = estimar_1rm_con_rpe(float(peso), int(reps), float(rpe))
+    if not e1rm:
+        return None
+    reps_est = math.floor(30 * (e1rm / float(peso_nuevo) - 1) - max(0.0, 10 - float(rpe_objetivo or 8)) + 1e-6)
+    return max(int(rango[0]), min(int(rango[1]), reps_est))
 
 
 def _redondear_abajo(valor, incremento):
