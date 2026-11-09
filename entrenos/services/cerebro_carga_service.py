@@ -678,7 +678,11 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         accion = 'Bajar peso'
         efecto = f'Bajará a {_kg(peso)} kg'
     elif peso > peso_hoy + 1e-6:
-        texto = f'Subo a {_kg(peso)} kg y vuelvo a {reps} reps.'
+        # 9-nov-2026: con las reps que se calculan para el peso nuevo, no «vuelvo al mínimo».
+        _ref = lectura['referencia']
+        _reps_hoy = int(round(float(_ref['reps_mediana'] if _ref.get('reps_mediana') is not None else _ref['reps'])))
+        _donde = f'por encima de {rango[1]}' if _reps_hoy > rango[1] else 'en el tope del rango'
+        texto = f'{_reps_hoy} reps con {_kg(peso_hoy)} kg, {_donde}: subo a {_kg(peso)} kg, a por {reps} reps.'
         accion = 'Subir peso'
         efecto = f'Subirá a {_kg(peso)} kg'
     else:
@@ -687,7 +691,7 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         accion = 'Mantener'
         efecto = f'A por {reps} reps'
     if porque_actual and f'{_kg(peso)} kg' in porque_actual and (
-        f'{reps} reps' in porque_actual or regla in ('bajar', 'subir')
+        f'{reps} reps' in porque_actual or regla == 'bajar'
     ):
         texto = porque_actual
     # 25-oct-2026: la etiqueta sale de la misma decisión (antes, "Reducirá la

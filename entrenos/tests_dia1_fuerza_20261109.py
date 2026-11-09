@@ -155,3 +155,18 @@ class TextosDeLaSesion(SimpleTestCase):
 
     def test_regla_de_parada_en_la_tarjeta(self):
         self.assertIn('ejercicio.regla_parada', PLANTILLA.read_text(encoding='utf-8'))
+
+
+class CierreDiceLasRepsCalculadas(Base):
+    """Cierre del 9-nov en producción: «subo a 182,5 kg y vuelvo a 4 reps» mientras la decisión calculaba 6."""
+
+    def test_subir_en_el_cierre_lleva_las_reps_de_la_decision(self):
+        from entrenos.services.cerebro_carga_service import decidir_carga, proxima_vez_texto
+        e = self.entreno(HOY - timedelta(days=1), {'Sentadilla Hack': '4-6'})
+        self.hacer(e, self.hack, [(30, 8, 7), (30, 6, 7), (30, 6, 7)])
+        texto, accion = proxima_vez_texto(self.cliente, e, 'Sentadilla Hack', 'peso_reps')
+        d = decidir_carga(self.cliente, {'nombre': 'Sentadilla Hack', 'repeticiones': '4-6', 'rpe_objetivo': 8,
+                                         'tipo_progresion': 'peso_reps'}, HOY)
+        self.assertEqual(accion, 'Subir peso')
+        self.assertNotIn('vuelvo a', texto)
+        self.assertIn(f"a por {d['reps']} reps", texto)

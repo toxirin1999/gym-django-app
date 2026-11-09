@@ -190,7 +190,7 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
             peso, reps, rango, siguiente = dato
             return (
                 f'{reps} reps con {_kg(peso)} kg, por encima de {rango[1]}: '
-                f'subo a {_kg(siguiente)} kg y vuelvo a {rango[0]} reps.'
+                f'subo a {_kg(siguiente)} kg.'  # 9-nov-2026: las reps las calcula la decisión, no el mínimo
             )
 
     if motivo.startswith('Objetivo no alcanzado en todas las series'):

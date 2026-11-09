@@ -98,7 +98,7 @@ class DecisionConPesoConcreto(TestCase):
         )
         self.assertEqual(
             porque_decision(log, None, None, 'peso_reps'),
-            '25 reps con 25 kg, por encima de 20: subo a 30 kg y vuelvo a 15 reps.',
+            '25 reps con 25 kg, por encima de 20: subo a 30 kg.',
         )
         self.assertEqual(_efecto_visible(log, 'peso_reps'), 'Subirá a 30 kg')
 
