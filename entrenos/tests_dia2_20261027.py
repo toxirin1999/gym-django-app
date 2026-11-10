@@ -96,7 +96,9 @@ class ReglaDeCarga(Comun):
         self.hacer(e, b, [(25, 20, 8)] * 3)
         d = decidir_carga(self.cliente, _ej(b.nombre, '15-20'), HOY)
         self.assertEqual((d['peso'], d['reps']), (25, 20))
-        self.assertIn('aguanta 2 s', d['frase'])
+        # 10-nov-2026 (nota 10): primero la pausa de 2 s, con la promesa de subir si se llega.
+        self.assertIn('pausa de 2 s', d['frase'])
+        self.assertTrue(d['pausa'])
 
     def test_nota3_texto_mismo_peso_se_cambia_si_baja(self):
         ej = {'peso_kg': 70, 'reps_objetivo_hoy': 15,

@@ -229,6 +229,27 @@ def ultima_sesion(cliente, nombre, antes_de, reps_min=None, incluir_descarga=Fal
     return reserva
 
 
+def ultima_sesion_mismo_rango(cliente, nombre, antes_de, rango, dias=VENTANA_DIAS):
+    """La última sesión (dentro de ``dias``) hecha con el mismo rango de reps, o None.
+
+    10-nov-2026 (notas 4 y 11): con un rango nuevo, el peso inicial parte del
+    último registro en ese mismo rango, no de otro rango (remo: propuso 25 kg
+    desde un 20 × 14 cuando ya había hecho 30 kg × 6 en 4-6).
+    """
+    if not rango:
+        return None
+    limite = antes_de
+    for _ in range(8):
+        lectura = ultima_sesion(cliente, nombre, limite, reps_min=rango[0])
+        if not lectura or (antes_de - lectura['fecha']).days > dias:
+            return None
+        rs = rango_de_sesion(lectura['entreno'], nombre)
+        if rs and tuple(rs) == tuple(rango):
+            return lectura
+        limite = lectura['fecha']
+    return None
+
+
 # ─────────────────────────────────────────────────────────────
 # Techo para el peso propuesto
 # ─────────────────────────────────────────────────────────────
@@ -252,11 +273,47 @@ def reps_txt(valor):
     return str(int(round(v)))
 
 
+def rpe_efectivo(rpe):
+    """RPE con el que se estima (10-nov-2026, notas 12 y 17).
+
+    El botón 5 significa «5 o menos»: para estimar la fuerza se supone RPE 4,
+    no 5. Sin RPE, 9 (lo prudente)."""
+    if rpe is None or rpe == '':
+        return 9.0
+    rpe = float(rpe)
+    return 4.0 if rpe <= 5 else rpe
+
+
+def reps_real_cercana(validas, peso, valor):
+    """La cifra de reps registrada (a ese peso) más cercana a ``valor``; con empate, la mayor.
+
+    10-nov-2026 (nota 3): la mediana de 15, 15, 12 y 9 es 13,5 y se citaba
+    «50 kg × 14», una cifra que no es ninguna serie. Solo se citan reps reales.
+    """
+    reales = sorted({int(s['reps']) for s in (validas or []) if abs(s['peso'] - peso) < 1e-6 and s['reps'] > 0})
+    if not reales:
+        return int(round(float(valor)))
+    return min(reales, key=lambda r: (abs(r - float(valor)), -r))
+
+
+def serie_de_mas_esfuerzo(ref):
+    """La última serie hecha con el peso de referencia (la de más esfuerzo real).
+
+    10-nov-2026 (nota 22): David marca el RPE del objetivo en las primeras
+    series para no quedarse sin fuerzas y en la última da lo que tiene. La
+    estimación de su fuerza sale de esa última serie, no de la media.
+    """
+    candidatas = [s for s in (ref.get('validas') or []) if abs(s['peso'] - ref['peso']) < 1e-6 and s['reps'] > 0]
+    if not candidatas:
+        return None
+    return candidatas[-1]
+
+
 def peso_para_reps(peso, reps, rpe, reps_objetivo, rpe_objetivo):
     """Peso con el que se harían ``reps_objetivo`` a ``rpe_objetivo`` (Epley + RIR)."""
     from analytics.utils import estimar_1rm_con_rpe
 
-    e1rm = estimar_1rm_con_rpe(float(peso), int(reps), float(rpe or 9))
+    e1rm = estimar_1rm_con_rpe(float(peso), int(reps), rpe_efectivo(rpe))
     if not e1rm:
         return None
     reps_al_fallo = reps_objetivo + max(0.0, 10 - float(rpe_objetivo or 8))
@@ -273,7 +330,7 @@ def reps_para_peso(peso, reps, rpe, peso_nuevo, rpe_objetivo, rango):
 
     if not rpe or not peso_nuevo or not rango:
         return None
-    e1rm = estimar_1rm_con_rpe(float(peso), int(reps), float(rpe))
+    e1rm = estimar_1rm_con_rpe(float(peso), int(reps), rpe_efectivo(rpe))
     if not e1rm:
         return None
     reps_est = math.floor(30 * (e1rm / float(peso_nuevo) - 1) - max(0.0, 10 - float(rpe_objetivo or 8)) + 1e-6)

@@ -125,8 +125,9 @@ class SiguienteSeriePorEstimacion(SimpleTestCase):
         self.assertEqual((p['tipo'], p['peso'], p['reps']), ('subir', 190, 5))
 
     def test_convergent_con_mucho_margen_sube_de_una_vez(self):
+        # 10-nov-2026: el botón 5 es «5 o menos»; se estima como RPE 4 (de 67,5 pasa a 70).
         p = self.plan(2.5, 62.5, 5, 8, 8, 6, 8)
-        self.assertEqual((p['tipo'], p['peso'], p['reps']), ('subir', 67.5, 7))
+        self.assertEqual((p['tipo'], p['peso'], p['reps']), ('subir', 70, 7))
 
     def test_tras_subir_las_reps_no_son_siempre_el_minimo(self):
         p = self.plan(5, 60, 6, 20, 8, 15, 20)

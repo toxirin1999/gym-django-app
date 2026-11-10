@@ -51,23 +51,24 @@ class Futbol(TestCase):
         aplicar_futbol_hoy(self.cliente, ejs, MIERCOLES)
         return ejs
 
-    def test_por_costumbre_solo_opcional(self):
-        curl, zancadas = self._hoy()
-        self.assertEqual(curl['nombre'], 'Curl con Barra Z')
-        self.assertNotIn('opcional_futbol', curl)
-        self.assertTrue(zancadas['opcional_futbol'])
+    def test_por_costumbre_entrenando_antes_la_pierna_va_completa(self):
+        # 10-nov-2026 (nota 21): David entrena antes del partidillo y su entreno manda.
+        zancadas, curl = self._hoy()
+        self.assertEqual(zancadas['nombre'], 'Zancadas con Kettlebell')  # sigue en su sitio
+        self.assertNotIn('opcional_futbol', zancadas)
         self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (3, 8))
         self.assertEqual(zancadas['criterio_entrenador'],
-                         'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas): la pierna de hoy va '
-                         'al final y es opcional. Si hoy no juegas, hazla como siempre.')
+                         'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas), pero entrenas antes '
+                         'y tu entreno manda: la pierna va completa. Si prefieres, deja la sesión para mañana.')
 
-    def test_apuntado_gimnasio_antes_del_partido(self):
+    def test_apuntado_gimnasio_antes_del_partido_no_recorta(self):
         self._apuntado(MIERCOLES)
-        zancadas = self._hoy()[1]
-        self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (2, 7))
+        zancadas = self._hoy()[0]
+        self.assertNotIn('opcional_futbol', zancadas)
+        self.assertEqual((zancadas['series'], zancadas['rpe_objetivo']), (3, 8))
         self.assertEqual(zancadas['criterio_entrenador'],
-                         'Hoy tienes fútbol (lo tienes apuntado): la pierna va al final y es opcional, '
-                         'con 2 series en vez de 3 y RPE 7 en vez de 8.')
+                         'Hoy tienes fútbol (lo tienes apuntado), pero entrenas antes y tu entreno manda: la '
+                         'pierna va completa. Si prefieres, deja la sesión para mañana.')
 
     def test_ya_jugado_decide_el_esfuerzo(self):
         self._jugado(MIERCOLES)

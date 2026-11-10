@@ -1651,7 +1651,7 @@ body{background:
       </div>
 
       <div class="exname-meta">
-        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{% if ejercicio.reps_objetivo %}{{ ejercicio.reps_objetivo }}{% else %}{{ rango_vis }}{% endif %} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}{% if ejercicio.regla_parada %}<span class="exname-meta-line exname-regla" style="display:block;margin-top:3px;opacity:.85;">{{ ejercicio.regla_parada }}</span>{% endif %}
+        {# 23-oct-2026: rango original del ejercicio; con tope, el objetivo ya va en la etiqueta "Tope · …" (no se repite ni se corta). #}{% with rango_vis=ejercicio.repeticiones_plan|default:ejercicio.repeticiones %}<span class="exname-meta-line"><span class="chip-g">{{ ejercicio.series }} series</span> · <span class="chip-g">RPE {{ ejercicio.rpe_objetivo }}</span>{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{% elif ejercicio.usa_tiempo %} · <span class="chip-n">{% if ejercicio.reps_objetivo %}{{ ejercicio.reps_objetivo }}{% else %}{{ rango_vis }}{% endif %} seg</span>{% elif ejercicio.usa_distancia %} · <span class="chip-n">{{ rango_vis }} m</span>{% else %} · <span class="chip-n">{{ rango_vis }} reps{% if ejercicio.reps_unidad %} {{ ejercicio.reps_unidad }}{% endif %}</span>{% endif %}</span>{% endwith %}
         {% if ejercicio.sugerencia_tope %}
         <span class="exname-chip" style="background:rgba(16,185,129,0.15);color:#10B981;border:1px solid rgba(16,185,129,0.3);" title="La última vez llegaste al tope — {% if ejercicio.usa_distancia %}mismo peso, más metros{% else %}mismo peso, una rep más{% endif %}">🔝 {% if ejercicio.usa_distancia %}Tope {{ ejercicio.peso_inicial_kg|floatformat:"-1" }} kg · a por {{ ejercicio.reps_sugeridas_tope }} m{% else %}Tope · {{ ejercicio.reps_sugeridas_tope }} reps{% endif %}</span>
         {% endif %}
@@ -1673,6 +1673,8 @@ body{background:
         </select>{% else %}<input type="hidden" name="{{ ejercicio.form_id }}_tipo_carga" id="tipo-carga-{{ ejercicio.form_id }}" value="total">{% endif %}
       </div>
     </div>
+    {# 10-nov-2026 (nota 9): la regla de parada, en su propia línea completa debajo de la tarjeta (en la cabecera la cortaba el botón «Peso total»). #}
+    {% if ejercicio.regla_parada %}<div class="ex-regla-parada" style="margin:8px 0 4px;padding:8px 12px;background:rgba(255,255,255,0.05);border-left:3px solid rgba(255,255,255,0.25);border-radius:0 8px 8px 0;color:#d7e0e2;font-size:12px;line-height:1.45;">{{ ejercicio.regla_parada }}</div>{% endif %}
     {# 30-oct-2026 (nota 19): el aviso del techo va debajo de la tarjeta; dentro tapaba el nombre. #}
     {% if ejercicio.aviso_tope_tempo %}
     <div class="ex-aviso-tope" style="margin:8px 0 4px;padding:8px 12px;background:rgba(245,158,11,0.10);border:1px solid rgba(245,158,11,0.3);border-radius:10px;color:#f5b544;font-size:12px;line-height:1.4;">⏱ {{ ejercicio.aviso_tope_tempo }}</div>
@@ -1981,14 +1983,14 @@ body{background:
           <span class="sl-label" style="padding-top:8px;">Esfuerzo (RPE)</span>
           <div style="flex:1;display:flex;flex-direction:column;gap:4px;">
             <div class="rpe-picker-grid" id="rpe-grid-{{ ejercicio.form_id }}-{{ sn }}" role="radiogroup" aria-label="Esfuerzo percibido de la serie {{ sn }}">
-              <button type="button" role="radio" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">5</button>
+              <button type="button" role="radio" class="rpe-pick-btn" data-val="5" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false" aria-label="RPE 5 o menos" title="5 o menos">5<small style="display:block;font-size:8px;line-height:1;opacity:.75;">o menos</small></button>
               <button type="button" role="radio" class="rpe-pick-btn" data-val="6" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">6</button>
               <button type="button" role="radio" class="rpe-pick-btn" data-val="7" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">7</button>
               <button type="button" role="radio" class="rpe-pick-btn" data-val="8" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">8</button>
               <button type="button" role="radio" class="rpe-pick-btn" data-val="9" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">9</button>
               <button type="button" role="radio" class="rpe-pick-btn" data-val="10" data-fid-sn="{{ ejercicio.form_id }}-{{ sn }}" aria-checked="false">10</button>
             </div>
-            <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}">Selecciona el RPE real</div>
+            <div class="rpe-desc" id="rpe-desc-{{ ejercicio.form_id }}-{{ sn }}">¿Cuántas reps más habrías hecho? 0 = 10 · 1 = 9 · 2 = 8 · 3 = 7 · 4 = 6 · 5 o más = 5 o menos</div>
           </div>
           <span class="sl-val rpe-v" id="rpe-disp-{{ ejercicio.form_id }}-{{ sn }}" style="display:none;">{{ ejercicio.rpe_objetivo }}</span>
         </div>
@@ -2976,6 +2978,9 @@ function aEscalaJS(peso, salto, hacia){
 // serie; prensa 180 × 8 a RPE 7 en 4-6 no subía nada; y tras subir, las reps
 // volvían siempre al mínimo del rango.
 function estimarSerieJS(peso, reps, rpe, rpeObj, repsMin, repsMax, salto, hacia) {
+  // 10-nov-2026 (notas 12 y 17): el botón 5 significa «5 o menos». Para estimar
+  // se supone RPE 4 (unas 6 reps en recámara), no 5: remo 30 × 6 a «5» quedaba corto.
+  if (rpe <= 5) rpe = 4;
   const rir = Math.max(0, 10 - rpe);
   const rirObj = Math.max(0, 10 - rpeObj);
   const e1rm = peso * (1 + (reps + rir) / 30);

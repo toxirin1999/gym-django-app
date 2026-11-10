@@ -255,7 +255,9 @@ def obtener_ultimo_peso_ejercicio(cliente_id, nombre_ejercicio, fecha_actual, ra
                         # 31-oct-2026 (nota 3): la mediana, la misma cifra que usa la
                         # frase de la regla (buenos días "22 × 5" en la tarjeta y
                         # "22 × 6" en la frase).
-                        repeticiones = int(round(float(ref.get('reps_mediana') or ref['reps'])))
+                        from entrenos.services.ultima_sesion_service import reps_real_cercana
+                        repeticiones = reps_real_cercana(
+                            ref.get('validas'), ref['peso'], ref.get('reps_mediana') or ref['reps'])
                         if ref['rpe'] is not None:
                             rpe_ref = ref['rpe']
                         # 30-oct-2026 (nota 14): el RPE de la misma serie que
@@ -4755,7 +4757,12 @@ def vista_entrenamiento_activo(request, cliente_id):
             continue
         _rpe_txt = str(int(_rpe)) if _rpe.is_integer() else f'{_rpe:g}'.replace('.', ',')
         _ej['regla_parada'] = (f"Para al llegar a {_ej['reps_max']} reps o a RPE {_rpe_txt}, "
-                               f"lo que llegue antes. Luego apunta el RPE real.")
+                               f"lo que llegue antes. Luego apunta el RPE real. "
+                               f"Si llegas al tope con RPE 6 o menos, la app sube más peso en la siguiente serie.")
+        # 10-nov-2026 (nota 10): el Pallof con pausa lo dice la tarjeta, no solo el briefing.
+        if _ej.get('con_pausa'):
+            _ej['regla_parada'] = ("Con pausa de 2 s con los brazos estirados en cada repetición. "
+                                   + _ej['regla_parada'])
 
     # Separar "DÍA 3 - DESCARGA ACTIVA" en dos partes para el header
     _sep = ' - ' if ' - ' in rutina_nombre else (' · ' if ' · ' in rutina_nombre else None)

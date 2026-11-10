@@ -196,7 +196,7 @@ def _frase_recuperacion(nivel, senales, buenas, datos):
         return (f'Hoy no estás al cien: {textos[0]}.{bueno} Entrenamos normal; si en la primera serie '
                 f'notas que no tira, quita una repetición y no pasa nada.')
     if nivel == 'verde':
-        return f'Hoy estás fresco: {_unir(buenas)}. Día para apretar.'
+        return f'Hoy estás fresco: {_unir(buenas)}.'  # 10-nov-2026 (nota 1): sin «Día para apretar», las tarjetas ya dicen qué toca
     if nivel == 'normal':
         return 'Llegas como siempre: ni el sueño, ni el pulso, ni la variabilidad se salen de lo normal en ti.'
     if datos.get('horas_sueno'):

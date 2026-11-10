@@ -958,5 +958,12 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
         except Exception:
             logger.exception('[plan_dinamico] última vez falló')
 
+    # 10-nov-2026 (nota 20): el core, al final de la sesión.
+    try:
+        from entrenos.services.criterios_entrenador_service import core_al_final
+        core_al_final(ejercicios_mod)
+    except Exception:
+        logger.exception('[plan_dinamico] core al final falló')
+
     logger.debug(f"[plan_dinamico] cliente={cliente.id}: retorna {len(cambios)} cambios")
     return ejercicios_mod, cambios

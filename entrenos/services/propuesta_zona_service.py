@@ -674,6 +674,18 @@ def aplicar_a_ejercicios(cliente, ejercicios, hoy, cambios, es_descarga=False):
             f'Cuenta para la propuesta: {signo}{SERIES_EXTRA} series semanales de '
             f'{p.nombre_zona.lower()} hasta el {p.fin:%d/%m}.'
         )
+        # 10-nov-2026 (nota 7): si hoy el ejercicio va recortado (fútbol), no se
+        # promete el volumen entero: se comprobará con las series que hagas.
+        try:
+            _plan, _hoy_s = int(ej.get('series_plan') or 0), int(ej.get('series') or 0)
+        except (TypeError, ValueError):
+            _plan = _hoy_s = 0
+        if _plan and _hoy_s and _hoy_s < _plan:
+            ej['propuesta_zona_texto'] = (
+                f'Hoy llevas {_hoy_s} series y no {_plan}, por el fútbol: la propuesta de '
+                f'{signo}{SERIES_EXTRA} series semanales de {p.nombre_zona.lower()} se comprobará '
+                f'con las series que hagas de verdad.'
+            )
     cambios.append({
         'tipo': 'propuesta_zona',
         'ejercicio_original': de_la_zona[0].get('nombre'),

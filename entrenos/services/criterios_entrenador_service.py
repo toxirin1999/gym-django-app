@@ -22,6 +22,9 @@ Los dos juntos no suman: como mucho, un punto menos.
 
 4. El mismo día del fútbol (8-nov-2026): la pierna va al final y es
    opcional. Si el partido está apuntado, además una serie menos y RPE 7.
+   10-nov-2026: si aún no se ha jugado (por costumbre o apuntado), David
+   entrena antes y su entreno manda: la pierna va completa y en su sitio, con
+   una frase y la opción de dejar la sesión para mañana.
 """
 
 from collections import Counter
@@ -226,6 +229,31 @@ def _anadir_frase(ej, frase):
     ej['criterio_entrenador'] = f'{previa} {frase}' if previa else frase
 
 
+_CORE_NOMBRES = ('crunch', 'pallof', 'plancha', 'plank', 'dead bug', 'ab wheel', 'elevaciones de piernas')
+
+
+def es_de_core(ej):
+    nombre = (ej.get('nombre') or '').casefold()
+    if any(t in nombre for t in _CORE_NOMBRES):
+        return True
+    try:
+        return _grupo_ejercicio(ej.get('nombre') or '', ej.get('grupo_muscular')) == 'core'
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def core_al_final(ejercicios):
+    """El core va después de los ejercicios principales (10-nov-2026, nota 20).
+
+    Orden estable: lo demás conserva su orden. Un core cansado antes de
+    sentadilla, jalón o peso muerto resta estabilidad donde más pesa.
+    """
+    if not ejercicios:
+        return ejercicios
+    ejercicios.sort(key=lambda e: 1 if es_de_core(e) else 0)
+    return ejercicios
+
+
 def aplicar_vispera_futbol(cliente, ejercicios, hoy):
     """Pierna con una serie menos y RPE 7 como mucho si mañana juegas al fútbol."""
     try:
@@ -268,6 +296,19 @@ def aplicar_futbol_hoy(cliente, ejercicios, hoy):
     rpe = getattr(act, 'rpe_medio', None) if act else None
     duro = estado == 'apuntado' or (estado == 'jugado' and (rpe is None or float(rpe) >= RPE_SUELO))
     aplicadas = []
+    # 10-nov-2026 (nota 21): David entrena antes de jugar y su entreno manda
+    # sobre el partidillo. Con el partido por costumbre o apuntado y aún sin
+    # jugar, la pierna va completa y en su sitio; solo se dice, y se ofrece
+    # dejar la sesión para el día siguiente.
+    if estado in ('costumbre', 'apuntado'):
+        origen = previsto['frase'] if estado == 'costumbre' else 'Hoy tienes fútbol (lo tienes apuntado)'
+        for ej in ejercicios:
+            if not _es_pierna(ej):
+                continue
+            _anadir_frase(ej, f'{origen}, pero entrenas antes y tu entreno manda: la pierna va completa. '
+                              f'Si prefieres, deja la sesión para mañana.')
+            aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
+        return aplicadas
     for ej in ejercicios:
         if not _es_pierna(ej):
             continue

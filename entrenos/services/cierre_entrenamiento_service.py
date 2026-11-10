@@ -662,6 +662,17 @@ def _comparar_referencias(entreno, entreno_anterior, nombre):
     if abs(hoy['peso'] - antes['peso']) < 0.25:
         if r_hoy == r_antes:
             return {'tipo': 'mantenida', 'detalle': f"igual que la última vez ({_kg(hoy['peso'])} kg × {r_hoy})"}
+        # 10-nov-2026 (nota 14): con menos reps no hay pérdida si hoy se paró en
+        # el tope del rango (curl 14 → 12 en 8-12) o si el rango es otro
+        # (jalón 8 → 6 al pasar a 4-6).
+        if r_hoy < r_antes and rango:
+            rango_antes = rango_de_sesion(entreno_anterior, nombre)
+            if r_hoy >= rango[1]:
+                return {'tipo': 'mantenida',
+                        'detalle': f"{texto} (tope del rango, {rango[1]} reps: es lo pedido, no una bajada)"}
+            if rango_antes and tuple(rango_antes) != tuple(rango):
+                return {'tipo': 'mantenida',
+                        'detalle': f"{texto} (rango nuevo, {rango[0]}-{rango[1]}: menos reps es lo pedido)"}
         signo = '+' if r_hoy > r_antes else '−'
         return {
             'tipo': 'subida' if r_hoy > r_antes else 'bajada',
