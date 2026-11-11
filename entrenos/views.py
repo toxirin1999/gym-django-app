@@ -10654,7 +10654,7 @@ def _anotar_series_sin_carga(cliente, ejercicio, fecha):
     if len(reps) > 1 and objetivo:
         media = round(sum(reps) / len(reps))
         if objetivo == media + 1:
-            ejercicio['objetivo_explicado'] = f'media {media}{uni} + 1'
+            ejercicio['objetivo_explicado'] = f'+1 sobre tu media de {media}{uni}'
         elif objetivo == max(reps) + 1:
             ejercicio['objetivo_explicado'] = 'tu mejor serie + 1'
 

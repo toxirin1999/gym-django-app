@@ -364,6 +364,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                     # metros (+5), no el objetivo: decía «Hoy a por 5 m».
                     ej['progresion_motivo'] = (f'Hoy a por {log.reps_anteriores + reps_sugeridas} m '
                                                f'(la última vez {log.reps_anteriores}).')
+                elif _unidad == 'm' and 0 < (reps_sugeridas or 0) <= 10:
+                    # 11-nov-2026 (nota 2): +5 m es el salto, no «a por 5 m».
+                    ej['progresion_motivo'] = f'Hoy {reps_sugeridas:g} m más que la última vez.'
                 elif _unidad != 'reps' and (reps_sugeridas or 0) < 5:
                     ej.pop('progresion_motivo', None)
                 else:
@@ -584,8 +587,8 @@ def _objetivo_sin_carga(cliente, ej, hoy):
         ej.setdefault('repeticiones_plan_original', ej.get('repeticiones_plan') or ej.get('repeticiones'))
         ej['repeticiones'] = ej['repeticiones_plan'] = f'{paso[0]}-{paso[1]}'
         ej['reps_min'], ej['reps_max'] = paso
-        ej['progresion_motivo'] += (f' Rango de paso {paso[0]}-{paso[1]} hasta hacer {paso[1]} en todas; '
-                                    f'el de la rutina es {rango[0]}-{rango[1]}.')
+        ej['progresion_motivo'] += (f' Mientras tanto trabajas entre {paso[0]} y {paso[1]} reps: con {paso[1]} '
+                                    f'en todas las series pasas al siguiente escalón (la rutina pide {rango[0]}-{rango[1]}).')
 
 
 RANGOS_DE_PASO = ((8, 12), (12, 15), (15, 20))

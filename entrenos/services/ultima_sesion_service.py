@@ -727,16 +727,38 @@ def anotar_ultima_vez(cliente, ej, hoy):
         # 30-oct-2026 (nota 1): el farmer (56 m como "rango") no tenía "La
         # última vez" en el briefing porque 55 m < 56 no daba referencia.
         from entrenos.models import EjercicioRealizado
-        previo = (
+        # 11-nov-2026 (nota 1): la sesión de descarga no es «la última vez»
+        # (dead hang 30 s @6 el 04/11 en vez de los 36 s del 30/10).
+        from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+        _periodos = periodos_descarga(cliente.id if hasattr(cliente, 'id') else cliente)
+        previo = None
+        saltada = None
+        for _cand in (
             EjercicioRealizado.objects.filter(
                 entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
                 completado=True, entreno__fecha__lt=hoy,
-            ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id').first()
-        )
+            ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id')[:12]
+        ):
+            if es_sesion_descarga(_cand.entreno, nombre, _periodos):
+                if saltada is None:
+                    saltada = _cand.entreno.fecha
+                continue
+            previo = _cand
+            break
+        if previo is None:
+            previo = (
+                EjercicioRealizado.objects.filter(
+                    entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
+                    completado=True, entreno__fecha__lt=hoy,
+                ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id').first()
+            )
+            saltada = None
         if previo and (hoy - previo.entreno.fecha) <= timedelta(days=VENTANA_DIAS):
             texto = texto_series(previo.entreno, nombre, tipo)
             if texto:
                 ej['ultima_vez_texto'] = f"{previo.entreno.fecha:%d/%m}: {texto}"
+                if saltada:
+                    ej['ultima_vez_texto'] += f" (antes de la descarga del {saltada:%d/%m})"
         return
     lectura = ultima_sesion(cliente, nombre, hoy, reps_min=rango[0] if rango else None)
     if not lectura or (hoy - lectura['fecha']) > timedelta(days=VENTANA_DIAS):

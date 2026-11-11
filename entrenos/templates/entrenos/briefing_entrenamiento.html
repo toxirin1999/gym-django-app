@@ -609,6 +609,7 @@
           {% elif ej.regla_carga == 'recalcular' %}<span class="tag tag-subtle accent">↔ NUEVO RANGO</span>
           {% elif ej.regla_carga == 'antigua' %}<span class="tag tag-subtle accent">↻ RECALCULADO</span>
           {% elif ej.regla_carga == 'fatiga' %}<span class="tag tag-subtle joi">= REPITE</span>
+          {% elif ej.regla_carga == 'tope' and ej.tope_con_tempo %}<span class="tag tag-subtle joi">= CON TEMPO</span>
           {% elif ej.regla_carga == 'tope' %}<span class="tag tag-subtle ok">↑ MÁS REPS</span>
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'subir_peso' %}<span class="tag tag-subtle ok">↑ SUBIR</span>
           {% elif ej.progresion_aplicada and ej.progresion_accion == 'bajar_peso' %}<span class="tag tag-subtle warn">↓ BAJAR</span>

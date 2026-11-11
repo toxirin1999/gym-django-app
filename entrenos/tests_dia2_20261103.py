@@ -35,7 +35,7 @@ class Textos(SimpleTestCase):
         src = ACTIVO.read_text(encoding='utf-8')
         self.assertIn('{% if ejercicio.aproximaciones.peso3 %}3{% else %}2{% endif %} pasos', src)
         self.assertIn("if(card?.dataset.descarga==='1')descansoSeg=Math.min(descansoSeg,120);", src)
-        self.assertIn(", al final'", src)
+        self.assertIn('queda para el final', src)
 
     def test_nota8_por_lado_en_el_resumen(self):
         src = RESUMEN.read_text(encoding='utf-8')

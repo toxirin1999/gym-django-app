@@ -790,6 +790,12 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             .exclude(entreno_id=entreno.id)
             .order_by('-entreno__fecha', '-id')
         ):
+            # 11-nov-2026 (notas 9 y 10): hoy no es descarga, así que la
+            # comparación es con la última sesión normal, no con la rebajada.
+            if not es_descarga_hoy:
+                from entrenos.services.sesion_descarga_service import es_sesion_descarga
+                if es_sesion_descarga(candidato.entreno, candidato.nombre_ejercicio):
+                    continue
             if mas_reciente is None:
                 mas_reciente = candidato
             peso_candidato, reps_candidato = _rendimiento_representativo(

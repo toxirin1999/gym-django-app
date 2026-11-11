@@ -257,7 +257,8 @@ def _decidir_carga(cliente, ej, hoy):
                      f'(la última vez {max(_reales)} a RPE {_kg(ref["rpe"])}: te sobró margen, dos más).')
         if aviso:
             frase += ' ' + aviso
-        return {'peso': peso, 'reps': reps, 'regla': 'tope', 'frase': frase}
+        return {'peso': peso, 'reps': reps, 'regla': 'tope', 'frase': frase,
+                'con_tempo': int(reps) >= int(maximo)}
 
     # 2b. 25-oct-2026: un día de fatiga (15 × 15 y luego 15 × 4) no baja el peso:
     # se repite con el objetivo de la vez anterior.
@@ -383,6 +384,11 @@ def _decidir_carga(cliente, ej, hoy):
             frase = (f'La última vez las series no fueron parejas ({_kg(peso_ref)} kg × {reps_cita} y '
                      f'{_kg(floja["peso"])} kg × {floja["reps"]} a RPE {_kg(floja["rpe"])}): para {minimo}-{maximo} '
                      f'parto de la más prudente, {_kg(peso)} kg. Con el RPE de la primera serie ajusto la siguiente.')
+        if not prudente:
+            # 11-nov-2026 (notas 6 y 25): con rango nuevo el primer número es una
+            # estimación prudente: se dice y se avisa de que la 2ª serie se ajusta.
+            frase += (f' Empiezo en {minimo} reps, la parte baja del rango: con lo que hagas en la '
+                      f'primera serie ajusto la siguiente.')
         return {
             'peso': peso, 'reps': minimo, 'regla': 'antigua' if antigua else 'recalcular',
             'frase': frase, 'prudente': bool(prudente),
@@ -456,8 +462,13 @@ def _decidir_carga(cliente, ej, hoy):
         _bruto = reps_para_peso(peso_ref, _src['reps'], _src['rpe'] or ref.get('rpe'), peso, rpe_obj, (1, 99))
         if _bruto is not None and _bruto < minimo:
             frase_subir += (f' Con ese peso calculo unas {_bruto}: si llegas al RPE {_kg(rpe_obj)} antes de '
-                            f'{minimo}, para ahí y apúntalo.')
-        return {'peso': peso, 'reps': reps_n, 'regla': 'subir', 'frase': frase_subir}
+                            f'las {minimo} reps, para ahí y apúntalo.')
+        _dec = {'peso': peso, 'reps': reps_n, 'regla': 'subir', 'frase': frase_subir}
+        if _bruto is not None and _bruto < minimo:
+            # 11-nov-2026 (nota 11): el cierre también dice lo que se calcula de verdad.
+            _dec['reps_calculo'] = _bruto
+            _dec['rpe_calculo'] = rpe_obj
+        return _dec
     from entrenos.services.maquina_service import tipo_equipo_carga
     if abs(float(techo) - peso_ref) < 1e-6 and tipo_equipo_carga(nombre) not in (
         'mancuerna_una', 'mancuerna_dos', 'kettlebell',
@@ -505,6 +516,7 @@ def aplicar_decision_carga(ej, decision):
     # 25-oct-2026: la etiqueta del briefing sabe por qué cambia el peso
     # (un cambio de rango no es "bajar"; un día de fatiga se repite).
     ej['regla_carga'] = decision['regla']
+    ej['tope_con_tempo'] = bool(decision.get('con_tempo'))  # 11-nov-2026 (nota 7)
     ej['con_pausa'] = bool(decision.get('pausa'))  # 10-nov-2026 (nota 10): Pallof con pausa de 2 s
     try:
         peso_actual = float(ej.get('peso_kg') or 0)
@@ -712,9 +724,19 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
                  f"(antes hacías {_kg(peso)} × {decision['reps_antes']}).")
         return (texto, 'Mantener', f'Repite {_kg(peso)} kg') if con_efecto else (texto, 'Mantener')
     if regla == 'tope':
-        texto = f'{_kg(peso)} kg es el máximo de la máquina: la próxima vez a por {reps} reps.'
-        accion = 'Subir repeticiones'
-        efecto = f'A por {reps} reps'
+        _max_hoy = int(rango[1])
+        _reps_tope = decision.get('reps_hoy')
+        if int(reps) >= _max_hoy and (_reps_tope is None or int(_reps_tope) >= _max_hoy):
+            # 11-nov-2026 (nota 8): con el máximo de la máquina y las reps del tope
+            # ya hechas, no hay «más reps» que pedir: se progresa con el tempo.
+            texto = (f'{_kg(peso)} kg es el máximo de la máquina y ya haces las {_max_hoy} reps: la próxima vez '
+                     f'igual, con la bajada de 3 s y 2 s arriba, hasta que salga más fácil.')
+            accion = 'Mantener'
+            efecto = 'Mismo peso, con tempo'
+        else:
+            texto = f'{_kg(peso)} kg es el máximo de la máquina: la próxima vez a por {reps} reps.'
+            accion = 'Subir repeticiones'
+            efecto = f'A por {reps} reps'
     elif decision.get('pausa'):
         # 10-nov-2026 (nota 10): Pallof al tope, primero con pausa de 2 s.
         from entrenos.services.maquina_service import a_escala, salto_carga
@@ -736,6 +758,9 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
                           _ref['reps_mediana'] if _ref.get('reps_mediana') is not None else _ref['reps'])
         _donde = f'por encima de {rango[1]}' if _reps_hoy > rango[1] else 'en el tope del rango'
         texto = f'{_reps_hoy} reps con {_kg(peso_hoy)} kg, {_donde}: subo a {_kg(peso)} kg, a por {reps} reps.'
+        if decision.get('reps_calculo') is not None:
+            texto += (f' Con ese peso calculo unas {decision["reps_calculo"]}: si llegas al RPE '
+                      f'{_kg(decision["rpe_calculo"])} antes de las {reps} reps, para ahí y apúntalo.')
         accion = 'Subir peso'
         efecto = f'Subirá a {_kg(peso)} kg'
     else:

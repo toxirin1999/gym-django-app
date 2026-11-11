@@ -37,7 +37,7 @@ class Sesion(Base):
         _objetivo_sin_carga(self.cliente, ej, HOY)
         self.assertEqual(ej['reps_objetivo_hoy'], 11)
         self.assertEqual(ej['repeticiones'], '8-12')
-        self.assertIn('Rango de paso 8-12', ej['progresion_motivo'])
+        self.assertIn('Mientras tanto trabajas entre 8 y 12', ej['progresion_motivo'])
         _objetivo_sin_carga(self.cliente, ej, HOY)  # idempotente
         self.assertEqual(ej['repeticiones'], '8-12')
 
