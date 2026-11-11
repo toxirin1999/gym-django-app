@@ -33,6 +33,15 @@ class AbduccionAlTope(Base):
         self.assertEqual(d['regla'], 'tope')
         self.assertTrue(d['con_tempo'])
 
+    def test_el_tope_de_reps_es_20_aunque_el_rango_del_plan_sea_menor(self):
+        # En producción el rango era 12-15: el texto decía «ya haces las 12 reps».
+        e = self.entreno(HOY, {'Abducción de Cadera en Máquina': '12-15'})
+        self.hacer(e, self.abd, [(60, 20, 8), (60, 20, 8)])
+        texto, accion = proxima_vez_texto(self.cliente, e, 'Abducción de Cadera en Máquina', 'peso_reps')
+        self.assertIn('ya haces las 20 reps', texto)
+        d = decidir_carga(self.cliente, dict(self._ej(), repeticiones='12-15'), HOY + timedelta(days=3))
+        self.assertTrue(d['con_tempo'])
+
     def test_con_menos_reps_si_las_pide(self):
         e = self.entreno(HOY - timedelta(days=12), {'Abducción de Cadera en Máquina': '15-20'})
         self.hacer(e, self.abd, [(60, 16, 8), (60, 16, 8)])
@@ -70,6 +79,10 @@ class CierreConCalculoHonesto(Base):
 
 
 class ComparacionSinDescarga(SimpleTestCase):
+    def test_una_sesion_de_hace_mas_de_seis_semanas_no_es_la_comparacion(self):
+        src = (Path(__file__).parent / 'services' / 'cierre_entrenamiento_service.py').read_text(encoding='utf-8')
+        self.assertIn('.days > 42', src)
+
     def test_el_cierre_salta_las_sesiones_de_descarga(self):
         src = (Path(__file__).parent / 'services' / 'cierre_entrenamiento_service.py').read_text(encoding='utf-8')
         self.assertIn('if not es_descarga_hoy:', src)

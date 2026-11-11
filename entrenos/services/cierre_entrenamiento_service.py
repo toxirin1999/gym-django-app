@@ -798,6 +798,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                     continue
             if mas_reciente is None:
                 mas_reciente = candidato
+            # 11-nov-2026: una sesión de hace más de seis semanas no es la
+            # comparación (hip thrust 202,5 × 3 de otro rango daba «−45 kg»).
+            if (not es_descarga_hoy and (entreno.fecha - candidato.entreno.fecha).days > 42
+                    and (entreno.fecha - mas_reciente.entreno.fecha).days <= 42):
+                break
             peso_candidato, reps_candidato = _rendimiento_representativo(
                 candidato.entreno, candidato.nombre_ejercicio,
                 candidato.peso_kg, candidato.repeticiones,

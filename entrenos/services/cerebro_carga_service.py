@@ -19,6 +19,7 @@ ver, con el historial real, en qué se diferencia de lo que sale hoy.
 """
 
 from datetime import timedelta
+from entrenos.services.progreso_service import MAX_REPS_TOPE
 
 
 def _kg(valor):
@@ -258,7 +259,7 @@ def _decidir_carga(cliente, ej, hoy):
         if aviso:
             frase += ' ' + aviso
         return {'peso': peso, 'reps': reps, 'regla': 'tope', 'frase': frase,
-                'con_tempo': int(reps) >= int(maximo)}
+                'con_tempo': int(reps) >= MAX_REPS_TOPE}
 
     # 2b. 25-oct-2026: un día de fatiga (15 × 15 y luego 15 × 4) no baja el peso:
     # se repite con el objetivo de la vez anterior.
@@ -724,7 +725,7 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
                  f"(antes hacías {_kg(peso)} × {decision['reps_antes']}).")
         return (texto, 'Mantener', f'Repite {_kg(peso)} kg') if con_efecto else (texto, 'Mantener')
     if regla == 'tope':
-        _max_hoy = int(rango[1])
+        _max_hoy = MAX_REPS_TOPE
         _reps_tope = decision.get('reps_hoy')
         if int(reps) >= _max_hoy and (_reps_tope is None or int(_reps_tope) >= _max_hoy):
             # 11-nov-2026 (nota 8): con el máximo de la máquina y las reps del tope
