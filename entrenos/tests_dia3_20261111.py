@@ -78,6 +78,28 @@ class CierreConCalculoHonesto(Base):
         self.assertIn("f'las {minimo} reps, para ahí y apúntalo.'", src)
 
 
+class CierreTopeSinFalsaProgresion(Base):
+    def _cambio(self, series_antes, series_hoy):
+        from entrenos.services.cierre_entrenamiento_service import _cambios_relevantes
+        base = EjercicioBase_crear('Abducción de Cadera en Máquina')
+        antes = self.entreno(HOY - timedelta(days=12), {base.nombre: '12-15'})
+        self.hacer(antes, base, series_antes)
+        hoy = self.entreno(HOY, {base.nombre: '12-15'})
+        self.hacer(hoy, base, series_hoy)
+        EjercicioRealizado.objects.filter(entreno=hoy).update(es_tope_maquina=True)
+        cambios = _cambios_relevantes(self.cliente, hoy, list(EjercicioRealizado.objects.filter(entreno=hoy)))
+        return [c for c in cambios if c['nombre'] == base.nombre][0]
+
+    def test_mismas_reps_no_es_progreso_por_reps(self):
+        c = self._cambio([(60, 20, 8), (60, 20, 8)], [(60, 20, 8), (60, 20, 8)])
+        self.assertIn('tempo', c['detalle'])
+        self.assertNotIn('progresó por reps', c['detalle'])
+
+    def test_mas_reps_si_es_progreso_por_reps(self):
+        c = self._cambio([(60, 16, 8), (60, 16, 8)], [(60, 18, 8), (60, 18, 8)])
+        self.assertIn('progresó por reps', c['detalle'])
+
+
 class ComparacionSinDescarga(SimpleTestCase):
     def test_una_sesion_de_hace_mas_de_seis_semanas_no_es_la_comparacion(self):
         src = (Path(__file__).parent / 'services' / 'cierre_entrenamiento_service.py').read_text(encoding='utf-8')

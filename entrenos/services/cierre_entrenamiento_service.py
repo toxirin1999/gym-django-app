@@ -758,6 +758,22 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 'progresion_distancia': 'peso fijo · progresa por metros',
                 'progresion_tiempo': 'peso fijo · progresa por tiempo',
             }.get(progresion, 'tope de peso · progresó por reps')
+            if progresion not in ('progresion_distancia', 'progresion_tiempo'):
+                # 11-nov-2026 (nota 8): con las mismas reps no progresó por reps.
+                _prev = (
+                    EjercicioRealizado.objects
+                    .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True)
+                    .exclude(entreno_id=entreno.id).order_by('-entreno__fecha', '-id').first()
+                )
+                if _prev is not None:
+                    _, _reps_hoy_t = _rendimiento_representativo(entreno, ej.nombre_ejercicio, ej.peso_kg, ej.repeticiones)
+                    _, _reps_prev_t = _rendimiento_representativo(
+                        _prev.entreno, _prev.nombre_ejercicio, _prev.peso_kg, _prev.repeticiones)
+                    if _reps_hoy_t is not None and _reps_prev_t is not None:
+                        if _reps_hoy_t > _reps_prev_t + 1e-6:
+                            detalle = 'tope de peso · progresó por reps'
+                        else:
+                            detalle = 'tope de peso · mismas reps: progresa con el tempo'
             cambios.append({
                 'nombre': ej.nombre_ejercicio,
                 'tipo': 'tope',
@@ -839,8 +855,13 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
                         entreno__fecha__lte=entreno.fecha, entreno__fecha__gte=entreno.fecha - timedelta(days=42))
                 .exclude(entreno_id=entreno.id)
-                .order_by('-entreno__fecha', '-id').first()
+                .order_by('-entreno__fecha', '-id')
             )
+            if not es_descarga_hoy:
+                from entrenos.services.sesion_descarga_service import es_sesion_descarga as _es_desc
+                reciente = next((c for c in reciente if not _es_desc(c.entreno, c.nombre_ejercicio)), None)
+            else:
+                reciente = reciente.first()
             # Solo con el mismo rango prescrito: un ejercicio en dos días con
             # rangos distintos (fondos a 8 y a 15) no se compara entre hilos.
             from entrenos.services.ultima_sesion_service import rango_de_sesion
