@@ -61,6 +61,16 @@ class Futbol(TestCase):
                          'Sueles jugar al fútbol los miércoles (3 de las últimas 4 semanas), pero entrenas antes '
                          'y tu entreno manda: la pierna va completa. Si prefieres, deja la sesión para mañana.')
 
+    def test_la_frase_sale_una_vez_y_no_cuenta_como_ajuste(self):
+        # 11-nov-2026: en el briefing salía en 5 tarjetas y contaba 14 «ejercicios ajustados».
+        from entrenos.services.criterios_entrenador_service import aplicar_futbol_hoy
+        ejs = [{'nombre': 'Zancadas con Kettlebell', 'grupo_muscular': 'cuadriceps', 'series': 3, 'rpe_objetivo': 8},
+               {'nombre': 'Sissy Squat', 'grupo_muscular': 'cuadriceps', 'series': 3, 'rpe_objetivo': 8}]
+        cambios = aplicar_futbol_hoy(self.cliente, ejs, MIERCOLES)
+        self.assertEqual(cambios, [])
+        self.assertIn('criterio_entrenador', ejs[0])
+        self.assertNotIn('criterio_entrenador', ejs[1])
+
     def test_apuntado_gimnasio_antes_del_partido_no_recorta(self):
         self._apuntado(MIERCOLES)
         zancadas = self._hoy()[0]

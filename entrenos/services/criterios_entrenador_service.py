@@ -302,13 +302,14 @@ def aplicar_futbol_hoy(cliente, ejercicios, hoy):
     # dejar la sesión para el día siguiente.
     if estado in ('costumbre', 'apuntado'):
         origen = previsto['frase'] if estado == 'costumbre' else 'Hoy tienes fútbol (lo tienes apuntado)'
+        # Solo se dice una vez (en la primera tarjeta de pierna) y no cuenta como
+        # «ejercicio ajustado»: no cambia nada del plan (11-nov-2026).
         for ej in ejercicios:
-            if not _es_pierna(ej):
-                continue
-            _anadir_frase(ej, f'{origen}, pero entrenas antes y tu entreno manda: la pierna va completa. '
-                              f'Si prefieres, deja la sesión para mañana.')
-            aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
-        return aplicadas
+            if _es_pierna(ej):
+                _anadir_frase(ej, f'{origen}, pero entrenas antes y tu entreno manda: la pierna va completa. '
+                                  f'Si prefieres, deja la sesión para mañana.')
+                break
+        return []
     for ej in ejercicios:
         if not _es_pierna(ej):
             continue

@@ -73,8 +73,8 @@ def reps_tope_con_margen(cliente, nombre, fecha, reps_sugeridas):
     aviso = None
     if reps and reps > MAX_REPS_TOPE:
         reps = MAX_REPS_TOPE
-        aviso = (f'Ya pasas de {MAX_REPS_TOPE} reps con el máximo de la máquina: '
-                 'baja en 3 s y aguanta 2 s arriba en cada rep, en vez de sumar más.')
+        aviso = (f'Con el máximo de la máquina, el tope son {MAX_REPS_TOPE} reps: '
+                 'en vez de sumar más, baja en 3 s y aguanta 2 s arriba en cada rep.')
     return reps, aviso
 
 
