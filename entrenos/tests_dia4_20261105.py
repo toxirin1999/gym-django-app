@@ -73,7 +73,8 @@ class DescargaMismoPeso(Base):
         ej = {'nombre': lat.nombre, 'repeticiones': '10-15', 'tipo_progresion': 'peso_reps',
               'rpe_objetivo': 6, 'peso_kg': 999}
         frase = ajustar_a_descarga(self.cliente, ej, LUNES)
-        self.assertEqual(ej['peso_kg'], 10.0)
-        self.assertEqual(ej['reps_objetivo_hoy'], 11)
-        self.assertIn('mismo peso y menos reps', frase)
+        # 12-nov-2026: con discos de 2 kg el salto de laterales es 2, no 5: bajar a 8
+        # (un 20 %) ya cabe en la regla y no hace falta mantener el peso.
+        self.assertEqual(ej['peso_kg'], 8.0)
+        self.assertNotIn('mismo peso y menos reps', frase or '')
         self.assertNotIn('_descarga_mismo_peso', ej)

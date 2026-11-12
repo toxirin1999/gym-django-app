@@ -34,6 +34,17 @@ def _capitalizar(texto):
     return texto[:1].upper() + texto[1:]
 
 
+def _unidad_ejercicio(log):
+    """'s' (tiempo), 'm' (distancia) o 'reps' (12-nov-2026, nota 28: «subí el objetivo a 37 reps» eran segundos)."""
+    try:
+        from rutinas.models import EjercicioBase
+        tipo = (EjercicioBase.objects.filter(nombre__iexact=log.ejercicio)
+                .values_list('tipo_progresion', flat=True).first())
+    except Exception:  # noqa: BLE001
+        tipo = None
+    return {'progresion_tiempo': 's', 'progresion_distancia': 'm'}.get(tipo, 'reps')
+
+
 def describir_accion(log):
     """Qué hizo el plan, con el número si lo tiene (nunca el % interno como kg)."""
     peso_objetivo = log.peso_sugerido
@@ -45,6 +56,9 @@ def describir_accion(log):
         return f'metí una descarga ({_kg(peso_objetivo)} kg)' if peso_objetivo else 'metí una descarga'
     if log.accion == 'subir_reps':
         reps = log.reps_sugeridas
+        unidad = _unidad_ejercicio(log)
+        if unidad != 'reps':
+            return f'subí el objetivo a {reps} {unidad}' if reps else 'subí el objetivo'
         return f'subí el objetivo a {reps} reps' if reps else 'subí las repeticiones'
     if log.accion == 'mantener':
         return f'mantuve {_kg(log.peso_anterior)} kg' if log.peso_anterior else 'mantuve la carga'
@@ -71,7 +85,15 @@ def _sesion_evaluadora(log):
         )
     else:
         qs = qs.filter(entreno__fecha__gte=log.fecha_creacion.date())
-    ej = qs.order_by('entreno__fecha', 'entreno__id').first()
+    # 12-nov-2026 (nota 28): una semana de descarga no comprueba una decisión de
+    # progreso (dead hang 37 s → «30 con RPE 6, funcionó» era la descarga).
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+    _periodos = periodos_descarga(log.cliente_id)
+    ej = next(
+        (c for c in qs.order_by('entreno__fecha', 'entreno__id')[:12]
+         if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)),
+        None,
+    )
     if ej is None:
         return None
     rendimiento = _rendimiento_representativo_desde_series(ej.entreno, normalizar_ejercicio(ej.nombre_ejercicio))
@@ -123,7 +145,7 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
         if float(despues['peso'] or 0) > 0:
             dato = f"{etiqueta}: {_kg(despues['peso'])} kg × {despues['reps']}"
         else:  # peso corporal: "0 kg × 7" no dice nada
-            dato = f"{etiqueta}: {despues['reps']} reps"
+            dato = f"{etiqueta}: {despues['reps']} {_unidad_ejercicio(log)}"
         if despues['rpe'] is not None:
             dato += f" con RPE {_rpe(despues['rpe'])}"
         partes.append(dato + '.')

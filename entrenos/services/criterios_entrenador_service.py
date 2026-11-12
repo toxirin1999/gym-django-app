@@ -113,6 +113,7 @@ def aplicar_criterios(cliente, ejercicios, hoy):
     cansado = bool(sueno and sueno < SUENO_CORTO_H and ratio and ratio >= CARGA_ALTA)
     variabilidad = _variabilidad_baja(cliente, hoy)  # 27-oct-2026 (E1)
     aplicadas = []
+    motivos_ya_dichos = set()
     for ej in ejercicios:
         try:
             rpe = float(ej.get('rpe_objetivo') or 0)
@@ -136,8 +137,22 @@ def aplicar_criterios(cliente, ejercicios, hoy):
         antes = int(rpe) if rpe.is_integer() else rpe
         ej['rpe_objetivo_plan'] = ej.get('rpe_objetivo')
         ej['rpe_objetivo'] = nuevo
-        ej['criterio_entrenador'] = (f'Hoy RPE {nuevo} en vez de {antes}: '
-                                     f'{" y ".join(motivos)}. Deja una o dos reps en reserva.')
+        _motivo_txt = " y ".join(motivos)
+        if _motivo_txt in motivos_ya_dichos:
+            # 12-nov-2026 (nota 3): el porqué (variabilidad, sueño…) se cuenta
+            # una vez; en las demás tarjetas solo el RPE de hoy.
+            ej['criterio_entrenador'] = f'Hoy RPE {nuevo} en vez de {antes}.'
+        else:
+            motivos_ya_dichos.add(_motivo_txt)
+            ej['criterio_entrenador'] = (f'Hoy RPE {nuevo} en vez de {antes}: '
+                                         f'{_motivo_txt}. Deja una o dos reps en reserva.')
+        ej['rpe_objetivo_plan'] = ej.get('rpe_objetivo_plan') or antes
+        # 12-nov-2026 (nota 1): el «calculo unas N» ya escrito decía «RPE 8»
+        # cuando hoy el objetivo es 7.
+        for _clave in ('progresion_motivo', 'motivo_peso_texto'):
+            _t = ej.get(_clave)
+            if isinstance(_t, str):
+                ej[_clave] = _t.replace(f'si llegas al RPE {antes} antes de', f'si llegas al RPE {nuevo} antes de')
         aplicadas.append({'ejercicio': ej.get('nombre'), 'frase': ej['criterio_entrenador']})
     return aplicadas
 

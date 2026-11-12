@@ -2924,6 +2924,9 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
   const pesoInput = document.getElementById('peso-'+fid+'-'+snSig);
   if (pesoInput) {
     pesoInput.value = String(Number((plan.peso).toFixed(2)));  // 23-oct-2026: 30, no 30.0
+    // 12-nov-2026 (nota 9): lo propone la propia app entre series, así que ya es el
+    // «plan» y no debe saltar el «¿Seguro? el plan dice 15 kg y vas a guardar 10».
+    pesoInput.dataset.planWeight = String(Number((plan.peso).toFixed(2)));
     calcularDiscosInline(fid, snSig, plan.peso);
     detectarPR(fid, snSig, plan.peso);
   }
@@ -3453,10 +3456,13 @@ function resumenDeEjercicio(fid){
     return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y te digo cuántas reps calculo con él.`};
   }
   let objSig=mejorEj+(conMargen?2:1);
+  // 12-nov-2026 (nota 16): con dos pesos en el ejercicio (25 y 30 kg), «mismo peso» no dice cuál.
+  const variosPesos=new Set(scs.map(s=>s.peso||0)).size>1;
+  const pesoTxtEj=(variosPesos&&pesoTopeEj>0)?` (${fmtKg(pesoTopeEj)} kg)`:'';
   if(repsMaxEj>0 && objSig>=repsMaxEj){
-    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por ${repsMaxEj} en todas; con ${repsMaxEj} en todas, subo el peso.`};
+    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${repsMaxEj} en todas; con ${repsMaxEj} en todas, subo el peso.`};
   }
-  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso y a por ${objSig}.`};
+  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${objSig}.`};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────

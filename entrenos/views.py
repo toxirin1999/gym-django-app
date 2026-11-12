@@ -3679,6 +3679,35 @@ def _es_principal_hoy(ejercicio, solo_pierna=False):
     return ejercicio.get('tipo_ejercicio') in ('compuesto_principal', 'compuesto_secundario')
 
 
+
+def _acotar_rango_visible(ej):
+    """12-nov-2026 (notas 12 y 13): el rango que se enseña manda sobre «la última vez + 1».
+
+    Y-raises mostraba «12-15 reps» pero la regla de parada decía «16» y el cierre
+    marcó 12 reps a RPE 7 como «por debajo del rango». Sin tope de máquina ni
+    descarga, ni el mínimo ni el máximo pueden pasar del máximo del rango.
+    """
+    if ej.get('sugerencia_tope') or ej.get('usa_tiempo') or ej.get('usa_distancia') or _ej_en_descarga(ej):
+        return
+    from entrenos.services.ultima_sesion_service import rango_reps as _rr
+    rango = _rr(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+    if not rango:
+        return
+    try:
+        rmax = int(ej.get('reps_max') or 0)
+        rmin = int(ej.get('reps_min') or 0)
+    except (TypeError, ValueError):
+        return
+    if rmax > rango[1]:
+        ej['reps_max'] = rango[1]
+    if rmin > rango[1]:
+        ej['reps_min'] = rango[0]
+    try:
+        if int(ej.get('reps_objetivo') or 0) > rango[1]:
+            ej['reps_objetivo'] = rango[1]
+    except (TypeError, ValueError):
+        pass
+
 def _ej_en_descarga(ejercicio):
     """2-nov-2026: en la semana de descarga el tope de máquina no propone reps.
 
@@ -4738,6 +4767,7 @@ def vista_entrenamiento_activo(request, cliente_id):
     # 13") como mínimo y máximo, y al hacer 13 reps proponía subir el peso.
     from entrenos.services.ultima_sesion_service import rango_reps as _rango_reps
     for _ej in ejercicios_planificados:
+        _acotar_rango_visible(_ej)
         if _ej.get('sugerencia_tope') or _ej.get('reps_min'):
             continue
         _rango = _rango_reps(_ej.get('repeticiones'))

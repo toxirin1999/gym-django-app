@@ -496,6 +496,15 @@ def _decidir_carga(cliente, ej, hoy):
                 cliente, lectura['entreno'],
                 _rpe_objetivo_snapshot(lectura['entreno'], normalizar_ejercicio(nombre)) or rpe_obj,
             )
+            # 12-nov-2026 (nota 18): si un criterio (variabilidad, sueño…) bajó el RPE
+            # ese día, lo pedido fue ese; hacer 12 a RPE 7 con 7 pedido no es «margen»
+            # (el cierre decía «a por 14» y la sesión «a por 13»).
+            _e_snap = _ej_snapshot(lectura['entreno'], nombre) or {}
+            try:
+                _bajado = float(_e_snap.get('rpe_objetivo'))
+                rpe_dia = min(float(rpe_dia), _bajado)
+            except (TypeError, ValueError):
+                pass
         except Exception:  # noqa: BLE001
             pass
         if al_peso and None not in rpes and all(x['reps'] >= minimo for x in al_peso) \

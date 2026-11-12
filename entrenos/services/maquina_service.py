@@ -221,8 +221,17 @@ def tipo_equipo_carga(nombre, equipo=None):
 _SALTO_FINO_BARRA = ('hip thrust',)
 
 
+# 12-nov-2026 (notas 2 y 4): la polea de laterales va de 5 en 5, pero David le
+# pone discos de 2 kg encima (10 → 12 → 14); y los Y-raises se hacen con 8 y 10
+# (el 9 no existe). Para los dos, la escala real es de 2 en 2.
+SALTO_POLEA_CON_DISCOS_2KG = 2.0
+_TOKENS_ESCALA_2KG = ('laterales en polea', 'y-raise', 'y raise')
+
+
 def salto_fisico(nombre, equipo=None):
     """Salto de la escala física del equipo, o None si no se reconoce."""
+    if any(t in (nombre or '').casefold() for t in _TOKENS_ESCALA_2KG):
+        return SALTO_POLEA_CON_DISCOS_2KG
     if any(t in (nombre or '').casefold() for t in _SALTO_FINO_BARRA):
         return SALTO_DISCOS
     return {
