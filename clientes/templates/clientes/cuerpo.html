@@ -78,6 +78,42 @@
     .pestanas{margin-right:48px}
     .dias{gap:2px}.punto{height:34px}
     .dia.sel::after{content:"▲";display:block;font-size:8px;line-height:1;color:var(--blue)}
+    /* 14-nov-2026: aspecto de app (tarjetas, fichas, medidor) */
+    .hero{margin-top:12px;padding:20px 18px;border:1px solid #1e2b25;border-radius:24px;background:linear-gradient(160deg,#14231c 0%,#0e1713 60%);position:relative}
+    .hero .titulo{font-size:44px;line-height:1;margin:10px 0 8px;letter-spacing:-.05em}
+    .hero .frase{font-size:15px;color:#e4e2da}
+    .chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+    .chip{display:inline-flex;align-items:center;padding:5px 11px;border-radius:999px;border:1px solid #2c3d35;background:#16231d;color:#cfd8d3;font-size:12px;font-weight:700;white-space:nowrap}
+    .chip.ok,.chip.bien{background:#12301f;border-color:#2c6b4c;color:#7ff0bb}
+    .chip.mal,.chip.alerta{background:#33201e;border-color:#6a3a34;color:#ffab9e}
+    .chip.aviso{background:#32270f;border-color:#6b5420;color:#f5c96a}
+    .chip.nd,.chip.pendiente,.chip.neutro{color:#9fb0a8}
+    .cta{display:flex;align-items:center;justify-content:center;min-height:48px;margin-top:16px;border-radius:14px;background:var(--green);color:#06140e;font-weight:800;font-size:15px;text-decoration:none}
+    .mas{margin-top:12px}.mas summary{min-height:44px;display:flex;align-items:center;color:var(--blue);font-size:13px;font-weight:700;cursor:pointer}
+    .hero .info summary{top:14px;right:14px}
+    .sec{margin:22px 4px 0;color:#9fb0a8;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+    .tiles{display:grid;gap:10px;margin-top:10px}
+    .tile{display:block;width:100%;text-align:left;padding:16px;border:1px solid #1e2b25;border-radius:20px;background:#111a16;color:var(--paper);font:inherit;cursor:pointer}
+    .tile:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+    .t-top{display:flex;justify-content:space-between;align-items:center;gap:8px}.t-nom{font-size:14px;font-weight:600;color:#9fb0a8}
+    .t-val{display:block;margin-top:4px;font-size:38px;line-height:1.1;font-weight:800;letter-spacing:-.04em}
+    .t-val small{margin-left:6px;font-size:15px;font-weight:600;color:#9fb0a8;letter-spacing:0}
+    .rango{position:relative;display:block;height:8px;margin-top:12px;border-radius:4px;background:#1b2822}
+    .rango .banda{position:absolute;top:0;bottom:0;border-radius:4px;background:rgba(66,228,160,.35)}
+    .rango .pto{position:absolute;top:-3px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:var(--green);border:2px solid #111a16}
+    .rango .pto.mal{background:#ff9486}
+    .t-eje{display:flex;justify-content:space-between;margin-top:6px;color:#8fa098;font-size:11px}
+    .t-pie{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;margin-top:10px;color:#cfd8d3;font-size:12.5px;line-height:1.4}
+    .t-pie .spark{width:96px;height:28px;margin:0;flex:none}
+    .medidor{text-align:center}.medidor svg{width:70%;margin:0 auto}.m-num{font-size:40px;font-weight:800;letter-spacing:-.04em;margin-top:-6px}
+    .acordeon{padding:4px 16px}
+    .preg{border-top:1px solid #1e2b25}.preg:first-of-type{border-top:0}
+    .preg summary{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;cursor:pointer;list-style:none;font-size:15px;font-weight:600}
+    .preg summary::-webkit-details-marker{display:none}
+    .preg p{margin:0 0 10px;color:#bcc6c0;font-size:13px;line-height:1.45}.preg h4{margin:8px 0 4px}
+    .dias .punto{height:auto;aspect-ratio:1;border-radius:50%}
+    .dias{gap:3px}
+    .acordeon .info{position:static}.acordeon .info summary{position:static;margin:4px 0 8px}
   </style>
 </head>
 <body>
@@ -86,11 +122,13 @@
     <h1>Cómo responde tu cuerpo</h1>
     <p class="fecha">{{ fecha_texto|capfirst }}</p>
 
-    <section class="card" aria-labelledby="hoy-titulo">
+    <!-- 14-nov-2026: rediseño tipo app: decisión, tres tarjetas, medidor, días, preguntas desplegables -->
+    <section class="hero" aria-labelledby="hoy-titulo">
       <span class="mono label" id="hoy-titulo">Hoy</span>
       {% if decision %}
         <p class="titulo {{ decision.tono }}">{{ decision.titulo }}</p>
         <p class="frase">{{ decision.frase }}</p>
+        {% if decision.chips %}<div class="chips">{% for c in decision.chips %}<span class="chip">{{ c }}</span>{% endfor %}</div>{% endif %}
         {% if decision.porque %}<p class="nota">{{ decision.porque }}</p>{% endif %}
       {% else %}
         <p class="titulo {{ estado.respuesta }}">{{ titulo }}</p>
@@ -98,47 +136,62 @@
       {% endif %}
       {% if descanso_plan %}<p class="frase">Hoy toca descanso según el plan: es el día libre de la semana, no una señal de tu cuerpo.</p>{% endif %}
       {% if parada %}<p class="frase aviso-hoy">Estás {% if parada.tipo == 'enfermo' %}enfermo{% else %}de parada{% endif %} desde el {{ parada.inicio|date:"d/m" }}. <a class="enlace" href="#parada-titulo">Marcar que has vuelto</a></p>{% endif %}
-
-      <div class="bloque">
-        <h3 class="mini">Qué vio el reloj esta mañana</h3>
-        <p>{{ bloque_reloj }}</p>
-        {% if sello_reloj %}<p class="sello{% if sello_reloj.atraso %} atraso{% endif %}">Importación del reloj: {% if sello_reloj.importacion %}{{ sello_reloj.importacion }}{% else %}hora aún sin registrar (se guarda desde la próxima sincronización){% endif %}. Mediciones: {{ sello_reloj.mediciones }}.</p>{% endif %}
-      </div>
-      <div class="bloque">
-        <h3 class="mini">Qué muestran los últimos días</h3>
-        <p><strong>Patrón: {{ titulo }}.</strong> {{ estado.frase }}</p>
-        {% if bloque_ultimos %}<p class="nota-b">{{ bloque_ultimos }}</p>{% endif %}
-      </div>
-      {% if decision %}
-      <div class="bloque">
-        <h3 class="mini">Qué cambió en mi entreno</h3>
-        <ul class="cambios">{% for c in decision.cambios %}<li>{{ c }}</li>{% endfor %}</ul>
-        <p class="nota-b">Solo cuenta lo que ya está aplicado en tu briefing de hoy.</p>
-      </div>
-      {% endif %}
-      <p class="nota"><a class="enlace" href="{% url 'clientes:dashboard_silencioso_preview' %}">Abrir la decisión en Ahora →</a></p>
+      <a class="cta" href="{% url 'clientes:dashboard_silencioso_preview' %}">Abrir la decisión en Ahora →</a>
+      <details class="mas">
+        <summary>Ver el detalle</summary>
+        <div class="bloque">
+          <h3 class="mini">Qué vio el reloj esta mañana</h3>
+          <p>{{ bloque_reloj }}</p>
+          {% if sello_reloj %}<p class="sello{% if sello_reloj.atraso %} atraso{% endif %}">Importación del reloj: {% if sello_reloj.importacion %}{{ sello_reloj.importacion }}{% else %}hora aún sin registrar (se guarda desde la próxima sincronización){% endif %}. Mediciones: {{ sello_reloj.mediciones }}.</p>{% endif %}
+        </div>
+        <div class="bloque">
+          <h3 class="mini">Qué muestran los últimos días</h3>
+          <p><strong>Patrón: {{ titulo }}.</strong> {{ estado.frase }}</p>
+          {% if bloque_ultimos %}<p class="nota-b">{{ bloque_ultimos }}</p>{% endif %}
+        </div>
+        {% if decision %}
+        <div class="bloque">
+          <h3 class="mini">Qué cambió en mi entreno</h3>
+          <ul class="cambios">{% for c in decision.cambios %}<li>{{ c }}</li>{% endfor %}</ul>
+          <p class="nota-b">Solo cuenta lo que ya está aplicado en tu briefing de hoy.</p>
+        </div>
+        {% endif %}
+      </details>
       <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>El titular es la misma decisión que ves en Ahora. Debajo, tres cosas separadas: lo que midió el reloj esta mañana, lo que muestran los últimos días y lo que el briefing ha cambiado en tu sesión.</p><p>El «patrón» mira los últimos 5 días y tu carga de 7 días frente a tu media de 4 semanas; la lectura de esta mañana mira solo hoy.</p>{% if estado.respuesta == 'conociendote' %}<p>Hasta tener 5 mañanas del reloj comparadas te estoy conociendo: te cuento lo que veo, pero no saco conclusiones.</p>{% endif %}</div></details>
     </section>
 
-    <section class="card" aria-labelledby="preguntas-titulo">
-      <span class="mono label" id="preguntas-titulo">Tus tres preguntas</span>
-      {% for p in preguntas %}
-        <div class="pregunta">
-          <h3>{{ p.pregunta }}</h3>
-          <span class="resp {{ p.tono }}">{{ p.respuesta }}</span>
-          <p>{{ p.porque }}</p>
-        </div>
+    <h2 class="sec">Esta mañana</h2>
+    {% localize off %}
+    <div class="tiles">
+      {% for t in tarjetas %}
+      <button type="button" class="tile" data-tab="{{ t.clave }}" aria-label="{{ t.nombre }}: ver los 14 días">
+        <span class="t-top"><span class="t-nom">{{ t.nombre }}</span><span class="chip {% if t.ok == True %}ok{% elif t.ok == False %}mal{% else %}nd{% endif %}">{{ t.estado }}</span></span>
+        <span class="t-val">{{ t.valor }}{% if t.hay_dato and t.unidad %}<small>{{ t.unidad }}</small>{% endif %}</span>
+        {% if t.banda_ini is not None %}
+        <span class="rango"><i class="banda" style="left:{{ t.banda_ini }}%;width:{{ t.banda_ancho }}%"></i>{% if t.punto is not None %}<i class="pto {% if t.ok == False %}mal{% endif %}" style="left:{{ t.punto }}%"></i>{% endif %}</span>
+        <span class="t-eje"><span>{{ t.minimo }}</span><span>tu rango habitual · {{ t.rango }}</span><span>{{ t.maximo }}</span></span>
+        {% endif %}
+        <span class="t-pie">{% if t.linea %}<span>{{ t.linea }}</span>{% endif %}{% if t.spark %}<svg class="spark" viewBox="0 0 96 28" aria-hidden="true"><polyline points="{{ t.spark }}" fill="none" stroke="#42e4a0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="{{ t.sx }}" cy="{{ t.sy }}" r="3" fill="{% if t.ok == False %}#ff9486{% else %}#42e4a0{% endif %}"/></svg>{% endif %}</span>
+      </button>
       {% endfor %}
-      <div class="clave"><span class="bien">● Bien</span><span class="aviso">● Atención</span><span class="alerta">● Hay que actuar</span><span class="pendiente">● Pendiente</span></div>
-      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p><strong>¿Necesito descansar?</strong> Es lo que piden tus señales, no el plan. Sí, si 3 de las mañanas con dato de los últimos 5 días (seguidas o no) están por debajo de lo normal en ti y tu carga no ha bajado más de un 20 %.</p><p><strong>¿Me estoy pasando?</strong> «Carga alta» es que tus últimos 7 días van un 30 % o más por encima de tu media de las 4 semanas anteriores; pasa a «Sí» cuando además 2 de las mañanas con dato de los últimos 5 días salen por debajo.</p><p><strong>¿Puedo dar más?</strong> Sí, cuando en los últimos 14 días hay 10 mañanas buenas (seguidas o no; un día sin dato del reloj no cuenta como buena), la carga está entre un 20 % menos y un 30 % más que tu media, tu esfuerzo medio no sube y no hay molestias.</p></div></details>
-    </section>
+    </div>
+    {% endlocalize %}
 
-    <section class="card" aria-labelledby="cambia-titulo">
-      <span class="mono label" id="cambia-titulo">Qué haría cambiar la respuesta</span>
-      {% for p in preguntas %}
-        <div class="pregunta"><h3>{{ p.pregunta }}</h3><p>{{ p.cambia }}</p></div>
-      {% endfor %}
+    {% if medidor %}
+    <h2 class="sec">Tu semana</h2>
+    <section class="card medidor" aria-label="Carga de los últimos 7 días">
+      {% localize off %}
+      <svg viewBox="0 0 150 90" role="img" aria-label="Carga de 7 días {{ medidor.texto }} frente a tu media">
+        <path d="M 15 80 A 60 60 0 0 1 135 80" fill="none" stroke="#1e2b25" stroke-width="12" stroke-linecap="round"/>
+        <path d="{{ medidor.banda }}" fill="none" stroke="#42e4a0" stroke-opacity=".45" stroke-width="12"/>
+        <circle cx="{{ medidor.x }}" cy="{{ medidor.y }}" r="6" fill="{% if medidor.en_zona %}#42e4a0{% else %}#f5b94a{% endif %}" stroke="#0a0f0d" stroke-width="2"/>
+      </svg>
+      {% endlocalize %}
+      <div class="m-num">{{ medidor.texto }}</div>
+      <p class="nota" style="text-align:center;margin:2px 0 0">frente a tu media de 4 semanas · zona normal −20 % a +30 %</p>
+      {% if medidor.descarga %}<div class="chips" style="justify-content:center"><span class="chip">Semana de descarga</span></div>{% endif %}
     </section>
+    {% endif %}
 
     <section class="card" aria-labelledby="cuerpo-titulo">
       <span class="mono label" id="cuerpo-titulo">Cómo amaneces · 14 días</span>
@@ -150,12 +203,24 @@
       <p class="detalle-dia" id="detalle-dia" aria-live="polite">Toca un día para ver qué lo marcó.</p>
       <div class="leyenda"><span><i style="background:var(--green)"></i>Fresco</span><span><i class="ring"></i>Normal</span><span><i style="background:var(--amber)"></i>Algo por debajo</span><span><i style="background:var(--red)"></i>Por debajo</span><span><i style="background:#7d8a84"></i>Sin media aún</span><span><i style="background:none;border:1px dashed #4a5a53"></i>Sin dato</span></div>
       {% if dias_energia %}<p class="nota">Marcados por tu energía al empezar el entreno: {% for d in dias_energia %}{{ d.fecha }}{% if not forloop.last %}, {% endif %}{% endfor %}.</p>{% endif %}
-
       <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p>Cada mañana comparo tres cosas con tu media de las 4 semanas anteriores (necesito 5 mañanas del reloj para tenerla):</p><p>· <strong>Variabilidad cardiaca</strong> un 15 % o más por debajo de lo normal en ti.<br>· <strong>Pulso en reposo</strong> 5 pulsaciones o más por encima.<br>· <strong>Sueño</strong>: menos de 6 h, o 1 h 15 menos de lo que sueles.</p><p>Ninguna señal y algo mejor que lo normal: <strong>Fresco</strong>. Nada fuera de lo normal: <strong>Normal</strong>. Una señal: <strong>Algo por debajo</strong>. Dos señales (o la variabilidad un 25 % por debajo): <strong>Por debajo</strong>.</p><p><strong>Sin media aún</strong>: hay datos de esa mañana, pero todavía no con qué compararlos. <strong>Sin dato</strong>: no llegó nada del reloj.</p><p>También cuenta cómo llegas: si al empezar el entreno marcas la energía 1,5 puntos o más por debajo de lo habitual, ese día sale <strong>Algo por debajo</strong> aunque el reloj diga otra cosa.</p></div></details>
     </section>
 
-    <!-- 13-nov-2026: variabilidad, pulso y sueño en una sola tarjeta con pestañas -->
-    <section class="card" aria-labelledby="senales-titulo">
+    <h2 class="sec" id="preguntas-titulo">¿Y ahora qué?</h2>
+    <section class="card acordeon" aria-label="Tus tres preguntas">
+      {% for p in preguntas %}
+      <details class="preg">
+        <summary><span class="p-q">{{ p.pregunta }}</span><span class="chip {{ p.tono }}">{{ p.respuesta }}</span></summary>
+        <p>{{ p.porque }}</p>
+        <h4 class="mini">Qué haría cambiar la respuesta</h4>
+        <p>{{ p.cambia }}</p>
+      </details>
+      {% endfor %}
+      <details class="info"><summary aria-label="Cómo funciona">i</summary><div class="info-txt"><p><strong>¿Hace falta descanso extra?</strong> Es lo que piden tus señales, no el plan. Sí, si 3 de las mañanas con dato de los últimos 5 días (seguidas o no) están por debajo de lo normal en ti y tu carga no ha bajado más de un 20 %.</p><p><strong>¿Me estoy pasando?</strong> «Carga alta» es que tus últimos 7 días van un 30 % o más por encima de tu media de las 4 semanas anteriores; pasa a «Sí» cuando además 2 de las mañanas con dato de los últimos 5 días salen por debajo.</p><p><strong>¿Puedo dar más?</strong> Sí, cuando en los últimos 14 días hay 10 mañanas buenas (seguidas o no; un día sin dato del reloj no cuenta como buena), la carga está entre un 20 % menos y un 30 % más que tu media, tu esfuerzo medio no sube y no hay molestias.</p></div></details>
+    </section>
+
+    <!-- vista detallada: se abre al tocar una tarjeta -->
+    <section class="card" id="senales" aria-labelledby="senales-titulo">
       <span class="mono label" id="senales-titulo">Señales de la mañana · 14 días</span>
       <div class="pestanas" role="tablist">
         <button type="button" role="tab" class="pestana activa" data-tab="variabilidad" aria-selected="true">Variabilidad</button>
@@ -231,6 +296,10 @@
           tabs.forEach(function(o){var on=o===t;o.classList.toggle('activa',on);o.setAttribute('aria-selected',on)});
           paneles.forEach(function(p){p.hidden=p.id!=='tab-'+t.dataset.tab});
         })});
+        function abrir(k){tabs.forEach(function(o){var on=o.dataset.tab===k;o.classList.toggle('activa',on);o.setAttribute('aria-selected',on)});
+          paneles.forEach(function(p){p.hidden=p.id!=='tab-'+k})}
+        document.querySelectorAll('.tile').forEach(function(t){t.addEventListener('click',function(){
+          abrir(t.dataset.tab);var d=document.getElementById('senales');if(d&&d.scrollIntoView)d.scrollIntoView({behavior:'smooth',block:'start'})})});
         var det=document.getElementById('detalle-dia');
         document.querySelectorAll('.dias .punto').forEach(function(b){b.addEventListener('click',function(){
           document.querySelectorAll('.dias .dia').forEach(function(d){d.classList.remove('sel')});

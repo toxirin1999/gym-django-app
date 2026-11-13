@@ -211,6 +211,8 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo, lectura=None, fmt=Non
            # 13-nov-2026 (mejora 17): valores en el eje y cuánto oscila, para no leer cada punto «a ojo».
            'eje_max': fmt(tope), 'eje_min': fmt(suelo), 'eje_max_y': MARGEN_ARR + 4, 'eje_min_y': ALTO - MARGEN_ABA - 4,
            'hoy_num': valores.get(hoy), 'media_num': media, 'tendencia_num': tendencias.get(dias - 1),
+           'suelo_num': suelo, 'tope_num': tope, 'banda_num': banda,
+           'serie_nums': [valores[desde + timedelta(days=i)] for i in range(dias) if desde + timedelta(days=i) in valores],
            'minimo': fmt(min(valores.values())), 'maximo': fmt(max(valores.values())),
            'oscila': bool(media and (max(valores.values()) - min(valores.values())) / media >= 0.4),
            'ultimos': ' · '.join(str(p['valor']) for p in ultimos),
@@ -518,6 +520,106 @@ def fecha_texto(d):
     return f'{DIAS_SEMANA[d.weekday()]} {d.day} de {MESES[d.month - 1]}'
 
 
+def _spark(nums, suelo, tope, w=96, h=28, pad=3):
+    """Mini línea de las 14 mañanas para la tarjeta (puntos con punto decimal, como el resto de SVG)."""
+    if len(nums) < 2 or tope <= suelo:
+        return '', None, None
+    n = len(nums)
+    pts = [((i / (n - 1)) * (w - 6) + 3, h - pad - ((v - suelo) / (tope - suelo)) * (h - 2 * pad))
+           for i, v in enumerate(nums)]
+    return ' '.join(f'{x:.1f},{y:.1f}' for x, y in pts), round(pts[-1][0], 1), round(pts[-1][1], 1)
+
+
+def tarjetas_senales(variab, pul, sue):
+    """14-nov-2026: variabilidad, pulso y sueño como tarjetas: número, barra de tu rango y mini línea.
+
+    Todo sale de las mismas series del panel; no hay puntuación inventada.
+    """
+    from entrenos.services.recuperacion_service import PULSO_ALTO_LPM, SUENO_MENOS_QUE_MEDIA_H, SUENO_MINIMO_H
+
+    def _base(clave, nombre, serie, unidad, rango_fmt):
+        hoy, media = serie.get('hoy_num'), serie.get('media_num')
+        t = {'clave': clave, 'nombre': nombre, 'unidad': unidad, 'ok': None, 'estado': 'Sin dato de hoy',
+             'valor': '—', 'hay_dato': hoy is not None and bool(media)}
+        banda = serie.get('banda_num')
+        if banda and serie.get('tope_num') is not None:
+            suelo, tope = serie['suelo_num'], serie['tope_num']
+            pc = lambda v: max(2.0, min(98.0, (v - suelo) / (tope - suelo) * 100))  # noqa: E731
+            t.update(banda_ini=round(pc(banda[0]), 1), banda_ancho=round(pc(banda[1]) - pc(banda[0]), 1),
+                     punto=round(pc(hoy), 1) if hoy is not None else None,
+                     rango=rango_fmt(banda), minimo=serie['eje_min'], maximo=serie['eje_max'])
+        sp, sx, sy = _spark(serie.get('serie_nums') or [], serie.get('suelo_num', 0), serie.get('tope_num', 0))
+        t.update(spark=sp, sx=sx, sy=sy)
+        tv, tl = serie.get('tendencia_valor'), serie.get('tendencia_lectura')
+        t['linea'] = f'Tendencia 7 días: {tv}{(" " + unidad) if unidad else ""} · {tl}' if tv is not None and tl else ''
+        return t, hoy, media
+
+    t1, hoy, media = _base('variabilidad', 'Variabilidad cardiaca', variab, 'ms',
+                           lambda b: f'{round(b[0])}–{round(b[1])}')
+    if t1['hay_dato']:
+        pct = round((hoy / media - 1) * 100)
+        t1['valor'] = str(variab['hoy_valor'])
+        t1['ok'] = hoy >= media * 0.85
+        t1['estado'] = (f'▼ {-pct} % bajo' if hoy < media * 0.85 else f'▲ {pct} % alto' if hoy > media * 1.15
+                        else 'En tu rango')
+    t2, hoy, media = _base('pulso', 'Pulso en reposo', pul, 'lpm', lambda b: f'{round(b[0])}–{round(b[1])}')
+    if t2['hay_dato']:
+        dif = round(hoy - media)
+        t2['valor'] = str(pul['hoy_valor'])
+        t2['ok'] = dif < PULSO_ALTO_LPM
+        t2['estado'] = (f'▲ {dif} alto' if dif >= PULSO_ALTO_LPM else f'▼ {-dif} · tranquilo' if dif <= -2
+                        else 'En tu rango')
+    t3, hoy, media = _base('sueno', 'Sueño', sue, '', lambda b: f'{_horas(b[0])}–{_horas(b[1])}')
+    if t3['hay_dato']:
+        t3['valor'] = str(sue['hoy_valor'])
+        corto = hoy < SUENO_MINIMO_H or hoy <= media - SUENO_MENOS_QUE_MEDIA_H
+        t3['ok'] = not corto
+        t3['estado'] = ('▼ corto' if corto else '▼ algo menos' if hoy < media - 0.4 else 'Como sueles')
+    return [t1, t2, t3]
+
+
+def medidor_carga(cliente, hoy):
+    """14-nov-2026: la carga de 7 días como medidor (40–160 % de tu media; zona normal 80–130 %)."""
+    import math
+
+    from entrenos.services.estado_carga_service import DIAS_AGUDA, lectura_carga
+
+    carga = lectura_carga(cliente, hoy)
+    if not carga['normal'] or carga['ratio'] is None:
+        return None
+    pct = round(carga['ratio'] * 100)
+    ang = lambda pc: math.pi - ((max(40, min(160, pc)) - 40) / 120) * math.pi  # noqa: E731
+    pt = lambda pc: (75 + 60 * math.cos(ang(pc)), 80 - 60 * math.sin(ang(pc)))  # noqa: E731
+    a, b, m = pt(80), pt(130), pt(pct)
+    ratio = round(pct - 100)
+    return {
+        'texto': f'{"+" if ratio > 0 else "−" if ratio < 0 else ""}{abs(ratio)} %',
+        'banda': f'M {a[0]:.1f} {a[1]:.1f} A 60 60 0 0 1 {b[0]:.1f} {b[1]:.1f}',
+        'x': round(m[0], 1), 'y': round(m[1], 1),
+        'en_zona': 80 <= pct <= 130,
+        'descarga': ratio <= -10 and _dias_en_descarga(cliente, hoy - timedelta(days=DIAS_AGUDA - 1), hoy) >= 3,
+    }
+
+
+def chips_de_cambios(cambios):
+    """Los cambios del briefing en chips cortos (el texto completo queda al tocar)."""
+    import re
+    chips, otros = [], 0
+    for c in cambios or []:
+        if c.startswith('La sesión va en versión reducida'):
+            chips.append('Versión reducida')
+        elif (m := re.match(r'RPE objetivo un punto menos en (\d+)', c)):
+            chips.append(f'RPE −1 · {m.group(1)} ejerc.')
+        elif c.startswith(('La sesión va tal como', 'Hoy no hay sesión')):
+            continue
+        else:
+            otros += 1
+    if otros:
+        chips.append(f'{otros} cambio{"s" if otros != 1 else ""} más' if chips else
+                     f'{otros} cambio{"s" if otros != 1 else ""}')
+    return chips
+
+
 def decision_de_hoy(cliente, usuario, hoy):
     """13-nov-2026: la MISMA decisión efectiva que enseña Ahora (no una lectura propia).
 
@@ -541,7 +643,8 @@ def decision_de_hoy(cliente, usuario, hoy):
                 porque = None
         return {
             'estado': operativo, 'titulo': operativo.capitalize(), 'frase': frase, 'porque': porque,
-            'cambios': que_cambio(decision_gym, operativo),
+            'cambios': (cambios := que_cambio(decision_gym, operativo)),
+            'chips': chips_de_cambios(cambios),
             'tono': {'ENTRENAR': 'bien', 'HECHO': 'bien', 'AJUSTAR': 'aviso'}.get(operativo, 'aviso'),
         }
     except Exception:  # noqa: BLE001
@@ -712,6 +815,8 @@ def contexto_panel(cliente, hoy, usuario=None):
         'estado': estado,
         'titulo': TITULOS[estado['respuesta']],
         'decision': decision_de_hoy(cliente, usuario or cliente.user, hoy),
+        'tarjetas': tarjetas_senales(variab, pul, sue),
+        'medidor': medidor_carga(cliente, hoy),
         'bloque_reloj': frase_reloj(variab, pul, sue),
         'bloque_ultimos': frase_ultimos_dias(estado, variab, pul, sue),
         'sello_reloj': sello_reloj(cliente, hoy),

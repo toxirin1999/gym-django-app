@@ -175,3 +175,31 @@ class PanelCuerpoMejoras(Base):
         self.assertNotIn('no cambia tu plan', html)
         self.assertNotIn('compensan', html)
 
+
+
+class PanelCuerpoAppDiseno(PanelCuerpoMejoras):
+    """14-nov-2026: rediseño tipo app (tarjetas, medidor, preguntas desplegables)."""
+
+    def test_tarjetas_con_rango_y_estado(self):
+        from entrenos.services.panel_cuerpo_service import pulso, sueno, tarjetas_senales, variabilidad
+        t = tarjetas_senales(variabilidad(self.cliente, self.HOY), pulso(self.cliente, self.HOY),
+                             sueno(self.cliente, self.HOY))
+        self.assertEqual([x['clave'] for x in t], ['variabilidad', 'pulso', 'sueno'])
+        self.assertEqual(t[0]['valor'], '42')
+        self.assertIs(t[0]['ok'], False)
+        self.assertIn('bajo', t[0]['estado'])
+        self.assertIsNotNone(t[0]['banda_ini'])
+        self.assertIs(t[1]['ok'], True)
+        self.assertEqual(t[2]['valor'], '6 h 42')
+
+    def test_chips_de_cambios(self):
+        from entrenos.services.panel_cuerpo_service import chips_de_cambios
+        self.assertEqual(chips_de_cambios(['La sesión va en versión reducida.', 'RPE objetivo un punto menos en 4 ejercicios: x.']),
+                         ['Versión reducida', 'RPE −1 · 4 ejerc.'])
+        self.assertEqual(chips_de_cambios(['La sesión va tal como estaba prevista.']), [])
+
+    def test_pagina_con_tarjetas_y_acordeon(self):
+        self.client.force_login(self.user)
+        html = self.client.get(reverse('clientes:cuerpo')).content.decode()
+        for txt in ('class="tiles"', 'data-tab="pulso"', 'class="preg"', '¿Y ahora qué?'):
+            self.assertIn(txt, html)
