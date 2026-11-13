@@ -1,0 +1,25 @@
+{% load l10n %}{# 13-nov-2026: gráfica de una medida de cada mañana (variabilidad, pulso, sueño). #}
+{% if s.puntos %}
+{% if s.media %}<p class="nota" style="margin-top:8px">Lo normal en ti, {{ articulo }} {{ s.media }} {{ unidad }} (media de las 4 semanas anteriores).</p>{% endif %}
+{% if s.hoy_valor %}<p class="valores">Hoy: <strong>{{ s.hoy_valor }} {{ unidad }}</strong>, {{ s.hoy_lectura }}.</p>{% endif %}
+{% if s.tendencia_valor %}<p class="valores">Tendencia de 7 días: <strong>{{ s.tendencia_valor }} {{ unidad }}</strong>, {{ s.tendencia_lectura }}.</p>{% endif %}
+{% localize off %}
+<svg viewBox="0 0 {{ s.ancho }} {{ s.alto }}" role="img" aria-label="{{ nombre }} de cada mañana, 14 días">
+  {% if s.media %}<rect x="8" y="{{ s.franja_y1 }}" width="324" height="{{ s.franja_alto }}" fill="#42e4a0" fill-opacity="0.10"/>
+  <line x1="8" x2="332" y1="{{ s.media_y }}" y2="{{ s.media_y }}" stroke="#42e4a0" stroke-opacity="0.5" stroke-dasharray="3 3"/>{% endif %}
+  {% if s.linea %}<polyline points="{{ s.linea }}" fill="none" stroke="#f3f0e8" stroke-opacity="0.22" stroke-width="1"/>{% endif %}
+  {% if s.tendencia %}<polyline points="{{ s.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
+  {% for p in s.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} {{ unidad }}</title></circle>{% endfor %}
+  <line x1="8" x2="332" y1="{{ s.base_y }}" y2="{{ s.base_y }}" stroke="#3d5a4e"/>
+  <text x="10" y="{{ s.eje_max_y }}" fill="#8fa098" font-size="10">{{ s.eje_max }}</text>
+  <text x="10" y="{{ s.eje_min_y }}" fill="#8fa098" font-size="10">{{ s.eje_min }}</text>
+  {% for m in s.marcas %}<text x="{{ m.x }}" y="{{ s.texto_y }}" fill="#d3dad6" font-size="11" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+</svg>
+{% endlocalize %}
+<div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
+<p class="valores">Últimas mañanas: <strong>{{ s.ultimos }}</strong> {{ unidad }}</p>
+{% if s.oscila %}<p class="nota">Sube y baja mucho de un día a otro (de {{ s.minimo }} a {{ s.maximo }} {{ unidad }} en 14 días): un punto rojo suelto no es nada, mira la línea verde.</p>{% endif %}
+{% if not s.media %}<p class="nota">La franja de lo normal sale cuando haya 5 mañanas (llevo {{ s.dias_con_dato }}).</p>{% endif %}
+{% else %}
+<p class="nota">Aún no ha llegado ninguna medida de {{ nombre|lower }} del reloj.</p>
+{% endif %}

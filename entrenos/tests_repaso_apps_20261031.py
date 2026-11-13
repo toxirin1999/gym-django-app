@@ -81,7 +81,8 @@ class UnaSolaVariabilidad(Base):
 
     def test_las_pantallas_dicen_la_ventana(self):
         base = Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes'
-        self.assertIn('(media de las 4 semanas anteriores)', (base / 'cuerpo.html').read_text(encoding='utf-8'))
+        # 13-nov-2026: las gráficas de la mañana viven en el parcial _cuerpo_serie.html
+        self.assertIn('(media de las 4 semanas anteriores)', (base / '_cuerpo_serie.html').read_text(encoding='utf-8'))
         memoria = (base / 'memoria_entrenador.html').read_text(encoding='utf-8')
         self.assertIn('HRV · media de 4 semanas', memoria)
         self.assertIn('HRV · media 4 sem.', memoria)

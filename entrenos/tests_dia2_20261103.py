@@ -122,7 +122,8 @@ class PanelesSeparados(SimpleTestCase):
 
     def test_cuerpo_variabilidad_y_pulso_en_su_panel(self):
         src = (Path(settings.BASE_DIR) / 'clientes' / 'templates' / 'clientes' / 'cuerpo.html').read_text(encoding='utf-8')
-        self.assertIn('aria-labelledby="variabilidad-titulo"', src)
-        self.assertIn('aria-labelledby="pulso-titulo"', src)
-        self.assertLess(src.index('id="cuerpo-titulo"'), src.index('id="variabilidad-titulo"'))
-        self.assertLess(src.index('id="variabilidad-titulo"'), src.index('id="pulso-titulo"'))
+        # 13-nov-2026: variabilidad, pulso y sueño comparten tarjeta con pestañas, en este orden
+        self.assertIn('aria-labelledby="senales-titulo"', src)
+        self.assertLess(src.index('id="cuerpo-titulo"'), src.index('id="senales-titulo"'))
+        self.assertLess(src.index('id="tab-variabilidad"'), src.index('id="tab-pulso"'))
+        self.assertLess(src.index('id="tab-pulso"'), src.index('id="tab-sueno"'))

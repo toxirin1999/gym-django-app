@@ -62,7 +62,8 @@ class Cuerpo(SimpleTestCase):
                                              'últimos 5 días por debajo de lo normal. Lo pediría con 3, seguidas o no.')
         self.assertEqual(pasas['porque'], 'Últimos 7 días: un 33 % por debajo de tu media de las 4 semanas anteriores.')
         self.assertEqual(mas['porque'], '7 mañanas buenas en los últimos 14 días; hacen falta 10, seguidas o no; '
-                                        'el reloj solo pudo comparar 10 de los 14.')
+                                        'el reloj solo pudo comparar 10 de los 14; la carga de la semana va un 33 % por debajo de '
+                                        'tu media: hace falta una semana en lo tuyo para saber si aguantarías más.')
         self.assertNotIn('pido', mas['porque'])
 
     def test_si_toca_descansar_por_senales(self):
