@@ -438,6 +438,8 @@ def guardar_checkin_iphone(cliente, payload, hoy=None):
                 for campo, valor in valores.items():
                     setattr(fila, campo, valor)
                 fila.save(update_fields=list(valores))
+            # 13-nov-2026: la hora de importación va aparte de la fecha medida.
+            BitacoraDiaria.objects.filter(pk=fila.pk).update(salud_importado_en=timezone.now())
         guardado[dia.isoformat()] = {**valores, **({'peso_kg': peso} if peso is not None else {})}
     cache.set(f'salud_iphone_ultimo_{cliente.id}',
               {'cuando': timezone.now().isoformat(), 'guardado': guardado}, 60 * 60 * 24 * 30)

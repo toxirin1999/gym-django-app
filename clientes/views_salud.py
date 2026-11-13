@@ -137,7 +137,7 @@ def cuerpo(request):
     hoy = timezone.localdate()
     from entrenos.services.marcador_semanal_service import marcador_cacheado
     return render(request, 'clientes/cuerpo.html', {
-        'cliente': cliente, 'hoy': hoy, **contexto_panel(cliente, hoy),
+        'cliente': cliente, 'hoy': hoy, **contexto_panel(cliente, hoy, request.user),
         # 26-oct-2026: la frase del marcador semanal por músculo; el detalle, en Plan.
         # 2-nov-2026: en descarga, Cuerpo solo avisa si te pasas de lo que pide.
         'frase_musculos': (lambda m: m.get('sobra') if m.get('descarga') else m['frase'])(

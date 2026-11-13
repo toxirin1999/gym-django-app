@@ -103,7 +103,7 @@ class GraficasCuerpo(Base):
         v = variabilidad(self.cliente, HOY)
         self.assertEqual(v['marcas'][-1]['texto'], 'hoy')
         self.assertLessEqual(len(v['puntos']), 14)
-        self.assertIn('por debajo de lo normal', v['hoy_lectura'])
+        self.assertIn('por debajo de lo habitual', v['hoy_lectura'])
         self.assertTrue(v['tendencia'])
         for par in v['tendencia'].split():
             x, y = par.split(',')

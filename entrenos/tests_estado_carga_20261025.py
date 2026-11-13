@@ -228,7 +228,7 @@ class Panel(Base):
             self.actividad(d, 400)
         self.cuerpo(['bien'] * 14)
         p = tres_preguntas(ec.estado_carga(self.cliente, HOY))
-        self.assertEqual([x['respuesta'] for x in p], ['No', 'No', 'Sí'])
+        self.assertEqual([x['respuesta'] for x in p], ['Hoy no', 'No', 'Sí'])
 
     def test_parada_desde_el_panel_vuelve_al_panel(self):
         self.client.force_login(self.user)

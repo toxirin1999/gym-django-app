@@ -79,6 +79,9 @@ class BitacoraDiaria(models.Model):
     calidad_sueno = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Calidad del sueño (0-100)")
     fc_reposo = models.PositiveSmallIntegerField(null=True, blank=True, help_text="FC de reposo al despertar (lpm)")
     hrv_ms = models.PositiveSmallIntegerField(null=True, blank=True, help_text="HRV al despertar en ms (Garmin/Apple Watch/WHOOP)")
+    # 13-nov-2026: cuándo llegó este día desde Salud del iPhone (hora de importación;
+    # ``fecha`` es el día medido). Una sincronización de hoy con datos de ayer no parece nueva.
+    salud_importado_en = models.DateTimeField(null=True, blank=True, help_text="Cuándo se importó desde Salud del iPhone")
     dolor_articular = models.PositiveSmallIntegerField(null=True, blank=True, help_text="Dolor articular de 0 a 10")
     autoconciencia = models.TextField(null=True, blank=True, help_text="¿Qué emoción domina (0-10)?")
     descarga_cognitiva = models.TextField(null=True, blank=True, help_text="Escribe 5’ “lo que me preocupa AHORA”")

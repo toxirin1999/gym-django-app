@@ -210,6 +210,7 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo, lectura=None, fmt=Non
            'base_y': ALTO - MARGEN_ABA, 'texto_y': ALTO - 6,
            # 13-nov-2026 (mejora 17): valores en el eje y cuánto oscila, para no leer cada punto «a ojo».
            'eje_max': fmt(tope), 'eje_min': fmt(suelo), 'eje_max_y': MARGEN_ARR + 4, 'eje_min_y': ALTO - MARGEN_ABA - 4,
+           'hoy_num': valores.get(hoy), 'media_num': media, 'tendencia_num': tendencias.get(dias - 1),
            'minimo': fmt(min(valores.values())), 'maximo': fmt(max(valores.values())),
            'oscila': bool(media and (max(valores.values()) - min(valores.values())) / media >= 0.4),
            'ultimos': ' · '.join(str(p['valor']) for p in ultimos),
@@ -242,19 +243,19 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo, lectura=None, fmt=Non
 def _lectura_variabilidad(v, media):
     pct = round((v / media - 1) * 100)
     if v < media * 0.85:
-        return f'un {-pct} % por debajo de lo normal en ti'
+        return f'un {-pct} % por debajo de lo habitual en ti'
     if v > media * 1.15:
-        return f'un {pct} % por encima de lo normal: bien recuperado'
-    return 'dentro de lo normal en ti'
+        return f'un {pct} % por encima de lo habitual: bien recuperado'
+    return 'dentro de lo habitual en ti'
 
 
 def _lectura_pulso(v, media):
     from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
     dif = round(v - media)
     if dif >= PULSO_ALTO_LPM:
-        return f'{dif} pulsaciones más de lo normal en ti'
+        return f'{dif} pulsaciones más de lo habitual en ti'
     if dif <= -2:
-        return f'{-dif} menos de lo normal: tranquilo'
+        return f'{-dif} menos de lo habitual: tranquilo'
     return 'como siempre'
 
 
@@ -272,6 +273,12 @@ def pulso(cliente, hoy, dias=DIAS_MANANAS):
                          franja=lambda m: (m - PULSO_ALTO_LPM, m + PULSO_ALTO_LPM),
                          malo=lambda v, m: v >= m + PULSO_ALTO_LPM,
                          lectura=_lectura_pulso)
+
+
+def _horas(v):
+    """6.73 → '6 h 44' (el mismo formato en la cabecera y en la pestaña del sueño)."""
+    from entrenos.services.recuperacion_service import horas_texto
+    return horas_texto(v)
 
 
 def _lectura_sueno(v, media):
@@ -292,30 +299,7 @@ def sueno(cliente, hoy, dias=DIAS_MANANAS):
         cliente, hoy, 'horas_sueno', dias,
         franja=lambda m: (m - SUENO_MENOS_QUE_MEDIA_H, m + SUENO_MENOS_QUE_MEDIA_H),
         malo=lambda v, m: v < SUENO_MINIMO_H or v <= m - SUENO_MENOS_QUE_MEDIA_H,
-        lectura=_lectura_sueno, fmt=lambda v: _n1(v))
-
-
-def lectura_cruzada(variab, pul):
-    """13-nov-2026 (mejora 7): variabilidad y pulso de hoy leídos juntos, solo si dicen algo."""
-    from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
-
-    def _num(x):
-        return x if isinstance(x, (int, float)) else None
-    hv, mv = _num(variab.get('hoy_valor')), _num(variab.get('media'))
-    hp, mp = _num(pul.get('hoy_valor')), _num(pul.get('media'))
-    if None in (hv, mv, hp, mp):
-        return None
-    hrv_baja = hv < mv * 0.85
-    pulso_alto = hp - mp >= PULSO_ALTO_LPM
-    pulso_bajo = hp - mp <= -2
-    if hrv_baja and pulso_alto:
-        return 'Las dos señales apuntan a cansancio: variabilidad baja y pulso alto.'
-    if hrv_baja and pulso_bajo:
-        return ('Hoy la variabilidad está baja pero el pulso en reposo está tranquilo: las dos señales se '
-                'compensan, así que no lo leo como cansancio acumulado. Mira si mañana se repite.')
-    if hrv_baja:
-        return 'Hoy la variabilidad está baja y el pulso normal: una señal suelta, no un patrón.'
-    return None
+        lectura=_lectura_sueno, fmt=_horas)
 
 
 def _detalle_dia(lec):
@@ -328,12 +312,12 @@ def _detalle_dia(lec):
     partes = []
     if d.get('hrv_ms') and m.get('hrv_ms'):
         pct = round((d['hrv_ms'] / m['hrv_ms'] - 1) * 100)
-        partes.append(f'variabilidad {round(d["hrv_ms"])} ms ({"+" if pct > 0 else "−"}{abs(pct)} % sobre lo normal)')
+        partes.append(f'variabilidad {round(d["hrv_ms"])} ms ({abs(pct)} % {"por encima" if pct > 0 else "por debajo"} de lo habitual)')
     elif d.get('hrv_ms'):
         partes.append(f'variabilidad {round(d["hrv_ms"])} ms')
     if d.get('fc_reposo'):
         dif = round(d['fc_reposo'] - m['fc_reposo']) if m.get('fc_reposo') else None
-        extra = '' if dif is None else (f' ({dif:+d} sobre lo normal)'.replace('-', '−'))
+        extra = '' if dif is None else (f' ({abs(dif)} {"por encima" if dif > 0 else "por debajo"} de lo habitual)' if dif else '')
         partes.append(f'pulso {round(d["fc_reposo"])}{extra}')
     if d.get('horas_sueno'):
         partes.append(f'sueño {horas_texto(d["horas_sueno"])}')
@@ -406,11 +390,11 @@ def tres_preguntas(estado):
     if r == 'parada':
         return [{'pregunta': p, 'respuesta': 'En pausa', 'tono': 'neutro',
                  'porque': 'Estás de parada: no juzgo nada hasta que vuelvas.'}
-                for p in ('¿Necesito descansar?', '¿Me estoy pasando?', '¿Puedo dar más?')]
+                for p in ('¿Hace falta descanso extra?', '¿Me estoy pasando?', '¿Puedo dar más?')]
 
     # 8-nov-2026: cuántas mañanas cuentan, en qué periodo y si deben ser seguidas.
     mananas5 = f'{malos} de {_mananas(dias5)} con dato de los últimos 5 días'
-    descanso = {'pregunta': '¿Necesito descansar?'}
+    descanso = {'pregunta': '¿Hace falta descanso extra?'}
     if r == 'descansa':
         descanso.update(respuesta='Sí', tono='alerta',
                         porque=f'Tus señales piden descanso: {mananas5} por debajo de lo normal en ti.')
@@ -418,7 +402,7 @@ def tres_preguntas(estado):
         descanso.update(respuesta='Aún no lo sé', tono='neutro',
                         porque=f'Me faltan mañanas comparadas con tu media ({dias14} de 5).')
     else:
-        descanso.update(respuesta='No', tono='bien',
+        descanso.update(respuesta='Hoy no', tono='bien',
                         porque=(f'Tus señales no piden descanso extra: {mananas5} por debajo de lo normal. '
                                 f'Lo pediría con 3, seguidas o no.'))
 
@@ -463,10 +447,65 @@ def tres_preguntas(estado):
         if estado['molestias']:
             motivos.append('molestias en ' + ', '.join(estado['molestias']))
         # 13-nov-2026: «pendiente» (gris), no el azul de «En pausa»; y siempre con el motivo.
-        mas.update(respuesta='Todavía no', tono='pendiente',
+        sin_valorar = ratio is not None and ratio < DAR_MAS_RATIO_MIN
+        mas.update(respuesta='Aún no se puede valorar' if sin_valorar else 'Todavía no', tono='pendiente',
                    porque=(('; '.join(motivos))[0].upper() + '; '.join(motivos)[1:] + '.') if motivos
                    else 'Todavía no se cumple alguna de las condiciones; mira el «i» para ver cuáles.')
+    descanso['cambia'], pasas['cambia'], mas['cambia'] = _que_cambiaria(estado, pct, conociendo)
     return [descanso, pasas, mas]
+
+
+def _pct_txt(pct):
+    return f'{"+" if pct > 0 else "−" if pct < 0 else ""}{abs(pct)} %'
+
+
+def _que_cambiaria(estado, pct, conociendo):
+    """13-nov-2026 (idea 5): la regla actual de cada respuesta y, si faltan datos, cuáles."""
+    from entrenos.services.estado_carga_service import (
+        DAR_MAS_BUENOS, DESCANSA_MALOS, DESCANSA_VENTANA, PASAS_MALOS, PASAS_RATIO)
+
+    ratio = estado['carga']['ratio']
+    malos, dias5 = estado['malos_5'], estado['dias_5']
+    buenos, dias14 = estado['buenos_14'], estado['dias_14']
+    ahora = _pct_txt(pct) if pct is not None else 'sin dato'
+
+    if conociendo:
+        falta = (f'Me faltan mañanas del reloj comparadas con tu media: llevo {dias14} de 5. '
+                 f'Hasta entonces no saco conclusiones.')
+        return falta, falta, falta
+
+    descanso = (f'Pasaría a «Sí» si {DESCANSA_MALOS} de las últimas {DESCANSA_VENTANA} mañanas con dato '
+                f'salen por debajo de lo habitual (ahora {malos} de {dias5}) y tu carga no ha bajado más '
+                f'de un 20 % respecto a tu media')
+    if ratio is not None and ratio < 0.8:
+        descanso += f' (ahora {ahora}: con una carga tan baja esta regla no se activa)'
+    descanso += '.'
+
+    if ratio is None:
+        pasas = 'Falta historial de carga (4 semanas) para compararla con tu media.'
+    else:
+        pasas = (f'Pasaría a «Sí» si tus últimos 7 días llegan a un {round((PASAS_RATIO - 1) * 100)} % o más '
+                 f'por encima de tu media (ahora {ahora}) y {PASAS_MALOS} de las últimas {DESCANSA_VENTANA} '
+                 f'mañanas salen por debajo (ahora {malos}).')
+
+    faltan = []
+    if buenos < DAR_MAS_BUENOS:
+        faltan.append(f'{DAR_MAS_BUENOS} mañanas buenas en 14 días, seguidas o no (llevas {buenos})')
+    if dias14 < 14:
+        faltan.append(f'datos del reloj de más días: solo pude comparar {dias14} de los 14')
+    if ratio is not None and not (0.8 <= ratio <= 1.3):
+        faltan.append(f'carga entre −20 % y +30 % de tu media (ahora {ahora})')
+    if estado['esfuerzo']['subiendo']:
+        faltan.append('que tu esfuerzo medio deje de subir')
+    if estado['molestias']:
+        faltan.append('sin molestias (hay en ' + ', '.join(estado['molestias']) + ')')
+    if estado['respuesta'] == 'dar_mas':
+        mas = 'Se mantiene mientras sigas con 10 mañanas buenas en 14 días, la carga en tu zona y sin molestias.'
+    elif faltan:
+        mas = 'Para valorarlo falta: ' + '; '.join(faltan) + '.'
+    else:
+        mas = 'Se cumplen las condiciones salvo que cambie alguna; mira el «i» para verlas.'
+    return descanso, pasas, mas
 
 
 DIAS_SEMANA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
@@ -474,43 +513,214 @@ MESES = ('enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto
          'octubre', 'noviembre', 'diciembre')
 
 
-def aviso_hoy(estado, dias):
-    """13-nov-2026 (mejora 1): si hoy amaneces por debajo y el titular dice «Vas bien», que lo diga.
-
-    El titular mira los últimos 5 días; la decisión de hoy en Ahora mira esta mañana.
-    """
-    if not dias or estado['respuesta'] in ('parada', 'descansa', 'te_pasas'):
-        return None
-    hoy_d = dias[-1]
-    if hoy_d['nivel'] not in ('rojo', 'ambar'):
-        return None
-    detalle = (hoy_d.get('detalle') or '').replace('Ese día: ', '', 1)
-    base = f'Esta mañana amaneces {hoy_d["nombre"].lower()}'
-    return f'{base}: {detalle}' if detalle else f'{base}.'
-
-
 def fecha_texto(d):
     """'domingo 25 de octubre', sin depender del idioma del servidor."""
     return f'{DIAS_SEMANA[d.weekday()]} {d.day} de {MESES[d.month - 1]}'
 
 
-def contexto_panel(cliente, hoy):
+def decision_de_hoy(cliente, usuario, hoy):
+    """13-nov-2026: la MISMA decisión efectiva que enseña Ahora (no una lectura propia).
+
+    Reutiliza lo que usa ``dashboard_silencioso_preview``: la autoridad diaria de gym, el estado del
+    sistema (organismo) y el porqué. Devuelve None si algo falla (la página cae a su titular de siempre).
+    """
+    import logging
+    try:
+        from core.organismo import estado_operativo_visible, resolver_estado_sistema_hoy
+        from entrenos.services.autoridad_diaria_gym_service import resolver_autoridad_diaria_gym
+        from entrenos.services.porque_decision_service import construir_porque
+
+        decision_gym = resolver_autoridad_diaria_gym(cliente, hoy) or {}
+        estado_sistema = resolver_estado_sistema_hoy(usuario, decision_gym=decision_gym) or {}
+        operativo = estado_operativo_visible(estado_sistema.get('estado'), estado_sistema.get('motivo'))
+        frase = estado_sistema.get('texto') or decision_gym.get('mensaje') or ''
+        porque = None
+        if operativo not in ('DESCANSAR', 'HECHO'):
+            porque = construir_porque(decision_gym)
+            if porque and porque.strip() == frase.strip():
+                porque = None
+        return {
+            'estado': operativo, 'titulo': operativo.capitalize(), 'frase': frase, 'porque': porque,
+            'cambios': que_cambio(decision_gym, operativo),
+            'tono': {'ENTRENAR': 'bien', 'HECHO': 'bien', 'AJUSTAR': 'aviso'}.get(operativo, 'aviso'),
+        }
+    except Exception:  # noqa: BLE001
+        logging.getLogger(__name__).exception('panel cuerpo: no se pudo leer la decisión de hoy')
+        return None
+
+
+_TIPOS_AJUSTE = {
+    'criterio_entrenador', 'deload', 'molestia_reciente', 'sustitucion_molestia',
+    'sustitucion_estancamiento', 'intervencion_molestia_pospuesta', 'progresion_pospuesta',
+}
+
+
+def que_cambio(decision_gym, operativo=None):
+    """13-nov-2026 (idea 1): solo ajustes ya aplicados en el briefing (``cambios_materializados``).
+
+    Una frase por motivo (el RPE un punto menos en varios ejercicios cuenta una vez).
+    """
+    import re
+    decision_gym = decision_gym or {}
+    cambios = [c for c in (decision_gym.get('cambios_materializados') or []) if c.get('tipo') in _TIPOS_AJUSTE]
+    items = []
+    if decision_gym.get('estado') == 'version_reducida' or decision_gym.get('modo_reducido'):
+        items.append('La sesión va en versión reducida.')
+    por_motivo = {}
+    ultimo_motivo = ''
+    for c in cambios:
+        razon = (c.get('razon') or '').strip()
+        if c['tipo'] == 'criterio_entrenador':
+            m = re.search(r'en vez de [\d.,]+: (.+?)\. Deja', razon)
+            corta = re.match(r'^Hoy RPE [\d.,]+ en vez de [\d.,]+\.$', razon)
+            if m:
+                ultimo_motivo = m.group(1)
+                por_motivo.setdefault(ultimo_motivo, []).append(c.get('ejercicio_original'))
+            elif corta:  # mismo porqué que la primera tarjeta (se cuenta una vez)
+                por_motivo.setdefault(ultimo_motivo, []).append(c.get('ejercicio_original'))
+            else:  # víspera/día de fútbol u otro criterio: su frase tal cual, una vez
+                if razon and razon not in items:
+                    items.append(razon)
+        elif c['tipo'] == 'deload':
+            items.append(razon)
+        else:
+            nombre = c.get('ejercicio_original')
+            items.append(f'{nombre}: {razon}' if nombre else razon)
+    for motivo, ejercicios in por_motivo.items():
+        n = len({e for e in ejercicios if e}) or len(ejercicios)
+        cuando = f': {motivo}' if motivo else ''
+        items.append(f'RPE objetivo un punto menos en {n} {"ejercicio" if n == 1 else "ejercicios"}{cuando}.')
+    if len(items) > 6:
+        items = items[:6] + [f'… y {len(items) - 6} ajustes más.']
+    if items:
+        return items
+    if operativo in ('DESCANSAR', 'HECHO') or not decision_gym.get('sesion_materializada'):
+        return ['Hoy no hay sesión que ajustar.']
+    return ['La sesión va tal como está en el plan: el briefing no ha aplicado ajustes.']
+
+
+def frase_reloj(variab, pul, sue):
+    """Qué vio el reloj ESTA mañana (solo hoy; la tendencia va en «últimos días»)."""
+    from entrenos.services.recuperacion_service import PULSO_ALTO_LPM
+
+    partes = []
+    hv, mv = variab.get('hoy_num'), variab.get('media_num')
+    if hv is not None and mv:
+        if hv < mv * 0.85:
+            partes.append(f'Variabilidad por debajo de tu rango hoy ({round(hv)} ms; lo habitual, unos {round(mv)})')
+        elif hv > mv * 1.15:
+            partes.append(f'Variabilidad por encima de tu rango hoy ({round(hv)} ms; lo habitual, unos {round(mv)})')
+        else:
+            partes.append(f'Variabilidad dentro de lo habitual hoy ({round(hv)} ms)')
+    hp, mp = pul.get('hoy_num'), pul.get('media_num')
+    if hp is not None and mp:
+        dif = round(hp - mp)
+        if dif >= PULSO_ALTO_LPM:
+            partes.append(f'Pulso por encima de tu rango ({round(hp)}; lo habitual, unos {round(mp)})')
+        elif dif <= -2:
+            partes.append(f'Pulso tranquilo ({round(hp)}, {-dif} por debajo de lo habitual)')
+        else:
+            partes.append(f'Pulso dentro de lo habitual ({round(hp)})')
+    hs, ms = sue.get('hoy_num'), sue.get('media_num')
+    if hs is not None:
+        txt = _horas(hs)
+        if ms and hs <= ms - 1.25 or hs < 6:
+            partes.append(f'Sueño corto ({txt})')
+        elif ms and hs < ms - 0.4:
+            partes.append(f'Sueño algo por debajo de lo habitual ({txt})')
+        else:
+            partes.append(f'Sueño {txt}')
+    if not partes:
+        return 'El reloj aún no ha mandado datos de esta mañana.'
+    return '. '.join(partes) + '.'
+
+
+def frase_ultimos_dias(estado, variab, pul, sue):
+    """Qué muestran los últimos días: tendencia de siete días de cada señal y mañanas malas."""
+    partes = []
+    if variab.get('tendencia_valor') is not None:
+        partes.append(f'variabilidad {variab["tendencia_valor"]} ms, {variab["tendencia_lectura"]}')
+    if pul.get('tendencia_valor') is not None:
+        partes.append(f'pulso {pul["tendencia_valor"]}, {pul["tendencia_lectura"]}')
+    if sue.get('tendencia_valor') is not None:
+        partes.append(f'sueño {sue["tendencia_valor"]}, {sue["tendencia_lectura"]}')
+    out = ''
+    if partes:
+        out = 'Tendencia de 7 días: ' + '; '.join(partes) + '.'
+    if estado.get('dias_5'):
+        out += (f' {estado["malos_5"]} de las últimas {estado["dias_5"]} mañanas con dato '
+                f'por debajo de lo habitual.')
+    return out.strip()
+
+
+def sello_reloj(cliente, hoy):
+    """13-nov-2026 (idea 4): hora de importación y fecha de las mediciones, por separado.
+
+    ``{'importacion': 'hoy 07:42' | None, 'mediciones': str, 'atraso': bool}``. Una sincronización de hoy
+    con datos de ayer se dice como tal.
+    """
+    from datetime import timedelta
+    from django.utils import timezone
+
+    from clientes.models import BitacoraDiaria
+
+    filas = list(BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hoy - timedelta(days=6), fecha__lte=hoy)
+                 .values('fecha', 'hrv_ms', 'fc_reposo', 'horas_sueno', 'salud_importado_en'))
+    if not filas:
+        return None
+
+    def _dia(f):
+        return 'hoy' if f == hoy else 'ayer' if f == hoy - timedelta(days=1) else f'{f:%d/%m}'
+
+    nombres = {'hrv_ms': 'variabilidad', 'fc_reposo': 'pulso', 'horas_sueno': 'sueño'}
+    ultimo = {}
+    for campo in nombres:
+        fechas = [f['fecha'] for f in filas if f[campo] is not None]
+        if fechas:
+            ultimo[campo] = max(fechas)
+    if not ultimo:
+        return None
+    de_hoy = [n for c, n in nombres.items() if ultimo.get(c) == hoy]
+    atrasadas = [(n, ultimo[c]) for c, n in nombres.items() if c in ultimo and ultimo[c] != hoy]
+    faltan = [n for c, n in nombres.items() if c not in ultimo]
+    if de_hoy and not atrasadas and not faltan:
+        mediciones = 'las tres señales son de esta mañana'
+    else:
+        partes = []
+        if de_hoy:
+            partes.append(', '.join(de_hoy) + ' de esta mañana')
+        for n, f in atrasadas:
+            partes.append(f'{n} de {_dia(f)}')
+        if faltan:
+            partes.append('sin ' + ', '.join(faltan))
+        mediciones = '; '.join(partes)
+    importaciones = [f['salud_importado_en'] for f in filas if f['salud_importado_en']]
+    importacion = None
+    if importaciones:
+        cuando = timezone.localtime(max(importaciones))
+        importacion = f'{_dia(cuando.date())} {cuando:%H:%M}'
+    return {'importacion': importacion, 'mediciones': mediciones, 'atraso': bool(atrasadas or faltan)}
+
+
+def contexto_panel(cliente, hoy, usuario=None):
     from entrenos.services.estado_carga_service import TITULOS, estado_carga, parada_en
 
     estado = estado_carga(cliente, hoy)
     dias = dias_recientes(estado, cliente)
-    variab, pul = variabilidad(cliente, hoy), pulso(cliente, hoy)
+    variab, pul, sue = variabilidad(cliente, hoy), pulso(cliente, hoy), sueno(cliente, hoy)
     return {
         'estado': estado,
         'titulo': TITULOS[estado['respuesta']],
+        'decision': decision_de_hoy(cliente, usuario or cliente.user, hoy),
+        'bloque_reloj': frase_reloj(variab, pul, sue),
+        'bloque_ultimos': frase_ultimos_dias(estado, variab, pul, sue),
+        'sello_reloj': sello_reloj(cliente, hoy),
         'preguntas': tres_preguntas(estado),
         'descanso_plan': descanso_del_plan(cliente, hoy),
         'camino': camino(cliente, hoy),
         'variabilidad': variab,
         'pulso': pul,
-        'sueno': sueno(cliente, hoy),
-        'lectura_cruzada': lectura_cruzada(variab, pul),
-        'aviso_hoy': aviso_hoy(estado, dias),
+        'sueno': sue,
         'dias_energia': [d for d in dias if d['nombre'].startswith('Energía')],
         'frase_camino': frase_camino(cliente, hoy),
         'dias': dias,

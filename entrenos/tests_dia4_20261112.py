@@ -34,6 +34,8 @@ class PlantillasYServicios(SimpleTestCase):
 
 
 # ── Panel «Cómo responde tu cuerpo» (13-nov-2026) ────────────────────────────
+from datetime import timedelta
+
 from django.urls import reverse
 
 from entrenos.tests_estado_carga_20261025 import HOY, Base
@@ -48,31 +50,6 @@ class PanelCuerpoMejoras(Base):
             self.reloj(i, hrv=70, fc=57, sueno=7.5)
         self.reloj(0, hrv=42, fc=52, sueno=6.7)
 
-    def test_sueno_con_decimales_y_ejes(self):
-        from entrenos.services.panel_cuerpo_service import sueno
-        s = sueno(self.cliente, self.HOY)
-        self.assertEqual(s['hoy_valor'], '6,7')
-        self.assertIn('eje_max', s)
-        self.assertIn('eje_min', s)
-
-    def test_lectura_cruzada_hrv_baja_con_pulso_bajo(self):
-        from entrenos.services.panel_cuerpo_service import lectura_cruzada, pulso, variabilidad
-        txt = lectura_cruzada(variabilidad(self.cliente, self.HOY), pulso(self.cliente, self.HOY))
-        self.assertIn('se compensan', txt)
-
-    def test_lectura_cruzada_dos_senales(self):
-        from entrenos.services.panel_cuerpo_service import lectura_cruzada
-        txt = lectura_cruzada({'hoy_valor': 40, 'media': 70}, {'hoy_valor': 64, 'media': 57})
-        self.assertIn('cansancio', txt)
-        self.assertIsNone(lectura_cruzada({'hoy_valor': 70, 'media': 70}, {'hoy_valor': 57, 'media': 57}))
-
-    def test_aviso_hoy_solo_si_amaneces_por_debajo_y_el_titular_es_tranquilo(self):
-        from entrenos.services.panel_cuerpo_service import aviso_hoy
-        dias = [{'nivel': 'rojo', 'nombre': 'Por debajo', 'detalle': 'Variabilidad baja.'}]
-        self.assertIn('Esta mañana amaneces por debajo', aviso_hoy({'respuesta': 'vas_bien'}, dias))
-        self.assertIsNone(aviso_hoy({'respuesta': 'descansa'}, dias))
-        self.assertIsNone(aviso_hoy({'respuesta': 'vas_bien'}, [{'nivel': 'normal', 'nombre': 'Normal'}]))
-
     def test_dias_con_detalle_y_hoy(self):
         from entrenos.services.estado_carga_service import estado_carga
         from entrenos.services.panel_cuerpo_service import dias_recientes
@@ -80,21 +57,121 @@ class PanelCuerpoMejoras(Base):
         self.assertTrue(dias[-1]['hoy'])
         self.assertTrue(dias[-1]['detalle'])
 
-    def test_pagina_tiene_sueno_pestanas_y_pie_corregido(self):
+    def test_sueno_en_horas_y_minutos_y_con_ejes(self):
+        from entrenos.services.panel_cuerpo_service import sueno
+        s = sueno(self.cliente, self.HOY)
+        self.assertEqual(s['hoy_valor'], '6 h 42')
+        self.assertIn('h', s['eje_max'])
+        self.assertIn('eje_min', s)
+
+    def test_frase_reloj_separa_hoy_de_la_tendencia(self):
+        from entrenos.services.panel_cuerpo_service import frase_reloj, pulso, sueno, variabilidad
+        txt = frase_reloj(variabilidad(self.cliente, self.HOY), pulso(self.cliente, self.HOY),
+                          sueno(self.cliente, self.HOY))
+        self.assertIn('Variabilidad por debajo de tu rango hoy', txt)
+        self.assertIn('Pulso tranquilo', txt)
+        self.assertNotIn('compensan', txt)
+        self.assertNotIn('Tendencia', txt)
+
+    def test_ultimos_dias_lleva_la_tendencia(self):
+        from entrenos.services.estado_carga_service import estado_carga
+        from entrenos.services.panel_cuerpo_service import frase_ultimos_dias, pulso, sueno, variabilidad
+        txt = frase_ultimos_dias(estado_carga(self.cliente, self.HOY), variabilidad(self.cliente, self.HOY),
+                                 pulso(self.cliente, self.HOY), sueno(self.cliente, self.HOY))
+        self.assertIn('Tendencia de 7 días', txt)
+
+    def test_dias_con_detalle_y_hoy(self):
+        from entrenos.services.estado_carga_service import estado_carga
+        from entrenos.services.panel_cuerpo_service import dias_recientes
+        dias = dias_recientes(estado_carga(self.cliente, self.HOY), self.cliente)
+        self.assertTrue(dias[-1]['hoy'])
+        self.assertIn('por debajo de lo habitual', dias[-1]['detalle'])
+
+    # ── Paquete 2: cabecera = decisión de Ahora, qué cambió, qué haría cambiar, sello ──
+    def test_que_cambio_solo_cuenta_ajustes_materializados(self):
+        from entrenos.services.panel_cuerpo_service import que_cambio
+        decision = {'estado': 'entrenar', 'sesion_materializada': True, 'cambios_materializados': [
+            {'tipo': 'criterio_entrenador', 'ejercicio_original': 'A',
+             'razon': 'Hoy RPE 7 en vez de 8: variabilidad un 38 % por debajo de lo habitual. Deja una o dos reps en reserva.'},
+            {'tipo': 'criterio_entrenador', 'ejercicio_original': 'B', 'razon': 'Hoy RPE 7 en vez de 8.'},
+            {'tipo': 'criterio_entrenador', 'ejercicio_original': 'D', 'razon': 'Hoy RPE 7 en vez de 8.'},
+            {'tipo': 'progresion_aplicada', 'ejercicio_original': 'C', 'razon': 'sube'},
+        ]}
+        items = que_cambio(decision, 'ENTRENAR')
+        self.assertEqual(len(items), 1)
+        self.assertIn('RPE objetivo un punto menos en 3 ejercicios: variabilidad', items[0])
+        self.assertNotIn('sube', ' '.join(items))
+
+    def test_que_cambio_sin_ajustes_y_sin_sesion(self):
+        from entrenos.services.panel_cuerpo_service import que_cambio
+        self.assertIn('tal como está en el plan', que_cambio({'estado': 'entrenar', 'sesion_materializada': True})[0])
+        self.assertIn('no hay sesión', que_cambio({}, 'DESCANSAR')[0])
+        self.assertIn('versión reducida', que_cambio({'estado': 'version_reducida', 'sesion_materializada': True})[0])
+
+    def test_cabecera_usa_la_decision_de_ahora(self):
+        from unittest.mock import patch
+        from entrenos.services.panel_cuerpo_service import decision_de_hoy
+        with patch('entrenos.services.autoridad_diaria_gym_service.resolver_autoridad_diaria_gym',
+                   return_value={'estado': 'version_reducida', 'sesion_materializada': True,
+                                 'cambios_materializados': []}), \
+             patch('core.organismo.resolver_estado_sistema_hoy',
+                   return_value={'estado': 'EN_MARGEN', 'motivo': 'gym_version_reducida',
+                                 'texto': 'Hay margen, con carga ajustada.'}):
+            d = decision_de_hoy(self.cliente, self.user, self.HOY)
+        self.assertEqual(d['titulo'], 'Entrenar')
+        self.assertEqual(d['frase'], 'Hay margen, con carga ajustada.')
+        self.assertIn('versión reducida', d['cambios'][0])
+
+    def test_que_haria_cambiar_la_respuesta(self):
+        from entrenos.services.panel_cuerpo_service import tres_preguntas
+        est = {'respuesta': 'vas_bien', 'carga': {'ratio': 0.63}, 'malos_5': 2, 'dias_5': 5, 'buenos_14': 12,
+               'dias_14': 12, 'esfuerzo': {'subiendo': False}, 'molestias': []}
+        d, p, m = tres_preguntas(est)
+        self.assertEqual(d['pregunta'], '¿Hace falta descanso extra?')
+        self.assertEqual(d['respuesta'], 'Hoy no')
+        self.assertIn('esta regla no se activa', d['cambia'])
+        self.assertIn('ahora −37 %', p['cambia'])
+        self.assertEqual(m['respuesta'], 'Aún no se puede valorar')
+        self.assertEqual(m['tono'], 'pendiente')
+        self.assertIn('solo pude comparar 12 de los 14', m['cambia'])
+
+    def test_sello_distingue_importacion_de_medicion(self):
+        from datetime import datetime, timezone as tz
+        from clientes.models import BitacoraDiaria
+        from entrenos.services.panel_cuerpo_service import sello_reloj
+        # sincronización de hoy a las 07:42 con datos de ayer (hoy sin medir)
+        BitacoraDiaria.objects.filter(cliente=self.cliente, fecha=self.HOY).delete()
+        BitacoraDiaria.objects.filter(cliente=self.cliente, fecha=self.HOY - timedelta(days=1)).update(
+            salud_importado_en=datetime(self.HOY.year, self.HOY.month, self.HOY.day, 6, 42, tzinfo=tz.utc))
+        sello = sello_reloj(self.cliente, self.HOY)
+        self.assertTrue(sello['atraso'])
+        self.assertIn('ayer', sello['mediciones'])
+        self.assertTrue(sello['importacion'].startswith('hoy '))
+
+    def test_sello_hoy_completo_y_sin_hora(self):
+        from entrenos.services.panel_cuerpo_service import sello_reloj
+        sello = sello_reloj(self.cliente, self.HOY)
+        self.assertFalse(sello['atraso'])
+        self.assertIn('las tres señales son de esta mañana', sello['mediciones'])
+        self.assertIsNone(sello['importacion'])
+
+    def test_guardar_checkin_registra_la_hora_de_importacion(self):
+        from clientes.models import BitacoraDiaria
+        from clientes.salud_iphone_service import guardar_checkin_iphone
+        guardar_checkin_iphone(self.cliente, {'fecha': self.HOY.isoformat(), 'hrv_ms': 55, 'fc_reposo': 54,
+                                              'horas_sueno': 7.2}, hoy=self.HOY)
+        fila = BitacoraDiaria.objects.filter(cliente=self.cliente, fecha=self.HOY).first()
+        self.assertIsNotNone(fila.salud_importado_en)
+
+    def test_pagina_nueva(self):
         self.client.force_login(self.user)
         r = self.client.get(reverse('clientes:cuerpo'))
         self.assertEqual(r.status_code, 200)
         html = r.content.decode()
-        self.assertIn('id="tab-sueno"', html)
-        self.assertIn('data-tab="pulso"', html)
-        self.assertIn('Toca un día para ver qué lo marcó', html)
+        for txt in ('Qué vio el reloj esta mañana', 'Qué muestran los últimos días', 'Qué cambió en mi entreno',
+                    'Qué haría cambiar la respuesta', 'id="tab-sueno"', 'Toca un día para ver qué lo marcó',
+                    'Importación del reloj'):
+            self.assertIn(txt, html)
         self.assertNotIn('no cambia tu plan', html)
-        self.assertIn('Ver qué significa para el entreno de hoy', html)
+        self.assertNotIn('compensan', html)
 
-    def test_todavia_no_explica_carga_baja_y_es_pendiente(self):
-        from entrenos.services.panel_cuerpo_service import tres_preguntas
-        est = {'respuesta': 'vas_bien', 'carga': {'ratio': 0.63}, 'malos_5': 1, 'dias_5': 5, 'buenos_14': 12,
-               'dias_14': 14, 'esfuerzo': {'subiendo': False}, 'molestias': []}
-        mas = tres_preguntas(est)[2]
-        self.assertEqual(mas['tono'], 'pendiente')
-        self.assertIn('37 % por debajo', mas['porque'])

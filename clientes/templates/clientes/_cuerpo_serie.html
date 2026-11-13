@@ -11,9 +11,9 @@
   {% if s.tendencia %}<polyline points="{{ s.tendencia }}" fill="none" stroke="#42e4a0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>{% endif %}
   {% for p in s.puntos %}<circle cx="{{ p.x }}" cy="{{ p.y }}" r="{% if p.hoy %}5{% else %}3.5{% endif %}" fill="{% if p.bajo %}#ff7f6e{% else %}#f3f0e8{% endif %}"{% if p.hoy %} stroke="#0c1512" stroke-width="2"{% endif %}><title>{{ p.fecha }}: {{ p.valor }} {{ unidad }}</title></circle>{% endfor %}
   <line x1="8" x2="332" y1="{{ s.base_y }}" y2="{{ s.base_y }}" stroke="#3d5a4e"/>
-  <text x="10" y="{{ s.eje_max_y }}" fill="#8fa098" font-size="10">{{ s.eje_max }}</text>
-  <text x="10" y="{{ s.eje_min_y }}" fill="#8fa098" font-size="10">{{ s.eje_min }}</text>
-  {% for m in s.marcas %}<text x="{{ m.x }}" y="{{ s.texto_y }}" fill="#d3dad6" font-size="11" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
+  <text x="10" y="{{ s.eje_max_y }}" fill="#8fa098" font-size="12">{{ s.eje_max }}</text>
+  <text x="10" y="{{ s.eje_min_y }}" fill="#8fa098" font-size="12">{{ s.eje_min }}</text>
+  {% for m in s.marcas %}<text x="{{ m.x }}" y="{{ s.texto_y }}" fill="#d3dad6" font-size="12" text-anchor="{% if forloop.first %}start{% elif forloop.last %}end{% else %}middle{% endif %}">{{ m.texto }}</text>{% endfor %}
 </svg>
 {% endlocalize %}
 <div class="leyenda"><span><i style="background:rgba(66,228,160,.25)"></i>Tu zona normal</span><span><i style="background:#42e4a0;height:3px"></i>Tendencia 7 días</span><span><i style="background:#f3f0e8;width:8px;border-radius:50%"></i>Cada mañana</span><span><i style="background:#ff7f6e;width:8px;border-radius:50%"></i>Fuera de lo normal</span></div>
