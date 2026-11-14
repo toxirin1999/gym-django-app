@@ -41,9 +41,11 @@ class LimpiezaTests(TuHistoriaBase):
         self.entreno(date(2025, 8, 25), 5420, 50)
         self.entreno(date(2025, 9, 1), 6000)
         self.entreno(date(2025, 9, 1), 6000)  # duplicado
-        self.entreno(date(2025, 9, 2), 0)     # sin volumen
+        self.entreno(date(2025, 9, 2), 0, None)  # sin volumen ni duración
+        self.entreno(date(2025, 9, 3), 0, 40)    # sin kg apuntados, pero entrenó (mayo de 2026)
         sesiones = sesiones_limpias(self.cliente, HOY)
-        self.assertEqual([s.fecha for s in sesiones], [date(2025, 8, 25), date(2025, 9, 1)])
+        self.assertEqual([s.fecha for s in sesiones],
+                         [date(2025, 8, 25), date(2025, 9, 1), date(2025, 9, 3)])
 
     def test_duracion_absurda_cuenta_como_desconocida(self):
         self.entreno(date(2026, 8, 10), 27875, 1478)
@@ -129,7 +131,8 @@ class EtapasYDescargaTests(TuHistoriaBase):
         for k in range(3):
             self.entreno(d + timedelta(days=7 + k), 5000, 25, f'Dia {k + 1} - Descarga Activa')
         tipico = self.entreno(d + timedelta(days=14), 16000, 70, 'Dia 1 - Hipertrofia — Metabólica')
-        EjercicioRealizado.objects.create(entreno=tipico, nombre_ejercicio='Prensa', series=4)
+        EjercicioBase.objects.create(nombre='Prensa de Piernas', grupo_muscular='piernas')
+        EjercicioRealizado.objects.create(entreno=tipico, nombre_ejercicio='Prensa De Piernas', series=4)
         self.entreno(d + timedelta(days=15), 18000, 70, 'Dia 2 - Hipertrofia — Metabólica')
         self.entreno(d + timedelta(days=16), 14000, 70, 'Dia 3 - Hipertrofia — Metabólica')
         h = calcular_historia(self.cliente, HOY)
@@ -139,7 +142,7 @@ class EtapasYDescargaTests(TuHistoriaBase):
         self.assertFalse(entonces['ahora'])
         self.assertEqual(ahora['fase'], 'Hipertrofia — Metabólica')
         self.assertEqual(ahora['entreno']['id'], tipico.id)  # la mediana en volumen
-        self.assertEqual(ahora['ejercicios'], [{'nombre': 'Prensa', 'series': 4}])
+        self.assertEqual(ahora['ejercicios'], [{'nombre': 'Prensa de Piernas', 'series': 4}])
 
         desc = h['descarga']
         self.assertEqual((desc['desde'], desc['hasta'], desc['sesiones']), ('8 de septiembre', '10 de septiembre', 3))
@@ -168,6 +171,13 @@ class SerieNormalTests(TuHistoriaBase):
         self.assertEqual((s['antes']['peso'], s['antes']['reps'], s['antes']['rpe']), ('30', 12, '10'))
         self.assertEqual((s['ahora']['peso'], s['ahora']['reps'], s['ahora']['rpe']), ('30', 13, '8'))
         self.assertEqual(s['ahora']['id'], reciente.id)
+
+    def test_una_serie_mucho_mas_pesada_no_es_comparable(self):
+        antigua = self.entreno(date(2026, 6, 29), 9000)
+        self.serie(antigua, 15, 8, 10)
+        reciente = self.entreno(date(2026, 11, 9), 9000)
+        self.serie(reciente, 35, 12, 6)  # más del doble: otra polea u otra forma de apuntar
+        self.assertIsNone(calcular_historia(self.cliente, HOY)['serie_normal'])
 
     def test_sin_margen_suficiente_no_hay_pantalla(self):
         antigua = self.entreno(date(2026, 8, 1), 9000)

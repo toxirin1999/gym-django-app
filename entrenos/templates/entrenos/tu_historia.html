@@ -157,7 +157,7 @@
     <section class="th-slide" data-id="primero" style="--acc:var(--cyan);--glow:rgba(114,221,255,.2)">
       <p class="th-kicker th-anim">Todo empezó el</p>
       <h2 class="th-title th-anim"><em>{{ h.primera.fecha }}</em></h2>
-      <p class="th-text th-anim">{{ h.primera.nombre }}{% if h.primera.minutos %}. {{ h.primera.minutos }} minutos{% endif %}, {{ h.primera.kg }} kg movidos.</p>
+      <p class="th-text th-anim">{{ h.primera.nombre }}{% if h.primera.minutos %}. {{ h.primera.minutos }} minutos{% endif %}{% if h.primera.kg != '0' %}, {{ h.primera.kg }} kg movidos{% endif %}.</p>
       <a class="th-open th-anim" href="{% url 'entrenos:post_entreno_resumen' cliente.id h.primera.id %}">Abrir ese entreno</a>
     </section>
 

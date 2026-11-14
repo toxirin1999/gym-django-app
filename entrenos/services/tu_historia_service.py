@@ -11,7 +11,8 @@ descarga respetada, la serie que hoy es normal, el ejercicio que ha estado ahí
 Las toneladas pierden protagonismo (sin "día más grande").
 
 Limpieza:
-- Solo entrenos con volumen registrado (> 0 kg).
+- Entrenos con volumen registrado (> 0 kg) o, sin volumen, con una duración
+  creíble (hay sesiones reales de mayo de 2026 sin kg apuntados).
 - Días con 3 registros o más se tratan como pruebas de la app (agosto de 2025).
 - Duplicados del mismo día con el mismo volumen cuentan una vez.
 - Duraciones fuera de 5-180 min se tratan como desconocidas; las horas de esas
@@ -35,6 +36,7 @@ SERIE_ANTIGUA_MIN_DIAS = 42   # la exigente, de hace al menos 6 semanas
 SERIE_RECIENTE_DIAS = 35      # la de ahora, de las últimas 5 semanas
 SERIE_ANTIGUA_RPE_MIN = 9
 SERIE_MARGEN_RPE = 1.5        # al menos 1,5 puntos menos de RPE
+SERIE_PESO_MAX = 1.25         # la reciente, como mucho un 25 % más pesada (misma serie, no otra máquina)
 
 MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
          'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
@@ -117,15 +119,15 @@ def sesiones_limpias(cliente, hasta=None):
     vistos, sesiones = set(), []
     for f in filas:
         kg = float(f['volumen_total_kg'] or 0)
-        if kg <= 0 or por_dia[f['fecha']] >= REGISTROS_DIA_PRUEBA:
+        minutos = f['duracion_minutos']
+        if not minutos or not (DUR_MIN <= minutos <= DUR_MAX):
+            minutos = None
+        if (kg <= 0 and not minutos) or por_dia[f['fecha']] >= REGISTROS_DIA_PRUEBA:
             continue
         clave = (f['fecha'], round(kg))
         if clave in vistos:
             continue
         vistos.add(clave)
-        minutos = f['duracion_minutos']
-        if not minutos or not (DUR_MIN <= minutos <= DUR_MAX):
-            minutos = None
         nombre = (f['nombre_rutina_liftin'] or f['rutina__nombre'] or 'Entreno').strip()
         sesiones.append(Sesion(f['id'], f['fecha'], kg, minutos, nombre))
     return sesiones
@@ -246,16 +248,19 @@ def _ejercicios_de(entreno_id, limite=6):
     from entrenos.models import EjercicioRealizado
     from entrenos.services.nombres_visibles import nombre_visible
 
-    filas = EjercicioRealizado.objects.filter(entreno_id=entreno_id).order_by('orden', 'id')
+    filas = list(EjercicioRealizado.objects.filter(entreno_id=entreno_id).order_by('orden', 'id')[:limite])
+    catalogo = _nombre_catalogo({clave_nombre(f.nombre_ejercicio) for f in filas})
     return [
-        {'nombre': nombre_visible(f.nombre_ejercicio), 'series': f.series}
-        for f in filas[:limite]
+        {'nombre': nombre_visible(catalogo.get(clave_nombre(f.nombre_ejercicio)) or f.nombre_ejercicio),
+         'series': f.series}
+        for f in filas
     ]
 
 
 def _entreno_tipico(etapa):
     """La sesión mediana en volumen de la etapa: ni la más floja ni la más bestia."""
-    ordenadas = sorted(etapa['sesiones'], key=lambda s: s.kg)
+    con_volumen = [s for s in etapa['sesiones'] if s.kg > 0] or etapa['sesiones']
+    ordenadas = sorted(con_volumen, key=lambda s: s.kg)
     s = ordenadas[len(ordenadas) // 2]
     inicio, fin = etapa['sesiones'][0].fecha, etapa['sesiones'][-1].fecha
     return {
@@ -286,12 +291,14 @@ def _descarga_respetada(etapas, sesiones):
         if not _es_descarga(etapa['fase']):
             continue
         inicio, fin = etapa['sesiones'][0].fecha, etapa['sesiones'][-1].fecha
-        antes = [s for s in sesiones if s.fecha < inicio][-5:]
-        despues = [s for s in sesiones if s.fecha > fin and not _es_descarga(fase_de(s.nombre))]
-        if len(antes) < 3 or not despues:
+        antes = [s for s in sesiones if s.fecha < inicio and s.kg > 0][-5:]
+        despues = [s for s in sesiones
+                   if s.fecha > fin and s.kg > 0 and not _es_descarga(fase_de(s.nombre))]
+        en_descarga = [s for s in etapa['sesiones'] if s.kg > 0]
+        if len(antes) < 3 or not despues or not en_descarga:
             continue
         media_antes = sum(s.kg for s in antes) / len(antes)
-        media_descarga = sum(s.kg for s in etapa['sesiones']) / len(etapa['sesiones'])
+        media_descarga = sum(s.kg for s in en_descarga) / len(en_descarga)
         if media_antes <= 0 or media_descarga >= media_antes:
             continue
         vuelta = despues[0]
@@ -379,7 +386,9 @@ def _serie_que_hoy_es_normal(sesiones, hasta):
         recientes = [x for x in series if x[0].fecha >= desde_reciente]
         for a in antiguas:
             for r in recientes:
-                if r[2] < a[2] or r[3] < a[3] or r[4] > a[4] - SERIE_MARGEN_RPE:
+                if r[2] < a[2] or r[2] > a[2] * SERIE_PESO_MAX or r[3] < a[3]:
+                    continue
+                if r[4] > a[4] - SERIE_MARGEN_RPE:
                     continue
                 puntos = (a[4] - r[4], r[2] / a[2], (r[0].fecha - a[0].fecha).days)
                 if mejor_puntos is None or puntos > mejor_puntos:
