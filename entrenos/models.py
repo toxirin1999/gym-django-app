@@ -2810,3 +2810,51 @@ class SerieTestigo(models.Model):
     def __str__(self):
         return f'{self.cliente_id} {self.fecha} {self.reps} reps'
 
+
+
+class NotaHistoria(models.Model):
+    """«Tu historia en el gym» (14-nov-2026): la frase del año y la carta al yo del futuro.
+
+    La carta queda sellada: no se enseña hasta `abrir_en` (sin fecha, sigue sellada;
+    cuándo se abre está por decidir). `cifras` guarda los números del momento en que
+    se escribió para compararlos al abrirla.
+    """
+
+    TIPO_FRASE = 'frase'
+    TIPO_CARTA = 'carta'
+    TIPOS = [(TIPO_FRASE, 'Frase del año'), (TIPO_CARTA, 'Carta al yo del futuro')]
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='notas_historia',
+    )
+    tipo = models.CharField(max_length=10, choices=TIPOS)
+    texto = models.TextField(max_length=2000)
+    abrir_en = models.DateField(null=True, blank=True)
+    cifras = models.JSONField(default=dict, blank=True)
+    creada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creada', '-id']
+
+    def __str__(self):
+        return f'{self.cliente_id} {self.tipo} {self.creada:%Y-%m-%d}'
+
+
+class EdicionHistoria(models.Model):
+    """Edición congelada de «Tu historia en el gym»: se guarda tal como se vio."""
+
+    cliente = models.ForeignKey(
+        'clientes.Cliente', on_delete=models.CASCADE, related_name='ediciones_historia',
+    )
+    anio = models.PositiveSmallIntegerField()
+    datos = models.JSONField()
+    creada = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-anio']
+        constraints = [
+            models.UniqueConstraint(fields=['cliente', 'anio'], name='edicion_historia_una_por_anio'),
+        ]
+
+    def __str__(self):
+        return f'{self.cliente_id} edición {self.anio}'
