@@ -9,6 +9,7 @@ from . import views
 from . import views_liftin
 from . import views_propuesta_zona
 from . import views_serie_testigo
+from . import views_tu_historia
 from .views import ejercicios_realizados_view
 from clientes import views as vistas_clientes
 from .views import evaluacion_profesional_view
@@ -164,6 +165,9 @@ urlpatterns = [
          name='api_buscar_ejercicios'),
 
     # ── Fase 5: Timeline unificado ────────────────────────────────────────────
+    # 14-nov-2026: panel provisional "Tu historia en el gym" (resumen tipo anual).
+    path('cliente/<int:cliente_id>/tu-historia/', views_tu_historia.tu_historia,
+         name='tu_historia'),
     path('cliente/<int:cliente_id>/timeline/', views.timeline_atleta,
          name='timeline_atleta'),
     path('cliente/<int:cliente_id>/actividad/<int:actividad_id>/editar/', views.editar_actividad_libre,
