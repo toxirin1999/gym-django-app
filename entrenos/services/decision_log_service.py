@@ -1021,6 +1021,26 @@ def _subida_sin_reps(log, nueva_sesion, reps_nuevas):
     return None
 
 
+def _bajada_sin_reps(log, nueva_sesion, reps_nuevas, peso_nuevo):
+    """Nota si tras bajar el peso las reps quedaron por debajo del mínimo del rango; None si cumple.
+
+    Solo con el objetivo de reps guardado en el snapshot de esa sesión: sin él no
+    se juzga (no se inventa un mínimo).
+    """
+    objetivo = _objetivo_repeticiones_snapshot(
+        nueva_sesion.entreno, normalizar_ejercicio(nueva_sesion.nombre_ejercicio),
+    )
+    try:
+        reps = float(reps_nuevas)
+    except (TypeError, ValueError):
+        return None
+    if objetivo is None or reps + 0.5 >= float(objetivo):
+        return None
+    fmt = lambda v: _formatear_reps(Decimal(str(round(float(v), 1))))  # noqa: E731
+    return (f'Con {fmt(peso_nuevo)} kg hizo {fmt(reps)} reps, por debajo de las {fmt(objetivo)} '
+            'mínimas del rango: el peso seguía siendo alto')
+
+
 def _rpe_pedido(entreno, nombre):
     """RPE objetivo que tenía el ejercicio en esa sesión (8 si no se sabe)."""
     try:
@@ -1257,7 +1277,13 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             else:
                 notas = 'Incremento de repeticiones confirmado'
     elif log.accion in ('bajar_peso', 'deload') and peso_nuevo <= peso_anterior:
-        if rpe_nuevo is not None and rpe_nuevo <= 8:
+        # 14-nov-2026 (nota 16): bajar el peso solo «funciona» si con él entran las
+        # reps del rango. Extensiones 12,5 kg × 5 a RPE 8 (rango 12-15) no es
+        # «Funcionó»: el peso seguía siendo demasiado.
+        corta = _bajada_sin_reps(log, nueva_sesion, reps_nuevas, peso_nuevo)
+        if corta:
+            resultado, notas = 'neutra', corta
+        elif rpe_nuevo is not None and rpe_nuevo <= 8:
             resultado = 'validada'
             notas = 'Reducción aplicada y RPE mejoró'
         else:

@@ -642,7 +642,35 @@ def _energia_baja_ese_dia(cliente, entreno):
 
 
 def _comparar_referencias(entreno, entreno_anterior, nombre):
-    """{'tipo', 'detalle'} comparando la serie de referencia de hoy con la de la última vez."""
+    """{'tipo', 'detalle'} comparando la serie de referencia de hoy con la de la última vez.
+
+    14-nov-2026 (nota 17): si hoy se empezó con un peso más alto que se quedó
+    corto (curl martillo 30 × 10 y luego 25 × 15), se dice; la fila solo con
+    «30 × 15 → 25 × 15» escondía por qué se bajó.
+    """
+    comparacion = _comparar_referencias_base(entreno, entreno_anterior, nombre)
+    if not comparacion:
+        return comparacion
+    try:
+        from entrenos.services.ultima_sesion_service import (
+            kg as _kg, rango_de_sesion, serie_referencia, series_de_trabajo,
+        )
+        rango = rango_de_sesion(entreno, nombre)
+        minimo = rango[0] if rango else None
+        hoy = serie_referencia(series_de_trabajo(entreno, nombre), minimo)
+        sup = (hoy or {}).get('superior')
+        if sup and minimo and sup['reps'] < minimo:
+            comparacion = dict(
+                comparacion,
+                detalle=f"{comparacion['detalle']} · empezó con {_kg(sup['peso'])} × {sup['reps']}, por debajo del rango",
+            )
+    except Exception:  # noqa: BLE001
+        pass
+    return comparacion
+
+
+def _comparar_referencias_base(entreno, entreno_anterior, nombre):
+    """La comparación sin el aviso de la serie pesada corta."""
     from entrenos.services.ultima_sesion_service import (
         kg as _kg, rango_de_sesion, serie_referencia, series_de_trabajo,
     )
@@ -987,6 +1015,11 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 # la última vez en ese rango (80 × 15): un regreso, no una bajada.
                 comparacion = dict(comparacion, tipo='mantenida',
                                    detalle=f"{comparacion['detalle']} · vuelves a este rango")
+            # 14-nov-2026 (nota 18): si la comparación salta una sesión más reciente
+            # (press 55 × 10 era de otra fecha, no de la última vez), se dice la fecha.
+            if mas_reciente is not None and mas_reciente.pk != anterior.pk:
+                comparacion = dict(comparacion,
+                                   detalle=f"{comparacion['detalle']} · sesión del {anterior.entreno.fecha:%d/%m}")
             cambios.append({'nombre': ej.nombre_ejercicio, **comparacion})
             continue
         # 18-oct-2026: sin series comparables y con una sesión de hace más de

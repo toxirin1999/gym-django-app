@@ -385,6 +385,20 @@ def _decidir_carga(cliente, ej, hoy):
             frase = (f'La última vez las series no fueron parejas ({_kg(peso_ref)} kg × {reps_cita} y '
                      f'{_kg(floja["peso"])} kg × {floja["reps"]} a RPE {_kg(floja["rpe"])}): para {minimo}-{maximo} '
                      f'parto de la más prudente, {_kg(peso)} kg. Con el RPE de la primera serie ajusto la siguiente.')
+        # 14-nov-2026 (nota 4): si ninguna serie de la última vez llegó al mínimo
+        # (extensiones 15 × 4 @10 y 10 × 7 @9 en 12-15), el peso no pasa del de la
+        # serie que más se acercó (10 kg × 7), como ya hace el cierre; salía 12,5 kg.
+        if not ref['en_rango'] and not tope:
+            _cercana = _referencia_mas_cercana(lectura, nombre)
+            _peso_cerca = float(_cercana['peso'])
+            if 0 < _peso_cerca < peso:
+                peso = a_escala(_peso_cerca, salto, 'cerca')
+                _otras = [x for x in validas if x['reps'] > 0]
+                _lista = ' y '.join(f'{_kg(x["peso"])} kg × {x["reps"]}' for x in _otras[:3])
+                cuando = f"El {lectura['fecha'].strftime('%d/%m')}" if antigua else 'La última vez'
+                frase = (f'{cuando} ninguna serie llegó a {minimo} ({_lista}): parto de {_kg(peso)} kg, '
+                         f'la que más se acercó.')
+                prudente = (peso, _cercana)
         if not prudente:
             # 11-nov-2026 (notas 6 y 25): con rango nuevo el primer número es una
             # estimación prudente: se dice y se avisa de que la 2ª serie se ajusta.
@@ -543,9 +557,13 @@ def aplicar_decision_carga(ej, decision):
         # contradecirlos (prensa: "hoy a por 13 reps (la última vez 12)" cuando
         # la última vez fueron 13 y la regla pedía 14). El texto sigue a la regla.
         motivo = str(ej.get('progresion_motivo') or '')
-        # 27-oct-2026 (nota 3): crunch 75 → 70 kg con el texto "Mismo peso: hoy a
-        # por 15": si la regla cambia el peso, el texto tiene que nombrarlo.
+        # 14-nov-2026 (nota 8): curl martillo, 15, 13 y 8 repetido por «lo hiciste al
+        # final»: el briefing decía «30 kg × 14; hoy a por 15» (del cambio de variante)
+        # sin el motivo, y a la vez el aviso pedía bajar. La regla de cansancio lleva
+        # su motivo: el texto es siempre el suyo.
         if decision.get('frase') and (
+            decision['regla'] == 'fatiga' and ej.get('progresion_motivo_local') != 'regla_unica'
+            or
             f"a por {decision['reps']}" not in motivo
             or (decision['regla'] != 'mantener' and f"{_kg(decision['peso'])} kg" not in motivo)
             or (decision['regla'] != 'mantener' and motivo.startswith('Mismo peso'))

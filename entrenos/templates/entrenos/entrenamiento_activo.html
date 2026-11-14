@@ -1966,6 +1966,8 @@ body{background:
           {# 23-oct-2026: solo en la S1; desde la S2 manda la propuesta entre series. #}
           <span class="peso-ultima-vez__cue">Hoy a por {{ ejercicio.reps_objetivo }} reps</span>
         {% endif %}
+        {# 14-nov-2026 (notas 1 y 9): todas las series de la última vez, no solo la de referencia. #}
+        {% if sn == 1 and ejercicio.ultima_vez_texto %}<span class="peso-ultima-vez__motivo" style="flex-basis:100%;font-size:10px;color:#b8c4be;line-height:1.35;">{{ ejercicio.ultima_vez_texto }}</span>{% endif %}
       </div>
       {% elif ejercicio.usa_peso and ejercicio.repeticiones_anterior %}
       {# 25-oct-2026: si la última vez no se apuntó el peso, al menos las reps (patada de glúteo). #}
