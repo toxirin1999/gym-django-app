@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pendientes</title>
+<style>
+  body{margin:0;background:#0b1114;color:#e8ece9;font:15px/1.5 system-ui,-apple-system,sans-serif;}
+  main{max-width:720px;margin:0 auto;padding:20px 16px 60px;}
+  h1{font-size:22px;margin:0 0 4px;}
+  h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;opacity:.65;margin:26px 0 8px;}
+  h2.vencidas{color:#f87171;opacity:1;}
+  h2.hoy{color:#4ade80;opacity:1;}
+  .sub{opacity:.7;margin:0 0 10px;}
+  .tarea{padding:12px 14px;margin:0 0 8px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.03);}
+  .tarea.vencida{border-color:rgba(248,113,113,.55);}
+  .tarea.cerrada{opacity:.55;}
+  .titulo{font-weight:600;}
+  .fecha{font-size:12px;opacity:.7;margin-top:2px;}
+  .detalle{font-size:13px;opacity:.85;margin-top:6px;}
+  .origen{font-size:11px;opacity:.5;margin-top:6px;}
+  a{color:#7dd3fc;}
+</style>
+</head>
+<body>
+<main>
+  <p><a href="{% url 'clientes:plan_decisiones' %}">← Centro</a></p>
+  <h1>Pendientes</h1>
+  <p class="sub">{{ hoy|date:"l j \d\e F" }} · {{ resumen.pendientes }} pendiente{{ resumen.pendientes|pluralize }}{% if resumen.vencidas %} · {{ resumen.vencidas }} vencida{{ resumen.vencidas|pluralize }}{% endif %}</p>
+
+  {% if grupos.vencidas %}<h2 class="vencidas">Vencidas</h2>
+  {% for t in grupos.vencidas %}{% include 'clientes/_pendiente.html' with vencida=True %}{% endfor %}{% endif %}
+
+  {% if grupos.hoy %}<h2 class="hoy">Hoy</h2>
+  {% for t in grupos.hoy %}{% include 'clientes/_pendiente.html' %}{% endfor %}{% endif %}
+
+  {% if grupos.semana %}<h2>Esta semana</h2>
+  {% for t in grupos.semana %}{% include 'clientes/_pendiente.html' %}{% endfor %}{% endif %}
+
+  {% if grupos.despues %}<h2>Más adelante</h2>
+  {% for t in grupos.despues %}{% include 'clientes/_pendiente.html' %}{% endfor %}{% endif %}
+
+  {% if grupos.sin_fecha %}<h2>Sin fecha</h2>
+  {% for t in grupos.sin_fecha %}{% include 'clientes/_pendiente.html' %}{% endfor %}{% endif %}
+
+  {% if grupos.cerradas %}<h2>Hechas</h2>
+  {% for t in grupos.cerradas %}{% include 'clientes/_pendiente.html' with cerrada=True %}{% endfor %}{% endif %}
+
+  {% if not resumen.pendientes and not grupos.cerradas %}<p class="sub">No hay tareas anotadas.</p>{% endif %}
+</main>
+</body>
+</html>

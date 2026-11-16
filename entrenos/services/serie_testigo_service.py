@@ -29,6 +29,10 @@ REPS_OBJETIVO = 13            # el peso fijo se elige para unas 12-15 repeticion
 SEMANAS_REFERENCIA = 3
 DIFERENCIA_QUE_CUENTA = 2
 SALTO_KG = 2.5
+# 16-nov-2026 (nota 27): 22 repeticiones con 52,5 kg cuando el peso era para ~13.
+# Una primera serie tan lejos del objetivo no sirve de referencia: pasa a ser
+# prueba de ajuste y el siguiente lunes el protocolo parte de un peso nuevo.
+MARGEN_AJUSTE_REPS = 6
 
 
 def _redondear_abajo(kg, salto=SALTO_KG):
@@ -64,6 +68,51 @@ def peso_fijo_desde_historial(cliente, hoy, dias=90):
     return _redondear_abajo(mejor / (1 + REPS_OBJETIVO / 30))
 
 
+def peso_ajustado(peso_kg, reps):
+    """Peso para unas 13 repeticiones a partir de una serie hecha (Epley), a la baja."""
+    e1rm = float(peso_kg) * (1 + float(reps) / 30)
+    return _redondear_abajo(e1rm / (1 + REPS_OBJETIVO / 30))
+
+
+def _primera_fuera_de_objetivo(protocolo):
+    """La única serie del protocolo, si cayó muy lejos de las ~13 repeticiones, o None."""
+    series = list(protocolo.series.filter(descarga=False).order_by('fecha')[:2])
+    if len(series) != 1:
+        return None
+    s = series[0]
+    if abs(s.reps - REPS_OBJETIVO) < MARGEN_AJUSTE_REPS:
+        return None
+    return s
+
+
+def _ajustar_si_hace_falta(cliente, protocolo, fecha):
+    """Si la primera serie fue de ajuste y ya es otro día, cierra el protocolo y abre uno con peso nuevo."""
+    from entrenos.models import ProtocoloTestigo
+
+    # Un solo ajuste automático: si ya hubo un protocolo antes, el peso es una decisión de David.
+    if ProtocoloTestigo.objects.filter(cliente=cliente, ejercicio=protocolo.ejercicio,
+                                       desde__lt=protocolo.desde).exists():
+        return protocolo
+    s = _primera_fuera_de_objetivo(protocolo)
+    if s is None or fecha <= s.fecha:
+        return protocolo
+    nuevo_peso = peso_ajustado(protocolo.peso_kg, s.reps)
+    if not nuevo_peso or abs(nuevo_peso - protocolo.peso_kg) < 1e-6:
+        return protocolo
+    desde = fecha - timedelta(days=fecha.weekday())
+    if desde <= protocolo.desde:
+        return protocolo
+    protocolo.hasta = desde - timedelta(days=1)
+    protocolo.save(update_fields=['hasta'])
+    return ProtocoloTestigo.objects.create(
+        cliente=cliente, ejercicio=protocolo.ejercicio, peso_kg=nuevo_peso, dia_semana=protocolo.dia_semana,
+        rep_pregunta=protocolo.rep_pregunta, desde=desde,
+        motivo=(f'Ajuste automático (16-nov-2026): {s.reps} repeticiones con {_num(protocolo.peso_kg)} kg '
+                f'el {s.fecha:%d/%m}, lejos de las {REPS_OBJETIVO} previstas. Aquel día fue prueba de ajuste '
+                'y la referencia empieza con este peso.'),
+    )
+
+
 def protocolo_vigente(cliente, fecha, crear=True):
     """El protocolo en vigor ese día; lo crea la primera vez desde ``INICIO`` si hay historial."""
     from django.db.models import Q
@@ -73,7 +122,9 @@ def protocolo_vigente(cliente, fecha, crear=True):
     p = ProtocoloTestigo.objects.filter(cliente=cliente, desde__lte=fecha).filter(
         Q(hasta__isnull=True) | Q(hasta__gte=fecha),
     ).first()
-    if p or not crear or fecha < INICIO:
+    if p:
+        return _ajustar_si_hace_falta(cliente, p, fecha) if crear else p
+    if not crear or fecha < INICIO:
         return p
     peso = peso_fijo_desde_historial(cliente, fecha)
     if not peso:
@@ -179,7 +230,12 @@ def frase_serie(serie, res=None):
         else:
             partes.append(f'En la {p.rep_pregunta} dijiste que te quedaban {serie.quedaban_estimadas}; '
                           f'te quedaban {real}.')
-    if serie.descarga:
+    ajuste = _primera_fuera_de_objetivo(p)
+    if ajuste is not None and ajuste.id == serie.id:
+        nuevo = peso_ajustado(p.peso_kg, serie.reps)
+        partes.append(f'El peso era ligero para unas {REPS_OBJETIVO}: hoy fue prueba de ajuste. '
+                      f'El lunes siguiente subo a {_num(nuevo)} kg y la referencia empieza ahí.')
+    elif serie.descarga:
         partes.append('Semana de descarga: no cuenta para la referencia.')
     elif res and res.get('referencia') is not None and res['ultima'].id == serie.id:
         dif = res['diferencia']

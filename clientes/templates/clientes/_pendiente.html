@@ -1,0 +1,6 @@
+<div class="tarea{% if vencida %} vencida{% endif %}{% if cerrada %} cerrada{% endif %}">
+  <div class="titulo">{% if cerrada %}✓ {% endif %}{{ t.titulo }}</div>
+  <div class="fecha">{% if cerrada and t.hecho_el %}Hecho el {{ t.hecho_el|date:"j/n" }}{% elif t.fecha %}{{ t.fecha|date:"l j/n" }}{% else %}Sin fecha{% endif %}</div>
+  {% if t.detalle %}<div class="detalle">{{ t.detalle }}</div>{% endif %}
+  {% if t.origen %}<div class="origen">{{ t.origen }}</div>{% endif %}
+</div>
