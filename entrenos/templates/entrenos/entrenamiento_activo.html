@@ -1365,16 +1365,22 @@ body{background:
 
 {% if serie_testigo %}
 <!-- 8-nov-2026: serie testigo de los lunes. Va aparte: no es una serie de trabajo. -->
+<style>
+#serie-testigo .st-campo{width:110px;min-height:44px;padding:8px 10px;font-size:18px;text-align:center;border-radius:10px;border:2px solid rgba(255,255,255,.55);background:#1a262c;color:#fff;box-sizing:border-box;}
+#serie-testigo .st-campo::placeholder{color:rgba(255,255,255,.35);}
+#serie-testigo .st-campo:focus{outline:none;border-color:#4ade80;}
+#serie-testigo.st-hecha .st-oculto{display:none !important;}
+</style>
 <section id="serie-testigo" style="margin:14px 16px 6px;padding:14px 16px;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:rgba(255,255,255,.03);">
-  <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;">Serie testigo · antes del primer ejercicio</div>
-  <p style="margin:6px 0 4px;font-size:15px;"><strong>{{ serie_testigo.ejercicio }} · {{ serie_testigo.peso_kg|floatformat:"-1" }} kg</strong></p>
-  <p style="margin:0 0 10px;font-size:12px;line-height:1.5;opacity:.8;">Después de calentar. Tempo controlado. Al llegar a la repetición {{ serie_testigo.rep_pregunta }}, piensa cuántas te quedan (sin parar) y sigue hasta la primera que no salga limpia. No cuenta como serie de trabajo.</p>
-  <div id="st-form" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+  <div class="st-oculto" style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;opacity:.6;">Serie testigo · antes del primer ejercicio</div>
+  <p class="st-oculto" style="margin:6px 0 4px;font-size:15px;"><strong>{{ serie_testigo.ejercicio }} · {{ serie_testigo.peso_kg|floatformat:"-1" }} kg</strong></p>
+  <p class="st-oculto" style="margin:0 0 10px;font-size:12px;line-height:1.5;opacity:.8;">Después de calentar. Tempo controlado. Al llegar a la repetición {{ serie_testigo.rep_pregunta }}, piensa cuántas te quedan (sin parar) y sigue hasta la primera que no salga limpia. No cuenta como serie de trabajo.</p>
+  <div id="st-form" class="st-oculto" style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
     <label style="font-size:11px;display:flex;flex-direction:column;gap:4px;">Repeticiones limpias
-      <input id="st-reps" type="number" inputmode="numeric" min="1" max="60" style="width:110px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0e161a;color:inherit;">
+      <input id="st-reps" type="number" inputmode="numeric" min="1" max="60" class="st-campo" placeholder="0">
     </label>
     <label style="font-size:11px;display:flex;flex-direction:column;gap:4px;">En la {{ serie_testigo.rep_pregunta }}, ¿cuántas te quedaban?
-      <input id="st-quedaban" type="number" inputmode="numeric" min="0" max="40" style="width:110px;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.2);background:#0e161a;color:inherit;">
+      <input id="st-quedaban" type="number" inputmode="numeric" min="0" max="40" class="st-campo" placeholder="0">
     </label>
     <button type="button" id="st-guardar" style="padding:9px 14px;border-radius:8px;border:0;background:#4ade80;color:#04130d;font-weight:600;">Guardar</button>
   </div>
@@ -1396,7 +1402,7 @@ body{background:
       body: JSON.stringify({fecha: '{{ fecha }}', reps: reps, quedaban: quedaban})
     }).then(function (r) { return r.json(); }).then(function (d) {
       out.textContent = d.msg || (d.ok ? 'Guardada.' : 'No se pudo guardar.');
-      if (d.ok) { document.getElementById('st-form').style.display = 'none'; }
+      if (d.ok) { document.getElementById('serie-testigo').classList.add('st-hecha'); }
       else { btn.disabled = false; }
     }).catch(function () { out.textContent = 'Sin conexión: vuelve a intentarlo.'; btn.disabled = false; });
   });
@@ -3404,6 +3410,13 @@ function resumenDeEjercicio(fid){
       // 19-oct-2026: el título dice hacia dónde se salió (25 × 25 en 15-20 es por encima).
       const debajo=resultados.some(r=>r.clase==='por-debajo');
       const encima=resultados.some(r=>r.clase==='por-encima');
+      // 16-nov-2026 (nota 12): con la máquina al tope no hay peso que ajustar
+      // hacia arriba, y por debajo del rango se mantiene el máximo: más reps.
+      const topeEj=parseFloat(document.getElementById('card-'+fid)?.dataset.topeKg||'');
+      const pesoMaxEj=Math.max(...scs.map(s=>s.peso||0));
+      if(topeEj>0 && pesoMaxEj>=topeEj && !encima){
+        return {e:'!',t:'En el máximo de la máquina',s:lectura+` Estás en el máximo de la máquina (${fmtKg(topeEj)} kg): no hay más peso, así que la próxima vez repetimos ${fmtKg(topeEj)} kg y buscamos más repeticiones.`};
+      }
       if(encima && !debajo){
         return {e:'↑',t:'Alguna serie por encima del rango',s:lectura+' Te sobró margen: la próxima vez subo el peso.'};
       }

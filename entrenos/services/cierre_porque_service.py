@@ -290,8 +290,19 @@ def _doble_progresion(log, tipo_progresion):
     if hundida:
         return hundida
     siguiente = objetivo_reps_hoy(log.reps_anteriores, rango)
+    # 16-nov-2026 (nota 26): si las series de hoy fueron desiguales, se dicen
+    # (4, 9 y 10) para que «con 12 en todas» se entienda como «en todas».
+    hoy = ''
+    try:
+        from entrenos.services.ultima_sesion_service import series_de_trabajo
+        reps_hoy = [s['reps'] for s in series_de_trabajo(log.entreno_origen, log.ejercicio)
+                    if s.get('peso') and abs(s['peso'] - float(log.peso_anterior)) < 1e-6 and s['reps'] > 0]
+        if len(set(reps_hoy)) > 1:
+            hoy = ' (hoy: ' + ', '.join(str(r) for r in reps_hoy[:-1]) + f' y {reps_hoy[-1]})'
+    except Exception:  # noqa: BLE001
+        hoy = ''
     return (
-        f'Mantengo {_kg(log.peso_anterior)} kg: la próxima vez a por {siguiente} reps. '
+        f'Mantengo {_kg(log.peso_anterior)} kg: la próxima vez a por {siguiente} reps{hoy}. '
         f'Con {rango[1]} en todas las series, subo el peso.'
     )
 

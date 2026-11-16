@@ -155,6 +155,7 @@ PUSH_NOTIFICATION_URL = 'https://fcm.googleapis.com/fcm/send'
 PUSH_NOTIFICATION_KEY = os.environ.get('PUSH_NOTIFICATION_KEY', '')
 
 MIDDLEWARE = [
+    'core.lentitud_middleware.PeticionesLentasMiddleware',  # 16-nov-2026: registra peticiones lentas en logs/lentas.log
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -328,6 +329,15 @@ LOGGING = {
             'formatter': 'errores_500',
             'encoding': 'utf-8',
         },
+        'lentas': {
+            'level': 'WARNING',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join(LOGS_DIR, 'lentas.log'),
+            'formatter': 'errores_500',
+            'maxBytes': 1000000,
+            'backupCount': 2,
+            'encoding': 'utf-8',
+        },
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
@@ -372,6 +382,11 @@ LOGGING = {
         'gamificacion.debug': {
             'handlers': ['gamificacion_debug'],
             'level': 'DEBUG',
+            'propagate': False,
+        },
+        'lentitud': {
+            'handlers': ['lentas'],
+            'level': 'WARNING',
             'propagate': False,
         },
         'django': {

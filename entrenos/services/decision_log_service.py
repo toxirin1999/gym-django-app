@@ -1049,6 +1049,21 @@ def _rpe_pedido(entreno, nombre):
         return 8.0
 
 
+def _contexto_de_ese_dia(log, nueva_sesion):
+    """Por qué ese día pudo ir peor sin que el objetivo fuera el problema, o None.
+
+    16-nov-2026 (notas 24 y 25): press francés hecho después de las extensiones
+    salió «No funcionó: el objetivo exigió RPE 10», y los gemelos de pie, con el
+    máximo de la máquina, «No funcionó» el día de energía baja. Con un motivo así
+    no se da por fallido: se vuelve a comprobar.
+    """
+    try:
+        from entrenos.services.cerebro_carga_service import contexto_cansancio
+        return contexto_cansancio(log.cliente, nueva_sesion.entreno, nueva_sesion.nombre_ejercicio)
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
@@ -1125,6 +1140,12 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'fallida'
             notas = (f'El objetivo exigió un RPE {float(rpe_nuevo):g}, por encima del '
                      f'{_rpe_pedido(nueva_sesion.entreno, nombre):g} que pedía el plan')
+            contexto = _contexto_de_ese_dia(log, nueva_sesion)
+            if contexto:
+                resultado = 'neutra'
+                notas = (f'El RPE subió a {float(rpe_nuevo):g} (el plan pedía '
+                         f'{_rpe_pedido(nueva_sesion.entreno, nombre):g}), pero ese día {contexto}: '
+                         'lo vuelvo a comprobar antes de darlo por malo')
         elif log.motivo_codigo == 'progresion_peso':
             objetivo = log.peso_sugerido
             if objetivo is None:
@@ -1203,6 +1224,11 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         elif reps_nuevas < reps_anteriores:
             resultado = 'fallida'
             notas = 'Rendimiento inferior manteniendo el tope de máquina'
+            contexto = _contexto_de_ese_dia(log, nueva_sesion)
+            if contexto:
+                resultado = 'neutra'
+                notas = (f'Menos reps que la vez anterior con el máximo de la máquina, pero ese día {contexto}: '
+                         'lo vuelvo a comprobar antes de darlo por malo')
         else:
             resultado = 'neutra'
             notas = 'Mismo rendimiento en el tope; aún no alcanzó el objetivo'
