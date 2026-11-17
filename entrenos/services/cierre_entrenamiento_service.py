@@ -28,6 +28,7 @@ from entrenos.services.decision_log_service import (
 )
 from entrenos.services.orden_sesiones_service import DESCONOCIDO, POSTERIOR, orden_entre_sesiones, primera_anterior
 from entrenos.services.historial_ejercicio_service import anteriores as historial_anteriores
+from entrenos.services.catalogo_service import base_por_nombre
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -79,14 +80,12 @@ _PROXIMA_VEZ_ACCION = {
 @por_peticion
 def _nombre_visible(nombre):
     """El nombre tal como está en la rutina ("Jalón al Pecho", no "Jalón Al Pecho")."""
-    from rutinas.models import EjercicioBase
+    from entrenos.services.catalogo_service import base_por_nombre
     from entrenos.services.nombres_visibles import nombre_visible
     if not (nombre or '').strip():
         return nombre
-    return nombre_visible(
-        EjercicioBase.objects.filter(nombre__iexact=nombre.strip()).values_list('nombre', flat=True).first()
-        or nombre
-    )
+    base = base_por_nombre(nombre.strip())
+    return nombre_visible((base.nombre if base else None) or nombre)
 
 
 def _kg_txt(valor):
@@ -742,7 +741,6 @@ def _unidad_lado(nombre):
 
 def _decisiones_de_descarga(cliente, entreno):
     """Las filas de "Decisión para la próxima sesión" de una sesión de descarga."""
-    from rutinas.models import EjercicioBase
     from entrenos.services.cerebro_carga_service import proxima_vez_texto
     from entrenos.services.decision_log_service import normalizar_ejercicio
     from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
@@ -754,8 +752,8 @@ def _decisiones_de_descarga(cliente, entreno):
         if clave in vistos or not es_sesion_descarga(entreno, ej.nombre_ejercicio, periodos):
             continue
         vistos.add(clave)
-        tipo = (EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
-                .values_list('tipo_progresion', flat=True).first()) or 'peso_reps'
+        _base = base_por_nombre(ej.nombre_ejercicio)
+        tipo = (_base.tipo_progresion if _base else None) or 'peso_reps'
         try:
             regla = proxima_vez_texto(cliente, entreno, ej.nombre_ejercicio, tipo, None, con_efecto=True)
         except Exception:  # noqa: BLE001
@@ -778,7 +776,6 @@ def _decisiones_de_descarga(cliente, entreno):
 
 
 def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
-    from rutinas.models import EjercicioBase
     from entrenos.services.decision_log_service import normalizar_ejercicio
 
     cambios = []
@@ -793,10 +790,8 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         if ej.es_tope_maquina and not es_descarga_hoy:
             # Farmer, planchas…: el peso fijo no es un tope de máquina; lo
             # que progresa son los metros o los segundos, no las reps.
-            progresion = (
-                EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
-                .values_list('tipo_progresion', flat=True).first()
-            )
+            _base = base_por_nombre(ej.nombre_ejercicio)
+            progresion = _base.tipo_progresion if _base else None
             detalle = {
                 'progresion_distancia': 'peso fijo · progresa por metros',
                 'progresion_tiempo': 'peso fijo · progresa por tiempo',
@@ -833,11 +828,8 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # el otro rango de reps con su peso naturalmente más ligero/pesado.
         # Se busca la ocurrencia anterior más reciente cuyas reps reales sean
         # compatibles con las de hoy (ver reps_compatibles_con_objetivo).
-        tipo_progresion = (
-            EjercicioBase.objects.filter(nombre__iexact=ej.nombre_ejercicio)
-            .values_list('tipo_progresion', flat=True).first()
-            or 'peso_reps'
-        )
+        _base = base_por_nombre(ej.nombre_ejercicio)
+        tipo_progresion = (_base.tipo_progresion if _base else None) or 'peso_reps'
         peso_hoy, reps_hoy = _rendimiento_representativo(
             entreno, ej.nombre_ejercicio, ej.peso_kg, ej.repeticiones,
         )

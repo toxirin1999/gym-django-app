@@ -27,13 +27,31 @@ def _clave(nombre):
 # ─────────────────────────────────────────────────────────────
 
 @por_peticion
-def tope_de(cliente, nombre):
-    """Peso máximo guardado para esa máquina (float) o None."""
+def _topes_del_cliente(cliente_id):
+    """{ejercicio_normalizado: peso_max_kg} del cliente, una lectura por petición (17-nov-2026).
+
+    Antes, una consulta por ejercicio (``tope_de`` x8 en el cierre y en Ahora).
+    Único por (cliente, ejercicio_normalizado): no hay fila que elegir.
+    """
     from entrenos.models import TopeMaquinaGym
 
-    tope = TopeMaquinaGym.objects.filter(
-        cliente=cliente, ejercicio_normalizado=_clave(nombre),
-    ).values_list('peso_max_kg', flat=True).first()
+    return dict(TopeMaquinaGym.objects.filter(cliente_id=cliente_id).values_list(
+        'ejercicio_normalizado', 'peso_max_kg'))
+
+
+@por_peticion
+def tope_de(cliente, nombre):
+    """Peso máximo guardado para esa máquina (float) o None."""
+    from core import memo_peticion
+    from entrenos.models import TopeMaquinaGym
+
+    cliente_id = getattr(cliente, 'pk', cliente)
+    if memo_peticion.activa() and cliente_id is not None:
+        tope = _topes_del_cliente(cliente_id).get(_clave(nombre))
+    else:
+        tope = TopeMaquinaGym.objects.filter(
+            cliente=cliente, ejercicio_normalizado=_clave(nombre),
+        ).values_list('peso_max_kg', flat=True).first()
     return float(tope) if tope is not None else None
 
 
@@ -255,9 +273,9 @@ def peso_minimo(nombre, equipo=None):
 @por_peticion
 def salto_carga(cliente, nombre):
     """El salto con el que se proponen y ajustan pesos de ese ejercicio."""
-    from rutinas.models import EjercicioBase
+    from entrenos.services.catalogo_service import base_por_nombre
 
-    base = EjercicioBase.objects.filter(nombre__iexact=nombre or '').first()
+    base = base_por_nombre(nombre)
     fisico = salto_fisico(nombre, base.equipo if base else None)
     if fisico:
         return fisico

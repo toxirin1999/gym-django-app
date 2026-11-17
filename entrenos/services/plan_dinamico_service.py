@@ -849,8 +849,8 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
             )
             tags_ejercicio = set(ej.get('risk_tags') or [])
             if not tags_ejercicio:
-                from rutinas.models import EjercicioBase
-                base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+                from entrenos.services.catalogo_service import base_por_nombre
+                base = base_por_nombre(nombre)
                 tags_ejercicio = set((base.risk_tags if base else []) or [])
             intervencion = next((item for item in
                 IntervencionMolestiaGym.objects.filter(cliente=cliente, estado='activa').order_by('-iniciada_en')

@@ -1420,8 +1420,8 @@ class GymDecisionLog(models.Model):
             raw = peso_anterior * (1 - float(self.valor_cambio) / 100)
         else:
             return None
-        from rutinas.models import EjercicioBase
-        base = EjercicioBase.objects.filter(nombre__iexact=self.ejercicio).first()
+        from entrenos.services.catalogo_service import base_por_nombre
+        base = base_por_nombre(self.ejercicio)
         incremento = float(base.incremento_fisico_kg) if base else 2.5
         # La sugerencia debe corresponder a una carga físicamente montable.
         candidato = round(round(raw / incremento) * incremento, 1)

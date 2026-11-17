@@ -771,8 +771,8 @@ def ajustar_escala_y_reps(cliente, ej, hoy):
     mantiene = ej.get('progresion_motivo_local') == 'doble_progresion'
     # Solo se redondea a la escala de un equipo que se reconoce.
     from entrenos.services.maquina_service import salto_fisico
-    from rutinas.models import EjercicioBase
-    _base = EjercicioBase.objects.filter(nombre__iexact=nombre).first()
+    from entrenos.services.catalogo_service import base_por_nombre
+    _base = base_por_nombre(nombre)
     equipo_conocido = salto_fisico(nombre, _base.equipo if _base else None) is not None
     # 20-oct-2026: un peso que no existe en el equipo (50,5 · 39 · 59,5 · 39,9
     # en máquinas de 5 en 5) se redondea aunque sea "el de la última vez".

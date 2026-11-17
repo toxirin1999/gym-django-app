@@ -67,8 +67,8 @@ def grupo_de(texto):
 
 
 def _grupo_ejercicio(nombre, por_defecto=None):
-    from rutinas.models import EjercicioBase
-    base = EjercicioBase.objects.filter(nombre__iexact=nombre).only('grupo_muscular').first()
+    from entrenos.services.catalogo_service import base_por_nombre
+    base = base_por_nombre(nombre)
     return grupo_de(base.grupo_muscular if base else por_defecto) or grupo_de(por_defecto)
 
 
