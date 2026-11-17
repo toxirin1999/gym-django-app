@@ -19,7 +19,7 @@ from datetime import date, datetime, time, timedelta
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from clientes.models import Cliente
@@ -570,6 +570,7 @@ class TestPRs(CierreEntrenamientoBase):
 
 # ── Caso 6: mensaje JOI del día ──────────────────────────────────────────────
 
+@override_settings(JOI_VOZ_ACTIVA=True)
 class TestJoiMensaje(CierreEntrenamientoBase):
     def _set_creado_en(self, msg, fecha):
         MensajeJOI.objects.filter(id=msg.id).update(
@@ -631,6 +632,7 @@ class TestJoiMensaje(CierreEntrenamientoBase):
 
 # ── Caso 6b (Phase 62F.2): JOI en registros retroactivos ─────────────────────
 
+@override_settings(JOI_VOZ_ACTIVA=True)
 class TestJoiMensajeRetroactivo(CierreEntrenamientoBase):
     """
     Si el entreno se registra con fecha pasada (p.ej. ayer), el mensaje JOI
@@ -683,3 +685,22 @@ class TestJoiMensajeRetroactivo(CierreEntrenamientoBase):
             ctx = construir_contexto_cierre(self.cliente, entreno)
 
         self.assertIsNone(ctx['joi_mensaje'])
+
+
+class TestJoiMensajeVozCongelada(CierreEntrenamientoBase):
+    """17-nov-2026 (lentitud): con la voz congelada no se consulta MensajeJOI."""
+
+    @override_settings(JOI_VOZ_ACTIVA=False)
+    def test_voz_congelada_no_consulta_mensajes(self):
+        from entrenos.services.cierre_entrenamiento_service import _joi_mensaje_cierre
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        MensajeJOI.objects.create(user=self.user, trigger='entreno_completado', mensaje='Hola.')
+        with self.assertNumQueries(0):
+            self.assertIsNone(_joi_mensaje_cierre(self.cliente, entreno))
+
+    @override_settings(JOI_VOZ_ACTIVA=True)
+    def test_voz_activa_sigue_devolviendo_el_mensaje(self):
+        from entrenos.services.cierre_entrenamiento_service import _joi_mensaje_cierre
+        entreno = self._crear_entreno(date(2026, 6, 1))
+        MensajeJOI.objects.create(user=self.user, trigger='entreno_completado', mensaje='Hola.')
+        self.assertEqual(_joi_mensaje_cierre(self.cliente, entreno), 'Hola.')
