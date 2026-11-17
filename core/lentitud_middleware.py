@@ -20,6 +20,7 @@ registra sin la cadena de consulta (lleva tokens).
 
 import logging
 import os
+import re
 import sys
 import time
 from collections import Counter
@@ -65,6 +66,22 @@ def _sitio_de_llamada():
     return 'n/d'
 
 
+_TABLA = re.compile(r'(?:\bFROM|\bINTO|\bUPDATE)\s+[`"]?([A-Za-z0-9_$]+)[`"]?', re.IGNORECASE)
+
+
+def _resumen_tablas(consultas, maximo=8):
+    """Tablas que más tiempo suman: ``tabla xN 1.23s``. Solo el nombre de la tabla, nunca valores."""
+    por_tabla = {}
+    for seg, sql in consultas:
+        m = _TABLA.search(str(sql)[:400])
+        nombre = m.group(1) if m else 'otra'
+        a = por_tabla.setdefault(nombre, [0, 0.0])
+        a[0] += 1
+        a[1] += seg
+    filas = sorted(por_tabla.items(), key=lambda kv: kv[1][1], reverse=True)[:maximo]
+    return ', '.join(f'{n} x{c} {s:.2f}s' for n, (c, s) in filas) or 'n/d'
+
+
 class PeticionesLentasMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -96,6 +113,7 @@ class PeticionesLentasMiddleware:
         memo_peticion.iniciar()
         perfil_tramos.iniciar()
         tramos = {}
+        motivo_sin_tramos = ''
         try:
             with connection.execute_wrapper(medir):
                 response = self.get_response(request)
@@ -103,15 +121,19 @@ class PeticionesLentasMiddleware:
             memo_peticion.terminar()
             try:
                 tramos = perfil_tramos.terminar()
-            except Exception:
+                if not tramos:
+                    motivo_sin_tramos = 'vacio'
+            except Exception as exc:  # el motivo queda en el registro
                 tramos = {}
+                motivo_sin_tramos = f'error {type(exc).__name__}: {exc}'[:120]
         total = time.monotonic() - t0
         if total >= _umbral():
             try:
-                self._registrar(request, response, total, consultas)
-                if tramos:
-                    logger.warning('TRAMOS %s %s total=%.1fs: %s', request.method, request.path,
-                                   total, perfil_tramos.resumen(tramos))
+                try:
+                    texto_tramos = perfil_tramos.resumen(tramos) if tramos else f'n/d ({motivo_sin_tramos})'
+                except Exception as exc:
+                    texto_tramos = f'n/d (error {type(exc).__name__}: {exc})'[:160]
+                self._registrar(request, response, total, consultas, texto_tramos)
             except Exception:  # medir nunca debe romper una respuesta
                 pass
         return response
@@ -121,7 +143,7 @@ class PeticionesLentasMiddleware:
         return None
 
     @staticmethod
-    def _registrar(request, response, total, consultas):
+    def _registrar(request, response, total, consultas, texto_tramos='n/d'):
         t0 = request._lentitud_t0
         ini_vista = getattr(request, '_lentitud_vista', None)
         antes = (ini_vista - t0) if ini_vista else None
@@ -135,7 +157,8 @@ class PeticionesLentasMiddleware:
             f'{seg:.2f}s {" ".join(str(sql).split())[:140]}' for seg, sql in lentas if seg >= 0.2
         )
         logger.warning(
-            '%s %s -> %s total=%.1fs antes_de_vista=%s db=%.1fs consultas=%d mediana=%.0fms sitios: %s%s',
+            '%s %s -> %s total=%.1fs antes_de_vista=%s db=%.1fs consultas=%d mediana=%.0fms sitios: %s%s'
+            ' tablas: %s tramos: %s',
             request.method,
             request.path,
             getattr(response, 'status_code', '?'),
@@ -146,4 +169,6 @@ class PeticionesLentasMiddleware:
             mediana * 1000,
             top or 'n/d',
             f' lentas: {detalle}' if detalle else '',
+            _resumen_tablas(consultas),
+            texto_tramos,
         )

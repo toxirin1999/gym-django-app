@@ -2,6 +2,7 @@
 import time
 from unittest.mock import patch
 
+from django.contrib.auth.models import User
 from django.db import connection
 from django.http import HttpResponse
 from django.test import RequestFactory, SimpleTestCase, TestCase
@@ -70,25 +71,42 @@ class TramosSueltos(SimpleTestCase):
 
 
 class MiddlewareRegistraTramos(TestCase):
-    def test_peticion_lenta_deja_linea_tramos_con_su_bd(self):
+    def _pasar(self, vista, url='/x/?token=secreto'):
+        with self.settings(LENTITUD_UMBRAL_S=0):
+            with self.assertLogs('lentitud', level='WARNING') as cap:
+                PeticionesLentasMiddleware(vista)(RequestFactory().get(url))
+        return cap.output
+
+    def test_peticion_lenta_deja_una_sola_linea_con_tramos_y_tablas(self):
         @tramo_de('lectura')
         def leer():
             with connection.cursor() as c:
                 c.execute('SELECT 1')
+            list(User.objects.all()[:1])
 
         def vista(request):
             leer()
             return HttpResponse('ok')
 
-        with self.settings(LENTITUD_UMBRAL_S=0):
-            with self.assertLogs('lentitud', level='WARNING') as cap:
-                PeticionesLentasMiddleware(vista)(RequestFactory().get('/x/?token=secreto'))
-        tramos = [l for l in cap.output if 'TRAMOS' in l]
-        self.assertEqual(len(tramos), 1)
-        self.assertIn('lectura x1', tramos[0])
-        self.assertIn('q=1', tramos[0])
-        self.assertIn('resto x1', tramos[0])
-        self.assertNotIn('secreto', tramos[0])
+        salida = self._pasar(vista)
+        self.assertEqual(len(salida), 1)
+        linea = salida[0]
+        self.assertIn('tramos: lectura x1', linea)
+        self.assertIn('resto x1', linea)
+        self.assertIn('tablas:', linea)
+        self.assertIn('auth_user x1', linea)
+        self.assertNotIn('secreto', linea)
+
+    def test_si_falla_el_perfil_la_linea_lo_dice(self):
+        with patch('core.lentitud_middleware.perfil_tramos.terminar', side_effect=RuntimeError('boom')):
+            salida = self._pasar(lambda r: HttpResponse('ok'))
+        self.assertEqual(len(salida), 1)
+        self.assertIn('tramos: n/d (error RuntimeError: boom)', salida[0])
+
+    def test_si_el_perfil_sale_vacio_la_linea_lo_dice(self):
+        with patch('core.lentitud_middleware.perfil_tramos.terminar', return_value={}):
+            salida = self._pasar(lambda r: HttpResponse('ok'))
+        self.assertIn('tramos: n/d (vacio)', salida[0])
 
     def test_peticion_rapida_no_deja_linea(self):
         with self.settings(LENTITUD_UMBRAL_S=60):
@@ -98,3 +116,18 @@ class MiddlewareRegistraTramos(TestCase):
     def test_el_perfil_no_queda_abierto_tras_la_peticion(self):
         PeticionesLentasMiddleware(lambda r: HttpResponse('ok'))(RequestFactory().get('/x/'))
         self.assertFalse(perfil_tramos.activo())
+
+
+class ResumenDeTablas(SimpleTestCase):
+    def test_agrupa_por_tabla_y_ordena_por_tiempo_sin_valores(self):
+        from core.lentitud_middleware import _resumen_tablas
+        txt = _resumen_tablas([
+            (0.5, "SELECT `joi_mensajejoi`.`id` FROM `joi_mensajejoi` WHERE `mensaje` = 'secreto'"),
+            (0.1, "SELECT x FROM `entrenos_entrenorealizado` WHERE id = 1"),
+            (0.2, "SELECT x FROM `entrenos_entrenorealizado` WHERE id = 2"),
+            (0.05, "INSERT INTO `joi_mensajejoi` (a) VALUES ('secreto')"),
+            (0.01, "SAVEPOINT s1"),
+        ])
+        self.assertTrue(txt.startswith('joi_mensajejoi x2 0.55s, entrenos_entrenorealizado x2 0.30s'))
+        self.assertIn('otra x1', txt)
+        self.assertNotIn('secreto', txt)
