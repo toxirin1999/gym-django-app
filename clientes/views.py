@@ -1145,7 +1145,7 @@ def _filtrar_resumen_semanal_para_portada(resumen, *, en_descarga):
 
 
 @tramo_de('contexto_ahora')
-def _get_dashboard_context_data(request, cliente):
+def _get_dashboard_context_data(request, cliente, con_estadisticas_plan=True):
     usuario = request.user
     hoy = timezone.now().date()
     generar_retos_semanales(cliente)
@@ -1306,7 +1306,10 @@ def _get_dashboard_context_data(request, cliente):
     _sesion_programada = _decision_entreno['sesion_programada']
 
     _stats_cache_key = f'dashboard_stats_{cliente.id}'
-    _stats_cached = cache.get(_stats_cache_key)
+    # 17-nov-2026 (lentitud): la portada Ahora no muestra estas estadisticas y generarlas
+    # (plan anual completo) costaba 1,3 a 1,8 s de Python por carga en frio. Con
+    # con_estadisticas_plan=False no se calculan; el resto de paneles las siguen pidiendo.
+    _stats_cached = cache.get(_stats_cache_key) if con_estadisticas_plan else (None, None, None, None)
     if _stats_cached is None:
         estadisticas_plan = obtener_estadisticas_plan_anual(cliente)
         historial_adherencia = obtener_historial_adherencia_semanal(cliente, num_semanas=8)
@@ -2234,7 +2237,7 @@ def dashboard_silencioso_preview(request):
     engine: detailed panels remain available as destinations from the preview.
     """
     cliente = get_object_or_404(Cliente, user=request.user)
-    context = _get_dashboard_context_data(request, cliente)
+    context = _get_dashboard_context_data(request, cliente, con_estadisticas_plan=False)
     hoy = timezone.localdate()
     checkin = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).first()
     decision_gym = context.get('_decision_gym_raw') or {}
