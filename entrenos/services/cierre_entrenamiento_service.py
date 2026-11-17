@@ -27,7 +27,7 @@ from entrenos.services.decision_log_service import (
     reconciliar_decisiones_fatiga_parcial,
 )
 from entrenos.services.orden_sesiones_service import DESCONOCIDO, POSTERIOR, orden_entre_sesiones, primera_anterior
-from entrenos.services.historial_ejercicio_service import POR_ID, anteriores as historial_anteriores
+from entrenos.services.historial_ejercicio_service import anteriores as historial_anteriores
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -806,7 +806,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 # 17-nov-2026 (nota 52): solo una sesión claramente anterior;
                 # al reabrir un cierre antiguo no se toman datos de una posterior.
                 _prev = primera_anterior(
-                    historial_anteriores(cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID),
+                    historial_anteriores(cliente, entreno, ej.nombre_ejercicio),
                     entreno,
                 )
                 if _prev is not None:
@@ -848,7 +848,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # reciente tiene un orden desconocido (mismo día sin hora, fechas del
         # plan y de ejecución que discrepan), no se compara con ninguna.
         orden_desconocido = False
-        for candidato in historial_anteriores(cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID):
+        for candidato in historial_anteriores(cliente, entreno, ej.nombre_ejercicio):
             # 11-nov-2026 (notas 9 y 10): hoy no es descarga, así que la
             # comparación es con la última sesión normal, no con la rebajada.
             if not es_descarga_hoy:
@@ -901,7 +901,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             # ejercicio desaparecía. Se compara la última sesión reciente por
             # su serie de referencia (la que entra en el rango).
             reciente = historial_anteriores(
-                cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID,
+                cliente, entreno, ej.nombre_ejercicio,
                 desde=entreno.fecha - timedelta(days=42),
             )
             if not es_descarga_hoy:

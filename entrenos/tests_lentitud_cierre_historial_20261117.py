@@ -107,3 +107,65 @@ class HistorialDelCierreEnBloque(TestCase):
         # en una decisión, otra clave) + 6 lecturas sueltas de los ejercicios de
         # hoy con filtros distintos + 1 lectura en bloque de ultima_sesion. Antes: 46.
         self.assertLessEqual(len(self.consultas), 16, '\n'.join(c[:120] for c in self.consultas))
+
+
+class DesempateDentroDeUnaSesion(TestCase):
+    """Dos registros del mismo ejercicio en una misma sesión anterior (nota 18: curl femoral repetido
+    como alternativa al rumano).
+
+    Antes no estaba definido: el porqué de la decisión (``_sesion_anterior``)
+    cogía la primera fila y la sección de cambios (``_cambios_relevantes``) la
+    última. Decisión de David (17-nov-2026): en todo el cierre, la primera fila
+    registrada (suele ser el ejercicio principal), dentro y fuera de una petición.
+    """
+
+    def setUp(self):
+        user = User.objects.create_user(username='desempate', password='x')
+        self.cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'D'})
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        antes = EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=HOY - timedelta(days=7))
+        self.primera = EjercicioRealizado.objects.create(entreno=antes, nombre_ejercicio='Curl Femoral', peso_kg=40,
+                                                         repeticiones=12, completado=True)
+        self.segunda = EjercicioRealizado.objects.create(entreno=antes, nombre_ejercicio='Curl Femoral', peso_kg=55,
+                                                         repeticiones=8, completado=True)
+        self.hoy = EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=HOY)
+
+    def elegidas(self):
+        from entrenos.services.cierre_porque_service import _sesion_anterior
+        from entrenos.services.historial_ejercicio_service import anteriores
+        return (
+            _sesion_anterior(self.cliente, self.hoy, 'Curl Femoral').pk,
+            [e.pk for e in anteriores(self.cliente, self.hoy, 'Curl Femoral')],
+        )
+
+    def test_gana_la_primera_registrada_dentro_y_fuera_de_una_peticion(self):
+        esperado = (self.primera.pk, [self.primera.pk, self.segunda.pk])
+        self.assertEqual(self.elegidas(), esperado)
+        dentro = []
+        PeticionesLentasMiddleware(lambda r: dentro.append(self.elegidas()) or HttpResponse('ok'))(
+            RequestFactory().get('/x/'))
+        self.assertEqual(dentro[0], esperado)
+
+
+class ClaveSinMayusculas(TestCase):
+    def test_dos_grafias_que_solo_cambian_en_mayusculas_comparten_lectura(self):
+        from entrenos.services.historial_ejercicio_service import anteriores, hay_posterior
+        user = User.objects.create_user(username='clave', password='x')
+        cliente, _ = Cliente.objects.get_or_create(user=user, defaults={'nombre': 'K'})
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 1')
+        antes = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha=HOY - timedelta(days=7))
+        EjercicioRealizado.objects.create(entreno=antes, nombre_ejercicio='Press Banca', peso_kg=70, repeticiones=8,
+                                          completado=True)
+        hoy = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina, fecha=HOY)
+
+        def vista(request):
+            with CaptureQueriesContext(connection) as ctx:
+                self.a = [e.peso_kg for e in anteriores(cliente, hoy, 'Press Banca')]
+                self.b = [e.peso_kg for e in anteriores(cliente, hoy, 'press banca')]
+                self.c = hay_posterior(cliente, 'PRESS BANCA', HOY)
+            self.n = len(ctx.captured_queries)
+            return HttpResponse('ok')
+
+        PeticionesLentasMiddleware(vista)(RequestFactory().get('/x/'))
+        self.assertEqual((self.a, self.b, self.c), ([70.0], [70.0], False))
+        self.assertEqual(self.n, 1)

@@ -81,9 +81,9 @@ def _sesion_anterior(cliente, entreno, nombre):
     # día sin hora o fechas que discrepan, no se compara con ninguna.
     from entrenos.services.orden_sesiones_service import primera_anterior
 
-    from entrenos.services.historial_ejercicio_service import POR_ENTRENO, anteriores
+    from entrenos.services.historial_ejercicio_service import anteriores
 
-    return primera_anterior(anteriores(cliente, entreno, nombre, desempate=POR_ENTRENO), entreno)
+    return primera_anterior(anteriores(cliente, entreno, nombre), entreno)
 
 
 def _decimal(valor):
