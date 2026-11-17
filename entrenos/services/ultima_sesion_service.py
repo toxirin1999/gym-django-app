@@ -21,7 +21,9 @@ justo al mínimo con RPE alto, y como mucho un salto de máquina por sesión.
 La regla solo baja o limita: nunca sube un peso.
 """
 
+from core import memo_peticion
 from core.memo_peticion import por_peticion
+from core.texto import plegar
 from datetime import timedelta
 from decimal import Decimal
 
@@ -46,23 +48,41 @@ def rango_reps(texto):
 
 
 @por_peticion
+def _series_del_entreno(entreno_id):
+    """Todas las series de trabajo de un entreno, una sola lectura (17-nov-2026).
+
+    Antes se leían de nuevo por cada ejercicio de ese entreno. Tupla de tuplas
+    (clave del ejercicio, peso, reps, rpe, metros) para que la memoria por
+    petición no la copie.
+    """
+    from entrenos.models import SerieRealizada
+    from entrenos.services.decision_log_service import normalizar_ejercicio
+
+    return tuple(
+        (normalizar_ejercicio(nombre), peso, reps, rpe, metros)
+        for nombre, peso, reps, rpe, metros in SerieRealizada.objects.filter(
+            entreno_id=entreno_id, completado=True, es_aproximacion=False,
+        ).order_by('serie_numero', 'id').values_list(
+            'ejercicio__nombre', 'peso_kg', 'repeticiones', 'rpe_real', 'distancia_metros',
+        )
+    )
+
+
+@por_peticion
 def series_de_trabajo(entreno, nombre):
     """Series completadas (sin aproximaciones) del ejercicio en ese entreno."""
-    from entrenos.models import SerieRealizada
     from entrenos.services.decision_log_service import normalizar_ejercicio
 
     clave = normalizar_ejercicio(nombre)
     return [
         {
-            'peso': float(s.peso_kg or 0),
-            'reps': int(s.repeticiones or 0),
-            'rpe': float(s.rpe_real) if s.rpe_real is not None else None,
-            'metros': float(s.distancia_metros) if s.distancia_metros is not None else None,
+            'peso': float(peso or 0),
+            'reps': int(reps or 0),
+            'rpe': float(rpe) if rpe is not None else None,
+            'metros': float(metros) if metros is not None else None,
         }
-        for s in SerieRealizada.objects.filter(
-            entreno=entreno, completado=True, es_aproximacion=False,
-        ).select_related('ejercicio').order_by('serie_numero', 'id')
-        if normalizar_ejercicio(s.ejercicio.nombre) == clave
+        for nombre_serie, peso, reps, rpe, metros in _series_del_entreno(entreno.pk)
+        if nombre_serie == clave
     ]
 
 
@@ -169,6 +189,69 @@ def rango_de_sesion(entreno, nombre):
     return None
 
 
+class _Candidata:
+    """Lo que ``ultima_sesion`` usa de cada ejercicio candidato."""
+
+    __slots__ = ('entreno', 'es_tope_maquina')
+
+    def __init__(self, entreno, es_tope_maquina):
+        self.entreno = entreno
+        self.es_tope_maquina = es_tope_maquina
+
+
+@por_peticion
+def _ejercicios_completados(cliente_id):
+    """(nombre plegado, entreno_id, fecha, es_tope_maquina) de todo lo hecho por el cliente.
+
+    17-nov-2026: una lectura por petición en vez de una consulta por ejercicio.
+    Del más reciente al más antiguo, como la consulta de siempre.
+    """
+    from entrenos.models import EjercicioRealizado
+
+    return tuple(
+        (plegar(nombre), entreno_id, fecha, tope)
+        for nombre, entreno_id, fecha, tope in EjercicioRealizado.objects.filter(
+            entreno__cliente_id=cliente_id, completado=True,
+        ).order_by('-entreno__fecha', '-entreno_id', 'id').values_list(
+            'nombre_ejercicio', 'entreno_id', 'entreno__fecha', 'es_tope_maquina',
+        )
+    )
+
+
+@por_peticion
+def _entreno_con_version(entreno_id):
+    """El entreno y su versión del plan en una consulta (la leen rango_de_sesion y la descarga)."""
+    from entrenos.models import EntrenoRealizado
+
+    return EntrenoRealizado.objects.select_related('gym_decision_version').get(pk=entreno_id)
+
+
+def _candidatas_ultima_sesion(cliente, nombre, antes_de, limite=8):
+    """Los últimos ``limite`` ejercicios con ese nombre antes de ``antes_de``.
+
+    Dentro de una petición salen de lecturas en bloque (memoria por petición,
+    que se vacía si algo escribe). Fuera (comandos, tareas), la consulta de
+    siempre. Mismo nombre que ``iexact`` en MySQL: sin mayúsculas ni tildes.
+    """
+    from datetime import datetime
+
+    cliente_id = getattr(cliente, 'pk', cliente)
+    if memo_peticion.activa() and cliente_id is not None:
+        fecha_tope = antes_de.date() if isinstance(antes_de, datetime) else antes_de
+        clave = plegar(nombre)
+        filas = [f for f in _ejercicios_completados(cliente_id) if f[0] == clave and f[2] < fecha_tope]
+        return [_Candidata(_entreno_con_version(f[1]), f[3]) for f in filas[:limite]]
+
+    from entrenos.models import EjercicioRealizado
+
+    return list(
+        EjercicioRealizado.objects.filter(
+            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
+            completado=True, entreno__fecha__lt=antes_de,
+        ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id')[:limite]
+    )
+
+
 @por_peticion
 def ultima_sesion(cliente, nombre, antes_de, reps_min=None, incluir_descarga=False):
     """La última sesión del ejercicio antes de ``antes_de`` (fecha), con su referencia.
@@ -183,17 +266,10 @@ def ultima_sesion(cliente, nombre, antes_de, reps_min=None, incluir_descarga=Fal
     saltada. Si no hay ninguna sesión normal, se devuelve la de descarga
     (``descarga=True``). ``incluir_descarga=True`` lee la última tal cual.
     """
-    from entrenos.models import EjercicioRealizado
-
     periodos = None
     reserva = None
     candidatas = 0
-    for ej in (
-        EjercicioRealizado.objects.filter(
-            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
-            completado=True, entreno__fecha__lt=antes_de,
-        ).select_related('entreno').order_by('-entreno__fecha', '-entreno_id')[:8]
-    ):
+    for ej in _candidatas_ultima_sesion(cliente, nombre, antes_de):
         series = series_de_trabajo(ej.entreno, nombre)
         if not series:
             candidatas += 1

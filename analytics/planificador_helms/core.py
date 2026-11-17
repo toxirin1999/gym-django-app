@@ -33,12 +33,7 @@ from core import memo_peticion
 from core.memo_peticion import por_peticion
 
 
-def _plegar(texto):
-    """Minúsculas y sin tildes: compara nombres como el ``icontains`` de MySQL."""
-    import unicodedata
-
-    descompuesto = unicodedata.normalize('NFKD', (texto or '').casefold())
-    return ''.join(c for c in descompuesto if not unicodedata.combining(c))
+from core.texto import plegar as _plegar  # minúsculas y sin tildes, como el ``icontains`` de MySQL
 
 
 @por_peticion
