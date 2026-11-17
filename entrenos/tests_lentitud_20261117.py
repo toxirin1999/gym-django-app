@@ -168,3 +168,26 @@ class MemoriaConTopeYExcepcion(TestCase):
         with self.assertRaises(RuntimeError):
             PeticionesLentasMiddleware(vista)(RequestFactory().get('/x/'))
         self.assertIsNone(memo_peticion._memo.get())
+
+
+class RegistroConMedianaYSitios(TestCase):
+    def test_la_linea_lenta_lleva_mediana_y_sitios_del_codigo(self):
+        from django.contrib.auth.models import User
+        from django.http import HttpResponse
+
+        def vista(request):
+            for _ in range(3):
+                list(User.objects.filter(pk=0))
+            return HttpResponse('ok')
+
+        mw = PeticionesLentasMiddleware(vista)
+        request = RequestFactory().get('/algo/?token=secreto')
+        with self.settings(LENTITUD_UMBRAL_S=0):
+            with self.assertLogs('lentitud', level='WARNING') as cap:
+                mw(request)
+        linea = cap.output[0]
+        self.assertIn('mediana=', linea)
+        self.assertIn('sitios:', linea)
+        self.assertIn('tests_lentitud_20261117.py', linea)
+        self.assertIn('x3', linea)
+        self.assertNotIn('secreto', linea)
