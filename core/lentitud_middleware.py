@@ -82,6 +82,26 @@ def _resumen_tablas(consultas, maximo=8):
     return ', '.join(f'{n} x{c} {s:.2f}s' for n, (c, s) in filas) or 'n/d'
 
 
+TABLAS_VIGILADAS_POR_DEFECTO = ('joi_mensajejoi',)
+
+
+def _vigiladas(consultas, tablas=None):
+    """Cuántas consultas tocan cada tabla vigilada, aunque sean 0 (``joi_mensajejoi=0``).
+
+    17-nov-2026: que una tabla no salga entre las 8 más caras de ``tablas:`` no
+    prueba que no se consultara. Esto cuenta sobre todas las consultas, y una
+    tabla cuenta también si aparece en un JOIN.
+    """
+    if tablas is None:
+        tablas = getattr(settings, 'LENTITUD_TABLAS_VIGILADAS', TABLAS_VIGILADAS_POR_DEFECTO)
+    partes = []
+    for tabla in tablas:
+        patron = re.compile(r'[`"\s.(]' + re.escape(tabla) + r'[`"\s.)]')
+        n = sum(1 for _, sql in consultas if patron.search(f' {sql} '))
+        partes.append(f'{tabla}={n}')
+    return ', '.join(partes) or 'n/d'
+
+
 class PeticionesLentasMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -158,7 +178,7 @@ class PeticionesLentasMiddleware:
         )
         logger.warning(
             '%s %s -> %s total=%.1fs antes_de_vista=%s db=%.1fs consultas=%d mediana=%.0fms sitios: %s%s'
-            ' tablas: %s tramos: %s',
+            ' tablas: %s vigiladas: %s tramos: %s',
             request.method,
             request.path,
             getattr(response, 'status_code', '?'),
@@ -170,5 +190,6 @@ class PeticionesLentasMiddleware:
             top or 'n/d',
             f' lentas: {detalle}' if detalle else '',
             _resumen_tablas(consultas),
+            _vigiladas(consultas),
             texto_tramos,
         )

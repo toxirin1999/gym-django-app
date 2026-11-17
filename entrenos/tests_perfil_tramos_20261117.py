@@ -131,3 +131,40 @@ class ResumenDeTablas(SimpleTestCase):
         self.assertTrue(txt.startswith('joi_mensajejoi x2 0.55s, entrenos_entrenorealizado x2 0.30s'))
         self.assertIn('otra x1', txt)
         self.assertNotIn('secreto', txt)
+
+
+class TablasVigiladas(TestCase):
+    """La prueba de que el cierre ya no lee JOI es ``joi_mensajejoi=0``, no que falte entre las 8 más caras."""
+
+    def test_cuenta_todas_las_consultas_aunque_no_esten_entre_las_mas_caras(self):
+        from core.lentitud_middleware import _vigiladas
+        consultas = [(1.0, f"SELECT x FROM `tabla_{i}`") for i in range(10)]
+        consultas += [
+            (0.001, "SELECT `joi_mensajejoi`.`id` FROM `joi_mensajejoi` WHERE `mensaje` = 'secreto'"),
+            (0.001, 'SELECT a.id FROM "entrenos_entrenorealizado" a INNER JOIN "joi_mensajejoi" j ON j.id = a.id'),
+            (0.001, "SELECT x FROM `joi_mensajejoi_extra`"),   # otra tabla con el mismo prefijo: no cuenta
+        ]
+        self.assertEqual(_vigiladas(consultas, ('joi_mensajejoi',)), 'joi_mensajejoi=2')
+
+    def test_la_linea_dice_cero_cuando_no_se_consulta(self):
+        def vista(request):
+            list(User.objects.all()[:1])
+            return HttpResponse('ok')
+
+        with self.settings(LENTITUD_UMBRAL_S=0):
+            with self.assertLogs('lentitud', level='WARNING') as cap:
+                PeticionesLentasMiddleware(vista)(RequestFactory().get('/x/'))
+        self.assertIn('vigiladas: joi_mensajejoi=0', cap.output[0])
+
+    def test_la_linea_cuenta_las_consultas_a_joi(self):
+        from joi.models import MensajeJOI
+
+        def vista(request):
+            list(MensajeJOI.objects.all()[:1])
+            list(MensajeJOI.objects.filter(pk=1))
+            return HttpResponse('ok')
+
+        with self.settings(LENTITUD_UMBRAL_S=0):
+            with self.assertLogs('lentitud', level='WARNING') as cap:
+                PeticionesLentasMiddleware(vista)(RequestFactory().get('/x/'))
+        self.assertIn('vigiladas: joi_mensajejoi=2', cap.output[0])
