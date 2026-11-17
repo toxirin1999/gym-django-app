@@ -458,6 +458,10 @@ _NARRATIVA_PAUSA = (
 _CONTINUIDAD_NO_INFORMADA = object()
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('estado_plan')
 def construir_estado_plan(
     preferencias_activas,
     intervenciones_activas,

@@ -646,6 +646,10 @@ def _reconciliar_con_regla_unica(ejercicios, cambios):
                                 'reps_sugeridas': ej.get('reps_objetivo_hoy'), 'razon': motivo})
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('plan_dinamico')
 def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
     """
     Modifica la lista de ejercicios del plan basándose en señales del sistema.

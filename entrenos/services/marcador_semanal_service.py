@@ -281,6 +281,10 @@ def _frase_falta(filas):
     return None
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('marcador_semanal')
 def marcador_cacheado(cliente, hoy):
     """El marcador, cacheado 10 minutos (genera la semana del plan)."""
     from django.core.cache import cache

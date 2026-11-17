@@ -187,6 +187,10 @@ def recuperar_frase_de_recaida(usuario):
     return None
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('estado_joi')
 def obtener_estado_joi(usuario):
     hoy = now().date()
     semana = hoy - timedelta(days=6)

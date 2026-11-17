@@ -27,7 +27,7 @@ from collections import Counter
 from django.conf import settings
 from django.db import connection
 
-from core import memo_peticion
+from core import memo_peticion, perfil_tramos
 
 logger = logging.getLogger('lentitud')
 
@@ -85,22 +85,33 @@ class PeticionesLentasMiddleware:
             try:
                 return execute(sql, params, many, context)
             finally:
-                consultas.append((time.monotonic() - ini, sql))
+                dur = time.monotonic() - ini
+                consultas.append((dur, sql))
+                perfil_tramos.consulta(dur)
                 if escribe:
                     memo_peticion.invalidar()
 
         request._lentitud_t0 = t0
         request._lentitud_vista = None
         memo_peticion.iniciar()
+        perfil_tramos.iniciar()
+        tramos = {}
         try:
             with connection.execute_wrapper(medir):
                 response = self.get_response(request)
         finally:
             memo_peticion.terminar()
+            try:
+                tramos = perfil_tramos.terminar()
+            except Exception:
+                tramos = {}
         total = time.monotonic() - t0
         if total >= _umbral():
             try:
                 self._registrar(request, response, total, consultas)
+                if tramos:
+                    logger.warning('TRAMOS %s %s total=%.1fs: %s', request.method, request.path,
+                                   total, perfil_tramos.resumen(tramos))
             except Exception:  # medir nunca debe romper una respuesta
                 pass
         return response

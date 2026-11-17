@@ -630,6 +630,10 @@ def propuesta_activa(cliente, hoy=None):
     ).order_by('-inicio').first()
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('propuesta_visible')
 def propuesta_visible(cliente, hoy=None):
     """Lo que Ahora debe enseñar: una propuesta por responder o una en curso."""
     from entrenos.models import PropuestaZonaGym

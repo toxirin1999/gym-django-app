@@ -197,6 +197,10 @@ def _pct(ratio):
     return round((ratio - 1) * 100)
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('estado_carga')
 def estado_carga(cliente, hoy):
     """La lectura del día. Todo serializable (irá al panel y al snapshot)."""
     carga = lectura_carga(cliente, hoy)

@@ -5,6 +5,10 @@ from .models import (
 )
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('datos_logros')
 def obtener_datos_logros(cliente):
     # Obtener el perfil de gamificación del cliente
     perfil = PerfilGamificacion.objects.filter(cliente=cliente).select_related('nivel_actual').first()

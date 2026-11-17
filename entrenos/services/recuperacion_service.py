@@ -107,6 +107,10 @@ def _datos_hoy(cliente, hoy):
     return datos
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('lectura_recuperacion')
 def lectura_recuperacion(cliente, hoy):
     """{'nivel', 'frase', 'senales', 'datos', 'medias'} o None si hoy no hay datos del reloj.
 

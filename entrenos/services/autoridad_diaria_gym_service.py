@@ -282,6 +282,10 @@ def _persistir_version_motor(
         return autoridad
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('autoridad_diaria_gym')
 def resolver_autoridad_diaria_gym(
     cliente,
     fecha=None,

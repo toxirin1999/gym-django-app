@@ -102,6 +102,10 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('sesion_pospuesta')
 def _proyeccion_sesion_pospuesta(cliente, fecha):
     """Referencia factual de la sesión conservada fuera del día actual."""
     from entrenos.models import SesionProgramada
@@ -353,6 +357,7 @@ def responder_sugerencia(request):
     })
 
 
+@tramo_de('consejo_carga')
 def consejo_carga(cliente):
     # Phase Cierre Menor 1: renombrado desde sugerencia_carga_joi. Es consejo de
     # carga funcional (motor), no voz de JOI; el nombre no debe atribuirlo a JOI.
@@ -776,6 +781,7 @@ def _ctx_estoico(request, hoy):
         return defaults
 
 
+@tramo_de('ctx_analytics')
 def _ctx_analytics(cliente, hoy):
     """Analytics pesados: mesociclos, fatiga, ratios fuerza. Caché 15 min."""
     _key = f'dashboard_analytics_{cliente.id}'
@@ -844,6 +850,7 @@ def _ctx_bio(cliente):
         }, {}
 
 
+@tramo_de('consistencia_semanal')
 def _consistencia_semanal_programada(cliente, hoy):
     """Calcula consistencia solo desde SesionProgramada persistida hasta hoy."""
     from entrenos.models import SesionProgramada
@@ -940,6 +947,7 @@ def _ctx_joi_semanal(cliente):
         return None
 
 
+@tramo_de('senal_corporal_diario')
 def _ctx_senal_corporal_diario(cliente):
     try:
         from entrenos.services.senales_autorizadas_service import obtener_proyeccion_senal_autorizada
@@ -948,6 +956,7 @@ def _ctx_senal_corporal_diario(cliente):
         return {'hay_senal': False, 'schema_version': 1}
 
 
+@tramo_de('sugerencia_diario')
 def _ctx_sugerencia_diario(cliente):
     try:
         from diario.services.sugerencias_diario import get_sugerencia_diario
@@ -1094,6 +1103,7 @@ def _ctx_sugerencia_activa(cliente, fecha_ref):
         return None
 
 
+@tramo_de('acwr_portada')
 def _normalizar_acwr_para_portada(analisis):
     """Evita que una lectura de carga baja anuncie una zona verde."""
     if not analisis:
@@ -1134,6 +1144,7 @@ def _filtrar_resumen_semanal_para_portada(resumen, *, en_descarga):
     return resultado
 
 
+@tramo_de('contexto_ahora')
 def _get_dashboard_context_data(request, cliente):
     usuario = request.user
     hoy = timezone.now().date()
@@ -2069,6 +2080,7 @@ def _decisiones_evaluadas_memoria(cliente):
         return None
 
 
+@tramo_de('ultimo_aprendizaje')
 def _ultimo_aprendizaje_plan(cliente, hoy, dias=14):
     """Lo último que el plan comprobó (regla 4) o, si no, su última decisión.
 
@@ -2213,6 +2225,7 @@ def _aviso_decision_pendiente(cliente, fecha_ref=None):
 
 @login_required
 @require_GET
+@tramo_de('vista_ahora')
 def dashboard_silencioso_preview(request):
     """Preview read-only of a quieter, action-first client dashboard.
 
@@ -2711,6 +2724,7 @@ def blade_runner_dashboard(request):
 
 
 
+@tramo_de('tendencia_peso')
 def analizar_tendencia_peso(cliente):
     registros = PesoDiario.objects.filter(cliente=cliente).order_by('fecha')
     if not registros:
@@ -2961,6 +2975,7 @@ from .models import MiniReto, BitacoraDiaria
 from joi.models import Entrenamiento  # ✅ correcto
 
 
+@tramo_de('retos_semanales')
 def generar_retos_semanales(cliente):
     hoy = date.today()
     lunes = hoy - timedelta(days=hoy.weekday())
@@ -4649,6 +4664,7 @@ from decimal import Decimal, InvalidOperation
 
 # ...
 
+@tramo_de('estadisticas_plan_anual')
 def obtener_estadisticas_plan_anual(cliente):
     """
     Obtiene estadísticas generales del plan anual del cliente.
@@ -4909,6 +4925,7 @@ from analytics.monitor_adherencia import MonitorAdherencia  # Asegúrate de que 
 
 # en clientes/views.py
 
+@tramo_de('reporte_adherencia')
 def calcular_reporte_adherencia_cliente(cliente: Cliente) -> dict:
     """
     Función ÚNICA y CORREGIDA para calcular el reporte de adherencia.
@@ -5285,6 +5302,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 from collections import defaultdict
 
 
+@tramo_de('historial_adherencia')
 def obtener_historial_adherencia_semanal(cliente: Cliente, num_semanas: int = 12) -> list[float]:
     """
     Calcula el historial de porcentajes de adherencia de las últimas 'num_semanas'.

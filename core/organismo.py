@@ -60,6 +60,10 @@ def estado_operativo_visible(estado, motivo=None):
     return estados.get(estado, 'AJUSTAR')
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('estado_sistema_hoy')
 def resolver_estado_sistema_hoy(usuario, decision_gym=None):
     """
     Determina el estado global del sistema para el usuario HOY.

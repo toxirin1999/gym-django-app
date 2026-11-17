@@ -372,6 +372,10 @@ def _semana_desde_cola(cliente, fecha, periodizacion):
     }
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('trayectoria_plan')
 def proyectar_trayectoria_plan(cliente, *, fecha=None):
     """Compone evidencia persistida y el plan Helms; nunca materializa ni evalúa."""
     fecha = fecha or timezone.localdate()

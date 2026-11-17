@@ -312,6 +312,10 @@ def _recopilar_semanas(cliente, n_semanas, fecha_ref):
 _DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('analisis_semanal')
 def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
     """
     Phase 16 — Detects structural mismatches between the configured plan and real behavior.

@@ -70,6 +70,10 @@ def _determinar_estado(sp, er, fecha, hoy):
     return 'sin_registro'
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('calendario_plan')
 def generar_calendario_plan(cliente, num_semanas=4, fecha_ref=None):
     """
     Returns a list of week dicts, oldest first, each with 7 day dicts.

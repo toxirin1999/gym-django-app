@@ -14,6 +14,10 @@ class Notificacion:
     color: str
 
 
+from core.perfil_tramos import tramo_de
+
+
+@tramo_de('notificaciones_contextuales')
 def generar_notificaciones_contextuales(cliente: Any, entrenos_recientes: List[Any]) -> List[Notificacion]:
     """
     Genera una lista de notificaciones basadas en el estado actual del cliente.
