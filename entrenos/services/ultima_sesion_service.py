@@ -218,12 +218,33 @@ def _ejercicios_completados(cliente_id):
     )
 
 
+class _AlmacenEntrenos:
+    """Entrenos ya leídos en esta petición, por id (no es un dict: la memoria no lo copia)."""
+
+    __slots__ = ('por_id',)
+
+    def __init__(self):
+        self.por_id = {}
+
+
 @por_peticion
-def _entreno_con_version(entreno_id):
-    """El entreno y su versión del plan en una consulta (la leen rango_de_sesion y la descarga)."""
+def _almacen_entrenos():
+    # Vive en la memoria por petición: se vacía con cualquier escritura y muere al terminar.
+    return _AlmacenEntrenos()
+
+
+def _entrenos_con_version(ids):
+    """Los entrenos ``ids`` con su versión del plan (la leen rango_de_sesion y la descarga).
+
+    Los que falten se leen juntos en una consulta.
+    """
     from entrenos.models import EntrenoRealizado
 
-    return EntrenoRealizado.objects.select_related('gym_decision_version').get(pk=entreno_id)
+    almacen = _almacen_entrenos().por_id
+    faltan = [i for i in ids if i not in almacen]
+    if faltan:
+        almacen.update(EntrenoRealizado.objects.select_related('gym_decision_version').in_bulk(faltan))
+    return [almacen[i] for i in ids]
 
 
 def _candidatas_ultima_sesion(cliente, nombre, antes_de, limite=8):
@@ -239,8 +260,9 @@ def _candidatas_ultima_sesion(cliente, nombre, antes_de, limite=8):
     if memo_peticion.activa() and cliente_id is not None:
         fecha_tope = antes_de.date() if isinstance(antes_de, datetime) else antes_de
         clave = plegar(nombre)
-        filas = [f for f in _ejercicios_completados(cliente_id) if f[0] == clave and f[2] < fecha_tope]
-        return [_Candidata(_entreno_con_version(f[1]), f[3]) for f in filas[:limite]]
+        filas = [f for f in _ejercicios_completados(cliente_id) if f[0] == clave and f[2] < fecha_tope][:limite]
+        entrenos = _entrenos_con_version([f[1] for f in filas])
+        return [_Candidata(entreno, f[3]) for entreno, f in zip(entrenos, filas)]
 
     from entrenos.models import EjercicioRealizado
 

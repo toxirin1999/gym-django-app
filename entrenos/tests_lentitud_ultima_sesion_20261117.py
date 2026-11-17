@@ -176,9 +176,11 @@ class UltimaSesionEnBloque(TestCase):
                     self.lecturas()
             self.consultas = [q['sql'][:90] for q in ctx.captured_queries]
         self.en_peticion(vista)
-        # 1 ejercicios del cliente + entrenos candidatos (7, uno por consulta) + sus series
-        # (7) + periodos de descarga = 16; antes eran 28.
-        self.assertLessEqual(len(self.consultas), 16, '\n'.join(self.consultas))
+        # 1 ejercicios del cliente + 1 periodos de descarga + series de 7 entrenos (7)
+        # + entrenos candidatos leídos en bloque, no uno a uno (3). Antes eran 28.
+        self.assertLessEqual(len(self.consultas), 12, '\n'.join(self.consultas))
+        lecturas_de_entrenos = [c for c in self.consultas if c.startswith('SELECT "entrenos_entrenorealizado"')]
+        self.assertLessEqual(len(lecturas_de_entrenos), 3, '\n'.join(self.consultas))
 
     def test_un_entreno_guardado_en_la_misma_peticion_se_ve_despues(self):
         def vista(request):
