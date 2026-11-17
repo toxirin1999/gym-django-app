@@ -73,7 +73,9 @@ def _resumen_tablas(consultas, maximo=8):
     """Tablas que más tiempo suman: ``tabla xN 1.23s``. Solo el nombre de la tabla, nunca valores."""
     por_tabla = {}
     for seg, sql in consultas:
-        m = _TABLA.search(str(sql)[:400])
+        # Todo el SQL: en un SELECT con muchas columnas el FROM queda lejos del
+        # principio (19:28 en producción: «otra x168»). Solo sale el nombre.
+        m = _TABLA.search(str(sql))
         nombre = m.group(1) if m else 'otra'
         a = por_tabla.setdefault(nombre, [0, 0.0])
         a[0] += 1

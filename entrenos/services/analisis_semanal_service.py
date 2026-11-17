@@ -312,10 +312,12 @@ def _recopilar_semanas(cliente, n_semanas, fecha_ref):
 _DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 
+from core.memo_peticion import por_peticion
 from core.perfil_tramos import tramo_de
 
 
 @tramo_de('analisis_semanal')
+@por_peticion
 def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
     """
     Phase 16 — Detects structural mismatches between the configured plan and real behavior.
@@ -374,16 +376,22 @@ def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
     dias_config = getattr(cliente, 'dias_disponibles', 4) or 4
     if dias_config > 1:
         sesiones_por_semana = []
+        lunes_semanas = []
         fecha_iter = fecha_inicio + timedelta(days=-fecha_inicio.weekday())  # start of first week
         while fecha_iter < fecha_ref - timedelta(weeks=1):  # exclude current week
-            lunes = fecha_iter
-            domingo = lunes + timedelta(days=6)
-            count = EntrenoRealizado.objects.filter(
-                cliente=cliente, fecha__range=(lunes, domingo)
-            ).count()
-            if count > 0:
-                sesiones_por_semana.append(count)
+            lunes_semanas.append(fecha_iter)
             fecha_iter += timedelta(weeks=1)
+        if lunes_semanas:
+            # 17-nov-2026: una lectura para todas las semanas (antes, una por semana).
+            fechas = list(EntrenoRealizado.objects.filter(
+                cliente=cliente,
+                fecha__range=(lunes_semanas[0], lunes_semanas[-1] + timedelta(days=6)),
+            ).values_list('fecha', flat=True))
+            for lunes in lunes_semanas:
+                domingo = lunes + timedelta(days=6)
+                count = sum(1 for f in fechas if lunes <= f <= domingo)
+                if count > 0:
+                    sesiones_por_semana.append(count)
 
         if len(sesiones_por_semana) >= UMBRAL_SEMANAS:
             promedio = sum(sesiones_por_semana) / len(sesiones_por_semana)
@@ -400,9 +408,12 @@ def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
 
     # ── 3. Versiones esenciales concentradas en cierto día ───────────────────
     esenciales_por_dia = defaultdict(lambda: {'total': 0, 'esenciales': 0})
-    for er in EntrenoRealizado.objects.filter(
+    # 17-nov-2026: una lectura con la rutina para los pasos 3 y 4 (antes, la
+    # rutina de cada entreno se leía aparte).
+    entrenos_ventana = list(EntrenoRealizado.objects.filter(
         cliente=cliente, fecha__gte=fecha_inicio, fecha__lt=fecha_ref,
-    ):
+    ).select_related('rutina'))
+    for er in entrenos_ventana:
         dow = er.fecha.weekday()
         esenciales_por_dia[dow]['total'] += 1
         if er.modo_reducido:
@@ -433,9 +444,7 @@ def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
         if len(futbol_fechas) >= 2:
             pierna_tras_futbol = 0
             total_pierna_futbol = 0
-            for er in EntrenoRealizado.objects.filter(
-                cliente=cliente, fecha__gte=fecha_inicio, fecha__lt=fecha_ref,
-            ):
+            for er in entrenos_ventana:
                 nombre = (er.rutina.nombre if er.rutina_id else '').lower()
                 es_pierna = any(kw in nombre for kw in ['pierna', 'piernas', 'leg', 'quad'])
                 if es_pierna:

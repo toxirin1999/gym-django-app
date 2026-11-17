@@ -132,6 +132,18 @@ class ResumenDeTablas(SimpleTestCase):
         self.assertIn('otra x1', txt)
         self.assertNotIn('secreto', txt)
 
+    def test_el_from_lejos_del_principio_tambien_cuenta(self):
+        """19:28 en producción: ``otra x168`` en Ahora. El FROM de un SELECT con muchas columnas queda
+        más allá de los 400 primeros caracteres; se busca en todo el SQL."""
+        from core.lentitud_middleware import _resumen_tablas
+        columnas = ', '.join(f'`entrenos_entrenorealizado`.`campo_{i}`' for i in range(40))
+        txt = _resumen_tablas([
+            (0.3, f"SELECT {columnas} FROM `entrenos_entrenorealizado` WHERE `nota` = 'secreto'"),
+            (0.2, f'SELECT {columnas} FROM "rutinas_rutina" INNER JOIN "x" ON 1'),
+        ])
+        self.assertEqual(txt, 'entrenos_entrenorealizado x1 0.30s, rutinas_rutina x1 0.20s')
+        self.assertNotIn('secreto', txt)
+
 
 class TablasVigiladas(TestCase):
     """La prueba de que el cierre ya no lee JOI es ``joi_mensajejoi=0``, no que falte entre las 8 más caras."""
