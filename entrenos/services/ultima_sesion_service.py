@@ -21,6 +21,7 @@ justo al mínimo con RPE alto, y como mucho un salto de máquina por sesión.
 La regla solo baja o limita: nunca sube un peso.
 """
 
+from core.memo_peticion import por_peticion
 from datetime import timedelta
 from decimal import Decimal
 
@@ -44,6 +45,7 @@ def rango_reps(texto):
     return partes[0], partes[-1]
 
 
+@por_peticion
 def series_de_trabajo(entreno, nombre):
     """Series completadas (sin aproximaciones) del ejercicio en ese entreno."""
     from entrenos.models import SerieRealizada
@@ -167,6 +169,7 @@ def rango_de_sesion(entreno, nombre):
     return None
 
 
+@por_peticion
 def ultima_sesion(cliente, nombre, antes_de, reps_min=None, incluir_descarga=False):
     """La última sesión del ejercicio antes de ``antes_de`` (fecha), con su referencia.
 

@@ -17,6 +17,7 @@ con un motivo que se puede citar:
 El total por grupo se acota a ±4 series y el planificador lo limita al MRV.
 """
 
+from core.memo_peticion import por_peticion
 from datetime import timedelta
 
 SERIES_POR_AJUSTE = 2
@@ -34,6 +35,7 @@ def _signo(propuesta):
     return -1 if getattr(propuesta, 'direccion', 'subir') == 'bajar' else 1
 
 
+@por_peticion
 def ajustes_volumen(cliente, fecha, incluir_pausadas=False):
     """{grupo: {'series': int, 'motivos': [str]}} vigentes en ``fecha``.
 

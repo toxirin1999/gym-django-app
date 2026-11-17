@@ -15,6 +15,7 @@ CONTRATO:
       quedan en None / lista vacía — la plantilla guarda silencio.
 """
 
+from core.memo_peticion import por_peticion
 from datetime import timedelta
 
 from django.db.models import Q
@@ -72,6 +73,7 @@ _PROXIMA_VEZ_ACCION = {
 
 
 
+@por_peticion
 def _nombre_visible(nombre):
     """El nombre tal como está en la rutina ("Jalón al Pecho", no "Jalón Al Pecho")."""
     from rutinas.models import EjercicioBase

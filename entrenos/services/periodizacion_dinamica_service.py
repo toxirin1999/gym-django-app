@@ -25,6 +25,7 @@ Señales (todas con dato, para poder decir por qué):
 Las semanas futuras no se guardan: se proyectan a partir de la actual.
 """
 
+from core.memo_peticion import por_peticion
 import math
 from datetime import date, timedelta
 
@@ -240,6 +241,15 @@ def _decidir_semana(cliente, lunes, previo, registros, periodizacion):
     return {**base, 'semana_plan': candidata, 'descarga': False, 'origen': origen, 'motivo': motivo}
 
 
+@por_peticion
+def _registros_hasta(cliente, lunes_hoy):
+    """Semanas del plan guardadas hasta el lunes de hoy (se repetía por cada semana proyectada)."""
+    from entrenos.models import SemanaPlanGym as S
+
+    return list(S.objects.filter(cliente=cliente, lunes__lte=lunes_hoy).order_by('lunes'))
+
+
+@por_peticion
 def resolver_semana(cliente, fecha, hoy=None):
     """{'semana_plan', 'descarga', 'origen', 'motivo', 'proyectada'} para ``fecha``."""
     from django.db import IntegrityError, transaction
@@ -262,7 +272,7 @@ def resolver_semana(cliente, fecha, hoy=None):
         return {'semana_plan': semana, 'descarga': es_semana_descarga(semana, periodizacion),
                 'origen': 'proyeccion', 'motivo': '', 'proyectada': True}
 
-    registros = list(S.objects.filter(cliente=cliente, lunes__lte=lunes_hoy).order_by('lunes'))
+    registros = _registros_hasta(cliente, lunes_hoy)
     if not registros:
         try:
             with transaction.atomic():

@@ -22,6 +22,8 @@ import time
 from django.conf import settings
 from django.db import connection
 
+from core import memo_peticion
+
 logger = logging.getLogger('lentitud')
 
 UMBRAL_POR_DEFECTO_S = 2.0
@@ -34,6 +36,13 @@ def _umbral():
         return UMBRAL_POR_DEFECTO_S
 
 
+def _escribe(sql):
+    """True si la sentencia puede cambiar datos. Leer y abrir/cerrar un savepoint no los cambia."""
+    inicio = str(sql).lstrip()[:20].upper()
+    return not (inicio.startswith('SELECT') or inicio.startswith('SAVEPOINT')
+                or inicio.startswith('RELEASE SAVEPOINT'))
+
+
 class PeticionesLentasMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
@@ -43,16 +52,26 @@ class PeticionesLentasMiddleware:
         consultas = []
 
         def medir(execute, sql, params, many, context):
+            # cualquier cosa que no sea una lectura vacía la memoria de la petición
+            escribe = _escribe(sql)
+            if escribe:
+                memo_peticion.invalidar()
             ini = time.monotonic()
             try:
                 return execute(sql, params, many, context)
             finally:
                 consultas.append((time.monotonic() - ini, sql))
+                if escribe:
+                    memo_peticion.invalidar()
 
         request._lentitud_t0 = t0
         request._lentitud_vista = None
-        with connection.execute_wrapper(medir):
-            response = self.get_response(request)
+        memo_peticion.iniciar()
+        try:
+            with connection.execute_wrapper(medir):
+                response = self.get_response(request)
+        finally:
+            memo_peticion.terminar()
         total = time.monotonic() - t0
         if total >= _umbral():
             try:

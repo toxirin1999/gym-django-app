@@ -18,6 +18,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List, Set
 
+from core.memo_peticion import por_peticion
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,6 +34,7 @@ class BioContextProvider:
     # ──────────────────────────────────────────────────────────
 
     @staticmethod
+    @por_peticion
     def get_current_restrictions(cliente) -> Dict[str, Any]:
         """
         Devuelve una vista unificada de todas las restricciones biomecánicas

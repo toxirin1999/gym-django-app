@@ -29,6 +29,20 @@ from .utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, extraer_
 from entrenos.services.descanso_service import get_descanso_sugerido
 
 
+from core.memo_peticion import por_peticion
+
+
+@por_peticion
+def _ultimo_ejercicio_realizado(cliente_id, nombre_lower):
+    """Último ejercicio hecho cuyo nombre contiene ``nombre_lower`` (se repetía por cada llamada del planificador)."""
+    from entrenos.models import EjercicioRealizado
+
+    return EjercicioRealizado.objects.filter(
+        nombre_ejercicio__icontains=nombre_lower,
+        entreno__cliente_id=cliente_id,
+    ).order_by('-entreno__fecha', '-id').first()
+
+
 class PlanificadorHelms:
     def __init__(self, perfil_cliente: PerfilCliente):
         self.perfil = perfil_cliente
@@ -847,10 +861,7 @@ class PlanificadorHelms:
 
             # Fallback: consultas individuales si la precarga no se ejecutó
             from entrenos.models import EjercicioRealizado, SerieRealizada
-            ej = EjercicioRealizado.objects.filter(
-                nombre_ejercicio__icontains=nombre_lower,
-                entreno__cliente_id=self.perfil.id
-            ).order_by('-entreno__fecha', '-id').first()
+            ej = _ultimo_ejercicio_realizado(self.perfil.id, nombre_lower)
 
             if ej and ej.peso_kg:
                 resultado['peso_real'] = float(ej.peso_kg)

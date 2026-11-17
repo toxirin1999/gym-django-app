@@ -14,9 +14,11 @@ Una sesión cuenta como descarga si:
   ciclo de deload (``CicloDeload``) vigente ese día.
 """
 
+from core.memo_peticion import por_peticion
 from datetime import timedelta
 
 
+@por_peticion
 def periodos_descarga(cliente_id):
     """Lista de (inicio, fin) con las fechas de descarga del cliente."""
     from entrenos.models import CicloDeload, SemanaPlanGym
@@ -42,6 +44,7 @@ def fecha_en_descarga(fecha, periodos):
     return any(inicio <= fecha <= fin for inicio, fin in periodos or ())
 
 
+@por_peticion
 def ejercicio_marcado_descarga(entreno, nombre):
     """¿El snapshot de esa sesión prescribió el ejercicio como descarga?"""
     from entrenos.services.decision_log_service import normalizar_ejercicio
@@ -104,6 +107,7 @@ def reps_descarga(reps_ref, minimo, maximo):
     return max(minimo, min(reps_ref - REPS_MENOS_DESCARGA, techo))
 
 
+@por_peticion
 def semana_plan_descarga(cliente_id, fecha):
     """True si la semana de ``fecha`` es de descarga en el plan (SemanaPlanGym)."""
     from entrenos.models import SemanaPlanGym

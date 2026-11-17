@@ -10,6 +10,7 @@ Dos cosas que antes adivinaba con reglas genéricas:
   todas las poleas iban de 5 en 5 y el fly saltaba de 20 a 25 kg.
 """
 
+from core.memo_peticion import por_peticion
 from decimal import Decimal
 
 SESIONES_PARA_INCREMENTO = 8
@@ -25,6 +26,7 @@ def _clave(nombre):
 # Tope
 # ─────────────────────────────────────────────────────────────
 
+@por_peticion
 def tope_de(cliente, nombre):
     """Peso máximo guardado para esa máquina (float) o None."""
     from entrenos.models import TopeMaquinaGym
@@ -250,6 +252,7 @@ def peso_minimo(nombre, equipo=None):
     return PESO_BARRA_OLIMPICA if tipo_equipo_carga(nombre, equipo) == 'barra_olimpica' else None
 
 
+@por_peticion
 def salto_carga(cliente, nombre):
     """El salto con el que se proponen y ajustan pesos de ese ejercicio."""
     from rutinas.models import EjercicioBase
