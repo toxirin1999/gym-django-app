@@ -48,8 +48,9 @@ def fecha_en_descarga(fecha, periodos):
 def ejercicio_marcado_descarga(entreno, nombre):
     """¿El snapshot de esa sesión prescribió el ejercicio como descarga?"""
     from entrenos.services.decision_log_service import normalizar_ejercicio
+    from entrenos.services.version_sesion_service import version_del_entreno
 
-    version = getattr(entreno, 'gym_decision_version', None)
+    version = version_del_entreno(entreno)
     snapshot = getattr(version, 'snapshot', None) or {}
     clave = normalizar_ejercicio(nombre)
     for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:

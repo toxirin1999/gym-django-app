@@ -585,16 +585,25 @@ def _resumen_sesion(entreno, ejercicios):
     }
 
 
+@por_peticion
+def _series_completadas(entreno_id):
+    """Las series completadas de un entreno, con su ejercicio, una vez por petición.
+
+    17-nov-2026: ``_rendimiento_representativo`` (x16) y
+    ``_metricas_comparables_por_unidad`` (x14) las leían enteras por cada
+    ejercicio. Tupla para que la memoria por petición no la copie.
+    """
+    return tuple(
+        SerieRealizada.objects.filter(entreno_id=entreno_id, completado=True).select_related('ejercicio')
+    )
+
+
 def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallback_reps):
     """Peso/reps de trabajo desde series; usa el agregado solo si no existen."""
     series = [
-        serie for serie in (
-            SerieRealizada.objects.filter(entreno=entreno, completado=True)
-            .exclude(peso_kg__isnull=True)
-            .select_related('ejercicio')
-        )
-        if normalizar_ejercicio(serie.ejercicio.nombre)
-        == normalizar_ejercicio(nombre_ejercicio)
+        serie for serie in _series_completadas(entreno.pk)
+        if serie.peso_kg is not None
+        and normalizar_ejercicio(serie.ejercicio.nombre) == normalizar_ejercicio(nombre_ejercicio)
     ]
     if not series:
         return float(fallback_peso or 0), fallback_reps or 0
@@ -617,11 +626,9 @@ def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallba
 def _metricas_comparables_por_unidad(entreno, nombre_ejercicio, tipo_progresion):
     """Extrae la magnitud comparable sin traducir segundos/metos a reps."""
     series = [
-        serie for serie in SerieRealizada.objects.filter(
-            entreno=entreno, completado=True, es_aproximacion=False,
-        ).select_related('ejercicio')
-        if normalizar_ejercicio(serie.ejercicio.nombre)
-        == normalizar_ejercicio(nombre_ejercicio)
+        serie for serie in _series_completadas(entreno.pk)
+        if not serie.es_aproximacion
+        and normalizar_ejercicio(serie.ejercicio.nombre) == normalizar_ejercicio(nombre_ejercicio)
     ]
     if not series:
         return None

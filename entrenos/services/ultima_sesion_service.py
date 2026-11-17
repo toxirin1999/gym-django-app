@@ -180,7 +180,9 @@ def rango_de_sesion(entreno, nombre):
     """Rango de reps que se prescribió en esa sesión (snapshot), o None."""
     from entrenos.services.decision_log_service import normalizar_ejercicio
 
-    version = getattr(entreno, 'gym_decision_version', None)
+    from entrenos.services.version_sesion_service import version_del_entreno
+
+    version = version_del_entreno(entreno)
     snapshot = getattr(version, 'snapshot', None) or {}
     clave = normalizar_ejercicio(nombre)
     for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
