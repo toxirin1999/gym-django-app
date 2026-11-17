@@ -192,13 +192,28 @@ def rango_de_sesion(entreno, nombre):
 
 
 class _Candidata:
-    """Lo que ``ultima_sesion`` usa de cada ejercicio candidato."""
+    """Lo que ``ultima_sesion`` usa de cada ejercicio candidato.
 
-    __slots__ = ('entreno', 'es_tope_maquina')
+    17-nov-2026: el entreno se carga al usarlo; si falta, se leen juntos los que
+    falten de esta candidata en adelante (y los recientes del cliente).
+    ``ultima_sesion`` suele quedarse con la primera, que casi siempre está ya
+    entre los recientes.
+    """
 
-    def __init__(self, entreno, es_tope_maquina):
-        self.entreno = entreno
+    __slots__ = ('_ids', '_pos', '_cliente_id', 'es_tope_maquina')
+
+    def __init__(self, ids, pos, cliente_id, es_tope_maquina):
+        self._ids = ids
+        self._pos = pos
+        self._cliente_id = cliente_id
         self.es_tope_maquina = es_tope_maquina
+
+    @property
+    def entreno(self):
+        cargado = _almacen_entrenos().por_id.get(self._ids[self._pos])
+        if cargado is not None:
+            return cargado
+        return _entrenos_con_version(self._ids[self._pos:], self._cliente_id)[0]
 
 
 @por_peticion
@@ -235,16 +250,31 @@ def _almacen_entrenos():
     return _AlmacenEntrenos()
 
 
-def _entrenos_con_version(ids):
+ENTRENOS_RECIENTES_PRECARGA = 10
+
+
+def _entrenos_con_version(ids, cliente_id=None):
     """Los entrenos ``ids`` con su versión del plan (la leen rango_de_sesion y la descarga).
 
-    Los que falten se leen juntos en una consulta.
+    Los que falten se leen juntos en una consulta. 17-nov-2026: en esa misma
+    consulta se añaden los ``ENTRENOS_RECIENTES_PRECARGA`` entrenos más
+    recientes del cliente que aún no estén: cada ejercicio buscaba sus propias
+    candidatas (``_entrenos_con_version`` x15 en Ahora) y casi siempre caen ahí.
+    Acotado a propósito: no se traen los snapshots de todo el historial.
     """
     from entrenos.models import EntrenoRealizado
 
     almacen = _almacen_entrenos().por_id
     faltan = [i for i in ids if i not in almacen]
     if faltan:
+        if cliente_id is not None:
+            recientes = []
+            for fila in _ejercicios_completados(cliente_id):
+                if fila[1] not in recientes:
+                    recientes.append(fila[1])
+                    if len(recientes) >= ENTRENOS_RECIENTES_PRECARGA:
+                        break
+            faltan += [i for i in recientes if i not in almacen and i not in faltan]
         almacen.update(EntrenoRealizado.objects.select_related('gym_decision_version').in_bulk(faltan))
     return [almacen[i] for i in ids]
 
@@ -263,8 +293,8 @@ def _candidatas_ultima_sesion(cliente, nombre, antes_de, limite=8):
         fecha_tope = antes_de.date() if isinstance(antes_de, datetime) else antes_de
         clave = plegar(nombre)
         filas = [f for f in _ejercicios_completados(cliente_id) if f[0] == clave and f[2] < fecha_tope][:limite]
-        entrenos = _entrenos_con_version([f[1] for f in filas])
-        return [_Candidata(entreno, f[3]) for entreno, f in zip(entrenos, filas)]
+        ids = [f[1] for f in filas]
+        return [_Candidata(ids, i, cliente_id, f[3]) for i, f in enumerate(filas)]
 
     from entrenos.models import EjercicioRealizado
 

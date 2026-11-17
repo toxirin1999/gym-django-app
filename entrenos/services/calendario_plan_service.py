@@ -115,7 +115,7 @@ def generar_calendario_plan(cliente, num_semanas=4, fecha_ref=None):
             cliente=cliente,
             fecha__gte=lunes_inicio,
             fecha__lte=fecha_fin,
-        ).order_by('-fecha')  # latest if multiple (keep last)
+        ).select_related('rutina').order_by('-fecha')  # latest if multiple (keep last)
     }
 
     # Batch-fetch active interventions per date range
@@ -147,6 +147,7 @@ def generar_calendario_plan(cliente, num_semanas=4, fecha_ref=None):
             er = entrenos.get(fecha)
             estado = _determinar_estado(sp, er, fecha, fecha_ref)
             es_futuro = fecha > fecha_ref
+            carga_mantenida = _carga_mantenida(er)  # una consulta por día, no dos
 
             nombre_sesion = (
                 (sp.nombre_sesion if sp else None)
@@ -161,7 +162,7 @@ def generar_calendario_plan(cliente, num_semanas=4, fecha_ref=None):
                 'fecha_prevista':    sp.fecha_prevista if sp else None,
                 'fecha_realizada':   fecha_realizada,
                 'modo_reducido':     er.modo_reducido if er else False,
-                'carga_mantenida':   _carga_mantenida(er),
+                'carga_mantenida':   carga_mantenida,
                 'motivo':            sp.motivo_estado if sp else '',
             }
 
@@ -172,7 +173,7 @@ def generar_calendario_plan(cliente, num_semanas=4, fecha_ref=None):
                 'es_hoy':             fecha == fecha_ref,
                 'es_futuro':          es_futuro,
                 'intervencion_activa': _tiene_intervencion(fecha) and not es_futuro,
-                'carga_mantenida':    _carga_mantenida(er),
+                'carga_mantenida':    carga_mantenida,
                 'sesion_programada':  sp,
                 'entreno_realizado':  er,
                 'detalle':            detalle,

@@ -28,6 +28,8 @@ from datetime import timedelta
 
 from django.utils import timezone
 
+from core.memo_peticion import por_peticion
+
 from entrenos.models import EntrenoRealizado, SesionEntrenamiento, SesionProgramada
 from entrenos.services.sesion_recomendada import calcular_bloque_esencial
 
@@ -46,6 +48,13 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
     """
     fecha_ref = fecha_ref or timezone.localdate()
     lunes = fecha_ref - timedelta(days=fecha_ref.weekday())
+    # 17-nov-2026 (lentitud): el resultado solo depende del lunes; se memoriza
+    # por petición (Ahora la pedía 8 veces desde cuatro sitios).
+    return _analizar_semana(cliente, lunes)
+
+
+@por_peticion
+def _analizar_semana(cliente, lunes):
     domingo = lunes + timedelta(days=6)
 
     entrenos_semana = list(
@@ -312,7 +321,6 @@ def _recopilar_semanas(cliente, n_semanas, fecha_ref):
 _DIAS_SEMANA = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 
 
-from core.memo_peticion import por_peticion
 from core.perfil_tramos import tramo_de
 
 

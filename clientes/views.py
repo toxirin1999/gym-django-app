@@ -1145,7 +1145,7 @@ def _filtrar_resumen_semanal_para_portada(resumen, *, en_descarga):
 
 
 @tramo_de('contexto_ahora')
-def _get_dashboard_context_data(request, cliente, con_estadisticas_plan=True):
+def _get_dashboard_context_data(request, cliente, con_estadisticas_plan=True, con_analytics=None):
     usuario = request.user
     hoy = timezone.now().date()
     generar_retos_semanales(cliente)
@@ -1215,7 +1215,15 @@ def _get_dashboard_context_data(request, cliente, con_estadisticas_plan=True):
     peso_actual, datos_peso, cambios_peso = _peso_cached
     sug_carga = consejo_carga(cliente)
 
-    _cache_analytics = _ctx_analytics(cliente, hoy)
+    # 17-nov-2026 (lentitud): Ahora no muestra mesociclos, ratios ni fatiga
+    # acumulada y no decide nada con ellos (solo leen). Sin estadísticas del
+    # plan, tampoco se calculan; el resto de paneles los siguen pidiendo.
+    if con_analytics is None:
+        con_analytics = con_estadisticas_plan
+    _cache_analytics = (
+        _ctx_analytics(cliente, hoy) if con_analytics
+        else {'ratios_fuerza': {}, 'fatiga_acumulada': {}, 'analisis_mesociclos': {}}
+    )
     ratios_fuerza = _cache_analytics['ratios_fuerza']
     fatiga_acumulada = _cache_analytics['fatiga_acumulada']
     analisis_mesociclos = _cache_analytics['analisis_mesociclos']
