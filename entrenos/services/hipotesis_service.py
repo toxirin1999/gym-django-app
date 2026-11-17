@@ -38,7 +38,7 @@ _OBSERVACIONES = {
         'proponer entrenar sin condiciones.'
     ),
     'version_reducida': (
-        'En {n} sesiones en versión esencial, la continuidad no mejoró tan claramente '
+        'En {n} sesiones en versión reducida, la continuidad no mejoró tan claramente '
         'como sugería la señal. Puede que la causa que activó el modo esencial '
         'persista más allá de una sesión.'
     ),
@@ -57,7 +57,7 @@ _ETIQUETAS_ESTADO = {
     'entrenar': 'propuestas de entrenar con normalidad',
     'posponer': 'decisiones de posponer una sesión',
     'recuperar': 'decisiones de priorizar recuperación',
-    'version_reducida': 'propuestas de versión esencial',
+    'version_reducida': 'propuestas de versión reducida',
 }
 
 

@@ -66,7 +66,7 @@ def construir_porque(decision_gym):
         return (f"Me has dicho que tienes la energía en {contexto['energia_valor']} de 10: "
                 f"hoy lo mínimo y bien hecho.")
     if causa == 'futbol_reciente':
-        return futbol.get('frase') or 'Jugaste al fútbol hace poco y hoy toca pierna: versión suave.'
+        return futbol.get('frase') or 'Jugaste al fútbol hace poco y hoy toca pierna: versión reducida.'
     if causa == 'hyrox_reciente':
         return 'Hyrox intenso (RPE 7 o más) en las últimas 48 h y hoy toca pierna: versión reducida.'
     if causa == 'lesion' and contexto.get('lesion_fase'):

@@ -260,7 +260,7 @@
             <summary class="meta" style="color:var(--paper,#f4f0e9);font-family:inherit;font-size:12px;line-height:1.45;text-transform:none;letter-spacing:normal;cursor:pointer">{{ d.texto }}</summary>
             <div class="meta" style="font-family:inherit;font-size:12px;line-height:1.5;text-transform:none;letter-spacing:normal;margin-top:6px">
               {% if d.detalle.esperado %}<p style="margin:0 0 4px"><strong>Qué se esperaba:</strong> {{ d.detalle.esperado }}</p>{% endif %}
-              {% if d.detalle.ocurrido %}<p style="margin:0 0 4px"><strong>Qué ocurrió:</strong> {{ d.detalle.ocurrido }}</p>{% endif %}
+              {% if d.detalle.ocurrido %}<p style="margin:0 0 4px"><strong>Qué ocurrió:</strong> {{ d.detalle.ocurrido }}</p>{% endif %}{% if d.detalle.sabia %}<p style="margin:0 0 4px"><strong>Qué sabía al decidir:</strong> {% for l in d.detalle.sabia %}{{ l }} {% endfor %}</p>{% endif %}
               <p style="margin:0"><strong>Se comprobó en:</strong> <a href="{% url 'entrenos:post_entreno_resumen' cliente.id d.detalle.entreno_id %}">la sesión del {{ d.detalle.sesion_fecha|date:"d/m" }}</a></p>
             </div>
           </details>

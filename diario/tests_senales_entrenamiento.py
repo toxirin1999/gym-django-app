@@ -127,7 +127,7 @@ class SugerenciaMarginalTest(TestCase):
         self.assertEqual(resultado['intensidad'], 'alta')
         self.assertIn('sugerencia', resultado)
         sugerencia = resultado['sugerencia'].lower()
-        self.assertIn('esencial', sugerencia)
+        self.assertIn('reducida', sugerencia)
 
     def test_sugerencia_no_ordena_ni_bloquea(self):
         for d in [1, 2, 3]:

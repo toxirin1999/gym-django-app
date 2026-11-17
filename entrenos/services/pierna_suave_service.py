@@ -1,8 +1,8 @@
-"""Pierna en versión suave tras el fútbol (30-oct-2026, notas 2, 7 y 8).
+"""Pierna en versión reducida tras el fútbol (30-oct-2026, notas 2, 7 y 8).
 
-Antes, el briefing decía "hoy pierna en versión suave" y la sesión no
-cambiaba nada de pierna; la "versión esencial" incluso adelantaba el hip
-thrust como ejercicio imprescindible. Ahora, si la versión esencial es por
+Antes, el briefing decía "hoy pierna en versión reducida" y la sesión no
+cambiaba nada de pierna; la "versión reducida" incluso adelantaba el hip
+thrust como ejercicio imprescindible. Ahora, si la versión reducida es por
 piernas cargadas (fútbol o Hyrox de los dos días anteriores):
 
 - los ejercicios de pierna llevan una serie menos (nunca menos de 2),

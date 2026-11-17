@@ -103,13 +103,13 @@ def construir_explicacion_decision(decision: dict, senal_diario: dict | None = N
 
     # Modo esencial
     if decision.get('modo_reducido'):
-        senales.append('Sesión en versión esencial: accesorios opcionales, principales primero.')
+        senales.append('Sesión en versión reducida: accesorios opcionales, principales primero.')
 
     # Señal corporal del diario (siempre la última — contexto, no decisión)
     if senal_diario and senal_diario.get('hay_senal'):
         _textos_diario = {
             'suave':    'El diario registra algo de carga corporal reciente. No cambia la sesión, pero vale observar cómo responde el cuerpo.',
-            'moderada': 'El diario registra varios cierres con cuerpo cargado o apagado. No cambia la sesión por sí solo, aunque una versión esencial es válida.',
+            'moderada': 'El diario registra varios cierres con cuerpo cargado o apagado. No cambia la sesión por sí solo, aunque una versión reducida es válida.',
             'alta':     'El diario registra cuerpo dolorido en días recientes. No cambia la sesión por sí solo, pero conviene revisar la carga.',
         }
         senales.append(_textos_diario.get(senal_diario['intensidad'], senal_diario.get('texto', '')))

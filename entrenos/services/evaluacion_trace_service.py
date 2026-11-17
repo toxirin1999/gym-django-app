@@ -114,7 +114,7 @@ def _calcular_resultado(estado_decision: str, senales: dict, trace) -> tuple[str
         if reducido:
             return (
                 Eval.SENAL_NO_CAPTADA,
-                'La sesión fue propuesta normal pero acabó en versión esencial. '
+                'La sesión fue propuesta normal pero acabó en versión reducida. '
                 'Puede que el cuerpo estuviera más ajustado de lo que reflejaban las métricas.',
             )
         if n_sesiones == 0:
@@ -124,17 +124,17 @@ def _calcular_resultado(estado_decision: str, senales: dict, trace) -> tuple[str
             'La sesión se completó sin señales de alarma posterior. Sin evidencia de que faltara captar algo.',
         )
 
-    # ── Versión esencial ──────────────────────────────────────────────────────
+    # ── Versión reducida ──────────────────────────────────────────────────────
     if estado_decision == 'version_reducida':
         if n_sesiones > 0 and not reducido:
             return (
                 Eval.LIBERO_MARGEN,
-                'Después de la versión esencial, la continuidad se mantuvo sin señal de sobrecarga. '
+                'Después de la versión reducida, la continuidad se mantuvo sin señal de sobrecarga. '
                 'Parece que reducir el volumen ese día protegió el margen.',
             )
         if n_sesiones == 0:
             return (Eval.INSUFICIENTE, 'Sin sesión posterior disponible para valorar.')
-        return (Eval.NEUTRO, 'Continuidad razonable tras la versión esencial.')
+        return (Eval.NEUTRO, 'Continuidad razonable tras la versión reducida.')
 
     return (Eval.INSUFICIENTE, 'Tipo de decisión no reconocido para evaluación.')
 

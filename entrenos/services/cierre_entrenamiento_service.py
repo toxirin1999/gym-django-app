@@ -26,6 +26,7 @@ from entrenos.services.decision_log_service import (
     normalizar_ejercicio,
     reconciliar_decisiones_fatiga_parcial,
 )
+from entrenos.services.orden_sesiones_service import DESCONOCIDO, POSTERIOR, orden_entre_sesiones, primera_anterior
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -50,7 +51,7 @@ _PROXIMA_VEZ = {
     'carga_alta_sostenida': 'Cuando la carga acumulada baje, el plan podrá volver a subir peso.',
     'carga_alta_semanal': 'Si esta semana se completa el bloque principal, la progresión podrá retomarse.',
     'bloque_parcial_repetido': 'Cuando el bloque principal se complete con regularidad, el plan retomará la progresión.',
-    'esenciales_frecuentes': 'Si las próximas sesiones no requieren versión esencial, la progresión podrá retomarse.',
+    'esenciales_frecuentes': 'Si las próximas sesiones no requieren versión reducida, la progresión podrá retomarse.',
     'margen_bajo_repetido': 'El volumen accesorio podrá ajustarse cuando el margen mejore.',
     'modo_reducido': 'La próxima sesión normal podrá retomar la progresión si el patrón lo permite.',
     'intervencion_no_subir_cargas': 'La progresión vuelve cuando termine la intervención activa.',
@@ -525,8 +526,8 @@ def _resumen_sesion(entreno, ejercicios):
     n_series_calculado = sum(ej.series for ej in ejercicios)
     sesion = getattr(entreno, 'sesion_detalle', None)
 
-    # Si fue versión esencial/reducida, añadir label discreta
-    sesion_tipo = '· Sesión ajustada' if entreno.modo_reducido else None
+    # Si fue versión reducida/reducida, añadir label discreta
+    sesion_tipo = '· Versión reducida' if entreno.modo_reducido else None
 
     # El detalle por serie es la autoridad solo cuando existe: allí podemos
     # recuperar el multiplicador bilateral de snapshots antiguos. Para un
@@ -790,10 +791,15 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             }.get(progresion, 'tope de peso · progresó por reps')
             if progresion not in ('progresion_distancia', 'progresion_tiempo'):
                 # 11-nov-2026 (nota 8): con las mismas reps no progresó por reps.
-                _prev = (
+                # 17-nov-2026 (nota 52): solo una sesión claramente anterior;
+                # al reabrir un cierre antiguo no se toman datos de una posterior.
+                _prev = primera_anterior(
                     EjercicioRealizado.objects
-                    .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True)
-                    .exclude(entreno_id=entreno.id).order_by('-entreno__fecha', '-id').first()
+                    .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio,
+                            completado=True, entreno__fecha__lte=entreno.fecha)
+                    .exclude(entreno_id=entreno.id).select_related('entreno')
+                    .order_by('-entreno__fecha', '-id'),
+                    entreno,
                 )
                 if _prev is not None:
                     _, _reps_hoy_t = _rendimiento_representativo(entreno, ej.nombre_ejercicio, ej.peso_kg, ej.repeticiones)
@@ -830,10 +836,15 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         anterior = None
         peso_anterior = None
         mas_reciente = None
+        # 17-nov-2026 (nota 52): solo sesiones claramente anteriores. Si la más
+        # reciente tiene un orden desconocido (mismo día sin hora, fechas del
+        # plan y de ejecución que discrepan), no se compara con ninguna.
+        orden_desconocido = False
         for candidato in (
             EjercicioRealizado.objects
-            .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True)
-            .exclude(entreno_id=entreno.id)
+            .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
+                    entreno__fecha__lte=entreno.fecha)
+            .exclude(entreno_id=entreno.id).select_related('entreno')
             .order_by('-entreno__fecha', '-id')
         ):
             # 11-nov-2026 (notas 9 y 10): hoy no es descarga, así que la
@@ -842,6 +853,13 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 from entrenos.services.sesion_descarga_service import es_sesion_descarga
                 if es_sesion_descarga(candidato.entreno, candidato.nombre_ejercicio):
                     continue
+            _orden = orden_entre_sesiones(candidato.entreno, entreno)
+            if _orden == POSTERIOR:
+                continue
+            if _orden == DESCONOCIDO:
+                orden_desconocido = True
+                mas_reciente = None
+                break
             if mas_reciente is None:
                 mas_reciente = candidato
             # 11-nov-2026: una sesión de hace más de seis semanas no es la
@@ -875,7 +893,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                     mas_reciente.entreno, mas_reciente.nombre_ejercicio,
                     mas_reciente.peso_kg, mas_reciente.repeticiones,
                 )
-        if anterior is None and tipo_progresion in ('peso_reps', 'peso_corporal_lastre'):
+        if anterior is None and not orden_desconocido and tipo_progresion in ('peso_reps', 'peso_corporal_lastre'):
             # 19-oct-2026: la media "representativa" de hoy (25 × 25) no se
             # parecía a la de la vez anterior (40 × 10 en pirámide) y el
             # ejercicio desaparecía. Se compara la última sesión reciente por
@@ -884,14 +902,16 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 EjercicioRealizado.objects
                 .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
                         entreno__fecha__lte=entreno.fecha, entreno__fecha__gte=entreno.fecha - timedelta(days=42))
-                .exclude(entreno_id=entreno.id)
+                .exclude(entreno_id=entreno.id).select_related('entreno')
                 .order_by('-entreno__fecha', '-id')
             )
             if not es_descarga_hoy:
                 from entrenos.services.sesion_descarga_service import es_sesion_descarga as _es_desc
-                reciente = next((c for c in reciente if not _es_desc(c.entreno, c.nombre_ejercicio)), None)
+                _saltar = lambda c: _es_desc(c.entreno, c.nombre_ejercicio)  # noqa: E731
             else:
-                reciente = reciente.first()
+                _saltar = None
+            # 17-nov-2026 (nota 52): solo una sesión claramente anterior.
+            reciente = primera_anterior(reciente, entreno, saltar=_saltar)
             # Solo con el mismo rango prescrito: un ejercicio en dos días con
             # rangos distintos (fondos a 8 y a 15) no se compara entre hilos.
             from entrenos.services.ultima_sesion_service import rango_de_sesion

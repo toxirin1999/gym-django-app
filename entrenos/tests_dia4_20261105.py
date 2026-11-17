@@ -1,7 +1,7 @@
 """5-nov-2026 · Briefing del Día 4 de la descarga (día después del fútbol).
 
-1. Versión suave por el fútbol: solo la pierna es opcional (R10).
-2. El estado dice el porqué real de la versión suave (el partido, no cómo amaneces).
+1. Versión reducida por el fútbol: solo la pierna es opcional (R10).
+2. El estado dice el porqué real de la versión reducida (el partido, no cómo amaneces).
 3. «(1 ejercicio)», en singular.
 4. Si bajar un salto en descarga quita más de un 20 % (laterales 10 → 5 kg),
    se mantiene el peso y se quitan reps.

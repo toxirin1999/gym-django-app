@@ -18,7 +18,7 @@ Los dos juntos no suman: como mucho, un punto menos.
    juegas (apuntado, o por costumbre: ese mismo día de la semana en 3 de las
    últimas 4 semanas), los ejercicios de pierna van con una serie menos
    (mínimo 2) y a RPE 7 como mucho. El día después del fútbol ya lo cubren
-   la cola (no repite pierna) y la versión suave del briefing.
+   la cola (no repite pierna) y la versión reducida del briefing.
 
 4. El mismo día del fútbol (8-nov-2026): la pierna va al final y es
    opcional. Si el partido está apuntado, además una serie menos y RPE 7.

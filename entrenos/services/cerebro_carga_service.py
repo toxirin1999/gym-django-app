@@ -588,6 +588,86 @@ def aplicar_decision_carga(ej, decision):
     return True
 
 
+def limitar_esfuerzo(cliente, ej, hoy):
+    """«Sin apretar» = limitar el esfuerzo (17-nov-2026, nota 33; decisión de David).
+
+    Cuando el RPE de hoy está por debajo del que pedía el plan (variabilidad
+    baja, poco sueño, grupo trabajado ayer, fútbol), una subida de peso solo
+    se mantiene si las reps entran dentro de ese RPE. Si para llegar al mínimo
+    del rango habría que pasarse de ese RPE, se baja el peso a la escala más
+    alta con la que sí entran; nunca por debajo del peso de la última vez.
+
+    Devuelve ``{'ejercicio', 'frase'}`` si cambió el peso, o None.
+    """
+    from entrenos.services.maquina_service import a_escala, salto_carga
+    from entrenos.services.ultima_sesion_service import (
+        rango_reps, reps_para_peso, serie_de_mas_esfuerzo, ultima_sesion,
+    )
+
+    if (ej.get('tipo_progresion') or 'peso_reps') != 'peso_reps' or ej.get('regla_carga') != 'subir':
+        return None
+    if ej.get('_deload_aplicado') or ej.get('deload'):
+        return None
+    try:
+        rpe_hoy = float(ej.get('rpe_objetivo'))
+        rpe_plan = float(ej.get('rpe_objetivo_plan'))
+        peso_hoy = float(ej.get('peso_kg'))
+    except (TypeError, ValueError):
+        return None
+    if rpe_hoy >= rpe_plan or peso_hoy <= 0:
+        return None
+    nombre = ej.get('nombre') or ''
+    rango = rango_reps(ej.get('repeticiones_plan') or ej.get('repeticiones'))
+    if not rango:
+        return None
+    minimo = rango[0]
+    lectura = ultima_sesion(cliente, nombre, hoy, reps_min=minimo)
+    if not lectura:
+        return None
+    ref = lectura['referencia']
+    peso_ref = float(ref['peso'])
+    if peso_hoy <= peso_ref + 1e-6:
+        return None
+    mejor = serie_de_mas_esfuerzo(ref)
+    reps_src = mejor['reps'] if mejor else int(round(float(ref.get('reps_mediana') or ref['reps'])))
+    rpe_src = (mejor['rpe'] if mejor else None) or ref.get('rpe')
+
+    def _reps_a(peso):
+        return reps_para_peso(peso_ref, reps_src, rpe_src, peso, rpe_hoy, (1, 99))
+
+    bruto = _reps_a(peso_hoy)
+    if bruto is None or bruto >= minimo:
+        return None  # las reps entran dentro del RPE de hoy: se mantiene el peso previsto
+    salto = salto_carga(cliente, nombre)
+    peso = peso_hoy
+    while peso - salto > peso_ref + 1e-6:
+        peso = a_escala(peso - salto, salto, 'abajo')
+        if (_reps_a(peso) or 0) >= minimo:
+            break
+    else:
+        peso = peso_ref
+    if (_reps_a(peso) or 0) < minimo and peso > peso_ref:
+        peso = peso_ref
+    reps = reps_para_peso(peso_ref, reps_src, rpe_src, peso, rpe_hoy, rango) or minimo
+    antes_txt = _kg(rpe_plan)
+    hoy_txt = _kg(rpe_hoy)
+    frase = (f'Hoy RPE {hoy_txt} en vez de {antes_txt}: con {_kg(peso_hoy)} kg calculo unas {bruto} reps, '
+             f'por debajo de las {minimo}, y para llegar tendrías que pasarte de ese RPE. '
+             + (f'Mantengo {_kg(peso)} kg, a por {reps} reps.' if abs(peso - peso_ref) < 1e-6
+                else f'Bajo a {_kg(peso)} kg, a por {reps} reps.'))
+    ej['peso_kg'] = peso
+    if 'peso_recomendado_kg' in ej:
+        ej['peso_recomendado_kg'] = peso
+    ej['reps_objetivo_hoy'] = reps
+    ej['progresion_motivo'] = frase
+    ej['progresion_motivo_local'] = 'regla_unica'
+    ej.pop('motivo_peso', None)
+    ej['limite_esfuerzo'] = True
+    if abs(peso - peso_ref) < 1e-6:
+        ej['regla_carga'] = 'mantener'
+    return {'ejercicio': nombre, 'frase': frase}
+
+
 def _referencia_mas_cercana(lectura, nombre):
     """La referencia de esa sesión; si ninguna serie llegó a su rango, la que más se acercó.
 

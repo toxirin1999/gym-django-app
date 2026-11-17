@@ -686,7 +686,7 @@ def _aplicar_contexto(decision_base, contexto, fecha_hoy):
     if motivo_cola and causa in ('futbol_reciente', 'hyrox_reciente', 'sesion_hoy'):
         mensaje = motivo_cola
         if causa != 'sesion_hoy' and 'sin apretar' not in motivo_cola:
-            mensaje += ' Lo que lleve pierna, en versión suave.'
+            mensaje += ' Lo que lleve pierna, en versión reducida.'
 
     decision.update({
         'estado': estado,

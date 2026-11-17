@@ -116,7 +116,7 @@ class DailyDecisionEngine:
             postura = cls.SOSTENER
         recomendaciones = {
             cls.EMPUJAR: cls._RECOMENDACIONES_GYM[cls.EMPUJAR],
-            cls.SOSTENER: 'Versión esencial activa. Principales primero, accesorios opcionales.',
+            cls.SOSTENER: 'Versión reducida activa. Principales primero, accesorios opcionales.',
             cls.RECUPERAR: cls._RECOMENDACIONES_GYM['recuperar_descanso'],
         }
         causa = autoridad.get('causa_principal') or 'sesion_hoy'

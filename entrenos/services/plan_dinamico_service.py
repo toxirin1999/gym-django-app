@@ -767,6 +767,23 @@ def aplicar_plan_dinamico(cliente, ejercicios, hoy=None):
                        + aplicar_futbol_hoy(cliente, ejercicios_mod, hoy)):
                 cambios.append({'tipo': 'criterio_entrenador', 'ejercicio_original': _c['ejercicio'],
                                 'ejercicio_nuevo': None, 'razon': _c['frase']})
+            # 17-nov-2026 (nota 33): con el esfuerzo limitado, el peso previsto solo
+            # se mantiene si las reps entran dentro de ese RPE; si no, baja.
+            from entrenos.services.cerebro_carga_service import limitar_esfuerzo
+            _limitados = False
+            for _ej in ejercicios_mod:
+                try:
+                    _l = limitar_esfuerzo(cliente, _ej, hoy)
+                except Exception:
+                    logger.exception('[plan_dinamico] límite de esfuerzo falló')
+                    _l = None
+                if _l:
+                    _limitados = True
+                    cambios.append({'tipo': 'criterio_entrenador', 'ejercicio_original': _l['ejercicio'],
+                                    'ejercicio_nuevo': None, 'razon': _l['frase']})
+            if _limitados:
+                # La lista «El plan ha cambiado» y las etiquetas siguen al peso final.
+                _reconciliar_con_regla_unica(ejercicios_mod, cambios)
         except Exception:
             logger.exception('[plan_dinamico] criterios de entrenador fallaron')
 

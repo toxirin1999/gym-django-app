@@ -38,7 +38,7 @@ _MENSAJES_PROGRESION = {
     'progresion_permitida':          'Semana con margen. La progresión está autorizada.',
     'mantener_carga':                'El plan frena la subida de cargas esta semana.',
     'reducir_accesorios':            'El volumen accesorio no cabe esta semana. Los ejercicios principales pueden progresar.',
-    'modo_reducido':                 'La sesión fue versión esencial. No se aplica progresión automática.',
+    'modo_reducido':                 'La sesión fue versión reducida. No se aplica progresión automática.',
     'carga_alta_semanal':            'El plan detecta carga alta esta semana (bloque principal incompleto). No se sube peso.',
     'prudencia_semanal':             'El plan operó en modo esencial. La progresión sigue abierta si los patrones lo permiten.',
     'intervencion_no_subir_cargas':  'Intervención activa: decidiste no subir cargas esta semana.',

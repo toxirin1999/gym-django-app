@@ -152,7 +152,7 @@ def analizar_semana_entrenamiento(cliente, fecha_ref=None):
     )
 
     # Phase 56.13 — carga_alta_objetiva: external physiological signals.
-    # INVARIANT: versión esencial repetida alone cannot prove high load.
+    # INVARIANT: versión reducida repetida alone cannot prove high load.
     rpe_semana = _rpe_medio_semana(entrenos_semana)
     carga_alta_objetiva, motivo_carga = _evaluar_carga_alta_objetiva(
         bloques_principales_parciales=bloques_principales_parciales,
@@ -196,7 +196,7 @@ _LECTURAS_JOI = {
     ('carga_alta', 'completa'): 'Esta semana la carga desbordó el bloque principal. El plan no pudo completarse del todo.',
     ('carga_alta', 'parcial'):  'Esta semana la carga desbordó el plan. El bloque principal no se completó del todo.',
     # prudencia_semanal: el plan activó esencial pero el usuario cumplió todo — no es carga alta objetiva
-    ('prudencia_semanal', 'completa'): 'Esta semana el plan activó versión esencial en todas las sesiones. El bloque principal se completó en todas. La continuidad sigue intacta.',
+    ('prudencia_semanal', 'completa'): 'Esta semana el plan activó versión reducida en todas las sesiones. El bloque principal se completó en todas. La continuidad sigue intacta.',
     ('prudencia_semanal', 'parcial'):  'Esta semana el plan operó en modo prudente. Parte del bloque principal no se completó.',
     ('margen_extra', 'completa'): 'Esta semana el plan encontró margen: se completó también el volumen accesorio.',
     ('solida', 'completa'):     'Semana sólida: continuidad sin adaptaciones.',
@@ -256,7 +256,7 @@ _OBSERVACIONES_PATRON = {
 
 _SUGERENCIAS_PATRON = {
     'margen_bajo_repetido':     'Considerar reducir el volumen accesorio. El patrón sugiere que esa parte del plan no cabe en la semana real.',
-    'carga_alta_sostenida':     'No subir cargas esta semana. Mantener la versión esencial disponible. El cuerpo lleva semanas acumulando.',
+    'carga_alta_sostenida':     'No subir cargas esta semana. Mantener la versión reducida disponible. El cuerpo lleva semanas acumulando.',
     'bloque_parcial_repetido':  'Valorar repetir el microciclo actual o reducir la exigencia principal. El bloque no se está completando con regularidad.',
     'alta_continuidad':         'Mantener la estructura actual. El plan está funcionando.',
     'esenciales_frecuentes':    'Revisar si el volumen total encaja con la semana real. Las versiones esenciales se están convirtiendo en la norma.',
@@ -417,7 +417,7 @@ def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
                 'dato': {'dia': nombre_dia, 'total': datos['total'], 'esenciales': datos['esenciales']},
             })
 
-    # ── 4. Pierna tras fútbol → versión esencial ─────────────────────────────
+    # ── 4. Pierna tras fútbol → versión reducida ─────────────────────────────
     try:
         from entrenos.models import ActividadRealizada
         futbol_fechas = set(
@@ -447,7 +447,7 @@ def analizar_distribucion_semanal(cliente, num_semanas=6, fecha_ref=None):
                 observaciones.append({
                     'patron': 'pierna_tras_futbol',
                     'texto': (
-                        f"Las sesiones de pierna cerca del fútbol tienden a acabar en versión esencial "
+                        f"Las sesiones de pierna cerca del fútbol tienden a acabar en versión reducida "
                         f"({pierna_tras_futbol} de {total_pierna_futbol}). "
                         f"Conviene separar pierna y fútbol al menos 2 días."
                     ),
@@ -620,7 +620,7 @@ def _evaluar_carga_alta_objetiva(bloques_principales_parciales, rpe_medio_semana
     """
     Returns (carga_alta_objetiva: bool, motivo_carga: str | None).
 
-    INVARIANT: versión esencial repetida alone is NOT a valid cause.
+    INVARIANT: versión reducida repetida alone is NOT a valid cause.
     External signals required:
         - bloques_principales_parciales > 0  (structural: user couldn't finish minimum)
         - rpe_medio_semana >= _RPE_CARGA_ALTA (physiological: subjective effort high)
@@ -649,7 +649,7 @@ def _clasificar_estado(
         # El usuario no completó el bloque principal — evidencia real de sobrecarga
         estado = 'carga_alta'
     elif sesiones_esenciales > 0 and sesiones_normales == 0:
-        # El plan activó versión esencial en todas las sesiones y el usuario las completó.
+        # El plan activó versión reducida en todas las sesiones y el usuario las completó.
         # No es carga alta objetiva: el plan fue prudente, no el cuerpo sobrecargado.
         # Usar 'prudencia_semanal' evita la tautología: plan decide esencial → lo llama carga alta.
         estado = 'prudencia_semanal'
@@ -731,7 +731,7 @@ def _generar_lectura(
     # All esencial, all principals complete — plan fue prudente, no evidencia de carga alta objetiva
     if sesiones_esenciales > 0 and sesiones_normales == 0:
         return (
-            f"Esta semana el plan activó versión esencial en "
+            f"Esta semana el plan activó versión reducida en "
             f"{sesiones_esenciales} "
             f"{_pl(sesiones_esenciales, 'sesión', 'sesiones')}. "
             "El bloque principal se completó en todas. La continuidad sigue intacta."

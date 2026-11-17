@@ -105,8 +105,13 @@ def _sesion_evaluadora(log):
         reps = round(float(reps))
     except (TypeError, ValueError):
         reps = None
+    try:
+        from entrenos.services.ultima_sesion_service import series_de_trabajo
+        series = series_de_trabajo(ej.entreno, ej.nombre_ejercicio)
+    except Exception:  # noqa: BLE001
+        series = []
     return {
-        'peso': peso, 'reps': reps, 'rpe': ej.rpe,
+        'peso': peso, 'reps': reps, 'rpe': ej.rpe, 'series': series,
         'fecha': ej.entreno.fecha_ejecucion or ej.entreno.fecha, 'entreno_id': ej.entreno_id,
     }
 
@@ -114,18 +119,56 @@ def _sesion_evaluadora(log):
 _SIN_DESPUES = object()
 
 
+def _peso_propuesto_real(log, despues):
+    """El peso que se propuso de verdad en la sesión que comprobó la decisión, o None."""
+    if not despues or log.accion not in ('subir_peso', 'bajar_peso', 'deload'):
+        return None
+    # 31-oct-2026 (nota 11): el peso que se propuso de verdad ese día (el
+    # briefing recalculó 35 kg; el log guardaba los 45 del cierre anterior).
+    try:
+        from entrenos.models import EntrenoRealizado
+        from entrenos.services.cerebro_carga_service import _peso_plan
+        return _peso_plan(EntrenoRealizado.objects.get(pk=despues['entreno_id']), log.ejercicio)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _dato_citado(log, despues):
+    """(peso, reps, RPE) de UNA misma serie para citar en «Hoy:» (17-nov-2026, nota 42).
+
+    Antes mezclaba el peso de la serie más pesada (75 kg) con el RPE medio del
+    ejercicio (6, de las series de 65 y 70). Ahora se cita el peso de la
+    decisión si se hizo («subí a 65 kg» → 65 kg × 6 con su RPE); si no, la serie
+    de referencia. El RPE sale siempre de las series a ese mismo peso.
+    """
+    peso, reps, rpe = despues.get('peso'), despues.get('reps'), despues.get('rpe')
+    series = [s for s in (despues.get('series') or []) if s.get('reps', 0) > 0]
+    if not series:
+        return peso, reps, rpe
+    objetivo = _peso_propuesto_real(log, despues)
+    if objetivo is None and log.accion in ('subir_peso', 'bajar_peso', 'deload') and log.peso_sugerido is not None:
+        objetivo = float(log.peso_sugerido)
+    if objetivo:
+        a_ese_peso = [s for s in series if abs(s['peso'] - float(objetivo)) < 0.01]
+        if a_ese_peso:
+            peso = a_ese_peso[0]['peso']
+            reps = round(sum(s['reps'] for s in a_ese_peso) / len(a_ese_peso))
+    # RPE: el más alto de las series a ese peso; sin RPE en ellas, no se inventa.
+    rpes = [s['rpe'] for s in series if peso is not None and abs(s['peso'] - float(peso)) < 1e-6 and s.get('rpe') is not None]
+    if rpes:
+        rpe = max(rpes)
+    elif len({s['peso'] for s in series}) == 1:
+        rpe = despues.get('rpe')  # un solo peso: el RPE medio del ejercicio es el de esas series
+    else:
+        rpe = None
+    return peso, reps, rpe
+
+
 def _accion_real(log, despues):
     """La acción con el peso que se propuso de verdad en la sesión que la comprobó."""
     accion = describir_accion(log)
     if despues and log.accion in ('subir_peso', 'bajar_peso', 'deload'):
-        # 31-oct-2026 (nota 11): el peso que se propuso de verdad ese día (el
-        # briefing recalculó 35 kg; el log guardaba los 45 del cierre anterior).
-        try:
-            from entrenos.models import EntrenoRealizado
-            from entrenos.services.cerebro_carga_service import _peso_plan
-            propuesto = _peso_plan(EntrenoRealizado.objects.get(pk=despues['entreno_id']), log.ejercicio)
-        except Exception:  # noqa: BLE001
-            propuesto = None
+        propuesto = _peso_propuesto_real(log, despues)
         if propuesto and (log.peso_sugerido is None or abs(float(log.peso_sugerido) - propuesto) > 0.01):
             verbo = {'subir_peso': 'subí el peso a', 'bajar_peso': 'bajé el peso a', 'deload': 'metí una descarga a'}
             accion = f'{verbo[log.accion]} {_kg(propuesto)} kg'
@@ -142,12 +185,13 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
     accion = _accion_real(log, despues)
     partes = [f'{_capitalizar(log.ejercicio)}: {accion}.']
     if despues and despues['peso'] is not None and despues['reps']:
-        if float(despues['peso'] or 0) > 0:
-            dato = f"{etiqueta}: {_kg(despues['peso'])} kg × {despues['reps']}"
+        c_peso, c_reps, c_rpe = _dato_citado(log, despues)
+        if float(c_peso or 0) > 0:
+            dato = f"{etiqueta}: {_kg(c_peso)} kg × {c_reps}"
         else:  # peso corporal: "0 kg × 7" no dice nada
-            dato = f"{etiqueta}: {despues['reps']} {_unidad_ejercicio(log)}"
-        if despues['rpe'] is not None:
-            dato += f" con RPE {_rpe(despues['rpe'])}"
+            dato = f"{etiqueta}: {c_reps} {_unidad_ejercicio(log)}"
+        if c_rpe is not None:
+            dato += f" con RPE {_rpe(c_rpe)}"
         partes.append(dato + '.')
     veredicto = VEREDICTO.get(log.resultado, '')
     if veredicto:
@@ -183,6 +227,11 @@ def _objetivo_registrado(entreno_id, nombre):
     return None
 
 
+def _lineas_sabia(log):
+    from entrenos.services.senales_al_decidir_service import lineas_para_mostrar
+    return lineas_para_mostrar(log) or None
+
+
 def detalle_decision(log, despues):
     """Qué se esperaba, qué ocurrió y en qué sesión se comprobó (7-nov-2026).
 
@@ -201,18 +250,20 @@ def detalle_decision(log, despues):
         esperado.append(f'Objetivo de esa sesión: {objetivo}.')
     ocurrido = None
     if despues.get('peso') is not None and despues.get('reps'):
-        if float(despues['peso'] or 0) > 0:
-            ocurrido = f"{_kg(despues['peso'])} kg × {despues['reps']}"
+        c_peso, c_reps, c_rpe = _dato_citado(log, despues)
+        if float(c_peso or 0) > 0:
+            ocurrido = f"{_kg(c_peso)} kg × {c_reps}"
         else:
-            ocurrido = f"{despues['reps']} reps"
-        if despues.get('rpe') is not None:
-            ocurrido += f" con RPE {_rpe(despues['rpe'])}"
+            ocurrido = f"{c_reps} reps"
+        if c_rpe is not None:
+            ocurrido += f" con RPE {_rpe(c_rpe)}"
         ocurrido += '.'
     if log.notas_resultado:
         ocurrido = f"{ocurrido + ' ' if ocurrido else ''}{_capitalizar(log.notas_resultado).rstrip('.')}."
     return {
         'esperado': ' '.join(esperado) or None,
         'ocurrido': ocurrido,
+        'sabia': _lineas_sabia(log),
         'sesion_fecha': despues['fecha'],
         'entreno_id': despues['entreno_id'],
     }

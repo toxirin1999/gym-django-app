@@ -9,7 +9,7 @@ Checklist (16):
 3.  Posponer + sesión posterior con RPE alto → senal_no_captada
 4.  Entrenar normal + RPE ≥ 9 posterior → senal_no_captada
 5.  Entrenar normal + completada normal → neutral
-6.  Versión esencial + continuidad sin sobrecarga → libero_margen
+6.  Versión reducida + continuidad sin sobrecarga → libero_margen
 7.  Resumen no usa 'acierto', 'fallo', 'correcto', 'incorrecto'
 8.  Resumen no culpa al usuario
 9.  Resumen no diagnostica fatiga como certeza

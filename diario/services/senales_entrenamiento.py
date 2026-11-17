@@ -128,7 +128,7 @@ def obtener_senal_corporal_diario(usuario, n_dias=5, fecha_ref=None):
             'intensidad': 'alta',
             'accion': 'revisar_carga',
             'texto': 'El cuerpo ha registrado dolor en los últimos días. Vale la pena revisar la carga de hoy.',
-            'sugerencia': 'Si la molestia aparece al calentar, usa versión esencial o revisa los ejercicios sensibles.',
+            'sugerencia': 'Si la molestia aparece al calentar, usa versión reducida o revisa los ejercicios sensibles.',
             'n_dias': n_dias,
             'dias_con_datos': len(vires),
         }
@@ -139,7 +139,7 @@ def obtener_senal_corporal_diario(usuario, n_dias=5, fecha_ref=None):
             'hay_senal': True,
             'intensidad': 'moderada',
             'accion': 'version_esencial',
-            'texto': 'Varios cierres recientes con cuerpo cargado o apagado. Una versión esencial de la sesión es válida.',
+            'texto': 'Varios cierres recientes con cuerpo cargado o apagado. Una versión reducida de la sesión es válida.',
             'sugerencia': 'Hoy conviene empezar con margen: primera serie controlada, sin perseguir récords.',
             'n_dias': n_dias,
             'dias_con_datos': len(vires),

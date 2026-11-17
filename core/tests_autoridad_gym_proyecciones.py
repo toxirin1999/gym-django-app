@@ -13,7 +13,7 @@ class SemaforoDesdeAutoridadGymTests(TestCase):
         autoridad = {
             'postura': 'sostener',
             'causa_principal': 'energia_baja',
-            'mensaje': 'Hoy basta con la versión esencial.',
+            'mensaje': 'Hoy basta con la versión reducida.',
             'contexto_fisico': {'energia_valor': 3, 'hrv_ms': 51},
         }
 
@@ -22,7 +22,7 @@ class SemaforoDesdeAutoridadGymTests(TestCase):
         self.assertEqual(semaforo['estado'], 'sostener')
         self.assertEqual(semaforo['causa'], 'energia_baja')
         self.assertEqual(semaforo['titulo'], 'SOSTENER')
-        self.assertIn('Versión esencial', semaforo['recomendacion_gym'])
+        self.assertIn('Versión reducida', semaforo['recomendacion_gym'])
         self.assertEqual(semaforo['decision_id'], None)
 
     def test_descanso_planificado_no_se_narra_como_version_esencial(self):
@@ -33,7 +33,7 @@ class SemaforoDesdeAutoridadGymTests(TestCase):
         })
 
         self.assertIn('descanso', semaforo['recomendacion_gym'].lower())
-        self.assertNotIn('versión esencial', semaforo['recomendacion_gym'].lower())
+        self.assertNotIn('versión reducida', semaforo['recomendacion_gym'].lower())
 
 
 class OrganismoRespetaAutoridadGymTests(TestCase):

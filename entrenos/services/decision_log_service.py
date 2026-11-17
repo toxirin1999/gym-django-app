@@ -1114,9 +1114,11 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     except Exception:  # noqa: BLE001
         fatiga = None
     if fatiga:
+        # 17-nov-2026 (nota 29): no se promete una comprobación que nadie hace;
+        # se dice que el resultado queda sin evaluar y por qué.
         _persistir_evaluacion_final(log, 'neutra', (
-            f"Ese día llegabas muy cansado ({kg(fatiga['peso'])} kg × {fatiga['reps_hoy']}; antes "
-            f"{kg(fatiga['peso'])} × {fatiga['reps_antes']}): lo vuelvo a comprobar antes de darlo por bueno o malo"
+            f"El resultado de hoy queda sin evaluar: llegabas muy cansado ({kg(fatiga['peso'])} kg × "
+            f"{fatiga['reps_hoy']}; antes {kg(fatiga['peso'])} × {fatiga['reps_antes']})"
         ))
         return
 
@@ -1143,9 +1145,8 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             contexto = _contexto_de_ese_dia(log, nueva_sesion)
             if contexto:
                 resultado = 'neutra'
-                notas = (f'El RPE subió a {float(rpe_nuevo):g} (el plan pedía '
-                         f'{_rpe_pedido(nueva_sesion.entreno, nombre):g}), pero ese día {contexto}: '
-                         'lo vuelvo a comprobar antes de darlo por malo')
+                notas = (f'El resultado de hoy queda sin evaluar: el RPE subió a {float(rpe_nuevo):g} '
+                         f'(el plan pedía {_rpe_pedido(nueva_sesion.entreno, nombre):g}) y ese día {contexto}')
         elif log.motivo_codigo == 'progresion_peso':
             objetivo = log.peso_sugerido
             if objetivo is None:
@@ -1227,8 +1228,8 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             contexto = _contexto_de_ese_dia(log, nueva_sesion)
             if contexto:
                 resultado = 'neutra'
-                notas = (f'Menos reps que la vez anterior con el máximo de la máquina, pero ese día {contexto}: '
-                         'lo vuelvo a comprobar antes de darlo por malo')
+                notas = ('El resultado de hoy queda sin evaluar: menos reps que la vez anterior con el '
+                         f'máximo de la máquina y ese día {contexto}')
         else:
             resultado = 'neutra'
             notas = 'Mismo rendimiento en el tope; aún no alcanzó el objetivo'

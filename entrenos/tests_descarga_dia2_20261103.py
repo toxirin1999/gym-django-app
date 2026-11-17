@@ -1,7 +1,7 @@
 """3-nov-2026 · Día 2 de la descarga y gráficas de Cuerpo.
 
 1. Reps de descarga: 3 menos que la última vez (que sobren 3 o 4 a RPE 6).
-2. En versión suave, el briefing pone los principales primero y marca los
+2. En versión reducida, el briefing pone los principales primero y marca los
    accesorios como opcionales; el estado no dice «todo en orden» a secas.
 4. Calentamiento de descarga: dos escalones, y ninguno con poco peso.
 Cuerpo: puntos con punto decimal (con coma el SVG no los dibujaba), 14

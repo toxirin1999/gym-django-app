@@ -205,14 +205,14 @@ class TestCierreGym32(TestCase):
 
     def test_sesion_ajustada_aparece_en_resumen_modo_reducido(self):
         """
-        Test 5: Si modo_reducido=True, resumen debe incluir "Sesión ajustada".
+        Test 5: Si modo_reducido=True, resumen debe incluir "Versión reducida".
         """
         entreno = EntrenoRealizado.objects.create(
             cliente=self.cliente,
             rutina=self.rutina,
             fecha=date.today(),
             volumen_total_kg=500.0,
-            modo_reducido=True  # Sesión ajustada
+            modo_reducido=True  # Versión reducida
         )
 
         resumen = _resumen_sesion(entreno, [])
@@ -221,7 +221,7 @@ class TestCierreGym32(TestCase):
             resumen['sesion_tipo'],
             "Resumen debe incluir sesion_tipo cuando modo_reducido=True"
         )
-        self.assertIn('Sesión ajustada', resumen['sesion_tipo'])
+        self.assertIn('Versión reducida', resumen['sesion_tipo'])
 
     def test_sesion_normal_sin_label(self):
         """
@@ -291,4 +291,4 @@ class TestCierreGym32(TestCase):
         # Validaciones
         self.assertEqual(len(contexto['prs']), 1, "Debe haber 1 PR")
         self.assertEqual(len(contexto['cambios_relevantes']), 0, "Cambio +0.02 kg oculto")
-        self.assertIn('Sesión ajustada', contexto['resumen']['sesion_tipo'], "Modo reducido comunicado")
+        self.assertIn('Versión reducida', contexto['resumen']['sesion_tipo'], "Modo reducido comunicado")

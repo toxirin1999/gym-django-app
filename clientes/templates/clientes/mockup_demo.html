@@ -1333,7 +1333,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
       {% endif %}
       {% if bloque_esencial_resumen %}
       <div style="margin-top:10px;padding:10px 12px;background:rgba(255,200,100,0.06);border:1px solid rgba(255,200,100,0.18);border-radius:10px;">
-        <div style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.8);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Versión esencial</div>
+        <div style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.8);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:6px;">Versión reducida</div>
         <div style="display:flex;gap:16px;font-size:12px;color:var(--td);">
           <span>
             Principal
@@ -1375,7 +1375,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         <span>
           {% if estado_entreno == 'recuperar' %}Recuperación recomendada
           {% elif estado_entreno == 'descanso' %}Día de descanso
-          {% elif estado_entreno == 'version_reducida' %}Versión esencial
+          {% elif estado_entreno == 'version_reducida' %}Versión reducida
           {% elif estado_entreno == 'posponer' %}Sesión en pausa
           {% elif tipo_entreno == 'pendiente' %}Sesión Pendiente
           {% else %}Próximo Entrenamiento{% endif %}
@@ -1436,7 +1436,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         </div>
         {% elif preferencia_aplicada.accion_sugerida == 'version_esencial_sugerida' %}
         <div style="margin-top:5px;font-size:9px;color:rgba(20,184,166,0.55);font-style:italic;">
-          Puedes hacer la versión esencial si tienes menos margen hoy.
+          Puedes hacer la versión reducida si tienes menos margen hoy.
         </div>
         {% endif %}
       </div>
@@ -1573,7 +1573,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
     {% else %}
     {# Estado normal (entrenar / version_reducida): CTA principal activo #}
     <a href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ hoy|date:'Y-m-d' }}{% if autoridad_gym.decision_id %}&decision_id={{ autoridad_gym.decision_id|urlencode }}{% else %}&rutina_nombre={{ proximo_entrenamiento.rutina_nombre|urlencode }}&ejercicios={{ proximo_entrenamiento_json|urlencode }}{% endif %}{% if sesion_programada %}&sesion_programada_id={{ sesion_programada.id }}{% endif %}{% if modo_reducido %}&modo_reducido=1{% endif %}" class="rb-cta">
-      {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión esencial
+      {% if modo_reducido %}<i class="fas fa-compress-arrows-alt"></i> Empezar versión reducida
       {% else %}<i class="fas fa-play"></i> Empezar entreno{% endif %}
     </a>
     <div style="display:flex;gap:8px;margin-top:8px;">
@@ -1854,7 +1854,7 @@ details[open] > .rb-collapse-summary::before { content: '▾'; }
         {% if analisis_semanal.sesiones_esenciales %}
         <div style="font-size:11px;color:rgba(255,200,100,0.8);">
           <span style="font-weight:700;font-size:15px;">{{ analisis_semanal.sesiones_esenciales }}</span>
-          versión esencial{{ analisis_semanal.sesiones_esenciales|pluralize:"es" }}
+          versión reducida{{ analisis_semanal.sesiones_esenciales|pluralize:"es" }}
         </div>
         {% endif %}
         {% if analisis_semanal.sesiones_saltadas %}
@@ -3128,7 +3128,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
 
   var estadoTexto = {
     'completada_normal': 'Completada',
-    'completada_esencial': 'Versión esencial completada',
+    'completada_esencial': 'Versión reducida completada',
     'parcial': 'Ejecutada parcialmente',
     'saltada': 'Saltada por el usuario',
     'omitida_sistema': 'Omitida por el sistema',
@@ -3141,7 +3141,7 @@ function mostrarDetalleDia(el, fecha, nombre, estado, fechaReal, esEsencial, car
   var lineas = [];
   if (nombre) lineas.push('<strong>' + nombre + '</strong>');
   if (estadoTexto) lineas.push(estadoTexto);
-  if (esEsencial) lineas.push('Versión esencial activa');
+  if (esEsencial) lineas.push('Versión reducida activa');
   if (cargaMantenida) lineas.push('Carga mantenida (freno contextual)');
   if (fechaReal && fechaReal !== fecha) lineas.push('Realizada el ' + fechaReal);
 

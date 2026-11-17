@@ -3,7 +3,7 @@
 1. «Hoy vas justo»: los accesorios, solo si te ves bien (no «para otro día»).
 2. La píldora del calentamiento dice los pasos que hay (2 en descarga).
 3. En descarga, el selector arranca en las reps de la descarga (el Crunch salía a 13).
-4. Principales para la versión suave: multiarticulares menos el core.
+4. Principales para la versión reducida: multiarticulares menos el core.
 5. Descanso de 2 minutos como mucho en descarga.
 6. Al continuar se avisa del ejercicio que dejaste atrás.
 8. Pallof y remo a una mano: reps por lado, kilos de los dos lados.

@@ -106,7 +106,7 @@ class VeredictosConContexto(SimpleTestCase):
         g = self._evaluar('progresion_reps', 10, 'lo hiciste al final, fuera de su orden')
         self.assertEqual(g['res'], 'neutra')
         self.assertIn('fuera de su orden', g['notas'])
-        self.assertIn('lo vuelvo a comprobar', g['notas'])
+        self.assertIn('El resultado de hoy queda sin evaluar', g['notas'])
 
     def test_nota24_rpe_alto_sin_contexto_sigue_siendo_fallido(self):
         g = self._evaluar('progresion_reps', 10, None)

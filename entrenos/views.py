@@ -3659,13 +3659,13 @@ def _fijar_reps_descarga(ejercicio):
 
 
 def _es_principal_hoy(ejercicio, solo_pierna=False):
-    """3-nov-2026 (nota 4): qué se queda en la versión suave.
+    """3-nov-2026 (nota 4): qué se queda en la versión reducida.
 
     Los multiarticulares (principales y secundarios) de cualquier grupo menos el
     core. Antes solo contaba ``compuesto_principal`` y salía el Crunch como
     principal y el Remo con mancuerna como accesorio.
 
-    5-nov-2026 (nota 1): si la versión suave es por el fútbol o el Hyrox
+    5-nov-2026 (nota 1): si la versión reducida es por el fútbol o el Hyrox
     (``solo_pierna``), solo la pierna pasa a opcional; lo demás queda como
     lo pedía el plan (R10). El jalón con brazos rectos y las laterales salían
     como opcionales el día después de un partido.
@@ -5097,6 +5097,8 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     es_aproximacion = request.POST.get(
                         f"{form_id}_aproximacion_{i}", ''
                     ).lower() in ('1', 'true', 'on')
+                    # 17-nov-2026 (nota 28): ¿cambió las reps que proponía la pantalla?
+                    reps_editadas = request.POST.get(f"{form_id}_reps_editadas_{i}", '0').strip() == '1'
 
                     if serie_valida and serie_confirmada:
                         semantica_carga = resolver_semantica_carga(tipo_carga_solicitado, peso)
@@ -5104,6 +5106,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             'serie_numero': i,
                             'peso': peso,
                             'reps': reps,
+                            'reps_editadas': reps_editadas,
                             'rpe_real': rpe_real,
                             'tipo_progresion': tipo_progresion,
                             'tecnica': tecnica,
@@ -5223,6 +5226,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                         rpe_real=s_data['rpe_real'],
                         tecnica_calidad=s_data.get('tecnica'),
                         es_aproximacion=s_data['es_aproximacion'],
+                        reps_editadas=bool(s_data.get('reps_editadas')),
                         completado=True,
                         tipo_carga=s_data['tipo_carga'],
                         multiplicador_carga=s_data['multiplicador_carga'],
@@ -5315,7 +5319,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '0'
             )
             entreno.save(update_fields=['modo_reducido', 'principales_planificados', 'opcionales_planificados'])
-            messages.success(request, "Versión esencial completada. El bloque principal ya es suficiente para hoy.")
+            messages.success(request, "Versión reducida completada. El bloque principal ya es suficiente para hoy.")
         else:
             messages.success(request, "¡Entrenamiento guardado con éxito!")
 
@@ -10403,7 +10407,7 @@ def briefing_entrenamiento(request, cliente_id):
             aviso_pierna_suave = aplicar_pierna_suave(cliente, ejercicios_mod, fecha_obj)
         except Exception:
             logger.exception('[briefing] pierna suave falló')
-        # 3-nov-2026 (nota 2): en versión suave el briefing enseña lo mismo que
+        # 3-nov-2026 (nota 2): en versión reducida el briefing enseña lo mismo que
         # hará la sesión: los principales primero y los accesorios como
         # opcionales (antes decía "los accesorios quedan para otro día" y la
         # lista no cambiaba).
@@ -10415,7 +10419,7 @@ def briefing_entrenamiento(request, cliente_id):
         for ej in ejercicios_mod:
             ej['opcional_hoy'] = not _es_principal_hoy(ej, solo_pierna)
         if not all(ej['opcional_hoy'] for ej in ejercicios_mod):
-            # 5-nov-2026 (nota 2): el porqué real de la versión suave (decía
+            # 5-nov-2026 (nota 2): el porqué real de la versión reducida (decía
             # «por cómo amaneces» el día después del fútbol con la variabilidad +44 %).
             causa = (autoridad_vigente or {}).get('causa_principal')
             if solo_pierna or causa in ('futbol_reciente', 'hyrox_reciente'):
@@ -10430,12 +10434,12 @@ def briefing_entrenamiento(request, cliente_id):
                 por_que = 'va por cómo llegas hoy'
             for msg in briefing.get('mensajes') or []:
                 if msg.get('tipo') == 'ok':
-                    msg['texto'] = (f'Sin alertas del plan en estas 2 semanas. Lo de hoy (versión suave) '
+                    msg['texto'] = (f'Sin alertas del plan en estas 2 semanas. Lo de hoy (versión reducida) '
                                     f'{por_que}, no por el plan.')
         else:
             for ej in ejercicios_mod:
                 ej['opcional_hoy'] = False
-    # 8-nov-2026: el día del fútbol la pierna va opcional aunque no sea versión suave.
+    # 8-nov-2026: el día del fútbol la pierna va opcional aunque no sea versión reducida.
     for ej in ejercicios_mod:
         if ej.get('opcional_futbol'):
             ej['opcional_hoy'] = True

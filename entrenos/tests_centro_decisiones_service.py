@@ -49,16 +49,16 @@ class TestAgruparTracesRecientes(SimpleTestCase):
 
     def test_traces_iguales_se_agrupan_con_count_y_ultima_fecha(self):
         traces = [
-            _trace('Versión esencial', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'jueves 28 may', fecha=date(2026, 5, 28)),
-            _trace('Versión esencial', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'martes 26 may', fecha=date(2026, 5, 26)),
-            _trace('Versión esencial', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'domingo 24 may', fecha=date(2026, 5, 24)),
-            _trace('Versión esencial', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'viernes 22 may', fecha=date(2026, 5, 22)),
+            _trace('Versión reducida', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'jueves 28 may', fecha=date(2026, 5, 28)),
+            _trace('Versión reducida', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'martes 26 may', fecha=date(2026, 5, 26)),
+            _trace('Versión reducida', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'domingo 24 may', fecha=date(2026, 5, 24)),
+            _trace('Versión reducida', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'viernes 22 may', fecha=date(2026, 5, 22)),
         ]
 
         grupos = agrupar_traces_recientes(traces)
 
         self.assertEqual(len(grupos), 1)
-        self.assertEqual(grupos[0]['decision_label'], 'Versión esencial')
+        self.assertEqual(grupos[0]['decision_label'], 'Versión reducida')
         self.assertEqual(grupos[0]['count'], 4)
         self.assertEqual(grupos[0]['fecha_label'], 'jueves 28 may')
 
@@ -66,7 +66,7 @@ class TestAgruparTracesRecientes(SimpleTestCase):
         traces = [
             _trace('Sesión del plan', 'Sesión del plan ejecutada sin adaptaciones.', 'martes 19 may', fecha=date(2026, 5, 19)),
             _trace('Sesión del plan', 'Sesión del plan ejecutada sin adaptaciones.', 'lunes 18 may', fecha=date(2026, 5, 18)),
-            _trace('Versión esencial', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'jueves 28 may', fecha=date(2026, 5, 28)),
+            _trace('Versión reducida', 'El plan priorizó ejercicios principales y dejó los accesorios como opcionales.', 'jueves 28 may', fecha=date(2026, 5, 28)),
         ]
 
         grupos = agrupar_traces_recientes(traces)
@@ -98,8 +98,8 @@ class TestAgruparTracesRecientes(SimpleTestCase):
         self.assertEqual(descanso['count'], 1)
 
     def test_detalle_conserva_items_originales(self):
-        t1 = _trace('Versión esencial', 'explicación', 'jueves 28 may', fecha=date(2026, 5, 28))
-        t2 = _trace('Versión esencial', 'explicación', 'martes 26 may', fecha=date(2026, 5, 26))
+        t1 = _trace('Versión reducida', 'explicación', 'jueves 28 may', fecha=date(2026, 5, 28))
+        t2 = _trace('Versión reducida', 'explicación', 'martes 26 may', fecha=date(2026, 5, 26))
 
         grupos = agrupar_traces_recientes([t1, t2])
 

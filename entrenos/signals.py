@@ -621,3 +621,12 @@ def calibrar_rpe_personal(sender, instance, created, raw=False, update_fields=No
     except Exception as e:
         import logging
         logging.getLogger(__name__).error(f"[RPE calibracion] {e}")
+
+
+@receiver(post_save, sender='entrenos.GymDecisionLog')
+def registrar_senales_al_decidir(sender, instance, created, raw=False, **kwargs):
+    """17-nov-2026: guarda qué sabía el entrenador en el momento de decidir."""
+    if raw or not created:
+        return
+    from entrenos.services.senales_al_decidir_service import registrar_senales
+    registrar_senales(instance)

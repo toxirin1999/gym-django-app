@@ -135,7 +135,7 @@ class TestOverlapSuprimido(TestCase):
 class TestModoReducido(TestCase):
     def test_modo_reducido_produce_senal(self):
         result = construir_explicacion_decision(_decision(modo_reducido=True))
-        self.assertTrue(any('esencial' in s.lower() for s in result['senales_activas']))
+        self.assertTrue(any('reducida' in s.lower() for s in result['senales_activas']))
 
 
 class TestCausaLabel(TestCase):

@@ -187,7 +187,7 @@ class LecturaTextualCopyTest(VisualCargaBase):
 
     def test_lectura_prudencia_usa_plan_activo(self):
         """
-        lectura_textual for prudencia_semanal uses 'el plan activó versión esencial',
+        lectura_textual for prudencia_semanal uses 'el plan activó versión reducida',
         not body-language framing.
         """
         self._add_entreno(0, modo_reducido=True, principales_completados=2)

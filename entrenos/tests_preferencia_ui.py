@@ -125,7 +125,7 @@ class TestCase4_MensajesSinAbsolutos(UIPreferenciaBase):
         hints = [
             'El plan lo toma como referencia. Puedes entrenar o posponer igualmente.',
             'Los accesorios de hoy son opcionales como referencia, no como regla.',
-            'Puedes hacer la versión esencial si tienes menos margen hoy.',
+            'Puedes hacer la versión reducida si tienes menos margen hoy.',
         ]
         forbidden = ['debes', 'tienes que', 'nunca', 'siempre debes']
         for hint in hints:
@@ -160,7 +160,7 @@ class TestCase5_AccionSugeridaVisible(UIPreferenciaBase):
         )
         response = self._get(self._decision(pref=pref))
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'versión esencial')
+        self.assertContains(response, 'versión reducida')
 
 
 # ── Cases 6-7: CTAs existentes siguen funcionando ─────────────────────────────

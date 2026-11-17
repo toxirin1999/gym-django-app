@@ -22,7 +22,7 @@ _ESTADO_LABELS = {
     'entrenar':        'Sesión del plan',
     'recuperar':       'Recuperación recomendada',
     'posponer':        'Sesión propuesta para otro momento',
-    'version_reducida':'Versión esencial',
+    'version_reducida':'Versión reducida',
     'descanso':        'Día de descanso',
 }
 

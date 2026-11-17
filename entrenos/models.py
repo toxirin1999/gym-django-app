@@ -290,6 +290,13 @@ class SerieRealizada(models.Model):
             "RPE agregado, 1RM y decisiones de progresión."
         ),
     )
+    reps_editadas = models.BooleanField(
+        default=False,
+        help_text=(
+            "17-nov-2026 (nota 28): el usuario cambió las reps que proponía la pantalla en esta serie. "
+            "Con False, las reps son las que mostraba la app. No cambia ningún peso ni decisión."
+        ),
+    )
 
     def __str__(self):
         return f"{self.ejercicio.nombre}: Serie {self.serie_numero} - {self.repeticiones} reps @ {self.peso_kg} kg"
@@ -1371,6 +1378,8 @@ class GymDecisionLog(models.Model):
     motivo_postergacion = models.TextField(null=True, blank=True)
     fecha_aplicacion = models.DateTimeField(null=True, blank=True)
 
+    # 17-nov-2026: que sabia el entrenador al decidir (ver senales_al_decidir_service).
+    senales_al_decidir = models.JSONField(default=dict, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_evaluacion = models.DateTimeField(null=True, blank=True)
 

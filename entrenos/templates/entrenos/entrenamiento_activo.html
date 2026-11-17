@@ -1454,7 +1454,7 @@ body{background:
 <div style="margin:0 16px 12px;padding:14px 16px;background:rgba(255,200,100,0.07);border:1px solid rgba(255,200,100,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">⚡</span>
   <div>
-    <div style="font-size:11px;font-weight:700;color:rgba(255,200,100,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Versión esencial activa</div>
+    <div style="font-size:11px;font-weight:700;color:rgba(255,200,100,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Versión reducida activa</div>
     {% if aviso_pierna_suave %}
     <div style="font-size:12px;color:var(--td);opacity:0.85;line-height:1.5;">{{ aviso_pierna_suave }}</div>
     {% else %}
@@ -1740,7 +1740,7 @@ body{background:
         {% elif ejercicio.motivo_bloqueo == 'bloque_parcial_repetido' %}El bloque principal no se completa regularmente.
         {% elif ejercicio.motivo_bloqueo == 'esenciales_frecuentes' %}Las versiones esenciales se repiten.
         {% elif ejercicio.motivo_bloqueo == 'margen_bajo_repetido' %}Margen accesorio bajo estas semanas.
-        {% elif ejercicio.motivo_bloqueo == 'modo_reducido' %}La sesión anterior fue en versión esencial.
+        {% elif ejercicio.motivo_bloqueo == 'modo_reducido' %}La sesión anterior fue en versión reducida.
         {% else %}El plan frena la subida esta semana.{% endif %}
       </div>
     </div>
@@ -2005,6 +2005,8 @@ body{background:
 
         <input type="number" style="display:none;" id="reps-hid-{{ ejercicio.form_id }}-{{ sn }}"
                name="{{ ejercicio.form_id }}_reps_{{ sn }}" value="{% if ejercicio.sugerencia_tope and ejercicio.reps_sugeridas_tope %}{{ ejercicio.reps_sugeridas_tope }}{% else %}{{ ejercicio.reps_objetivo }}{% endif %}">
+        <input type="hidden" id="repsed-{{ ejercicio.form_id }}-{{ sn }}"
+               name="{{ ejercicio.form_id }}_reps_editadas_{{ sn }}" value="0">
         <input type="number" style="display:none;" id="rpe-hid-{{ ejercicio.form_id }}-{{ sn }}"
                name="{{ ejercicio.form_id }}_rpe_{{ sn }}" value="">
         <input type="hidden" name="{{ ejercicio.form_id }}_rpe_obj_{{ sn }}" value="{{ ejercicio.rpe_objetivo }}">
@@ -3470,7 +3472,15 @@ function resumenDeEjercicio(fid){
   if(repsMaxEj>0 && peorEj>=repsMaxEj && !cardEj?.dataset.topeKg){
     return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y te digo cuántas reps calculo con él.`};
   }
-  let objSig=mejorEj+(conMargen?2:1);
+  // 17-nov-2026 (notas 40 y 44): la misma base que la regla del cierre (mediana de las
+  // reps al peso más alto, redondeo par como Python): Arnold 8 y 9 → base 8 → «a por 10»,
+  // no «a por 11» (mejor serie + 2).
+  const repsTopEj=scs.filter(s=>(s.peso||0)===pesoTopeEj).map(s=>s.reps||0).sort((a,b)=>a-b);
+  const mitadEj=repsTopEj.length>>1;
+  const medianaEj=repsTopEj.length%2?repsTopEj[mitadEj]:(repsTopEj[mitadEj-1]+repsTopEj[mitadEj])/2;
+  const pisoEj=Math.floor(medianaEj), restoEj=medianaEj-pisoEj;
+  const baseReglaEj=restoEj<0.5?pisoEj:(restoEj>0.5?pisoEj+1:(pisoEj%2===0?pisoEj:pisoEj+1));
+  let objSig=baseReglaEj+(conMargen?2:1);
   // 12-nov-2026 (nota 16): con dos pesos en el ejercicio (25 y 30 kg), «mismo peso» no dice cuál.
   const variosPesos=new Set(scs.map(s=>s.peso||0)).size>1;
   const pesoTxtEj=(variosPesos&&pesoTopeEj>0)?` (${fmtKg(pesoTopeEj)} kg)`:'';
@@ -3495,6 +3505,7 @@ function syncSliderRPE(el,dispId,hidId,descId){
 }
 
 // ── PICKER REPS / TIEMPO / DISTANCIA ────────────────────────────
+const _repsIniciales={};
 function cambiarPicker(dispId,hidId,delta,min,max,fid,sn,tipo){
   const disp=document.getElementById(dispId);
   const hid=document.getElementById(hidId);
@@ -3514,6 +3525,13 @@ function cambiarPicker(dispId,hidId,delta,min,max,fid,sn,tipo){
   if(fid&&sn)marcarSerieTocada(fid,sn);
   if(navigator.vibrate)navigator.vibrate(8);
   if(fid&&sn)actualizarORM(fid,sn);
+  // 17-nov-2026 (nota 28): marca «reps editadas» (valor distinto del inicial).
+  if(tipo!=='tiempo'&&tipo!=='distancia'&&fid&&sn){
+    const k=fid+'-'+sn;
+    if(!(k in _repsIniciales))_repsIniciales[k]=current;
+    const marca=document.getElementById('repsed-'+k);
+    if(marca)marca.value=(val!==_repsIniciales[k])?'1':'0';
+  }
 }
 
 // Hold-to-repeat: mantener pulsado acelera el cambio

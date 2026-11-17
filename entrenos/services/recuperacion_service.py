@@ -292,7 +292,7 @@ def esfuerzo_futbol(cliente, hoy):
                      f'Las piernas están bien: hoy pierna normal.')
         else:
             frase = (f'{cuando} jugaste al fútbol{detalle_txt}. Tus piernas ya han trabajado: '
-                     f'hoy pierna en versión suave.')
+                     f'hoy pierna en versión reducida.')
         return {'nivel': nivel, 'frase': frase, 'partido': partido}
 
     referencia = median(previas)
@@ -300,7 +300,7 @@ def esfuerzo_futbol(cliente, hoy):
     if ratio >= 1.2:
         nivel = 'alto'
         frase = (f'{cuando} el fútbol fue de los duros para ti{detalle_txt}, '
-                 f'más que un partido normal tuyo. Las piernas aún lo notan: hoy pierna en versión suave.')
+                 f'más que un partido normal tuyo. Las piernas aún lo notan: hoy pierna en versión reducida.')
     elif ratio <= 0.6:
         nivel = 'suave'
         frase = (f'{cuando} el fútbol fue tranquilo{detalle_txt}, bastante menos que un partido normal tuyo. '
@@ -308,7 +308,7 @@ def esfuerzo_futbol(cliente, hoy):
     else:
         nivel = 'normal'
         frase = (f'{cuando} jugaste un partido normal para ti{detalle_txt}. '
-                 f'Tus piernas ya han trabajado: hoy pierna en versión suave.')
+                 f'Tus piernas ya han trabajado: hoy pierna en versión reducida.')
     partido['comparado_con'] = round(referencia, 1)
     return {'nivel': nivel, 'frase': frase, 'partido': partido}
 
@@ -376,7 +376,9 @@ def comprobacion_cierre(cliente, entreno):
                 f'(esfuerzo {hoy_txt} sobre 10; sueles estar en {antes_txt}). Bien hecho no forzar: '
                 f'mañana descansa bien.')
     if rpe_hoy <= rpe_antes - 0.5:
+        # 17-nov-2026 (nota 45): con menos esfuerzo del habitual, los datos no
+        # dicen que el ajuste fuera justo: dicen que quizá sobró.
         return (f'Hoy ajusté la sesión: {que}. Te costó menos de lo normal (esfuerzo {hoy_txt} sobre 10; '
-                f'sueles estar en {antes_txt}): el ajuste fue justo y no pierdes nada.')
+                f'sueles estar en {antes_txt}): quizá no hacía falta ajustar tanto.')
     return (f'Hoy ajusté la sesión: {que}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10, '
             f'como tus {antes_txt} de siempre): el ajuste fue justo y no pierdes nada.')

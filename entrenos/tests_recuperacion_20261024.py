@@ -145,7 +145,7 @@ class EsfuerzoFutbol(ConCliente):
         self.partido(1, 90, 150, 110, strava=False)
         r = rec.esfuerzo_futbol(self.cliente, HOY)
         self.assertEqual(r['nivel'], 'sin_datos')
-        self.assertIn('versión suave', r['frase'])
+        self.assertIn('versión reducida', r['frase'])
 
     def test_rato_corto_sin_historial_es_suave(self):
         self.partido(1, 30, 130)
