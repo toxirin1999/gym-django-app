@@ -32,6 +32,11 @@ def terminar(token=None):
     _memo.set(None)
 
 
+def activa():
+    """True dentro de una petición (hay memoria en curso)."""
+    return _memo.get() is not None
+
+
 def invalidar():
     memoria = _memo.get()
     if memoria:

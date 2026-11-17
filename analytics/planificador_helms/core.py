@@ -29,18 +29,49 @@ from .utils.helpers import normalizar_nombre, extraer_nombre_ejercicio, extraer_
 from entrenos.services.descanso_service import get_descanso_sugerido
 
 
+from core import memo_peticion
 from core.memo_peticion import por_peticion
 
 
+def _plegar(texto):
+    """Minúsculas y sin tildes: compara nombres como el ``icontains`` de MySQL."""
+    import unicodedata
+
+    descompuesto = unicodedata.normalize('NFKD', (texto or '').casefold())
+    return ''.join(c for c in descompuesto if not unicodedata.combining(c))
+
+
 @por_peticion
-def _ultimo_ejercicio_realizado(cliente_id, nombre_lower):
-    """Último ejercicio hecho cuyo nombre contiene ``nombre_lower`` (se repetía por cada llamada del planificador)."""
+def _historial_ejercicios_cliente(cliente_id):
+    """Todos los ejercicios hechos por el cliente, del más reciente al más antiguo.
+
+    17-nov-2026: antes se buscaba el último ejercicio con una consulta por
+    nombre (cientos por página); ahora una sola lectura y la búsqueda en
+    memoria. Tupla de tuplas para que la memoria por petición no la copie.
+    """
     from entrenos.models import EjercicioRealizado
 
-    return EjercicioRealizado.objects.filter(
-        nombre_ejercicio__icontains=nombre_lower,
-        entreno__cliente_id=cliente_id,
-    ).order_by('-entreno__fecha', '-id').first()
+    return tuple(
+        (_plegar(nombre), entreno_id, peso_kg, repeticiones, rpe)
+        for nombre, entreno_id, peso_kg, repeticiones, rpe in EjercicioRealizado.objects.filter(
+            entreno__cliente_id=cliente_id,
+        ).order_by('-entreno__fecha', '-id').values_list(
+            'nombre_ejercicio', 'entreno_id', 'peso_kg', 'repeticiones', 'rpe',
+        )
+    )
+
+
+@por_peticion
+def _rpes_series_de_entreno(entreno_id):
+    """(nombre plegado, RPE) de cada serie con RPE de un entreno, en una consulta."""
+    from entrenos.models import SerieRealizada
+
+    return tuple(
+        (_plegar(nombre), rpe)
+        for nombre, rpe in SerieRealizada.objects.filter(
+            entreno_id=entreno_id, rpe_real__isnull=False,
+        ).values_list('ejercicio__nombre', 'rpe_real')
+    )
 
 
 class PlanificadorHelms:
@@ -789,6 +820,23 @@ class PlanificadorHelms:
             logger.warning("Error leyendo periodos de descarga: %s", e)
             self._periodos_descarga = []
 
+    def _historial_sin_precarga(self):
+        # En una petición manda la memoria por petición (se vacía si algo escribe);
+        # fuera de ella (comandos, tareas) se guarda en el propio planificador.
+        if memo_peticion.activa():
+            return _historial_ejercicios_cliente(self.perfil.id)
+        if '_historial_sin_precarga_cache' not in self.__dict__:
+            self._historial_sin_precarga_cache = _historial_ejercicios_cliente(self.perfil.id)
+        return self._historial_sin_precarga_cache
+
+    def _rpes_sin_precarga(self, entreno_id):
+        if memo_peticion.activa():
+            return _rpes_series_de_entreno(entreno_id)
+        cache = self.__dict__.setdefault('_rpes_sin_precarga_cache', {})
+        if entreno_id not in cache:
+            cache[entreno_id] = _rpes_series_de_entreno(entreno_id)
+        return cache[entreno_id]
+
     def _obtener_historial_ejercicio(self, nombre_ejercicio: str) -> dict:
         """
         Devuelve el peso y RPE de la última sesión del ejercicio.
@@ -859,27 +907,23 @@ class PlanificadorHelms:
                     resultado['rpe_real'] = ancla['rpe']
                 return resultado
 
-            # Fallback: consultas individuales si la precarga no se ejecutó
-            from entrenos.models import EjercicioRealizado, SerieRealizada
-            ej = _ultimo_ejercicio_realizado(self.perfil.id, nombre_lower)
-
-            if ej and ej.peso_kg:
-                resultado['peso_real'] = float(ej.peso_kg)
-                resultado['peso_real_bruto'] = resultado['peso_real']
-            if ej and ej.repeticiones is not None:
-                resultado['reps_real'] = int(ej.repeticiones)
-
+            # Sin precarga: último ejercicio con ese nombre y la media del RPE de
+            # sus series (o el RPE del ejercicio). 17-nov-2026: el historial se
+            # lee una vez y las series una vez por entreno, no una por ejercicio.
+            buscado = _plegar(nombre_ejercicio)
+            ej = next((fila for fila in self._historial_sin_precarga() if buscado in fila[0]), None)
             if ej:
-                series = SerieRealizada.objects.filter(
-                    entreno=ej.entreno,
-                    ejercicio__nombre__icontains=nombre_lower,
-                    rpe_real__isnull=False
-                )
-                rpes = [float(s.rpe_real) for s in series if s.rpe_real is not None]
+                _, entreno_id, peso_kg, repeticiones, rpe = ej
+                if peso_kg:
+                    resultado['peso_real'] = float(peso_kg)
+                    resultado['peso_real_bruto'] = resultado['peso_real']
+                if repeticiones is not None:
+                    resultado['reps_real'] = int(repeticiones)
+                rpes = [float(r) for nombre, r in self._rpes_sin_precarga(entreno_id) if buscado in nombre]
                 if rpes:
                     resultado['rpe_real'] = sum(rpes) / len(rpes)
-                elif ej.rpe is not None:
-                    resultado['rpe_real'] = float(ej.rpe)
+                elif rpe is not None:
+                    resultado['rpe_real'] = float(rpe)
         except Exception as e:
             logger.warning("Error al obtener historial del ejercicio '%s': %s", nombre_ejercicio, e)
         return resultado
