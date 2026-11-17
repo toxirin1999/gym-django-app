@@ -708,16 +708,14 @@ def _aviso_rango_nuevo(cliente, nombre, fecha, rango_antes):
 def _proxima_vez_descarga_sin_carga(cliente, entreno, nombre, tipo_progresion, con_efecto):
     """Tiempo o reps sin carga tras una sesión de descarga: vuelve a lo de antes."""
     from datetime import timedelta as _td
-    from entrenos.models import EjercicioRealizado as _ER
     from entrenos.services.sesion_descarga_service import es_sesion_descarga
     from entrenos.services.ultima_sesion_service import ultima_sesion
 
     if not es_sesion_descarga(entreno, nombre):
         return None
-    if _ER.objects.filter(
-        entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
-        entreno__fecha__gt=entreno.fecha,
-    ).exists():
+    from entrenos.services.historial_ejercicio_service import hay_posterior
+
+    if hay_posterior(cliente, nombre, entreno.fecha):
         return None
     antes = ultima_sesion(cliente, nombre, entreno.fecha + _td(days=1))
     valores = [int(s['reps']) for s in (antes or {}).get('series') or [] if s.get('reps')]
@@ -763,11 +761,8 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
     # próxima sale de lo de antes de la descarga, y el cierre lo dice.
     from entrenos.services.sesion_descarga_service import es_sesion_descarga
     if es_sesion_descarga(entreno, nombre):
-        from entrenos.models import EjercicioRealizado as _ER
-        if _ER.objects.filter(
-            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
-            entreno__fecha__gt=entreno.fecha,
-        ).exists():
+        from entrenos.services.historial_ejercicio_service import hay_posterior
+        if hay_posterior(cliente, nombre, entreno.fecha):
             return None  # ya hay una sesión posterior: este cierre es historia
         # 2-nov-2026 (notas 9, 10 y 12): se cuenta lo de antes de la descarga
         # tal cual. Antes se decidía con el rango de la descarga y salían cosas
@@ -798,11 +793,8 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
     lectura = ultima_sesion(cliente, nombre, siguiente, reps_min=rango[0])
     if not lectura or lectura['entreno'].pk != entreno.pk:
         return None
-    from entrenos.models import EjercicioRealizado
-    if EjercicioRealizado.objects.filter(
-        entreno__cliente=cliente, nombre_ejercicio__iexact=nombre, completado=True,
-        entreno__fecha__gt=entreno.fecha,
-    ).exists():
+    from entrenos.services.historial_ejercicio_service import hay_posterior
+    if hay_posterior(cliente, nombre, entreno.fecha):
         return None  # ya hay una sesión posterior: este cierre es historia
     decision = decidir_carga(cliente, ej, siguiente)
     if not decision:

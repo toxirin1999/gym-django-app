@@ -77,20 +77,13 @@ def texto_series(entreno, nombre, tipo_progresion='peso_reps'):
 
 
 def _sesion_anterior(cliente, entreno, nombre):
-    from entrenos.models import EjercicioRealizado
-
     # 17-nov-2026 (nota 52): solo una sesión claramente anterior; con el mismo
     # día sin hora o fechas que discrepan, no se compara con ninguna.
     from entrenos.services.orden_sesiones_service import primera_anterior
 
-    return primera_anterior(
-        EjercicioRealizado.objects.filter(
-            entreno__cliente=cliente, nombre_ejercicio__iexact=nombre,
-            completado=True, entreno__fecha__lte=entreno.fecha,
-        ).exclude(entreno=entreno).select_related('entreno')
-        .order_by('-entreno__fecha', '-entreno_id'),
-        entreno,
-    )
+    from entrenos.services.historial_ejercicio_service import POR_ENTRENO, anteriores
+
+    return primera_anterior(anteriores(cliente, entreno, nombre, desempate=POR_ENTRENO), entreno)
 
 
 def _decimal(valor):

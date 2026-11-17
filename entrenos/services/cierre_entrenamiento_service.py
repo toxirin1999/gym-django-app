@@ -27,6 +27,7 @@ from entrenos.services.decision_log_service import (
     reconciliar_decisiones_fatiga_parcial,
 )
 from entrenos.services.orden_sesiones_service import DESCONOCIDO, POSTERIOR, orden_entre_sesiones, primera_anterior
+from entrenos.services.historial_ejercicio_service import POR_ID, anteriores as historial_anteriores
 from entrenos.services.progresion_contextual_service import (
     evaluar_permiso_progresion,
     _MENSAJES_PROGRESION,
@@ -208,6 +209,9 @@ def _decisiones_entrenador(cliente, entreno):
         if log.accion == 'mantener' and nombre in omitidos_por_nombre:
             logs_omitidos[nombre] = log
 
+    # 17-nov-2026: los ejercicios de hoy se leen una vez (antes, dos lecturas por decisión).
+    ejercicios_hoy = list(entreno.ejercicios_realizados.all())
+
     def evidencia_de_ejercicio(nombre):
         """Expone la evidencia mínima que sostiene una decisión.
 
@@ -217,7 +221,7 @@ def _decisiones_entrenador(cliente, entreno):
         """
         clave = normalizar_ejercicio(nombre)
         ejercicio = next(
-            (ej for ej in entreno.ejercicios_realizados.all()
+            (ej for ej in ejercicios_hoy
              if normalizar_ejercicio(ej.nombre_ejercicio) == clave),
             None,
         )
@@ -267,7 +271,7 @@ def _decisiones_entrenador(cliente, entreno):
                 _sesion_anterior, porque_decision, texto_series,
             )
             ejercicio_hoy = next(
-                (ej for ej in entreno.ejercicios_realizados.all()
+                (ej for ej in ejercicios_hoy
                  if normalizar_ejercicio(ej.nombre_ejercicio) == nombre),
                 None,
             )
@@ -802,11 +806,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
                 # 17-nov-2026 (nota 52): solo una sesión claramente anterior;
                 # al reabrir un cierre antiguo no se toman datos de una posterior.
                 _prev = primera_anterior(
-                    EjercicioRealizado.objects
-                    .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio,
-                            completado=True, entreno__fecha__lte=entreno.fecha)
-                    .exclude(entreno_id=entreno.id).select_related('entreno')
-                    .order_by('-entreno__fecha', '-id'),
+                    historial_anteriores(cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID),
                     entreno,
                 )
                 if _prev is not None:
@@ -848,13 +848,7 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
         # reciente tiene un orden desconocido (mismo día sin hora, fechas del
         # plan y de ejecución que discrepan), no se compara con ninguna.
         orden_desconocido = False
-        for candidato in (
-            EjercicioRealizado.objects
-            .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
-                    entreno__fecha__lte=entreno.fecha)
-            .exclude(entreno_id=entreno.id).select_related('entreno')
-            .order_by('-entreno__fecha', '-id')
-        ):
+        for candidato in historial_anteriores(cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID):
             # 11-nov-2026 (notas 9 y 10): hoy no es descarga, así que la
             # comparación es con la última sesión normal, no con la rebajada.
             if not es_descarga_hoy:
@@ -906,12 +900,9 @@ def _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy=False):
             # parecía a la de la vez anterior (40 × 10 en pirámide) y el
             # ejercicio desaparecía. Se compara la última sesión reciente por
             # su serie de referencia (la que entra en el rango).
-            reciente = (
-                EjercicioRealizado.objects
-                .filter(entreno__cliente=cliente, nombre_ejercicio__iexact=ej.nombre_ejercicio, completado=True,
-                        entreno__fecha__lte=entreno.fecha, entreno__fecha__gte=entreno.fecha - timedelta(days=42))
-                .exclude(entreno_id=entreno.id).select_related('entreno')
-                .order_by('-entreno__fecha', '-id')
+            reciente = historial_anteriores(
+                cliente, entreno, ej.nombre_ejercicio, desempate=POR_ID,
+                desde=entreno.fecha - timedelta(days=42),
             )
             if not es_descarga_hoy:
                 from entrenos.services.sesion_descarga_service import es_sesion_descarga as _es_desc
