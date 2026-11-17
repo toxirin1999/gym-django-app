@@ -32,6 +32,7 @@ from entrenos.services.progresion_contextual_service import (
     _MENSAJES_PROGRESION,
 )
 from entrenos.utils.utils import reps_compatibles_con_objetivo
+from django.conf import settings
 from joi.models import MensajeJOI
 
 
@@ -1098,6 +1099,12 @@ def _joi_mensaje_cierre(cliente, entreno):
            (comportamiento previo, para revisitas al cierre).
         3. Si no hay nada, silencio.
     """
+    # 17-nov-2026 (lentitud): con la voz de JOI congelada la plantilla no pinta
+    # este mensaje (`joi_activa` es falso) y no se puede generar ninguno nuevo de
+    # este tipo, así que la consulta (1,4 a 2 s en producción) no sirve a nadie.
+    if not getattr(settings, 'JOI_VOZ_ACTIVA', False):
+        return None
+
     base = MensajeJOI.objects.filter(user=cliente.user, trigger='entreno_completado')
 
     reciente = (
