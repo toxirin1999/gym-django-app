@@ -135,6 +135,7 @@ class DashboardSilenciosoPreviewTests(TestCase):
         self.assertIsNone(response.context["quiet_load"])
         self.assertNotContains(response, 'class="load-chip"')
 
+    @patch('entrenos.services.propuesta_zona_service.SUBIR_VOLUMEN_ACTIVO', True)  # 18-nov-2026: subir en espera
     def test_propuesta_de_zona_se_presenta_con_datos_estructurados_y_no_un_parrafo(self):
         """La iniciativa explica qué cae y qué cambia sin reanalizar su texto."""
         from entrenos.models import PropuestaZonaGym

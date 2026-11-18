@@ -79,6 +79,18 @@ class _DatosEntrenoMixin:
         self.cliente = Cliente.objects.get(user=user)
         self.rutina = Rutina.objects.create(nombre='Rutina evo')
         self._entrenos = {}
+        # 18-nov-2026: estas pruebas miden la agregación; el bloque del plan (comparabilidad)
+        # se prueba aparte en tests_trayectoria_panel_20261118.
+        from unittest.mock import patch
+        parche = patch('entrenos.services.comparabilidad_service.Bloques.de', return_value={
+            'familia': 'hipertrofia', 'nombre': 'Hipertrofia — Prueba', 'semana_plan': 1, 'origen': 'prueba'})
+        parche.start()
+        self.addCleanup(parche.stop)
+        # ...y la exigencia de evidencia de zona (2 ejercicios o 3 sesiones) tampoco.
+        for nombre in ('EJERCICIOS_PARA_TENDENCIA', 'SESIONES_PARA_TENDENCIA'):
+            p2 = patch(f'entrenos.services.evolucion_muscular_service.{nombre}', 1)
+            p2.start()
+            self.addCleanup(p2.stop)
 
     def _ej(self, dias_atras, nombre, peso, reps, grupo=None, **extra):
         fecha = self.HOY - timedelta(days=dias_atras)
@@ -108,11 +120,11 @@ class EvolucionPorGrupoTests(_DatosEntrenoMixin, TestCase):
 
     def test_usa_e1rm_no_peso_bruto(self):
         # Mismo peso, más repeticiones: el peso bruto no cambia, el e1RM sí.
-        self._ej(120, 'Press banca con barra', 80, 5, 'Pecho')
-        self._ej(10, 'Press banca con barra', 80, 10, 'Pecho')
+        self._ej(120, 'Press banca con barra', 80, 10, 'Pecho')
+        self._ej(10, 'Press banca con barra', 80, 14, 'Pecho')
         pecho = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'pecho')
-        # Epley: 80*(1+5/30)=93.33 → 80*(1+10/30)=106.67  → +14.3 %
-        self.assertAlmostEqual(pecho['pct'], 14.3, places=1)
+        # Epley: 80*(1+10/30)=106.67 → 80*(1+14/30)=117.33  → +10.0 % (mismo tramo medio)
+        self.assertAlmostEqual(pecho['pct'], 10.0, places=1)
         self.assertEqual(pecho['estado'], 'progresa')
 
     def test_considera_todos_los_ejercicios_no_solo_veinte(self):
@@ -281,8 +293,8 @@ class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):
         self._ej(10, 'Buenos días', 45, 5, 'Isquios')                 # -17 %
         self._ej(120, 'Curl femoral tumbado', 70, 3, 'Isquios')
         self._ej(10, 'Curl femoral tumbado', 55, 5, 'Isquios')        # -18 %
-        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
-        self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')  # +232 %, ligero
+        self._ej(120, 'Hiperextensiones inversas', 5, 12, 'Isquios')
+        self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')  # +200 %, ligero
         r = calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY)
         isquios = self._grupo(r, 'isquios')
         self.assertEqual(isquios['estado'], 'retrocede')
@@ -293,7 +305,7 @@ class EvolucionRobustaTests(_DatosEntrenoMixin, TestCase):
         self.assertEqual(r['n_dudosos'], 0)
 
     def test_zona_con_solo_accesorios_ligeros(self):
-        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
+        self._ej(120, 'Hiperextensiones inversas', 5, 12, 'Isquios')
         self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')
         isquios = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'isquios')
         self.assertIsNone(isquios['pct'])
@@ -308,6 +320,14 @@ class GruposMuscularesCompatTests(TestCase):
         cliente = Cliente.objects.get(user=user)
         rutina = Rutina.objects.create(nombre='r')
         hoy = date(2026, 10, 10)
+        from unittest.mock import patch
+        for destino, valor in (('entrenos.services.comparabilidad_service.Bloques.de',
+                                {'familia': 'hipertrofia', 'nombre': 'Prueba', 'semana_plan': 1, 'origen': 'prueba'}),
+                               ('entrenos.services.evolucion_muscular_service.EJERCICIOS_PARA_TENDENCIA', 1),
+                               ('entrenos.services.evolucion_muscular_service.SESIONES_PARA_TENDENCIA', 1)):
+            pp = patch(destino, return_value=valor) if destino.endswith('.de') else patch(destino, valor)
+            pp.start()
+            self.addCleanup(pp.stop)
         for dias, peso in ((120, 20), (10, 32)):
             e = EntrenoRealizado.objects.create(cliente=cliente, rutina=rutina,
                                                 fecha=hoy - timedelta(days=dias))
@@ -392,7 +412,7 @@ class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
 
         self._ej(120, 'Curl martillo', 40, 8, 'Bíceps')
         self._ej(10, 'Curl martillo', 100, 8, 'Bíceps', tipo_carga='total')
-        self._ej(120, 'Hiperextensiones inversas', 5, 8, 'Isquios')
+        self._ej(120, 'Hiperextensiones inversas', 5, 12, 'Isquios')
         self._ej(10, 'Hiperextensiones inversas', 15, 12, 'Isquios')
         self._ej(120, 'Press francés', 20, 10, 'Tríceps')
         self._ej(10, 'Press francés', 22, 10, 'Tríceps')
@@ -403,7 +423,7 @@ class DiagnosticoEvolucionCommandTests(_DatosEntrenoMixin, TestCase):
         self.assertIn('Curl martillo: +150.0 %  ⚠ DUDOSO', texto)
         self.assertIn('100 kg × 8 (total)', texto)
         self.assertIn('Press francés: +10.0 %', texto)
-        self.assertIn('Hiperextensiones inversas: +231.6 %  · ACCESORIO LIGERO', texto)
+        self.assertIn('Hiperextensiones inversas: +200.0 %  · ACCESORIO LIGERO', texto)
         self.assertIn('3 ejercicios · 1 dudosos · 1 accesorios ligeros', texto)
 
         out = StringIO()

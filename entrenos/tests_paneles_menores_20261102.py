@@ -12,15 +12,15 @@ LUNES = date(2026, 11, 2)
 
 
 class Frase(SimpleTestCase):
-    def test_verbo_en_plural_con_dos_dias(self):
-        from entrenos.services.marcador_semanal_service import _frase_falta
-        f = _frase_falta([{'grupo': 'Pecho', 'hechas': 0, 'minimo': 7, 'maximo': 14, 'estado': 'bajo',
-                           'cubren': ['Día 1', 'Día 5']}])
-        self.assertTrue(f.endswith('el Día 1 y el Día 5 las cubren.'), f)
+    def test_dias_pendientes_se_nombran_con_y(self):
+        from entrenos.services.marcador_semanal_service import _frase
+        f = _frase([{'grupo': 'Pecho', 'hechas': 0, 'plan': 14, 'pendientes': 7, 'proyectadas': 7,
+                     'estado': 'falta', 'cubren': ['Día 1', 'Día 5']}])
+        self.assertIn('las sesiones pendientes (Día 1 y Día 5) aportan 7', f)
 
 
 class MarcadorDescarga(Base):
-    def test_en_descarga_cuenta_desde_el_lunes_y_sin_minimos(self):
+    def test_en_descarga_cuenta_desde_el_lunes(self):
         from collections import Counter
         from entrenos.services import marcador_semanal_service as m
         SemanaPlanGym.objects.create(cliente=self.cliente, lunes=LUNES, semana_plan=44, descarga=True,
@@ -36,9 +36,9 @@ class MarcadorDescarga(Base):
             r = m.marcador_semanal(self.cliente, LUNES + timedelta(days=1))
         self.assertEqual(llamadas, [2])
         self.assertTrue(r['descarga'])
-        self.assertEqual(r['filas'][0]['estado'], 'ok')
-        self.assertIn('Semana de descarga', r['frase'])
-        self.assertIsNone(r['sobra'])
+        self.assertEqual(r['filas'][0]['estado'], 'falta')
+        self.assertTrue(r['periodo'].startswith('Semana de descarga'))
+        self.assertNotIn('sobra', r)
 
 
 class Historial(Base):

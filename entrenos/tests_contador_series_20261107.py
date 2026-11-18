@@ -51,7 +51,7 @@ class Reglas(_Base):
         m = marcador_semanal(self.cliente, LUNES)
         filas = {f['clave']: f for f in m['filas']}
         self.assertEqual((filas['pecho']['directas'], filas['pecho']['indirectas']), (4, 0))
-        self.assertTrue(m['periodo'].startswith('Últimos 7 días · '))
+        self.assertRegex(m['periodo'], r'^Semana \d\d/\d\d–\d\d/\d\d · hecho hasta hoy')
 
     def test_plan_cuenta_indirectas_como_lo_hecho(self):
         from collections import Counter
@@ -99,10 +99,11 @@ class Memoria(_Base):
     def test_plan_lo_explica(self):
         self.client.force_login(self.cliente.user)
         datos = {'filas': [{'grupo': 'Tríceps', 'clave': 'tríceps', 'hechas': 17, 'directas': 9, 'indirectas': 8,
-                            'minimo': 10, 'maximo': 19, 'plan': 15.5, 'estado': 'ok', 'cubren': [],
-                            'pct': 89, 'pct_min': 52}],
-                 'frase': None, 'periodo': 'Últimos 7 días · 01/11–07/11'}
+                            'pendientes': 0, 'proyectadas': 17, 'plan': 15.5, 'estado': 'completo', 'cubren': [],
+                            'aportan': [], 'hechas_por_sesion': [], 'pct': 100, 'pct_pend': 0, 'pct_plan': 91}],
+                 'frase': None, 'periodo': 'Semana 02/11–08/11 · hecho hasta hoy (07/11)'}
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
         self.assertContains(r, '9 directas + 8 de indirectas')
-        self.assertContains(r, 'Cuenta las series de trabajo de este periodo (últimos 7 días · 01/11–07/11), no una media.')
+        self.assertContains(r, 'Hechas y previstas cuentan el mismo periodo: la semana de lunes a domingo.')
+        self.assertContains(r, 'Semana 02/11–08/11 · hecho hasta hoy (07/11)')

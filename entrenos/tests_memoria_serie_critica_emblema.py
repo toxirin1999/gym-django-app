@@ -61,6 +61,15 @@ class EmblemaTests(TestCase):
         self.user = get_user_model().objects.create_user(username='emblema', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         self.hoy = timezone.localdate()
+        from unittest.mock import patch
+        for destino, kw in (('entrenos.services.comparabilidad_service.Bloques.de',
+                             {'return_value': {'familia': 'hipertrofia', 'nombre': 'Prueba', 'semana_plan': 1,
+                                               'origen': 'prueba'}}),
+                            ('entrenos.services.evolucion_muscular_service.EJERCICIOS_PARA_TENDENCIA', {'new': 1}),
+                            ('entrenos.services.evolucion_muscular_service.SESIONES_PARA_TENDENCIA', {'new': 1})):
+            parche = patch(destino, **kw)
+            parche.start()
+            self.addCleanup(parche.stop)
 
     def _sesion(self, dias, nombre, peso, grupo='Pecho'):
         entreno = EntrenoRealizado.objects.create(

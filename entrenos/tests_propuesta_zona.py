@@ -18,11 +18,21 @@ from entrenos.services.propuesta_zona_service import (
 from rutinas.models import Rutina
 
 
+# 18-nov-2026: «subir volumen» está en espera (SUBIR_VOLUMEN_ACTIVO = False) hasta justificar
+# cómo se decide el ajuste. Este ciclo de vida (proponer → aceptar → comprobar) se prueba con el
+# interruptor activado, para que siga funcionando cuando se reactive; que en espera no genera
+# nada se prueba en tests_trayectoria_panel_20261118.
+@patch('entrenos.services.propuesta_zona_service.SUBIR_VOLUMEN_ACTIVO', True)
 class PropuestaZonaTests(TestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user('propuesta-zona', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         self.hoy = timezone.localdate()
+        # El bloque del plan (comparabilidad) se prueba aparte: aquí, siempre el mismo.
+        parche = patch('entrenos.services.comparabilidad_service.Bloques.de', return_value={
+            'familia': 'hipertrofia', 'nombre': 'Hipertrofia — Prueba', 'semana_plan': 1, 'origen': 'prueba'})
+        parche.start()
+        self.addCleanup(parche.stop)
 
     def _sesion(self, fecha, nombre, peso, reps=8, grupo='Isquios'):
         entreno = EntrenoRealizado.objects.create(

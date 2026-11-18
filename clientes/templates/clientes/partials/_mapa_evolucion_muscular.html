@@ -99,6 +99,7 @@
     <li><span class="mm-sw mm-sw--progresa"></span>Progresa · +10–30 %</li>
     <li><span class="mm-sw mm-sw--estable"></span>Estable · −5 a +10 %</li>
     <li><span class="mm-sw mm-sw--retrocede"></span>Retrocede</li>
+    <li><span class="mm-sw mm-sw--limitada"></span>Evidencia limitada</li>
     <li><span class="mm-sw mm-sw--sin_datos"></span>Sin comparar aún</li>
   </ul>
 </section>
@@ -114,7 +115,7 @@
       <span class="mm-row-pct mm-t-{{ g.estado }}">{% if g.pct is None %}—{% else %}{% if g.pct > 0 %}+{% endif %}{{ g.pct|floatformat:0 }} %{% endif %}</span>
       <span class="mm-row-main">
         <span class="mm-row-name">{{ g.nombre }}</span>
-        <span class="mm-row-state mm-t-{{ g.estado }}">{% if g.estado == 'progresa_mucho' %}Progresa mucho{% elif g.estado == 'progresa' %}Progresa{% elif g.estado == 'estable' %}Estable{% elif g.estado == 'retrocede' %}Retrocede{% else %}Sin comparar{% endif %}{% if g.dudosos %} <span class="mm-row-flag">· {{ g.dudosos|length }} a revisar</span>{% endif %}</span>
+        <span class="mm-row-state mm-t-{{ g.estado }}">{% if g.estado == 'progresa_mucho' %}Progresa mucho{% elif g.estado == 'progresa' %}Progresa{% elif g.estado == 'estable' %}Estable{% elif g.estado == 'retrocede' %}Retrocede{% elif g.estado == 'limitada' %}Evidencia limitada{% else %}Sin comparar{% endif %}{% if g.dudosos %} <span class="mm-row-flag">· {{ g.dudosos|length }} a revisar</span>{% endif %}</span>
       </span>
       <svg class="mm-chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </summary>
@@ -125,6 +126,23 @@
       </div>
       {% if evo.series_semanas %}<p class="mm-row-split">{{ g.series_directas|floatformat:"-1" }} directas{% if g.series_indirectas %} + {{ g.series_indirectas|floatformat:"-1" }} de indirectas (cuentan la mitad){% endif %}. Media de {{ evo.series_semanas }} semana{{ evo.series_semanas|pluralize }} completa{{ evo.series_semanas|pluralize }} sin descarga, del {{ evo.series_desde|date:"d/m" }} al {{ evo.series_hasta|date:"d/m" }}; Plan enseña la semana en curso.</p>{% endif %}
       <p class="mm-row-copy">{{ g.lectura }}</p>
+      {% if g.referencias %}
+      <div class="mm-refs">
+        <span class="mm-light-k">Marcas comparadas · mismo tramo de reps y mismo bloque</span>
+        {% for r in g.referencias %}
+        <p class="mm-review-item">{{ r.ejercicio }} · {{ r.referencia.antes.fecha|date:"d/m" }} {{ r.referencia.antes.peso_kg|floatformat:"-1" }} kg × {{ r.referencia.antes.reps }} ({{ r.referencia.antes.bloque }}) → {{ r.referencia.ahora.fecha|date:"d/m" }} {{ r.referencia.ahora.peso_kg|floatformat:"-1" }} kg × {{ r.referencia.ahora.reps }} ({{ r.referencia.ahora.bloque }}) · {{ r.sesiones }} sesiones{% if r.referencia.antes.nota_peso %} · antes: {{ r.referencia.antes.nota_peso }}{% endif %}{% if r.referencia.ahora.nota_peso %} · ahora: {{ r.referencia.ahora.nota_peso }}{% endif %}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if g.a_comprobar %}
+      <div class="mm-review">
+        <span class="mm-review-k">Peso a comprobar · no cuenta en la evolución</span>
+        {% for d in g.a_comprobar %}
+        <p class="mm-review-item">{{ d.ejercicio }} · {{ d.referencia.antes.fecha|date:"d/m" }} {{ d.referencia.antes.peso_kg|floatformat:"-1" }} kg → {{ d.referencia.ahora.fecha|date:"d/m" }} {{ d.referencia.ahora.peso_kg|floatformat:"-1" }} kg{% if d.referencia.antes.nota_peso %} · {{ d.referencia.antes.nota_peso }}{% endif %}{% if d.referencia.ahora.nota_peso %} · {{ d.referencia.ahora.nota_peso }}{% endif %}</p>
+        {% endfor %}
+        <p class="mm-review-hint">Un peso con decimales no se descarta por serlo: se comprueba su origen, la unidad (por mano, por lado o total) y la máquina.</p>
+      </div>
+      {% endif %}
       {% if g.mejor %}
       <p class="mm-row-best">Mejor: {{ g.mejor.ejercicio }} · {{ g.mejor.antes|floatformat:1 }} → {{ g.mejor.ahora|floatformat:1 }} kg (1RM est.) · {{ g.n_ejercicios }} ejercicio{{ g.n_ejercicios|pluralize }} comparable{{ g.n_ejercicios|pluralize }}</p>
       {% endif %}

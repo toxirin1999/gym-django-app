@@ -90,9 +90,10 @@ class EvaluacionComparable(_DatosEntrenoMixin, TestCase):
     def test_distinto_tramo_de_reps_no_se_compara(self):
         self._ej(40, 'Buenos Días (Good Mornings)', 50, 12, 'Isquios')
         self._ej(5, 'Buenos Días (Good Mornings)', 70, 6, 'Isquios')
+        # 18-nov-2026: el tramo de reps es siempre filtro de comparabilidad.
         normal = comparar_ejercicios(self.cliente, self.HOY, 30)[0]
         estricto = comparar_ejercicios(self.cliente, self.HOY, 30, estricto=True)[0]
-        self.assertIsNotNone(normal['pct'])
+        self.assertIsNone(normal['pct'])
         self.assertIsNone(estricto['pct'])
         self.assertTrue(estricto['cambio_rango'])
 
@@ -102,7 +103,11 @@ class EvaluacionComparable(_DatosEntrenoMixin, TestCase):
         fecha = self.HOY - timedelta(days=5)
         SemanaPlanGym.objects.create(cliente=self.cliente, lunes=fecha - timedelta(days=fecha.weekday()),
                                      semana_plan=44, descarga=True, origen='descarga_programada')
-        estricto = comparar_ejercicios(self.cliente, self.HOY, 30, estricto=True)[0]
+        from unittest.mock import patch
+        with patch('entrenos.services.comparabilidad_service.Bloques.de',
+                   side_effect=lambda f: {'familia': 'descarga' if f == fecha else 'hipertrofia',
+                                          'nombre': 'x', 'semana_plan': 1, 'origen': 'prueba'}):
+            estricto = comparar_ejercicios(self.cliente, self.HOY, 30, estricto=True)[0]
         self.assertIsNone(estricto['ahora'])
         self.assertIsNone(estricto['pct'])
 

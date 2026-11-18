@@ -22,6 +22,16 @@ class MemoriaMapaCorporalTests(TestCase):
         self.cliente = Cliente.objects.get(user=self.user)
         self.url = reverse('clientes:memoria_entrenador', args=[self.cliente.id])
         self.client.force_login(self.user)
+        # 18-nov-2026: bloque y exigencia de evidencia se prueban en tests_trayectoria_panel_20261118.
+        from unittest.mock import patch
+        for destino, kw in (('entrenos.services.comparabilidad_service.Bloques.de',
+                             {'return_value': {'familia': 'hipertrofia', 'nombre': 'Prueba', 'semana_plan': 1,
+                                               'origen': 'prueba'}}),
+                            ('entrenos.services.evolucion_muscular_service.EJERCICIOS_PARA_TENDENCIA', {'new': 1}),
+                            ('entrenos.services.evolucion_muscular_service.SESIONES_PARA_TENDENCIA', {'new': 1})):
+            parche = patch(destino, **kw)
+            parche.start()
+            self.addCleanup(parche.stop)
 
     def _sesion(self, dias_atras, nombre, peso, grupo):
         entreno = EntrenoRealizado.objects.create(

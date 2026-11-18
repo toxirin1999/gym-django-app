@@ -19,7 +19,14 @@ Método
    solo el peso por mano, ahora el total de las dos) no duplica la carga.
    Se descartan cargas de recuperación, series no completadas y registros
    sin peso.
-3. Un ejercicio cuenta si tiene datos en ambas ventanas. Un cambio de más
+3. (18-nov-2026) Solo se comparan marcas comparables: mismo tramo de reps
+   (≤ 8, 9-14, ≥ 15) y mismo bloque del plan (hipertrofia, fuerza, potencia;
+   la descarga no se compara). Cada comparación guarda las fechas y
+   referencias usadas. Un peso con decimales no se descarta por tenerlos: se
+   comprueba su origen, unidad y máquina (``comparabilidad_service``). Una
+   zona con un solo ejercicio y menos de tres sesiones comparables se marca
+   «evidencia limitada».
+   Un ejercicio cuenta si tiene datos en ambas ventanas. Un cambio de más
    de ±``UMBRAL_DUDOSO`` % en un solo periodo es casi siempre un error de
    registro: se aparta como "dato a revisar" y no entra en la mediana.
    Si el ejercicio es ligero (e1RM previo < ``UMBRAL_LIGERO_KG``) se
@@ -172,12 +179,21 @@ def _estado(pct):
     return 'progresa_mucho'
 
 
-def _lectura(estado, series_semana, n_dudosos=0, n_ligeros=0, n_cambio_rango=0):
+def _lectura(estado, series_semana, n_dudosos=0, n_ligeros=0, n_cambio_rango=0,
+             n_ejercicios=0, n_sesiones=0, n_a_comprobar=0):
     """Frase descriptiva y determinista para la fila de cada zona."""
+    if estado == 'limitada':
+        return (f'Evidencia limitada: {n_ejercicios} ejercicio{"s" if n_ejercicios != 1 else ""} y '
+                f'{n_sesiones} sesion{"es" if n_sesiones != 1 else ""} comparables (mismo tramo de reps y '
+                f'mismo bloque). Hacen falta {EJERCICIOS_PARA_TENDENCIA} ejercicios o '
+                f'{SESIONES_PARA_TENDENCIA} sesiones para apoyar una tendencia.')
     if estado == 'sin_datos':
+        if n_a_comprobar and not n_dudosos:
+            return ('Hay pesos por comprobar (origen, unidad o máquina) antes de poder comparar: '
+                    'evidencia limitada.')
         if n_cambio_rango and not n_dudosos:
-            return ('Cambiaste de rango de reps (ahora más reps y menos peso): '
-                    'aún no hay con qué comparar. No es una pérdida de fuerza.')
+            return ('Evidencia limitada: no hay marcas comparables entre los dos periodos '
+                    '(mismo tramo de reps y mismo bloque). No es una pérdida de fuerza.')
         if n_ligeros and not n_dudosos:
             return ('Solo hay accesorios ligeros comparables: sus saltos en % no '
                     'reflejan la fuerza del grupo.')
@@ -254,24 +270,35 @@ def tramo_reps(reps):
     return 'alto'
 
 
+# 18-nov-2026: lo mínimo para apoyar una tendencia de una zona. No basta, por sí
+# solo, para proponer subir volumen (ver ``propuesta_zona_service``).
+EJERCICIOS_PARA_TENDENCIA = 2
+SESIONES_PARA_TENDENCIA = 3
+
+
 def comparar_ejercicios(cliente, hoy=None, dias=90, estricto=False):
     """
     Detalle por ejercicio de las dos ventanas. Lo usan el mapa y el comando
     ``diagnosticar_evolucion_muscular``.
 
-    ``estricto`` (8-nov-2026, para evaluar propuestas): sin las semanas de
-    descarga y comparando siempre el mismo tramo de reps (≤ 8, 9-14, ≥ 15). Si
-    no hay ningún tramo en común, no se compara: mejor «sin evidencia» que
-    comparar 4-6 reps con 12-15.
+    18-nov-2026: la comparación es siempre entre marcas comparables (mismo
+    tramo de reps y mismo bloque del plan; la descarga no se compara). Si no
+    hay ninguna pareja comparable no hay porcentaje: ``evidencia`` es
+    ``'sin_comparable'`` y se dice por qué. ``estricto`` se conserva por
+    compatibilidad y ya no cambia nada: antes era el modo de las propuestas.
 
     Devuelve una lista de dicts::
 
         {'zona', 'ejercicio', 'pct' | None, 'dudoso': bool, 'ligero': bool,
-         'antes': {'e1rm', 'peso_kg', 'reps', 'fecha', 'tipo_carga',
-                   'multiplicador', 'peso_total_kg',
-                   'fuente': 'serie' | 'media'} | None,
+         'evidencia': 'suficiente' | 'a_comprobar' | 'sin_comparable',
+         'sesiones': int, 'criterio': {...} | None, 'sin_comparable_motivo': str | None,
+         'antes': {'e1rm', 'peso_kg', 'reps', 'fecha', 'tramo', 'bloque',
+                   'tipo_carga', 'multiplicador', 'peso_total_kg',
+                   'fuente': 'serie' | 'media', 'revision': {...}} | None,
          'ahora': {...} | None}
     """
+    from entrenos.services.comparabilidad_service import Bloques, revisar_peso
+
     hoy = hoy or date.today()
     inicio_actual, inicio_anterior = _ventanas(hoy, dias)
 
@@ -280,29 +307,26 @@ def comparar_ejercicios(cliente, hoy=None, dias=90, estricto=False):
     recuperacion = {(eid, _plano(nombre))
                     for _f, nombre, *_r, rec, eid in agregados if rec}
 
-    candidatos = []  # (fecha, nombre, grupo, peso, total, mult, tipo, reps, fuente)
+    candidatos = []  # (fecha, nombre, grupo, peso, total, mult, tipo, reps, fuente, eid)
     con_series = set()
+    pesos_sesion = defaultdict(set)
     for fecha, nombre, grupo, peso, total, mult, tipo, reps, eid in \
             _series(cliente, inicio_anterior, hoy):
         clave = (eid, _plano(nombre))
         if clave in recuperacion:
             continue
         con_series.add(clave)
-        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'serie'))
+        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'serie', eid))
+        pesos_sesion[clave].add(float(peso or 0))
     for fecha, nombre, grupo, peso, total, mult, tipo, reps, _series_n, rec, eid in agregados:
         if rec or (eid, _plano(nombre)) in con_series:
             continue
-        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'media'))
-    if estricto:
-        from entrenos.models import SemanaPlanGym
-        descarga = set(SemanaPlanGym.objects.filter(
-            cliente=cliente, descarga=True,
-        ).values_list('lunes', flat=True))
-        candidatos = [c for c in candidatos if (c[0] - timedelta(days=c[0].weekday())) not in descarga]
+        candidatos.append((fecha, nombre, grupo, peso, total, mult, tipo, reps, 'media', eid))
     candidatos.sort(key=lambda c: c[0])
 
+    bloques = Bloques(cliente)
     por_ejercicio = {}
-    for fecha, nombre, grupo, peso, peso_total, mult, tipo, reps, fuente in candidatos:
+    for fecha, nombre, grupo, peso, peso_total, mult, tipo, reps, fuente, eid in candidatos:
         zona = normalizar_zona(grupo, nombre)
         if zona is None:
             continue
@@ -310,61 +334,87 @@ def comparar_ejercicios(cliente, hoy=None, dias=90, estricto=False):
         e1rm = _e1rm(_carga_por_unidad(peso, peso_total, mult), reps)
         if e1rm <= 0:
             continue
+        bloque = bloques.de(fecha)
+        if bloque['familia'] == 'descarga':
+            continue                      # una semana de descarga no se compara con nada
 
         ventana = 'ahora' if fecha > inicio_actual else 'antes'
         info = por_ejercicio.setdefault((zona, _plano(nombre)), {
             'zona': zona, 'ejercicio': nombre.strip(), 'antes': None, 'ahora': None,
-            '_tramos': {'antes': {}, 'ahora': {}}, '_ultimo_tramo': None,
+            '_claves': {'antes': {}, 'ahora': {}}, '_fechas': {'antes': {}, 'ahora': {}},
         })
         # Candidatos ordenados por fecha: el último nombre visto es el más reciente.
         info['ejercicio'] = nombre.strip()
+        tramo = tramo_reps(reps)
         dato = {
             'e1rm': e1rm, 'peso_kg': float(peso or 0), 'reps': reps, 'fecha': fecha,
             'tipo_carga': tipo, 'multiplicador': mult, 'peso_total_kg': peso_total,
-            'fuente': fuente,
+            'fuente': fuente, 'tramo': tramo, 'bloque': bloque['nombre'],
+            'familia': bloque['familia'], 'bloque_origen': bloque['origen'],
+            '_pesos_sesion': pesos_sesion.get((eid, _plano(nombre)), ()),
         }
         actual = info[ventana]
         if actual is None or e1rm > actual['e1rm']:
             info[ventana] = dato
-        # 01-nov-2026: lo mejor de cada tramo de reps, para comparar como con como.
-        tramo = tramo_reps(reps)
-        previo = info['_tramos'][ventana].get(tramo)
+        clave = (tramo, bloque['familia'])
+        previo = info['_claves'][ventana].get(clave)
         if previo is None or e1rm > previo['e1rm']:
-            info['_tramos'][ventana][tramo] = dato
-        if ventana == 'ahora':
-            info['_ultimo_tramo'] = tramo
+            info['_claves'][ventana][clave] = dato
+        info['_fechas'][ventana].setdefault(clave, set()).add(fecha)
+
+    def _revisar(dato, nombre):
+        if dato is None:
+            return
+        dato['revision'] = revisar_peso(
+            nombre, _carga_por_unidad(dato['peso_kg'], dato['peso_total_kg'], dato['multiplicador']),
+            dato.pop('_pesos_sesion', ()), dato['fuente'], dato['tipo_carga'])
 
     resultado = []
     for info in por_ejercicio.values():
         pct = None
-        info['cambio_rango'] = False
-        tramos = info.pop('_tramos')
-        ultimo = info.pop('_ultimo_tramo')
+        info.update({'cambio_rango': False, 'sin_comparable_motivo': None, 'criterio': None,
+                     'sesiones': 0, 'evidencia': 'sin_comparable'})
+        claves = info.pop('_claves')
+        fechas = info.pop('_fechas')
         if info['antes'] and info['ahora']:
-            # 01-nov-2026: la fuerza estimada a 15-20 reps sale más baja que a
-            # 6-8 (encogimientos 110 × 16 cuentan como × 15). Se compara el
-            # mismo tramo de reps; si no hay ninguno en común, no se compara.
-            # Solo cuando los dos extremos no se parecen (≤ 8 frente a ≥ 15); tramos
-            # vecinos (8 y 12) se comparan como siempre.
-            tramos_extremos = {tramo_reps(info['antes']['reps']), tramo_reps(info['ahora']['reps'])}
-            lejos = tramos_extremos == {'fuerza', 'alto'} or (estricto and len(tramos_extremos) > 1)
-            if lejos:
-                comunes = [t for t in tramos['ahora'] if t in tramos['antes']]
-                if comunes:
-                    tramo = ultimo if ultimo in comunes else max(
-                        comunes, key=lambda t: tramos['ahora'][t]['fecha'])
-                    info['antes'], info['ahora'] = tramos['antes'][tramo], tramos['ahora'][tramo]
-                else:
-                    info['cambio_rango'] = True
-        if info['antes'] and info['ahora'] and not info['cambio_rango']:
-            pct = round((info['ahora']['e1rm'] - info['antes']['e1rm'])
-                        / info['antes']['e1rm'] * 100, 1)
+            comunes = [k for k in claves['ahora'] if k in claves['antes']]
+            if comunes:
+                clave = max(comunes, key=lambda k: (claves['ahora'][k]['fecha'],
+                                                    len(fechas['ahora'][k]) + len(fechas['antes'][k])))
+                info['antes'], info['ahora'] = claves['antes'][clave], claves['ahora'][clave]
+                info['sesiones'] = len(fechas['antes'][clave]) + len(fechas['ahora'][clave])
+                info['criterio'] = {
+                    'tramo': clave[0], 'familia': clave[1],
+                    'bloque_antes': info['antes']['bloque'], 'bloque_ahora': info['ahora']['bloque'],
+                }
+                info['evidencia'] = 'suficiente'
+                pct = round((info['ahora']['e1rm'] - info['antes']['e1rm'])
+                            / info['antes']['e1rm'] * 100, 1)
+            else:
+                info['cambio_rango'] = True
+                tramos_a = {k[0] for k in claves['antes']}
+                tramos_b = {k[0] for k in claves['ahora']}
+                info['sin_comparable_motivo'] = (
+                    'tramo de reps distinto' if not (tramos_a & tramos_b) else 'bloque distinto')
+        _revisar(info['antes'], info['ejercicio'])
+        _revisar(info['ahora'], info['ejercicio'])
+        if info['evidencia'] == 'suficiente' and any(
+                (info[v] or {}).get('revision', {}).get('estado') == 'a_comprobar' for v in ('antes', 'ahora')):
+            info['evidencia'] = 'a_comprobar'
         info['pct'] = pct
         extremo = pct is not None and abs(pct) > UMBRAL_DUDOSO
         info['ligero'] = extremo and info['antes']['e1rm'] < UMBRAL_LIGERO_KG
         info['dudoso'] = extremo and not info['ligero']
         resultado.append(info)
     return sorted(resultado, key=lambda e: (e['zona'], e['ejercicio']))
+
+
+def _referencia(e):
+    """Las fechas y marcas usadas en una comparación, para enseñarlas (18-nov-2026)."""
+    def uno(d):
+        return {'fecha': d['fecha'], 'peso_kg': d['peso_kg'], 'reps': d['reps'], 'tramo': d['tramo'],
+                'bloque': d['bloque'], 'nota_peso': (d.get('revision') or {}).get('nota')}
+    return {'antes': uno(e['antes']), 'ahora': uno(e['ahora']), 'criterio': e['criterio']}
 
 
 def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
@@ -409,6 +459,7 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
     fiables = defaultdict(list)
     dudosos = defaultdict(list)
     ligeros = defaultdict(list)
+    a_comprobar = defaultdict(list)
     cambio_rango = defaultdict(int)
     for e in comparar_ejercicios(cliente, hoy=hoy, dias=dias):
         if e.get('cambio_rango'):
@@ -416,7 +467,11 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         if e['pct'] is None:
             continue
         resumen = {'ejercicio': e['ejercicio'], 'antes': round(e['antes']['e1rm'], 1),
-                   'ahora': round(e['ahora']['e1rm'], 1), 'pct': e['pct']}
+                   'ahora': round(e['ahora']['e1rm'], 1), 'pct': e['pct'],
+                   'sesiones': e['sesiones'], 'referencia': _referencia(e)}
+        if e['evidencia'] == 'a_comprobar':
+            a_comprobar[e['zona']].append(resumen)
+            continue
         destino = dudosos if e['dudoso'] else ligeros if e['ligero'] else fiables
         destino[e['zona']].append(resumen)
 
@@ -424,11 +479,20 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
     for zona in ZONAS:
         cambios = fiables.get(zona, [])
         pct = round(statistics.median(c['pct'] for c in cambios), 1) if cambios else None
+        n_sesiones = max((c['sesiones'] for c in cambios), default=0)
+        # 18-nov-2026: dos ejercicios o tres sesiones comparables apoyan una tendencia;
+        # con menos, «evidencia limitada» (el porcentaje se enseña, pero no manda).
+        limitada = bool(cambios) and len(cambios) < EJERCICIOS_PARA_TENDENCIA \
+            and n_sesiones < SESIONES_PARA_TENDENCIA
         grupo = {
             'zona': zona,
             'nombre': NOMBRES_ZONA[zona],
             'pct': pct,
-            'estado': _estado(pct),
+            'estado': 'limitada' if limitada else _estado(pct),
+            'evidencia_limitada': limitada,
+            'n_sesiones': n_sesiones,
+            'referencias': sorted(cambios, key=lambda c: c['ejercicio']),
+            'a_comprobar': a_comprobar.get(zona, []),
             'n_ejercicios': len(cambios),
             'series_semana': round(series_por_zona.get(zona, 0), 1),
             'series_directas': round(directas_por_zona.get(zona, 0), 1),
@@ -440,13 +504,15 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         grupo['cambio_rango'] = cambio_rango.get(zona, 0)
         grupo['lectura'] = _lectura(grupo['estado'], grupo['series_semana'],
                                     len(grupo['dudosos']), len(grupo['ligeros']),
-                                    grupo['cambio_rango'])
+                                    grupo['cambio_rango'], len(cambios), n_sesiones,
+                                    len(grupo['a_comprobar']))
         grupos.append(grupo)
 
     con_datos = sorted((g for g in grupos if g['pct'] is not None), key=lambda g: -g['pct'])
     sin_datos = [g for g in grupos if g['pct'] is None]
-    media = (round(sum(g['pct'] for g in con_datos) / len(con_datos), 1)
-             if con_datos else None)
+    con_tendencia = [g for g in con_datos if not g['evidencia_limitada']]
+    media = (round(sum(g['pct'] for g in con_tendencia) / len(con_tendencia), 1)
+             if con_tendencia else None)
 
     return {
         'periodo_dias': dias,
@@ -459,7 +525,7 @@ def calcular_evolucion_por_grupo(cliente, hoy=None, dias=90):
         'n_dudosos': sum(len(g['dudosos']) for g in grupos),
         'grupos': con_datos + sin_datos,
         'estado_por_zona': {g['zona']: g['estado'] for g in grupos},
-        'lider': con_datos[0] if con_datos else None,
+        'lider': con_tendencia[0] if con_tendencia else None,
         'zonas_sin_registros': [g['nombre'] for g in sin_datos
                                 if not g['series_semana'] and not g['dudosos']
                                 and not g['ligeros']],

@@ -1,28 +1,28 @@
-"""Marcador semanal por músculo (26-oct-2026, semana adaptativa, paso 2).
+"""Marcador semanal por músculo (26-oct-2026; rehecho el 18-nov-2026).
 
-Solo muestra: series de los últimos 7 días por músculo frente a su objetivo.
+Un solo periodo para todo: la semana de calendario en curso (lunes a domingo).
 
-- **Objetivo**: un margen, no un número. El mínimo es 10 series (evidencia)
-  o lo que pide tu plan si es menos (core, trapecio…); el máximo, lo que pide
-  tu plan con 4 de margen, sin pasar de 20.
-- **Hechas**: series de trabajo reales de los últimos 7 días. Las indirectas
-  cuentan la mitad (un press de pecho es medio tríceps; un remo, medio bíceps).
-- **Frase**: solo si hay algo que decir (falta llegar al mínimo, o te pasas).
+- **Hechas**: series de trabajo reales desde el lunes hasta hoy. Las
+  indirectas cuentan la mitad (un press de pecho es medio tríceps; un remo,
+  medio bíceps).
+- **Pendientes**: lo que aportan de verdad las sesiones de la semana que aún
+  no has hecho (series de cada una para ese músculo), no solo si lo tocan.
+- **Plan**: la referencia es lo que pide el planificador para esa misma
+  semana, contado igual. Se dice de dónde sale. Ya no hay un mínimo de 10 ni
+  un máximo de «plan + 4»: no estaban justificados.
+- **Frase**: solo hechos (llevas X, las pendientes aportan Y, el plan pide Z).
 
-7-nov-2026: el plan y lo hecho se cuentan igual (antes el plan solo contaba
-directas y lo hecho sumaba las indirectas: tríceps "17 de 9–14" con 9
-directas). Cada fila dice cuántas son directas y cuántas indirectas. El
-Farmer Walk cuenta como antebrazo y medio trapecio, en el plan y en lo hecho
-(antes el plan lo ponía en trapecio un día y lo hecho, en antebrazo).
+7-nov-2026: el plan y lo hecho se cuentan igual. El Farmer Walk cuenta como
+antebrazo y medio trapecio, en el plan y en lo hecho.
 """
 
 from collections import Counter, defaultdict
 from datetime import timedelta
 import unicodedata
 
-MINIMO_EVIDENCIA = 10
-MAXIMO_EVIDENCIA = 20
-MARGEN = 4
+# 18-nov-2026: a partir de cuántas series sobre el plan se avisa de que se supera.
+# Solo informa; no es una norma de entrenamiento ni propone nada por sí sola.
+MARGEN_SOBRE_PLAN = 4
 
 # (palabras del ejercicio, grupo directo, grupo que recibe media serie)
 INDIRECTOS = (
@@ -115,6 +115,7 @@ def series_plan_semana(cliente, hoy):
         {ej.get('nombre') for ent in entrenos for ej in (ent.get('ejercicios') or [])})
     for ent in entrenos:
         grupos = set()
+        series = Counter()
         for ej in ent.get('ejercicios') or []:
             try:
                 n = int(ej.get('series') or 0)
@@ -123,10 +124,25 @@ def series_plan_semana(cliente, hoy):
             grupo = grupo_catalogo.get(_limpio(ej.get('nombre'))) or ej.get('grupo_muscular')
             for g, peso in grupos_de_serie(ej.get('nombre'), grupo):
                 plan[g] += n * peso
+                series[g] += n * peso
                 if peso == 1.0:
                     grupos.add(g)
-        sesiones.append({'nombre': (ent.get('rutina_nombre') or '').strip(), 'grupos': grupos})
+        # 18-nov-2026: las series que aporta cada sesión a cada músculo (no solo si lo toca).
+        sesiones.append({'nombre': (ent.get('rutina_nombre') or '').strip(), 'grupos': grupos,
+                         'series': dict(series)})
     return plan, sesiones
+
+
+def _fecha_real_entre(desde, hasta, prefijo='entreno__'):
+    """Filtro por el día en que se hizo la sesión (``fecha_ejecucion``; si no consta, ``fecha``).
+
+    ``fecha`` es el día del plan al que pertenece la rutina; una sesión movida se hizo otro día.
+    Lo hecho y lo pendiente de la semana cuentan por el día real (18-nov-2026).
+    """
+    from django.db.models import Q
+    return (Q(**{f'{prefijo}fecha_ejecucion__gte': desde, f'{prefijo}fecha_ejecucion__lte': hasta})
+            | Q(**{f'{prefijo}fecha_ejecucion__isnull': True, f'{prefijo}fecha__gte': desde,
+                   f'{prefijo}fecha__lte': hasta}))
 
 
 def series_hechas_detalle(cliente, desde, hasta):
@@ -139,12 +155,33 @@ def series_hechas_detalle(cliente, desde, hasta):
     total, directas, indirectas = Counter(), Counter(), Counter()
     for s in SerieRealizada.objects.filter(
         entreno__cliente=cliente, completado=True, es_aproximacion=False,
-        entreno__fecha__gte=desde, entreno__fecha__lte=hasta,
-    ).select_related('ejercicio'):
+    ).filter(_fecha_real_entre(desde, hasta)).select_related('ejercicio'):
         for g, peso in grupos_de_serie(s.ejercicio.nombre, s.ejercicio.grupo_muscular):
             total[g] += peso
             (directas if peso == 1.0 else indirectas)[g] += peso
     return total, directas, indirectas
+
+
+def series_hechas_por_sesion(cliente, desde, hasta):
+    """{grupo: [{'dia', 'fecha', 'series'}]} de las series hechas, por sesión (18-nov-2026)."""
+    from entrenos.models import SerieRealizada
+
+    acumulado = {}
+    for s in SerieRealizada.objects.filter(
+        entreno__cliente=cliente, completado=True, es_aproximacion=False,
+    ).filter(_fecha_real_entre(desde, hasta)).select_related('ejercicio', 'entreno', 'entreno__rutina'):
+        rutina = getattr(s.entreno, 'rutina', None)
+        dia = _dia(rutina.nombre) if rutina is not None else 'Sesión'
+        for g, peso in grupos_de_serie(s.ejercicio.nombre, s.ejercicio.grupo_muscular):
+            clave = (g, s.entreno_id)
+            fila = acumulado.setdefault(clave, {'dia': dia, 'fecha': s.entreno.fecha, 'series': 0})
+            fila['series'] += peso
+    out = defaultdict(list)
+    for (g, _eid), fila in acumulado.items():
+        out[g].append(fila)
+    for g in out:
+        out[g].sort(key=lambda f: f['fecha'])
+    return dict(out)
 
 
 def series_hechas(cliente, hoy, dias=7):
@@ -160,7 +197,12 @@ def _pendientes(cliente, hoy, sesiones):
     from entrenos.services.nombre_rutina import clave_rutina
     hechas = Counter(
         clave_rutina(e.rutina.nombre)
-        for e in EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False).filter(
+        for e in EntrenoRealizado.objects.filter(
+            cliente=cliente, rutina__isnull=False,
+            # Una sesión del plan de la semana pasada hecha hoy suma sus series, pero no cubre
+            # una sesión pendiente de esta semana aunque se llame igual.
+            fecha__gte=lunes,
+        ).filter(
             Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=hoy)
             | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=hoy)
         ).select_related('rutina')
@@ -180,50 +222,62 @@ def _dia(nombre):
     return _etiqueta_dia(nombre) or nombre
 
 
+def _estado_fila(hechas, plan, proyectadas):
+    if proyectadas > plan + MARGEN_SOBRE_PLAN:
+        return 'supera'
+    if hechas >= plan:
+        return 'completo'
+    if proyectadas >= plan:
+        return 'cubierto'
+    return 'falta'
+
+
 def marcador_semanal(cliente, hoy):
-    """{'filas': [...], 'frase': str|None}. Filas ordenadas por series del plan."""
+    """{'filas': [...], 'frase': str|None, 'periodo', 'referencia'}. Filas por series del plan."""
     plan, sesiones = series_plan_semana(cliente, hoy)
     if not plan:
         return {'filas': [], 'frase': None}
-    # 2-nov-2026: en la semana de descarga se cuenta desde el lunes y contra la
-    # descarga; los últimos 7 días eran la semana normal anterior y el mínimo
-    # de una semana normal ("te faltan 7 de pecho") no tiene sentido aquí.
+    lunes = hoy - timedelta(days=hoy.weekday())
+    domingo = lunes + timedelta(days=6)
     descarga = False
     try:
         from entrenos.services.sesion_descarga_service import semana_plan_descarga
         descarga = semana_plan_descarga(cliente.id, hoy)
     except Exception:  # noqa: BLE001
         pass
-    dias = hoy.weekday() + 1 if descarga else 7
-    desde = hoy - timedelta(days=dias - 1)
-    hechas, directas, indirectas = series_hechas_detalle(cliente, desde, hoy)
+    hechas, directas, indirectas = series_hechas_detalle(cliente, lunes, hoy)
+    por_sesion = series_hechas_por_sesion(cliente, lunes, hoy)
     pendientes = _pendientes(cliente, hoy, sesiones)
 
     filas = []
     for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
-        ref = int(en_plan + 0.5)  # el margen, en series enteras
-        minimo = min(MINIMO_EVIDENCIA, ref)
-        maximo = min(MAXIMO_EVIDENCIA, max(ref, MINIMO_EVIDENCIA) + MARGEN)
-        if descarga:
-            minimo, maximo = 0, ref + 2
         h = hechas.get(grupo, 0)
-        estado = 'bajo' if h < minimo else ('alto' if h > maximo else 'ok')
-        cubren = [_dia(s['nombre']) for s in pendientes if grupo in s['grupos']]
+        aportan = [{'dia': _dia(s['nombre']), 'series': s['series'].get(grupo, 0)}
+                   for s in pendientes if s['series'].get(grupo, 0) > 0]
+        pend = sum(a['series'] for a in aportan)
+        proyectadas = h + pend
+        escala = max(en_plan, proyectadas, 1)
         filas.append({
-            'grupo': _visible(grupo), 'clave': grupo, 'hechas': h, 'minimo': minimo, 'maximo': maximo,
+            'grupo': _visible(grupo), 'clave': grupo, 'hechas': h, 'plan': en_plan,
+            'pendientes': pend, 'proyectadas': proyectadas,
             'directas': directas.get(grupo, 0), 'indirectas': indirectas.get(grupo, 0),
-            'plan': en_plan, 'estado': estado, 'cubren': cubren,
-            'pct': min(100, round(h / maximo * 100)) if maximo else 0,
-            'pct_min': min(100, round(minimo / maximo * 100)) if maximo else 0,
+            'estado': _estado_fila(h, en_plan, proyectadas),
+            'aportan': aportan, 'hechas_por_sesion': por_sesion.get(grupo, []),
+            'cubren': [a['dia'] for a in aportan],
+            'pct': round(h / escala * 100),
+            'pct_pend': round(min(pend, escala - min(h, escala)) / escala * 100),
+            'pct_plan': round(en_plan / escala * 100),
         })
-    if descarga:
-        sobra = _frase_sobra(filas)
-        frase = ('Semana de descarga: aquí no hay mínimos que cumplir, se cuenta desde el lunes '
-                 'frente a lo que pide la descarga.' + (f' {sobra}' if sobra else ''))
-        return {'filas': filas, 'frase': frase, 'descarga': True, 'sobra': sobra,
-                'periodo': f'Esta semana (descarga) · {_rango(desde, hoy)}'}
-    return {'filas': filas, 'frase': _frase(filas), 'descarga': False,
-            'periodo': f'Últimos 7 días · {_rango(desde, hoy)}'}
+    dias_pend = [_dia(s['nombre']) for s in pendientes]
+    referencia = {
+        'texto': (f'Plan de la semana {_rango(lunes, domingo)} según el planificador: '
+                  f'{len(sesiones)} sesiones, {len(pendientes)} sin hacer'
+                  + (f' ({", ".join(dias_pend)})' if dias_pend else '')),
+        'sesiones_plan': len(sesiones), 'sesiones_pendientes': dias_pend,
+    }
+    etiqueta = 'Semana de descarga' if descarga else 'Semana'
+    return {'filas': filas, 'frase': _frase(filas), 'descarga': descarga, 'referencia': referencia,
+            'periodo': f'{etiqueta} {_rango(lunes, domingo)} · hecho hasta hoy ({hoy:%d/%m})'}
 
 
 def _rango(desde, hasta):
@@ -235,50 +289,27 @@ def _num(valor):
 
 
 def _frase(filas):
-    """Lo que hay que decir de la semana, o None si va bien.
+    """Solo hechos de la semana (llevas, aportan las pendientes, pide el plan), o None.
 
-    31-oct-2026: lo que falta y, además, lo que ya sobra (tríceps 17 de 9–14
-    con el Día 5 por delante). Solo avisa; no cambia la sesión.
+    18-nov-2026: sin juicios sobre si las series valen o no: el panel dice cuántas series hay,
+    cuántas aportan de verdad las sesiones que quedan y qué pide el plan.
     """
-    falta = _frase_falta(filas)
-    sobra = _frase_sobra(filas)
-    if falta and sobra:
-        return f'{falta} {sobra}'
-    return falta or sobra
-
-
-def _frase_sobra(filas):
-    altos = sorted((f for f in filas if f['estado'] == 'alto'),
-                   key=lambda x: x['hechas'] - x['maximo'], reverse=True)
-    if not altos:
-        return None
-    con_dia = [f for f in altos if f['cubren']]
-    if con_dia:
-        nombres = [f"{f['grupo'].lower()} ({_num(f['hechas'])} de {f['minimo']}–{f['maximo']})" for f in con_dia[:3]]
-        lista = nombres[0] if len(nombres) == 1 else ', '.join(nombres[:-1]) + ' y ' + nombres[-1]
-        dias = ' y el '.join(sorted({d for f in con_dia[:3] for d in f['cubren']})[:2])
-        verbo = 'va' if len(nombres) == 1 else 'van'
-        return (f"Ya {verbo} por encima del máximo {lista}, y el {dias} lo vuelve a cargar: "
-                f"esas series no suman, solo cansan.")
-    f = altos[0]
-    return (f"{f['grupo']} va por encima ({_num(f['hechas'])} de {f['minimo']}–{f['maximo']}): "
-            f"más series no suman, solo cansan.")
-
-
-def _frase_falta(filas):
-    sin_cubrir = [f for f in filas if f['estado'] == 'bajo' and not f['cubren']]
-    if sin_cubrir:
-        f = sin_cubrir[0]
-        return (f"{f['grupo']} se queda en {_num(f['hechas'])} series de {f['minimo']}–{f['maximo']} "
-                f"y no quedan días esta semana que lo trabajen.")
-    bajos = [f for f in filas if f['estado'] == 'bajo']
-    if bajos:
-        f = max(bajos, key=lambda x: x['minimo'] - x['hechas'])
-        falta = f['minimo'] - f['hechas']
-        dias = ' y el '.join(f['cubren'][:2])
-        verbo = 'las cubren' if len(f['cubren'][:2]) > 1 else 'las cubre'
-        return f"Te faltan {_num(falta)} series de {f['grupo'].lower()} para el mínimo: el {dias} {verbo}."
-    return None
+    partes = []
+    falta = [f for f in filas if f['estado'] == 'falta']
+    if falta:
+        f = max(falta, key=lambda x: x['plan'] - x['proyectadas'])
+        partes.append(
+            f"{f['grupo']}: llevas {_num(f['hechas'])} de {_num(f['plan'])} que pide el plan; "
+            + (f"las sesiones pendientes ({' y '.join(f['cubren'])}) aportan {_num(f['pendientes'])}"
+               if f['cubren'] else 'ninguna sesión pendiente lo trabaja')
+            + f" y quedarías en {_num(f['proyectadas'])}.")
+    supera = sorted((f for f in filas if f['estado'] == 'supera'),
+                    key=lambda x: x['proyectadas'] - x['plan'], reverse=True)
+    for f in supera[:2]:
+        partes.append(
+            f"{f['grupo']}: llevas {_num(f['hechas'])} y las pendientes suman {_num(f['pendientes'])} "
+            f"({_num(f['proyectadas'])}); el plan de la semana pide {_num(f['plan'])}.")
+    return ' '.join(partes) or None
 
 
 from core.perfil_tramos import tramo_de

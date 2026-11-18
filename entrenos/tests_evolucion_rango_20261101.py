@@ -20,7 +20,7 @@ class RangoDeReps(_DatosEntrenoMixin, TestCase):
         self.assertTrue(e['cambio_rango'])
         g = self._grupo(calcular_evolucion_por_grupo(self.cliente, hoy=self.HOY), 'trapecios')
         self.assertEqual(g['estado'], 'sin_datos')
-        self.assertIn('Cambiaste de rango de reps', g['lectura'])
+        self.assertIn('mismo tramo de reps', g['lectura'])
 
     def test_mismo_tramo_se_compara(self):
         self._ej(120, 'Encogimientos con Barra', 140, 8, grupo='Trapecio')

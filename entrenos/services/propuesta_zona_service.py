@@ -48,6 +48,12 @@ MARGEN_RPE = 1.0             # al menos un punto por debajo del RPE pedido
 # Mientras, el entrenador los observa (Memoria anota si caen) pero no propone
 # añadirles series; bajar volumen sí puede. Termina en cuanto el plan pasa a
 # una semana fuera del bloque, y no se reactiva.
+# 18-nov-2026 (decisión de David): las propuestas de SUBIR volumen quedan en espera
+# hasta justificar cómo se decide el ajuste. Dos ejercicios o tres sesiones
+# comparables pueden apoyar una tendencia (se muestra en Memoria), pero no
+# bastan por sí solos para proponer más series. Las de bajar siguen como estaban.
+SUBIR_VOLUMEN_ACTIVO = False
+
 ZONAS_SUBIR_EN_PAUSA = ('triceps', 'trapecios')
 PAUSA_DESDE = date(2026, 11, 2)              # semana de la decisión (descarga, semana 44)
 PAUSA_SEMANAS = range(44, 49)                # la descarga previa y el bloque (45-48)
@@ -155,11 +161,19 @@ def detectar_zona_con_fatiga(cliente, hoy=None):
     )
 
     hoy = hoy or timezone.localdate()
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+
+    periodos = periodos_descarga(cliente.pk)
     por_zona = {}
-    for nombre in GymDecisionLog.objects.filter(
+    for log in GymDecisionLog.objects.filter(
         cliente=cliente, motivo_codigo__in=_MOTIVOS_FATIGA,
         fecha_creacion__date__gte=hoy - timedelta(days=14), fecha_creacion__date__lte=hoy,
-    ).values_list('ejercicio', flat=True):
+    ).select_related('entreno_origen'):
+        nombre = log.ejercicio
+        # 18-nov-2026: un RPE alto o un fallo en una sesión de descarga no es evidencia de fatiga
+        # acumulada (se compara con lo previsto para esa semana, no con el bloque).
+        if log.entreno_origen is not None and es_sesion_descarga(log.entreno_origen, nombre, periodos):
+            continue
         zona = normalizar_zona(None, nombre)
         if zona:
             por_zona.setdefault(zona, set()).add((nombre or '').strip())
@@ -194,23 +208,34 @@ def _zona_de_grupo(grupo):
 
 
 def zonas_por_encima_del_maximo(cliente, hoy=None):
-    """{zona: (hechas_esta, hechas_anterior, minimo, maximo)} por encima del máximo dos semanas seguidas.
+    """{zona: (series_esta, series_anterior, plan, umbral)} por encima del plan dos semanas seguidas.
 
-    Semana = ventana de 7 días del marcador semanal (series de trabajo, las
-    indirectas cuentan media). El máximo es el de la semana del plan de hoy.
-    Dos ventanas seguidas para no reaccionar a una semana de recuperar sesiones.
+    18-nov-2026: la referencia es lo que pide el plan de la semana (ya no un
+    «máximo útil» de 10 + 4). Esta semana cuenta lo hecho y lo que aportan las
+    sesiones pendientes; la anterior, la semana completa de lunes a domingo
+    (contra el plan de esta, que suele ser el mismo bloque). Se pasa si supera
+    el plan en ``MARGEN_SOBRE_PLAN`` series o más.
     """
-    from entrenos.services.marcador_semanal_service import marcador_cacheado, series_hechas
+    from entrenos.services.marcador_semanal_service import (
+        MARGEN_SOBRE_PLAN, marcador_cacheado, series_hechas_detalle,
+    )
 
     hoy = hoy or timezone.localdate()
-    filas = (marcador_cacheado(cliente, hoy) or {}).get('filas') or []
-    anterior = series_hechas(cliente, hoy - timedelta(days=7))
+    marcador = marcador_cacheado(cliente, hoy) or {}
+    filas = marcador.get('filas') or []
+    lunes = hoy - timedelta(days=hoy.weekday())
+    # Una semana de descarga (esta o la anterior) no es evidencia de que el plan se pase.
+    if marcador.get('descarga') or (lunes - timedelta(days=7)) in _lunes_descarga(
+            cliente.pk, lunes - timedelta(days=7), lunes - timedelta(days=7)):
+        return {}
+    anterior = series_hechas_detalle(cliente, lunes - timedelta(days=7), lunes - timedelta(days=1))[0]
     altas = {}
     for f in filas:
         zona = _zona_de_grupo(f['clave'])
         previas = anterior.get(f['clave'], 0)
-        if zona and f['hechas'] > f['maximo'] and previas > f['maximo']:
-            altas[zona] = (f['hechas'], previas, f['minimo'], f['maximo'])
+        umbral = f['plan'] + MARGEN_SOBRE_PLAN
+        if zona and f['proyectadas'] > umbral and previas > umbral:
+            altas[zona] = (f['proyectadas'], previas, f['plan'], umbral)
     return altas
 
 
@@ -219,21 +244,21 @@ def _num(valor):
 
 
 def detectar_zona_por_encima(cliente, hoy=None):
-    """La zona que más se pasa de su máximo (dos semanas seguidas), o None."""
+    """La zona que más se pasa del plan (dos semanas seguidas), o None."""
     from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA
 
     altas = zonas_por_encima_del_maximo(cliente, hoy)
     if not altas:
         return None
-    zona, (h, previas, minimo, maximo) = max(altas.items(), key=lambda kv: (kv[1][0] - kv[1][3], kv[0]))
+    zona, (h, previas, plan, umbral) = max(altas.items(), key=lambda kv: (kv[1][0] - kv[1][3], kv[0]))
     return {'zona': zona, 'nombre_zona': NOMBRES_ZONA.get(zona, zona.title()),
-            'hechas': h, 'previas': previas, 'minimo': minimo, 'maximo': maximo}
+            'hechas': h, 'previas': previas, 'plan': plan, 'umbral': umbral}
 
 
 def _texto_propuesta_por_encima(d):
     return (
-        f"{d['nombre_zona']}: {_num(d['hechas'])} series esta semana y {_num(d['previas'])} la anterior, "
-        f"por encima de tu máximo útil ({d['minimo']}–{d['maximo']}). Esas series no suman, solo cansan. "
+        f"{d['nombre_zona']}: {_num(d['hechas'])} series esta semana (hechas y previstas) y "
+        f"{_num(d['previas'])} la anterior, frente a las {_num(d['plan'])} que pide el plan de la semana. "
         f"Te propongo −{SERIES_EXTRA} series semanales de {d['nombre_zona']} durante {SEMANAS} semanas."
     )
 
@@ -305,12 +330,13 @@ def detectar_zona_con_margen(cliente, hoy=None):
     """
     from entrenos.models import EjercicioRealizado
     from entrenos.services.evolucion_muscular_service import NOMBRES_ZONA, normalizar_zona
-    from entrenos.services.marcador_semanal_service import marcador_cacheado
+    from entrenos.services.marcador_semanal_service import MARGEN_SOBRE_PLAN, marcador_cacheado
     from entrenos.services.sensacion_zona_service import frena_subir
 
     hoy = hoy or timezone.localdate()
     filas = (marcador_cacheado(cliente, hoy) or {}).get('filas') or []
-    llenas = {_zona_de_grupo(f['clave']) for f in filas if f['hechas'] >= f['maximo']}
+    llenas = {_zona_de_grupo(f['clave']) for f in filas
+              if f['proyectadas'] >= f['plan'] + MARGEN_SOBRE_PLAN}
     por_zona = {}
     for nombre, grupo in EjercicioRealizado.objects.filter(
         entreno__cliente=cliente, completado=True,
@@ -376,8 +402,8 @@ def _generar_propuesta_por_encima(cliente, hoy):
     return PropuestaZonaGym.objects.create(
         cliente=cliente, zona=d['zona'], ejercicios=ejercicios[:MAX_EJERCICIOS],
         series_extra=SERIES_EXTRA, direccion=PropuestaZonaGym.DIRECCION_BAJAR, semanas=SEMANAS,
-        deteccion={'motivo': 'por_encima_del_maximo', 'hechas': d['hechas'], 'previas': d['previas'],
-                   'minimo': d['minimo'], 'maximo': d['maximo']},
+        deteccion={'motivo': 'por_encima_del_plan', 'hechas': d['hechas'], 'previas': d['previas'],
+                   'plan': d['plan'], 'umbral': d['umbral']},
         texto=_texto_propuesta_por_encima(d),
     )
 
@@ -407,6 +433,10 @@ def generar_propuesta_si_procede(cliente, hoy=None):
         cliente=cliente,
         estado__in=[PropuestaZonaGym.ESTADO_PENDIENTE, PropuestaZonaGym.ESTADO_ACEPTADA],
     )
+    if not SUBIR_VOLUMEN_ACTIVO:
+        # Una propuesta de subir en espera no bloquea las demás.
+        en_curso = en_curso.exclude(
+            estado=PropuestaZonaGym.ESTADO_PENDIENTE, direccion=PropuestaZonaGym.DIRECCION_SUBIR)
     if en_curso.exists():
         return None
     # 31-oct-2026: pasarse del máximo dos semanas seguidas va primero, y una
@@ -421,6 +451,9 @@ def generar_propuesta_si_procede(cliente, hoy=None):
         from entrenos.services.sensacion_zona_service import frena_subir
         if frena_subir(cliente, deteccion['zona'], hoy) or deteccion['zona'] in zonas_por_encima_del_maximo(cliente, hoy):
             deteccion = None
+    if not SUBIR_VOLUMEN_ACTIVO:
+        # 18-nov-2026: sin propuestas de subir hasta justificar la regla de decisión.
+        return _generar_propuesta_bajar(cliente, hoy)
     if deteccion is None:
         return _generar_propuesta_margen(cliente, hoy) or _generar_propuesta_bajar(cliente, hoy)
     reciente = PropuestaZonaGym.objects.filter(
@@ -531,6 +564,8 @@ def aceptar_propuesta(propuesta, hoy=None):
     p = PropuestaZonaGym.objects.select_for_update().get(pk=propuesta.pk)
     if p.estado != PropuestaZonaGym.ESTADO_PENDIENTE:
         raise PropuestaNoVigente('La propuesta ya no está pendiente.')
+    if p.direccion == PropuestaZonaGym.DIRECCION_SUBIR and not SUBIR_VOLUMEN_ACTIVO:
+        raise PropuestaNoVigente('Subir volumen está en espera: aún no está justificado cómo se decide el ajuste.')
     hoy = hoy or timezone.localdate()
     p.estado = PropuestaZonaGym.ESTADO_ACEPTADA
     p.inicio = hoy + timedelta(days=1)
@@ -639,9 +674,13 @@ def propuesta_visible(cliente, hoy=None):
     from entrenos.models import PropuestaZonaGym
 
     hoy = hoy or timezone.localdate()
-    pendiente = PropuestaZonaGym.objects.filter(
+    pendientes = PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_PENDIENTE,
-    ).order_by('-creada_en').first()
+    )
+    if not SUBIR_VOLUMEN_ACTIVO:
+        # Las de subir quedan pendientes en la base de datos, sin enseñarse ni poder aceptarse.
+        pendientes = pendientes.exclude(direccion=PropuestaZonaGym.DIRECCION_SUBIR)
+    pendiente = pendientes.order_by('-creada_en').first()
     if pendiente:
         return {'tipo': 'pendiente', 'propuesta': pendiente}
     sincronizar_pausas(cliente)

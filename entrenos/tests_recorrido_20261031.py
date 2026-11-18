@@ -9,14 +9,16 @@ from entrenos.services.marcador_semanal_service import _frase
 
 
 class Marcador(SimpleTestCase):
-    def test_avisa_de_lo_que_falta_y_de_lo_que_sobra(self):
-        falta = {'grupo': 'Trapecio', 'hechas': 3, 'minimo': 6, 'maximo': 14, 'estado': 'bajo', 'cubren': ['Día 4']}
-        triceps = {'grupo': 'Tríceps', 'hechas': 17, 'minimo': 9, 'maximo': 14, 'estado': 'alto', 'cubren': ['Día 5']}
-        biceps = {'grupo': 'Bíceps', 'hechas': 14.5, 'minimo': 9, 'maximo': 14, 'estado': 'alto', 'cubren': ['Día 5']}
-        f = _frase([falta, triceps, biceps])
-        self.assertTrue(f.startswith('Te faltan 3 series de trapecio'))
-        self.assertIn('Ya van por encima del máximo tríceps (17 de 9–14) y bíceps (14,5 de 9–14)', f)
-        self.assertIn('el Día 5 lo vuelve a cargar', f)
+    def test_avisa_de_lo_que_falta_y_de_lo_que_supera_con_hechos(self):
+        falta = {'grupo': 'Trapecio', 'hechas': 3, 'plan': 6, 'pendientes': 1.5, 'proyectadas': 4.5,
+                 'estado': 'falta', 'cubren': ['Día 4']}
+        triceps = {'grupo': 'Tríceps', 'hechas': 12, 'plan': 9, 'pendientes': 5, 'proyectadas': 17,
+                   'estado': 'supera', 'cubren': ['Día 5']}
+        f = _frase([falta, triceps])
+        self.assertTrue(f.startswith('Trapecio: llevas 3 de 6 que pide el plan'))
+        self.assertIn('las sesiones pendientes (Día 4) aportan 1,5 y quedarías en 4,5', f)
+        self.assertIn('Tríceps: llevas 12 y las pendientes suman 5 (17); el plan de la semana pide 9.', f)
+        self.assertNotIn('cansan', f)
 
 
 class Semantica(SimpleTestCase):

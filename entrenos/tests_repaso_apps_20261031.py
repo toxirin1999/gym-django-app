@@ -93,33 +93,38 @@ def _marcador(filas):
 
 
 class PorEncimaDelMaximo(Base):
-    FILA = {'clave': 'tríceps', 'grupo': 'Tríceps', 'hechas': 17, 'minimo': 9, 'maximo': 14}
+    # 18-nov-2026: la referencia es el plan de la semana (9) + margen de 4 series.
+    FILA = {'clave': 'tríceps', 'grupo': 'Tríceps', 'hechas': 14, 'plan': 9, 'pendientes': 3, 'proyectadas': 17}
+
+    @staticmethod
+    def _anterior(n):
+        from collections import Counter
+        return patch('entrenos.services.marcador_semanal_service.series_hechas_detalle',
+                     return_value=(Counter({'tríceps': n}), Counter(), Counter()))
 
     def test_dos_semanas_seguidas_por_encima(self):
-        with _marcador([self.FILA]), patch('entrenos.services.marcador_semanal_service.series_hechas',
-                                           return_value={'tríceps': 16}):
-            self.assertEqual(pz.zonas_por_encima_del_maximo(self.cliente, HOY), {'triceps': (17, 16, 9, 14)})
+        with _marcador([self.FILA]), self._anterior(16):
+            self.assertEqual(pz.zonas_por_encima_del_maximo(self.cliente, HOY), {'triceps': (17, 16, 9, 13)})
 
     def test_una_semana_alta_no_basta(self):
-        with _marcador([self.FILA]), patch('entrenos.services.marcador_semanal_service.series_hechas',
-                                           return_value={'tríceps': 12}):
+        with _marcador([self.FILA]), self._anterior(12):
             self.assertEqual(pz.zonas_por_encima_del_maximo(self.cliente, HOY), {})
 
     def test_propone_bajar_con_el_dato(self):
-        with _marcador([self.FILA]), patch('entrenos.services.marcador_semanal_service.series_hechas',
-                                           return_value={'tríceps': 16}):
+        with _marcador([self.FILA]), self._anterior(16):
             p = pz.generar_propuesta_si_procede(self.cliente, HOY)
         self.assertEqual((p.zona, p.direccion), ('triceps', PropuestaZonaGym.DIRECCION_BAJAR))
-        self.assertEqual(p.deteccion['motivo'], 'por_encima_del_maximo')
-        self.assertIn('17 series esta semana y 16 la anterior', p.texto)
-        self.assertIn('(9–14)', p.texto)
+        self.assertEqual(p.deteccion['motivo'], 'por_encima_del_plan')
+        self.assertIn('17 series esta semana (hechas y previstas) y 16 la anterior', p.texto)
+        self.assertIn('las 9 que pide el plan de la semana', p.texto)
+        self.assertNotIn('cansan', p.texto)
         self.assertIn('−2 series semanales de Tríceps', p.texto)
 
     def test_zona_por_encima_no_recibe_mas_series_aunque_retroceda(self):
         retroceso = {'zona': 'triceps', 'nombre_zona': 'Tríceps', 'pct': -6.0, 'ejercicios': []}
         with patch.object(pz, '_generar_propuesta_por_encima', return_value=None), \
                 patch.object(pz, 'detectar_zona_en_retroceso', return_value=retroceso), \
-                patch.object(pz, 'zonas_por_encima_del_maximo', return_value={'triceps': (17, 16, 9, 14)}), \
+                patch.object(pz, 'zonas_por_encima_del_maximo', return_value={'triceps': (17, 16, 9, 13)}), \
                 patch.object(pz, '_generar_propuesta_margen', return_value=None), \
                 patch.object(pz, '_generar_propuesta_bajar', return_value=None):
             self.assertIsNone(pz.generar_propuesta_si_procede(self.cliente, HOY))
@@ -147,7 +152,7 @@ class MargenSinProgreso(Base):
         for dias, s, p in zip((21, 14, 7), sentado, depie):
             self.sesion(dias, {self.gemelos: s, self.depie: p})
 
-    FILA = [{'clave': 'gemelos', 'grupo': 'Gemelos', 'hechas': 6, 'minimo': 9, 'maximo': 13}]
+    FILA = [{'clave': 'gemelos', 'grupo': 'Gemelos', 'hechas': 6, 'plan': 10, 'pendientes': 0, 'proyectadas': 6}]
 
     def test_tres_sesiones_con_margen_y_sin_subir(self):
         self.tres([[(80, 15, 7)]] * 3, [[(100, 15, 7)]] * 3)
@@ -155,9 +160,10 @@ class MargenSinProgreso(Base):
             d = pz.detectar_zona_con_margen(self.cliente, HOY)
             p = pz.generar_propuesta_si_procede(self.cliente, HOY)
         self.assertEqual(d['zona'], 'gemelos')
-        self.assertEqual((p.zona, p.direccion), ('gemelos', PropuestaZonaGym.DIRECCION_SUBIR))
-        self.assertIn('terminaste a RPE 7, 7, 7 cuando se pedía 9', p.texto)
-        self.assertIn('+2 series semanales de Gemelos', p.texto)
+        # 18-nov-2026: dos ejercicios con tres sesiones apoyan la detección, pero no activan
+        # por sí solos una propuesta de subir volumen: queda en espera.
+        self.assertIsNone(p)
+        self.assertFalse(PropuestaZonaGym.objects.filter(cliente=self.cliente).exists())
 
     def test_si_progresa_no_propone(self):
         self.tres([[(80, 15, 7)], [(80, 16, 7)], [(85, 15, 7)]], [[(100, 15, 7)], [(100, 16, 7)], [(105, 15, 7)]])
@@ -179,7 +185,7 @@ class MargenSinProgreso(Base):
 
     def test_zona_ya_en_su_maximo_no_sube(self):
         self.tres([[(80, 15, 7)]] * 3, [[(100, 15, 7)]] * 3)
-        llena = [dict(self.FILA[0], hechas=13)]
+        llena = [dict(self.FILA[0], hechas=14, proyectadas=14)]
         with _marcador(llena):
             self.assertIsNone(pz.detectar_zona_con_margen(self.cliente, HOY))
 

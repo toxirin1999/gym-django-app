@@ -30,35 +30,53 @@ class Marcador(ColaSemanalBase):
         self.assertEqual(h['tríceps'], 3 + 2)  # 3 directas + 4 de press a la mitad
         self.assertEqual(h['bíceps'], 1)
 
-    def test_filas_con_margen_y_quien_lo_cubre(self):
-        # Plan de la semana de prueba: cuádriceps y pecho en dos días (4 + 4 series).
+    def test_filas_con_plan_pendientes_y_quien_las_aporta(self):
+        # 18-nov-2026: sin rangos mínimo/máximo; el plan de la semana es la referencia.
         e = self.entrenar(LUNES, 'Dia 1 - Hipertrofia')
         self.series(e, 'Sentadilla Hack', 'Cuádriceps', 4)
         m = marcador_semanal(self.cliente, LUNES)
         filas = {f['clave']: f for f in m['filas']}
-        self.assertEqual((filas['cuádriceps']['minimo'], filas['cuádriceps']['maximo']), (8, 14))
-        self.assertEqual(filas['cuádriceps']['estado'], 'bajo')
-        self.assertEqual(filas['cuádriceps']['cubren'], ['Día 3'])
+        cuad = filas['cuádriceps']
+        self.assertEqual(cuad['hechas'], 4)
+        self.assertEqual(cuad['proyectadas'], cuad['hechas'] + cuad['pendientes'])
+        self.assertEqual(cuad['estado'], 'cubierto' if cuad['proyectadas'] >= cuad['plan'] else 'falta')
+        self.assertEqual(cuad['cubren'], ['Día 3'])
         self.assertEqual(filas['pecho']['cubren'], ['Día 4'])
-        self.assertEqual(m['frase'], 'Te faltan 8 series de pecho para el mínimo: el Día 4 las cubre.')
+        self.assertNotIn('minimo', cuad)
+        self.assertIn('Plan de la semana', m['referencia']['texto'])
+        self.assertIn('pecho', m['frase'].lower())
+        self.assertNotIn('solo cansan', m['frase'])
 
-    def test_frase_sin_dias_que_lo_cubran_y_por_encima(self):
-        fila = {'grupo': 'Bíceps', 'hechas': 4, 'minimo': 9, 'maximo': 13, 'estado': 'bajo', 'cubren': []}
-        self.assertIn('no quedan días esta semana', _frase([fila]))
-        alto = {'grupo': 'Pecho', 'hechas': 19, 'minimo': 10, 'maximo': 17, 'estado': 'alto', 'cubren': []}
-        self.assertIn('va por encima (19 de 10–17)', _frase([alto]))
-        ok = {'grupo': 'Pecho', 'hechas': 12, 'minimo': 10, 'maximo': 17, 'estado': 'ok', 'cubren': []}
+    def test_frase_solo_hechos_sin_juicio(self):
+        fila = {'grupo': 'Bíceps', 'hechas': 4, 'plan': 9, 'pendientes': 0, 'proyectadas': 4,
+                'estado': 'falta', 'cubren': []}
+        self.assertIn('ninguna sesión pendiente lo trabaja', _frase([fila]))
+        alto = {'grupo': 'Pecho', 'hechas': 19, 'plan': 10, 'pendientes': 0, 'proyectadas': 19,
+                'estado': 'supera', 'cubren': []}
+        f = _frase([alto])
+        self.assertIn('llevas 19', f)
+        self.assertIn('el plan de la semana pide 10', f)
+        self.assertNotIn('cansan', f)
+        ok = {'grupo': 'Pecho', 'hechas': 12, 'plan': 10, 'pendientes': 0, 'proyectadas': 12,
+              'estado': 'completo', 'cubren': []}
         self.assertIsNone(_frase([ok]))
 
     def test_se_ve_en_plan_y_en_el_panel(self):
         self.client.force_login(self.cliente.user)
-        datos = {'filas': [{'grupo': 'Pecho', 'clave': 'pecho', 'hechas': 7, 'minimo': 10, 'maximo': 17,
-                            'plan': 13, 'estado': 'bajo', 'cubren': ['Día 5'], 'pct': 41, 'pct_min': 59}],
-                 'frase': 'Te faltan 3 series de pecho para el mínimo: el Día 5 las cubre.'}
+        datos = {'filas': [{'grupo': 'Pecho', 'clave': 'pecho', 'hechas': 7, 'plan': 13, 'pendientes': 4,
+                            'proyectadas': 11, 'directas': 7, 'indirectas': 0, 'estado': 'falta',
+                            'cubren': ['Día 5'], 'aportan': [{'dia': 'Día 5', 'series': 4}],
+                            'hechas_por_sesion': [], 'pct': 54, 'pct_pend': 31, 'pct_plan': 100}],
+                 'periodo': 'Semana 16/11–22/11 · hecho hasta hoy (18/11)',
+                 'referencia': {'texto': 'Plan de la semana 16/11–22/11 según el planificador: 5 sesiones, 1 sin hacer (Día 5)'},
+                 'frase': 'Pecho: llevas 7 de 13 que pide el plan; las sesiones pendientes (Día 5) aportan 4 y quedarías en 11.'}
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
             self.assertContains(r, 'Tu semana por músculo')
-            self.assertContains(r, '<strong>7</strong> de 10–17', html=False)
-            self.assertContains(r, 'Lo cubre el Día 5')
+            self.assertContains(r, '<strong>7</strong> hechas')
+            self.assertContains(r, '· plan 13')
+            self.assertContains(r, 'Pendientes: Día 5 (4)')
+            self.assertContains(r, 'Plan de la semana 16/11–22/11')
+            self.assertNotContains(r, 'solo cansan')
             r = self.client.get(reverse('clientes:cuerpo'))
-            self.assertContains(r, 'Te faltan 3 series de pecho')
+            self.assertContains(r, 'Pecho: llevas 7 de 13')
