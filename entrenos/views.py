@@ -4879,6 +4879,15 @@ from analytics.utils import estimar_1rm  # ¡La importación que ya solucionamos
 # ... (importaciones)
 
 
+def _bloquear_cliente_para_guardar(cliente):
+    """Nota 31: bloquea la fila del cliente hasta el final de la transacción del guardado.
+
+    Otro guardado del mismo cliente espera aquí. Las lecturas normales (Ahora,
+    Cuerpo…) no esperan: MySQL no las bloquea.
+    """
+    list(Cliente.objects.select_for_update().filter(pk=cliente.pk).values_list('pk', flat=True))
+
+
 @login_required
 @require_http_methods(["POST"])
 @transaction.atomic
@@ -4969,11 +4978,17 @@ def guardar_entrenamiento_activo(request, cliente_id):
             except SelloEjecucionGymInvalido as exc:
                 return HttpResponse(str(exc), status=409)
         rutina_nombre = request.POST.get('rutina_nombre')
-        rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
         # Un reintento tras una respuesta perdida no debe crear otra sesión:
         # misma rutina, mismo día del plan y guardada hoy → ya está guardada.
-        _ya_guardado = EntrenoRealizado.objects.filter(
+        # Nota 31 (18-nov-2026): dos envíos a la vez podían comprobar los dos
+        # antes de que el otro guardase. Se bloquea al cliente dentro de esta
+        # transacción ANTES de comprobar, y se comprueba con lectura bloqueante
+        # (ve lo último confirmado): el segundo envío espera, relee y devuelve
+        # el mismo cierre sin escribir nada. Si el primero falla, su transacción
+        # se deshace y el segundo guarda.
+        _bloquear_cliente_para_guardar(cliente)
+        _ya_guardado = EntrenoRealizado.objects.select_for_update().filter(
             cliente=cliente, fecha=fecha, rutina__nombre=rutina_nombre,
             fuente_datos='manual', fecha_ejecucion=timezone.localdate(),
         ).order_by('-id').first()
@@ -4986,6 +5001,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     'volumen': float(_ya_guardado.volumen_total_kg or 0),
                 })
             return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=_ya_guardado.id)
+        rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
         # El cronómetro puede llevar días abierto: una duración imposible se
         # sustituye por una estimación según las series para no inflar la carga.
