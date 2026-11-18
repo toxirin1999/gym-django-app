@@ -65,7 +65,7 @@ def _rpes_series_de_entreno(entreno_id):
         (_plegar(nombre), rpe)
         for nombre, rpe in SerieRealizada.objects.filter(
             entreno_id=entreno_id, rpe_real__isnull=False,
-        ).values_list('ejercicio__nombre', 'rpe_real')
+        ).order_by('pk').values_list('ejercicio__nombre', 'rpe_real')
     )
 
 
@@ -826,7 +826,7 @@ class PlanificadorHelms:
 
     def _rpes_sin_precarga(self, entreno_id):
         if memo_peticion.activa():
-            return _rpes_series_de_entreno(entreno_id)
+            return rpes_series(self.perfil.id, entreno_id)
         cache = self.__dict__.setdefault('_rpes_sin_precarga_cache', {})
         if entreno_id not in cache:
             cache[entreno_id] = _rpes_series_de_entreno(entreno_id)
@@ -941,3 +941,48 @@ class PlanificadorHelms:
 
     def _calcular_descanso_pormenorizado(self, nombre: str, rpe: int, tipo: str, reps=None) -> float:
         return get_descanso_sugerido(tipo_ejercicio=tipo, rpe_objetivo=rpe, nombre=nombre, reps=reps)['minutos']
+
+
+RPES_ENTRENOS_RECIENTES = 15
+
+
+class _RpesRecientes:
+    """{entreno_id: ((nombre plegado, rpe), …)} (no es un dict: la memoria no lo copia)."""
+
+    __slots__ = ('por_id',)
+
+    def __init__(self, por_id):
+        self.por_id = por_id
+
+
+@por_peticion
+def _rpes_series_recientes(cliente_id):
+    """RPE de las series de los entrenos más recientes del cliente, en una consulta (18-nov-2026).
+
+    El planificador pedía los de cada entreno por separado (x11-12 en Ahora y
+    en Cuerpo). Mismo filtro que ``_rpes_series_de_entreno`` (con RPE, estén o
+    no completadas).
+    """
+    from entrenos.models import SerieRealizada
+
+    ids = []
+    for fila in _historial_ejercicios_cliente(cliente_id):
+        if fila[1] not in ids:
+            ids.append(fila[1])
+            if len(ids) >= RPES_ENTRENOS_RECIENTES:
+                break
+    por_id = {i: [] for i in ids}
+    for entreno_id, nombre, rpe in SerieRealizada.objects.filter(
+        entreno_id__in=ids, rpe_real__isnull=False,
+    ).order_by('pk').values_list('entreno_id', 'ejercicio__nombre', 'rpe_real'):
+        por_id[entreno_id].append((_plegar(nombre), rpe))
+    return _RpesRecientes({i: tuple(v) for i, v in por_id.items()})
+
+
+def rpes_series(cliente_id, entreno_id):
+    """Como ``_rpes_series_de_entreno``; dentro de una petición, de la lectura de los recientes."""
+    if memo_peticion.activa() and cliente_id is not None:
+        recientes = _rpes_series_recientes(cliente_id).por_id
+        if entreno_id in recientes:
+            return recientes[entreno_id]
+    return _rpes_series_de_entreno(entreno_id)

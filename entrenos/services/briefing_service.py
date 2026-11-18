@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from entrenos.services.tempo_service import get_mensaje_tempo
+from core.memo_peticion import por_peticion
 
 
 def _get_rpe_bias(cliente):
@@ -36,61 +37,64 @@ def necesita_deload_gym(cliente, hoy=None):
     con FC moderada porque usan el sistema fosfágeno, no el aeróbico.
     Corregir el RPE de gym con el sesgo detectado en carrera introduce ruido.
     """
-    from entrenos.models import EntrenoRealizado, EjercicioRealizado
-
     hoy = hoy or date.today()
     from entrenos.services.deload_cycle_service import obtener_ciclo_activo, abrir_ciclo_deload
     if obtener_ciclo_activo(cliente, hoy):
         return True
     hace_14 = hoy - timedelta(days=14)
     hace_28 = hoy - timedelta(days=28)
+    cliente_id = getattr(cliente, 'pk', cliente)
 
-    recientes = EntrenoRealizado.objects.filter(
-        cliente=cliente, fecha__range=(hace_14, hoy)
-    ).prefetch_related('ejercicios_realizados')
+    # 18-nov-2026 (lentitud): solo las lecturas de entrada se comparten en la
+    # petición (x10 en Ahora y en Cuerpo); la decisión y la apertura del ciclo
+    # se hacen en cada llamada, y abrir un ciclo vacía la memoria.
+    n_recientes, rpes_rec, energias = _sesiones_rpe_energia(cliente_id, hace_14, hoy)
 
-    if recientes.count() < 3:
+    if n_recientes < 3:
         return False
 
-    rpes_rec = [
-        float(ej.rpe)
-        for e in recientes
-        for ej in e.ejercicios_realizados.all()
-        if ej.rpe is not None
-    ]
     rpe_rec = sum(rpes_rec) / len(rpes_rec) if rpes_rec else None
-
-    energias = [e.energia_pre_sesion for e in recientes if e.energia_pre_sesion is not None]
     energia_media = sum(energias) / len(energias) if energias else None
 
     # Criterio B: energía crónicamente baja (subjetiva, válida para gym)
-    if energia_media is not None and energia_media <= 3.5 and recientes.count() >= 3:
+    if energia_media is not None and energia_media <= 3.5 and n_recientes >= 3:
         abrir_ciclo_deload(
             cliente, 'fatiga_gym', metrica='energia_media', umbral=3.5,
-            valor=energia_media, evidencia={'sesiones': recientes.count()}, hoy=hoy,
+            valor=energia_media, evidencia={'sesiones': n_recientes}, hoy=hoy,
         )
         return True
 
     # Criterio A: RPE bruto de gym alto dos semanas consecutivas
-    if rpe_rec is not None and rpe_rec >= 8.5 and recientes.count() >= 4:
-        previas = EntrenoRealizado.objects.filter(
-            cliente=cliente, fecha__range=(hace_28, hace_14)
-        ).prefetch_related('ejercicios_realizados')
-        rpes_prev = [
-            float(ej.rpe)
-            for e in previas
-            for ej in e.ejercicios_realizados.all()
-            if ej.rpe is not None
-        ]
+    if rpe_rec is not None and rpe_rec >= 8.5 and n_recientes >= 4:
+        _, rpes_prev, _ = _sesiones_rpe_energia(cliente_id, hace_28, hace_14)
         rpe_prev = sum(rpes_prev) / len(rpes_prev) if rpes_prev else None
         if rpe_prev is not None and rpe_prev >= 8.0:
             abrir_ciclo_deload(
                 cliente, 'fatiga_gym', metrica='rpe_medio', umbral=8.5,
-                valor=rpe_rec, evidencia={'rpe_previo': rpe_prev, 'sesiones': recientes.count()}, hoy=hoy,
+                valor=rpe_rec, evidencia={'rpe_previo': rpe_prev, 'sesiones': n_recientes}, hoy=hoy,
             )
             return True
 
     return False
+
+
+@por_peticion
+def _sesiones_rpe_energia(cliente_id, desde, hasta):
+    """(nº de sesiones, RPEs de sus ejercicios, energías pre-sesión) entre dos fechas, inclusive.
+
+    Lectura pura de ``necesita_deload_gym``, memorizada por petición
+    (18-nov-2026). Mismos datos que antes: todas las sesiones del rango y los
+    ejercicios con RPE (completados o no), en orden de id.
+    """
+    from entrenos.models import EjercicioRealizado, EntrenoRealizado
+
+    sesiones = list(EntrenoRealizado.objects.filter(
+        cliente_id=cliente_id, fecha__range=(desde, hasta),
+    ).order_by('pk').values_list('energia_pre_sesion', flat=True))
+    rpes = tuple(float(r) for r in EjercicioRealizado.objects.filter(
+        entreno__cliente_id=cliente_id, entreno__fecha__range=(desde, hasta), rpe__isnull=False,
+    ).order_by('entreno_id', 'pk').values_list('rpe', flat=True))
+    return len(sesiones), rpes, tuple(e for e in sesiones if e is not None)
 
 
 def get_briefing_gym(cliente, ejercicios_planificados, fecha):
