@@ -457,6 +457,61 @@ class SesionesMovidasDeFecha(ColaSemanalBase):
         self.assertEqual(m._pendientes(self.cliente, LUNES + timedelta(days=2), sesiones), [])
 
 
+class DiferenciaPlanFrenteAHechasMasPendientes(SesionesMovidasDeFecha):
+    """Qué ejercicios de las sesiones ya hechas explican que hechas + pendientes no lleguen al plan."""
+
+    def test_los_desvios_nombran_los_ejercicios(self):
+        from entrenos.services import marcador_semanal_service as m
+        hoy = LUNES + timedelta(days=2)
+        self._hacer(LUNES + timedelta(days=2), hoy, 'Dia 3 - Hipertrofia', grupo='Glúteos', n=2)  # 'Ej Dia 3 - ...'
+        zan = EjercicioBase.objects.get(nombre='Ej Dia 3 - Hipertrofia')
+        plan_sesion = {'nombre': 'Dia 3 - Hipertrofia', 'grupos': set(), 'series': {},
+                       'ejercicios': {}}
+        r = None
+        with patch.object(m, 'series_plan_semana') as sp:
+            from entrenos.services.marcador_semanal_service import grupos_de_serie
+            g = grupos_de_serie(zan.nombre, 'Glúteos')[0][0]
+            plan_sesion['series'] = {g: 5}
+            plan_sesion['ejercicios'] = {g: [('Hip Thrust con Barra', 3), (zan.nombre, 2)]}
+            sp.return_value = (Counter({g: 5}), [plan_sesion])
+            r = m.marcador_semanal(self.cliente, hoy)
+        fila = r['filas'][0]
+        self.assertEqual(fila['hechas'], 2)
+        self.assertEqual(fila['proyectadas'], 2)
+        self.assertEqual(fila['desvios'], [{'dia': 'Día 3', 'ejercicio': 'Hip Thrust con Barra', 'plan': 3, 'hecho': 0}])
+
+    def test_un_ejercicio_hecho_que_no_estaba_en_el_plan_aparece_como_de_mas(self):
+        from entrenos.services import marcador_semanal_service as m
+        hoy = LUNES + timedelta(days=2)
+        self._hacer(LUNES + timedelta(days=2), hoy, 'Dia 3 - Hipertrofia', grupo='Glúteos', n=2)
+        extra = EjercicioBase.objects.get(nombre='Ej Dia 3 - Hipertrofia')
+        g = m.grupos_de_serie(extra.nombre, 'Glúteos')[0][0]
+        sesion = {'nombre': 'Dia 3 - Hipertrofia', 'grupos': set(), 'series': {g: 3},
+                  'ejercicios': {g: [('Hip Thrust con Barra', 3)]}}
+        with patch.object(m, 'series_plan_semana', return_value=(Counter({g: 3}), [sesion])):
+            r = m.marcador_semanal(self.cliente, hoy)
+        nombres = {d['ejercicio']: (d['plan'], d['hecho']) for d in r['filas'][0]['desvios']}
+        self.assertEqual(nombres['Hip Thrust Con Barra'.title()] if 'Hip Thrust Con Barra' in nombres else nombres['Hip Thrust con Barra'], (3, 0))
+        self.assertTrue(any(plan == 0 and hecho == 2 for plan, hecho in nombres.values()))
+
+    def test_sin_diferencias_no_hay_desvios(self):
+        from entrenos.services import marcador_semanal_service as m
+        hoy = LUNES + timedelta(days=2)
+        self._hacer(LUNES + timedelta(days=2), hoy, 'Dia 3 - Hipertrofia', grupo='Glúteos', n=3)
+        base = EjercicioBase.objects.get(nombre='Ej Dia 3 - Hipertrofia')
+        g = m.grupos_de_serie(base.nombre, 'Glúteos')[0][0]
+        sesion = {'nombre': 'Dia 3 - Hipertrofia', 'grupos': set(), 'series': {g: 3}, 'ejercicios': {g: [(base.nombre, 3)]}}
+        with patch.object(m, 'series_plan_semana', return_value=(Counter({g: 3}), [sesion])):
+            r = m.marcador_semanal(self.cliente, hoy)
+        self.assertEqual(r['filas'][0]['desvios'], [])
+
+    def test_la_plantilla_los_enseña(self):
+        from pathlib import Path
+        src = (Path(__file__).parents[1] / 'clientes' / 'templates' / 'clientes' / 'trayectoria_plan.html').read_text(
+            encoding='utf-8')
+        self.assertIn('Distinto del plan en sesiones ya hechas', src)
+
+
 class BajarVolumenRespetaDescarga(SubirVolumenEnEspera):
     """Las señales que autorizan bajar volumen no cuentan descargas."""
 

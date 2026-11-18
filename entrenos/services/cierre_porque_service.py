@@ -159,6 +159,9 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
     if log.motivo_codigo == 'distancia_sin_margen' or motivo.startswith('Distancia o margen insuficiente'):
         return _porque_distancia(log.entreno_origen, log.ejercicio, rpe_txt)
 
+    if motivo.startswith('Progresión pendiente por falta de objetivo'):
+        return motivo
+
     if motivo.startswith('Tope de peso alcanzado'):
         from entrenos.services.progreso_service import SALTO_METROS_TOPE
         return (f'Peso fijo de {_kg(peso_hoy)} kg: progreso por metros (+{SALTO_METROS_TOPE} m).'
@@ -225,7 +228,15 @@ def porque_decision(log, ejercicio_hoy, anterior, tipo_progresion):
         if rpe is None:
             return 'No registraste RPE: mantengo hasta tener el dato.'
         if rpe > 7.5:
-            return f'RPE {rpe_txt} hoy: subo cuando lo hagas a RPE 7,5 o menos dos sesiones seguidas.'
+            # La regla ejecutable (decision_log_service._decidir_accion, punto 4) sube cuando la
+            # sesión sale a RPE 7,5 o menos y la anterior fue RPE 8 o menos sin fallo: la de hoy ya
+            # cuenta como la anterior si cumple. 18-nov-2026: el texto decía «dos sesiones seguidas
+            # a 7,5», que no es lo que hace la regla.
+            if rpe <= 8 and not getattr(ejercicio_hoy, 'fallo_muscular', False):
+                return (f'RPE {rpe_txt} hoy: subo si la próxima vez lo haces a RPE 7,5 o menos; '
+                        f'la de hoy (RPE {rpe_txt}, sin fallo) ya cuenta como la primera.')
+            return (f'RPE {rpe_txt} hoy: subo cuando una sesión salga a RPE 8 o menos sin fallo '
+                    'y la siguiente a RPE 7,5 o menos.')
         if anterior is None:
             return 'Primera sesión registrada de este ejercicio: mantengo para tener referencia.'
         if anterior.fallo_muscular:

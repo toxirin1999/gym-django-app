@@ -254,3 +254,71 @@ class ObjetivoDelHueco(Comun):
         self.assertIn('objetivoHueco.reps_objetivo || repsHistorico', activo)
         cierre = Path('entrenos/templates/entrenos/post_entreno_resumen.html').read_text(encoding='utf-8')
         self.assertIn('objetivo del hueco: {{ s.objetivo }}', cierre)
+
+
+class ProgresionPendienteSinObjetivo(ObjetivoDelHueco):
+    """El sustituto sin objetivo conocido no progresa y el cierre lo dice (Hack del 18/11)."""
+
+    def test_sin_objetivo_la_decision_queda_pendiente(self):
+        from entrenos.models import GymDecisionLog
+        from entrenos.services.decision_log_service import generar_decisiones_para_entreno
+        e = self._dia3_sissy_por_hack(con_objetivo=False)
+        generar_decisiones_para_entreno(e)
+        d = GymDecisionLog.objects.get(entreno_origen=e, ejercicio_normalizado='sentadilla hack')
+        self.assertEqual(d.accion, 'mantener')
+        self.assertTrue(d.motivo.startswith('Progresión pendiente por falta de objetivo'))
+        self.assertIn('Sissy Squat', d.motivo)
+
+    def test_el_cierre_conserva_progresion_pendiente_por_falta_de_objetivo(self):
+        from entrenos.models import GymDecisionLog
+        from entrenos.services.cierre_porque_service import porque_decision
+        from entrenos.services.decision_log_service import generar_decisiones_para_entreno
+        e = self._dia3_sissy_por_hack(con_objetivo=False)
+        generar_decisiones_para_entreno(e)
+        d = GymDecisionLog.objects.get(entreno_origen=e, ejercicio_normalizado='sentadilla hack')
+        hoy = EjercicioRealizado.objects.filter(entreno=e, nombre_ejercicio__icontains='hack').first()
+        frase = porque_decision(d, hoy, None, 'peso_reps')
+        self.assertTrue(frase.startswith('Progresión pendiente por falta de objetivo'))
+        self.assertNotIn('subo', frase)
+
+    def test_con_objetivo_asignado_si_se_decide_normalmente(self):
+        from entrenos.models import GymDecisionLog
+        from entrenos.services.decision_log_service import generar_decisiones_para_entreno
+        e = self._dia3_sissy_por_hack()
+        generar_decisiones_para_entreno(e)
+        d = GymDecisionLog.objects.get(entreno_origen=e, ejercicio_normalizado='sentadilla hack')
+        self.assertFalse(d.motivo.startswith('Progresión pendiente'))
+
+
+class ReglaSubirTrasRpeControlado(SimpleTestCase):
+    """«Subo cuando lo hagas a RPE 7,5 o menos» corresponde a la regla 4 de _decidir_accion."""
+
+    def _ej(self, rpe, fallo=False):
+        return SimpleNamespace(rpe=rpe, fallo_muscular=fallo, fallo_intencional=None, es_tope_maquina=False)
+
+    def _decidir(self, rpe_hoy, rpe_prev, fallo_prev=False):
+        from entrenos.services.decision_log_service import _decidir_accion
+        perfil = SimpleNamespace(incremento_peso_pct=5, reduccion_peso_pct=10)
+        prev = SimpleNamespace(rpe=rpe_prev, fallo_muscular=fallo_prev)
+        return _decidir_accion(self._ej(rpe_hoy), [prev], perfil, rpe_hoy, False, False)[0]
+
+    def test_basta_la_proxima_sesion_a_7_5_si_la_de_hoy_fue_rpe_8_sin_fallo(self):
+        self.assertEqual(self._decidir(7.5, 8), 'subir_peso')
+
+    def test_si_la_de_hoy_fue_rpe_9_no_basta_una(self):
+        self.assertEqual(self._decidir(7.5, 9), 'mantener')
+
+    def test_si_la_de_hoy_llego_al_fallo_no_basta_una(self):
+        self.assertEqual(self._decidir(7.5, 8, fallo_prev=True), 'mantener')
+
+    def test_el_texto_dice_lo_que_hace_la_regla(self):
+        from entrenos.services.cierre_porque_service import porque_decision
+        log = SimpleNamespace(motivo='Parámetros estables — mantener y enfocar en técnica', rpe_anterior=8,
+                              motivo_codigo='', peso_anterior=30, accion='mantener', entreno_origen=None,
+                              entreno_origen_id=None)
+        hoy = SimpleNamespace(rpe=8, fallo_muscular=False, peso_kg=30)
+        with patch('entrenos.services.cierre_porque_service._doble_progresion', return_value=None):
+            frase = porque_decision(log, hoy, None, 'peso_reps')
+        self.assertIn('ya cuenta como la primera', frase)
+        self.assertNotIn('dos sesiones seguidas', frase)
+

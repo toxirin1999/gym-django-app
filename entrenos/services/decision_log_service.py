@@ -775,6 +775,21 @@ def generar_decisiones_para_entreno(entreno):
             motivo = 'Cierre parcial por fatiga — mantener hasta tolerar la dosis prevista.'
             motivo_codigo = ''
 
+        # 18-nov-2026: un sustituto cuyo objetivo (rango y RPE del hueco) no consta no se progresa:
+        # no se juzga contra el objetivo de otro día ni contra uno inventado.
+        if (getattr(ej, 'sustituye_a', '')
+                and _objetivo_repeticiones_snapshot(entreno, nombre) is None
+                and _rpe_objetivo_snapshot(entreno, nombre) is None
+                and rango_sesion is None):
+            accion = 'mantener'
+            valor_cambio = None
+            motivo_codigo = ''
+            motivo = (
+                f'Progresión pendiente por falta de objetivo: no consta el rango ni el RPE que se '
+                f'asignaron a {ej.nombre_ejercicio} al sustituir a {ej.sustituye_a}; '
+                f'mantengo {_kg_txt(peso)} kg hasta tenerlo.'
+            )
+
         GymDecisionLog.objects.get_or_create(
             cliente=cliente,
             entreno_origen=entreno,

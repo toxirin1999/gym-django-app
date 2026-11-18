@@ -85,7 +85,7 @@ class PorQueConElDato(Base):
         log = self.log(e, self.prensa, 'mantener', 'Parámetros estables — mantener y enfocar en técnica', 145)
         self.assertEqual(
             porque_decision(log, ej, None, 'peso_reps'),
-            'RPE 8 hoy: subo cuando lo hagas a RPE 7,5 o menos dos sesiones seguidas.',
+            'RPE 8 hoy: subo si la próxima vez lo haces a RPE 7,5 o menos; la de hoy (RPE 8, sin fallo) ya cuenta como la primera.',
         )
 
     def test_parametros_estables_por_la_sesion_anterior(self):
@@ -233,7 +233,7 @@ class CierreCompleto(Base):
         with patch('entrenos.services.cierre_porque_service.lo_que_viene', return_value=['Mañana toca descanso.']):
             ctx = construir_contexto_cierre(self.cliente, e2)
         decision = ctx['decisiones_entrenador'][0]
-        self.assertEqual(decision['porque'], 'RPE 8 hoy: subo cuando lo hagas a RPE 7,5 o menos dos sesiones seguidas.')
+        self.assertEqual(decision['porque'], 'RPE 8 hoy: subo si la próxima vez lo haces a RPE 7,5 o menos; la de hoy (RPE 8, sin fallo) ya cuenta como la primera.')
         self.assertEqual(decision['hoy'], '145 kg × 12, 12, 12')
         self.assertEqual(len(ctx['comprobaciones']), 1)
         self.assertEqual(ctx['que_viene'], ['Mañana toca descanso.'])
@@ -251,7 +251,7 @@ class CierreCompleto(Base):
         html = r.content.decode()
         self.assertContains(r, 'Lo que comprobé hoy')
         self.assertIn('Hoy: 145 kg × 12 con RPE 8', html)
-        self.assertIn('RPE 8 hoy: subo cuando lo hagas a RPE 7,5 o menos', html)
+        self.assertIn('RPE 8 hoy: subo si la próxima vez lo haces a RPE 7,5 o menos', html)
         self.assertContains(r, 'Lo que viene')
 
 

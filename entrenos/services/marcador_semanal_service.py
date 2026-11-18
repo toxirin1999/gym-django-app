@@ -116,6 +116,7 @@ def series_plan_semana(cliente, hoy):
     for ent in entrenos:
         grupos = set()
         series = Counter()
+        por_ejercicio = defaultdict(list)
         for ej in ent.get('ejercicios') or []:
             try:
                 n = int(ej.get('series') or 0)
@@ -125,11 +126,12 @@ def series_plan_semana(cliente, hoy):
             for g, peso in grupos_de_serie(ej.get('nombre'), grupo):
                 plan[g] += n * peso
                 series[g] += n * peso
+                por_ejercicio[g].append((ej.get('nombre'), n * peso))
                 if peso == 1.0:
                     grupos.add(g)
         # 18-nov-2026: las series que aporta cada sesión a cada músculo (no solo si lo toca).
         sesiones.append({'nombre': (ent.get('rutina_nombre') or '').strip(), 'grupos': grupos,
-                         'series': dict(series)})
+                         'series': dict(series), 'ejercicios': dict(por_ejercicio)})
     return plan, sesiones
 
 
@@ -182,6 +184,50 @@ def series_hechas_por_sesion(cliente, desde, hasta):
     for g in out:
         out[g].sort(key=lambda f: f['fecha'])
     return dict(out)
+
+
+def _hecho_por_ejercicio(cliente, desde, hasta):
+    """{(clave de rutina, ejercicio limpio): {grupo: series}} de lo hecho entre ``desde`` y ``hasta``."""
+    from entrenos.models import SerieRealizada
+    from entrenos.services.nombre_rutina import clave_rutina
+
+    out = defaultdict(Counter)
+    for s in SerieRealizada.objects.filter(
+        entreno__cliente=cliente, completado=True, es_aproximacion=False,
+    ).filter(_fecha_real_entre(desde, hasta)).select_related('ejercicio', 'entreno__rutina'):
+        rutina = getattr(s.entreno, 'rutina', None)
+        clave = clave_rutina(rutina.nombre) if rutina is not None else ''
+        for g, peso in grupos_de_serie(s.ejercicio.nombre, s.ejercicio.grupo_muscular):
+            out[(clave, _limpio(s.ejercicio.nombre))][g] += peso
+    return out
+
+
+def _desvios(sesiones, pendientes, hecho, grupo):
+    """Dónde lo hecho de las sesiones YA hechas se separa de lo que el plan pedía para ese músculo.
+
+    [{'dia', 'ejercicio', 'plan', 'hecho'}]: faltó (hecho < plan) o se hizo de más / otro ejercicio
+    (plan 0). Explica por qué el plan de la semana y lo hecho más lo pendiente no coinciden.
+    """
+    from entrenos.services.nombre_rutina import clave_rutina
+
+    pendientes_ids = {id(s) for s in pendientes}
+    out = []
+    for s in sesiones:
+        if id(s) in pendientes_ids:
+            continue
+        clave = clave_rutina(s['nombre'])
+        previstos = set()
+        for nombre, series in (s.get('ejercicios') or {}).get(grupo, []):
+            limpio = _limpio(nombre)
+            previstos.add(limpio)
+            hecho_aqui = hecho.get((clave, limpio), {}).get(grupo, 0)
+            if abs(series - hecho_aqui) > 1e-9:
+                out.append({'dia': _dia(s['nombre']), 'ejercicio': nombre, 'plan': series, 'hecho': hecho_aqui})
+        for (c, limpio), grupos in hecho.items():
+            if c == clave and limpio not in previstos and grupos.get(grupo, 0) > 0:
+                out.append({'dia': _dia(s['nombre']), 'ejercicio': limpio.title(), 'plan': 0,
+                            'hecho': grupos[grupo]})
+    return out
 
 
 def series_hechas(cliente, hoy, dias=7):
@@ -248,6 +294,7 @@ def marcador_semanal(cliente, hoy):
     hechas, directas, indirectas = series_hechas_detalle(cliente, lunes, hoy)
     por_sesion = series_hechas_por_sesion(cliente, lunes, hoy)
     pendientes = _pendientes(cliente, hoy, sesiones)
+    hecho_ej = _hecho_por_ejercicio(cliente, lunes, hoy)
 
     filas = []
     for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
@@ -263,6 +310,7 @@ def marcador_semanal(cliente, hoy):
             'directas': directas.get(grupo, 0), 'indirectas': indirectas.get(grupo, 0),
             'estado': _estado_fila(h, en_plan, proyectadas),
             'aportan': aportan, 'hechas_por_sesion': por_sesion.get(grupo, []),
+            'desvios': _desvios(sesiones, pendientes, hecho_ej, grupo),
             'cubren': [a['dia'] for a in aportan],
             'pct': round(h / escala * 100),
             'pct_pend': round(min(pend, escala - min(h, escala)) / escala * 100),
