@@ -238,10 +238,10 @@ class PropuestaZonaTests(TestCase):
         # La frase cita la aplicación registrada y la limitación cuando el resultado es medido.
         PropuestaZonaGym.objects.filter(pk=p.pk).update(
             resultado='validada', notas_resultado='Fuerza estimada +23,2 % frente a las 4 semanas anteriores',
-            deteccion=dict(p.deteccion, aplicacion_registrada={'sesiones': 10, 'desde': '2026-10-17', 'hasta': '2026-11-17'}))
+            deteccion=dict(p.deteccion, aplicacion_registrada={'sesiones': 8, 'desde': '2026-10-17', 'hasta': '2026-11-17'}))
         p.refresh_from_db()
         frase = frase_evaluacion(p)
-        self.assertIn('Aplicación registrada en 10 sesiones (17/10–17/11).', frase)
+        self.assertIn('Aplicación registrada en 8 sesiones (17/10–17/11).', frase)
         self.assertIn('no prueba por sí solo que las series extra lo causaran', frase)
         PropuestaZonaGym.objects.filter(pk=p.pk).update(
             resultado='neutra', notas_resultado=notas)
