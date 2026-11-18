@@ -47,17 +47,14 @@ def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
     cuando existe detalle la autoridad causal son las series completadas. Las
     aproximaciones con menos peso no deben diluir el rendimiento de trabajo.
     """
-    from entrenos.models import SerieRealizada
+    # 17-nov-2026: de la lectura compartida de series del entreno.
+    from entrenos.services.series_entreno_service import series_completadas
 
     series = [
         serie
-        for serie in SerieRealizada.objects.filter(
-            entreno=entreno,
-            completado=True,
-            peso_kg__isnull=False,
-            es_aproximacion=False,
-        ).select_related('ejercicio')
-        if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
+        for serie in series_completadas(entreno.pk)
+        if serie.peso_kg is not None and not serie.es_aproximacion
+        and normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
     ]
     if not series:
         return None

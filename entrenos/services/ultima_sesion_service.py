@@ -55,16 +55,13 @@ def _series_del_entreno(entreno_id):
     (clave del ejercicio, peso, reps, rpe, metros) para que la memoria por
     petición no la copie.
     """
-    from entrenos.models import SerieRealizada
     from entrenos.services.decision_log_service import normalizar_ejercicio
+    from entrenos.services.series_entreno_service import series_completadas
 
+    # 17-nov-2026: de la lectura compartida de series del entreno.
     return tuple(
-        (normalizar_ejercicio(nombre), peso, reps, rpe, metros)
-        for nombre, peso, reps, rpe, metros in SerieRealizada.objects.filter(
-            entreno_id=entreno_id, completado=True, es_aproximacion=False,
-        ).order_by('serie_numero', 'id').values_list(
-            'ejercicio__nombre', 'peso_kg', 'repeticiones', 'rpe_real', 'distancia_metros',
-        )
+        (normalizar_ejercicio(s.ejercicio.nombre), s.peso_kg, s.repeticiones, s.rpe_real, s.distancia_metros)
+        for s in series_completadas(entreno_id) if not s.es_aproximacion
     )
 
 

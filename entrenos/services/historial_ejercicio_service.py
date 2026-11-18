@@ -78,3 +78,27 @@ def hay_posterior(cliente, nombre, fecha):
     if cliente_id is None:
         return _consulta(cliente, nombre).filter(entreno__fecha__gt=fecha).exists()
     return any(e.entreno.fecha > fecha for e in _historial_completado(cliente_id, _clave(nombre)))
+
+
+def posteriores(cliente, nombre, entreno_origen_id=None, desde_fecha=None, limite=12):
+    """Ejercicios completados con ese nombre posteriores a una decisión (``_sesion_evaluadora``).
+
+    Con ``entreno_origen_id``: los de entrenos con id mayor; si no, desde
+    ``desde_fecha``. De la sesión más antigua a la más reciente (fecha, id de
+    entreno) y, dentro de una sesión, la primera fila registrada (antes no
+    estaba definido; mismo criterio que ``ORDEN``). Como mucho ``limite``.
+    """
+    cliente_id = _en_bloque(cliente)
+    if cliente_id is None:
+        qs = _consulta(cliente, nombre).select_related('entreno')
+        if entreno_origen_id:
+            qs = qs.exclude(entreno_id=entreno_origen_id).filter(entreno__id__gt=entreno_origen_id)
+        else:
+            qs = qs.filter(entreno__fecha__gte=desde_fecha)
+        return list(qs.order_by('entreno__fecha', 'entreno__id', 'id')[:limite])
+    if entreno_origen_id:
+        filas = [e for e in _historial_completado(cliente_id, _clave(nombre)) if e.entreno_id > entreno_origen_id]
+    else:
+        filas = [e for e in _historial_completado(cliente_id, _clave(nombre)) if e.entreno.fecha >= desde_fecha]
+    filas.sort(key=lambda e: (e.entreno.fecha, e.entreno_id, e.id))
+    return filas[:limite]

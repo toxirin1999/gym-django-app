@@ -588,17 +588,16 @@ def _resumen_sesion(entreno, ejercicios):
     }
 
 
-@por_peticion
 def _series_completadas(entreno_id):
     """Las series completadas de un entreno, con su ejercicio, una vez por petición.
 
     17-nov-2026: ``_rendimiento_representativo`` (x16) y
     ``_metricas_comparables_por_unidad`` (x14) las leían enteras por cada
-    ejercicio. Tupla para que la memoria por petición no la copie.
+    ejercicio. Ahora es la lectura compartida de ``series_entreno_service``.
     """
-    return tuple(
-        SerieRealizada.objects.filter(entreno_id=entreno_id, completado=True).select_related('ejercicio')
-    )
+    from entrenos.services.series_entreno_service import series_completadas
+
+    return series_completadas(entreno_id)
 
 
 def _rendimiento_representativo(entreno, nombre_ejercicio, fallback_peso, fallback_reps):

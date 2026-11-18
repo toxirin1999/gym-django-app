@@ -69,28 +69,24 @@ def describir_accion(log):
 
 def _sesion_evaluadora(log):
     """La primera sesión del ejercicio posterior a la decisión (la que la evaluó)."""
-    from entrenos.models import EjercicioRealizado
     from entrenos.services.decision_log_service import (
         _rendimiento_representativo_desde_series, normalizar_ejercicio,
     )
 
-    qs = EjercicioRealizado.objects.filter(
-        entreno__cliente=log.cliente,
-        nombre_ejercicio__iexact=log.ejercicio,
-        completado=True,
-    ).select_related('entreno')
-    if log.entreno_origen_id:
-        qs = qs.exclude(entreno_id=log.entreno_origen_id).filter(
-            entreno__id__gt=log.entreno_origen_id,
-        )
-    else:
-        qs = qs.filter(entreno__fecha__gte=log.fecha_creacion.date())
+    # 17-nov-2026: del historial del ejercicio ya leído en la petición.
+    from entrenos.services.historial_ejercicio_service import posteriores
+
+    candidatas = posteriores(
+        log.cliente_id, log.ejercicio,
+        entreno_origen_id=log.entreno_origen_id,
+        desde_fecha=None if log.entreno_origen_id else log.fecha_creacion.date(),
+    )
     # 12-nov-2026 (nota 28): una semana de descarga no comprueba una decisión de
     # progreso (dead hang 37 s → «30 con RPE 6, funcionó» era la descarga).
     from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
     _periodos = periodos_descarga(log.cliente_id)
     ej = next(
-        (c for c in qs.order_by('entreno__fecha', 'entreno__id')[:12]
+        (c for c in candidatas
          if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)),
         None,
     )

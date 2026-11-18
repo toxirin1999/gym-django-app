@@ -29,14 +29,13 @@ DIAS_SEMANA = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 
 # ─────────────────────────────────────────────────────────────
 
 def _series_trabajo(entreno, nombre):
-    from entrenos.models import SerieRealizada
+    """Completadas, sin aproximaciones, en orden de serie (17-nov-2026: de la lectura compartida)."""
+    from entrenos.services.series_entreno_service import series_completadas
 
     clave = normalizar_ejercicio(nombre)
     return [
-        s for s in SerieRealizada.objects.filter(
-            entreno=entreno, completado=True, es_aproximacion=False,
-        ).select_related('ejercicio').order_by('serie_numero', 'id')
-        if normalizar_ejercicio(s.ejercicio.nombre) == clave
+        s for s in series_completadas(entreno.pk)
+        if not s.es_aproximacion and normalizar_ejercicio(s.ejercicio.nombre) == clave
     ]
 
 
