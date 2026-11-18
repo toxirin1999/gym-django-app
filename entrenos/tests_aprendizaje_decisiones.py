@@ -45,7 +45,7 @@ class AprendizajeDecisionesTests(TestCase):
         self._entreno(5, 62.5, 10, 7)
         texto = frase_decision(self._log(origen, 'validada'))
         self.assertTrue(texto.startswith('Press banca: subí el peso a '))
-        self.assertIn('Después: 62,5 kg × 10 con RPE 7.', texto)
+        self.assertIn('Después (13/11): 62,5 kg × 10 con RPE 7.', texto)
         self.assertTrue(texto.endswith('Funcionó.'))
         self.assertNotIn('+5 kg', texto)  # el 5 es un porcentaje interno
 
@@ -59,7 +59,7 @@ class AprendizajeDecisionesTests(TestCase):
         origen = self._entreno(10, 60, 10, 7)
         texto = frase_decision(self._log(origen, 'neutra', 'Falta el RPE'))
         self.assertNotIn('Después', texto)
-        self.assertIn('Aún sin conclusión', texto)
+        self.assertIn('Resultado inconcluso: falta el RPE', texto)
 
     def test_mantener_cita_el_peso(self):
         log = GymDecisionLog(ejercicio='Remo', accion='mantener', peso_anterior=50, motivo='x')
@@ -82,7 +82,7 @@ class AprendizajeDecisionesTests(TestCase):
         response = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
         self.assertContains(response, 'Lo que decidí y si funcionó')
         self.assertContains(response, '1 de 1 cambios funcionaron')
-        self.assertContains(response, 'Después: 62,5 kg × 10 con RPE 7.')
+        self.assertContains(response, 'Después (13/11): 62,5 kg × 10 con RPE 7.')
 
     def test_la_lista_omite_consolidaciones_y_repite_un_ejercicio_una_vez(self):
         self._log(self._entreno(12, 60, 10, 7), 'neutra', 'Sin cambio claro', accion='mantener')
@@ -98,7 +98,7 @@ class AprendizajeDecisionesTests(TestCase):
         self._entreno(5, 0, 7, 6)
         log = self._log(origen, 'validada', accion='subir_reps', valor=1)
         texto = frase_decision(log)
-        self.assertIn('Después: 7 reps con RPE 6.', texto)
+        self.assertIn('Después (13/11): 7 reps con RPE 6.', texto)
         self.assertNotIn('0 kg', texto)
 
 

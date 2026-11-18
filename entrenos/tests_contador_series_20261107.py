@@ -100,10 +100,13 @@ class Memoria(_Base):
         self.client.force_login(self.cliente.user)
         datos = {'filas': [{'grupo': 'Tríceps', 'clave': 'tríceps', 'hechas': 17, 'directas': 9, 'indirectas': 8,
                             'pendientes': 0, 'proyectadas': 17, 'plan': 15.5, 'estado': 'completo', 'cubren': [],
-                            'aportan': [], 'hechas_por_sesion': [], 'pct': 100, 'pct_pend': 0, 'pct_plan': 91}],
-                 'frase': None, 'periodo': 'Semana 02/11–08/11 · hecho hasta hoy (07/11)'}
+                            'aportan': [], 'hechas_por_sesion': [], 'pct': 100, 'pct_pend': 0, 'pct_plan': 91,
+                            'objetivo': 17, 'bar_hechas': 100, 'bar_pend': 0,
+                            'detalle': {'hechas': 17, 'pendientes': 0, 'sesiones_hechas': [],
+                                        'pendientes_detalle': [], 'diferencias': []}}],
+                 'frase': None, 'semana_rango': '02/11–08/11', 'hasta_hoy': 'sábado 07/11'}
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
-        self.assertContains(r, '9 directas + 8 de indirectas')
-        self.assertContains(r, 'Hechas y previstas cuentan el mismo periodo: la semana de lunes a domingo.')
-        self.assertContains(r, 'Semana 02/11–08/11 · hecho hasta hoy (07/11)')
+        self.assertContains(r, 'Directas hechas 9 · indirectas hechas 8')
+        self.assertContains(r, 'Una serie directa cuenta entera y una indirecta, la mitad')
+        self.assertContains(r, '02/11–08/11')

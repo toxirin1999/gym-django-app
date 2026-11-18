@@ -107,12 +107,48 @@ class PropuestaZonaTests(TestCase):
         # 4 semanas antes: 45×5; durante la propuesta: 50×6 → sube.
         self._sesion(p.inicio - timedelta(days=5), 'Buenos días', 45, 5)
         self._sesion(p.inicio + timedelta(days=10), 'Buenos días', 50, 6)
+        # 18-nov-2026 (nota 49): sin constancia de que se aplicó, el efecto no se da por comprobado.
         evaluadas = evaluar_propuestas_vencidas(self.cliente, self.hoy)
         self.assertEqual(len(evaluadas), 1)
+        p.refresh_from_db()
+        self.assertEqual(p.resultado, 'neutra')
+        self.assertIn('no consta que la propuesta', p.notas_resultado)
+        self.assertIn('Buenos días: 45 kg × 5', p.notas_resultado)
+        self.assertIn('50 kg × 6', p.notas_resultado)
+
+    def test_con_la_aplicacion_registrada_se_comprueba_y_cita_fechas_y_datos(self):
+        self._isquios_caen()
+        p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
+        inicio = self.hoy - timedelta(days=35)
+        PropuestaZonaGym.objects.filter(pk=p.pk).update(inicio=inicio, fin=inicio + timedelta(days=27))
+        p.refresh_from_db()
+        self._sesion(p.inicio - timedelta(days=5), 'Buenos días', 45, 5)
+        durante = p.inicio + timedelta(days=10)
+        self._sesion(durante, 'Buenos días', 50, 6)
+        with patch('entrenos.services.propuesta_zona_service.sesiones_con_ajuste_registrado',
+                   return_value=[durante]):
+            evaluar_propuestas_vencidas(self.cliente, self.hoy)
         p.refresh_from_db()
         self.assertEqual(p.estado, PropuestaZonaGym.ESTADO_EVALUADA)
         self.assertEqual(p.resultado, 'validada')
         self.assertIn('frente a las 4 semanas anteriores', p.notas_resultado)
+        self.assertIn(f'({durante:%d/%m})', p.notas_resultado)
+
+    def test_marcas_fuera_de_la_ventana_dejan_el_efecto_sin_determinar(self):
+        self._isquios_caen()
+        p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
+        inicio = self.hoy - timedelta(days=35)
+        PropuestaZonaGym.objects.filter(pk=p.pk).update(inicio=inicio, fin=inicio + timedelta(days=27))
+        p.refresh_from_db()
+        # La marca «antes» ya cae dentro de la propuesta: no mide un antes y un durante.
+        self._sesion(p.inicio + timedelta(days=2), 'Buenos días', 45, 5)
+        self._sesion(p.inicio + timedelta(days=20), 'Buenos días', 50, 6)
+        with patch('entrenos.services.propuesta_zona_service.sesiones_con_ajuste_registrado',
+                   return_value=[p.inicio + timedelta(days=2)]):
+            evaluar_propuestas_vencidas(self.cliente, self.hoy)
+        p.refresh_from_db()
+        self.assertEqual(p.resultado, 'neutra')
+        self.assertTrue('sin determinar' in p.notas_resultado or 'Sin evidencia' in p.notas_resultado)
 
     def test_visible_en_ahora_y_responder(self):
         self._isquios_caen()

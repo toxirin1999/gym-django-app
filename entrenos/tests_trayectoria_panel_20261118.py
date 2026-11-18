@@ -509,7 +509,10 @@ class DiferenciaPlanFrenteAHechasMasPendientes(SesionesMovidasDeFecha):
         from pathlib import Path
         src = (Path(__file__).parents[1] / 'clientes' / 'templates' / 'clientes' / 'trayectoria_plan.html').read_text(
             encoding='utf-8')
-        self.assertIn('Distinto del plan en sesiones ya hechas', src)
+        # 18-nov-2026: el panel móvil rediseñado deja el detalle bajo «Ver detalle».
+        self.assertIn('Ver detalle', src)
+        self.assertIn('Sin versión histórica para comprobarlo', src)
+        self.assertIn('Objetivo frente al plan semanal', src)
 
 
 class BajarVolumenRespetaDescarga(SubirVolumenEnEspera):

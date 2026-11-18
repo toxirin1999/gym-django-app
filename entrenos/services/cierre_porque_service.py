@@ -322,13 +322,24 @@ def _doble_progresion(log, tipo_progresion):
 def comprobaciones_de_hoy(cliente, entreno):
     """Decisiones anteriores que esta sesión ha evaluado, con su veredicto.
 
-    Mismo criterio que Memoria: solo las que cambiaron algo (no "mantuve") y
-    con conclusión (funcionó / no funcionó).
+    Solo las que cambiaron algo (no "mantuve"). 18-nov-2026 (nota 43): también
+    las de resultado inconcluso, con el motivo exacto; antes se omitían y la
+    decisión parecía no haberse comprobado.
     """
     from entrenos.models import GymDecisionLog
     from entrenos.services.aprendizaje_decisiones_service import _sesion_evaluadora
 
     items = []
+    vistos_log = set()
+
+    # Con la sesión evaluadora guardada (decisiones evaluadas desde 18-nov-2026).
+    for log in (GymDecisionLog.objects.filter(cliente=cliente, entreno_evaluador=entreno,
+                                              resultado__isnull=False)
+                .exclude(accion='mantener').order_by('ejercicio', 'fecha_creacion')):
+        vistos_log.add(log.pk)
+        items.append({'resultado': log.resultado, 'texto': frase_decision(log, etiqueta='Hoy')})
+
+    # Históricas: se deriva la sesión evaluadora.
     vistos = set()
     for ej in entreno.ejercicios_realizados.filter(completado=True).order_by('orden', 'id'):
         nombre = normalizar_ejercicio(ej.nombre_ejercicio)
@@ -338,21 +349,19 @@ def comprobaciones_de_hoy(cliente, entreno):
         log = (
             GymDecisionLog.objects.filter(
                 cliente=cliente, ejercicio_normalizado=nombre,
-                resultado__in=('validada', 'fallida'),
+                resultado__in=('validada', 'fallida', 'neutra'),
                 entreno_origen__isnull=False,
                 entreno_origen__fecha__lte=entreno.fecha,
+                entreno_evaluador__isnull=True,
             ).exclude(accion='mantener').exclude(entreno_origen=entreno)
             .order_by('-fecha_creacion').first()
         )
-        if log is None:
+        if log is None or log.pk in vistos_log:
             continue
         evaluadora = _sesion_evaluadora(log)
         if not evaluadora or evaluadora.get('entreno_id') != entreno.id:
             continue
-        items.append({
-            'resultado': log.resultado,
-            'texto': frase_decision(log, etiqueta='Hoy'),
-        })
+        items.append({'resultado': log.resultado, 'texto': frase_decision(log, etiqueta='Hoy')})
     return items
 
 

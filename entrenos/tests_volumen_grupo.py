@@ -118,16 +118,19 @@ class PropuestaPorFatiga(Base):
 
     def test_evaluacion_de_bajar_funciona_si_no_se_pierde_fuerza(self):
         p = self.propuesta(zona='cuadriceps', direccion='bajar', inicio=HOY - timedelta(days=40))
-        with patch('entrenos.services.evolucion_muscular_service.comparar_ejercicios',
-                   return_value=[{'ejercicio': 'Curl femoral tumbado', 'pct': -1.0, 'dudoso': False}]):
+        fila = {'ejercicio': 'Curl femoral tumbado', 'pct': -1.0, 'dudoso': False,
+                'antes': {'peso_kg': 40.0, 'reps': 10, 'fecha': p.inicio - timedelta(days=3)},
+                'ahora': {'peso_kg': 40.0, 'reps': 10, 'fecha': p.inicio + timedelta(days=12)}}
+        with patch('entrenos.services.evolucion_muscular_service.comparar_ejercicios', return_value=[fila]), \
+                patch('entrenos.services.propuesta_zona_service.sesiones_con_ajuste_registrado',
+                      return_value=[p.inicio + timedelta(days=12)]):
             evaluar_propuestas_vencidas(self.cliente, HOY)
         p.refresh_from_db()
         self.assertEqual(p.resultado, 'validada')
-        self.assertEqual(
-            frase_evaluacion(p),
+        self.assertTrue(frase_evaluacion(p).startswith(
             'Cuádriceps: propuse −2 series semanales durante 4 semanas y aceptaste. '
-            'Funcionó: menos volumen sin perder fuerza (-1,0 % frente a las 4 semanas anteriores).',
-        )
+            'Funcionó: menos volumen sin perder fuerza (-1,0 % frente a las 4 semanas anteriores).'))
+        self.assertIn('Curl femoral tumbado: 40 kg × 10', frase_evaluacion(p))
 
 
 class PlanificadorAplicaElAjuste(Base):

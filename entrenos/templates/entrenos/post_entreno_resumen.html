@@ -401,7 +401,7 @@
   <div class="sec-hdr"><span class="sec-tag">Lo que comprobé hoy</span><div class="sec-line"></div></div>
   <div class="card">
     {% for item in comprobaciones %}
-    <p style="margin:0 0 8px;">{% if item.resultado == 'validada' %}✓{% else %}✗{% endif %} {{ item.texto }}</p>
+    <p style="margin:0 0 8px;">{% if item.resultado == 'validada' %}✓{% elif item.resultado == 'fallida' %}✗{% else %}·{% endif %} {{ item.texto }}</p>
     {% endfor %}
   </div>
   {% endif %}

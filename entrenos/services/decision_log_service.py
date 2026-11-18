@@ -957,6 +957,8 @@ def evaluar_decisiones_para_entreno(entreno):
 
     from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
     _periodos = periodos_descarga(cliente.id)
+    from entrenos.services.comparabilidad_service import Bloques
+    _bloques = Bloques(cliente)
     for ej in ejercicios:
         nombre = normalizar_ejercicio(ej.nombre_ejercicio)
         if not nombre:
@@ -972,14 +974,15 @@ def evaluar_decisiones_para_entreno(entreno):
             ~Q(motivo_codigo__in=ejecutivas)
             | Q(motivo_codigo__in=ejecutivas, estado_aplicacion='aplicada')
         )
-        log = GymDecisionLog.objects.filter(
+        candidatas = list(GymDecisionLog.objects.filter(
             cliente=cliente,
             resultado__isnull=True,
             experimento_variante__isnull=True,
         ).exclude(accion='cambiar_variante').exclude(entreno_origen=entreno).filter(
             aplicable,
             ejercicio_normalizado=nombre,
-        ).order_by('-fecha_creacion').first()
+        ).order_by('-fecha_creacion'))
+        log = candidatas[0] if candidatas else None
 
         # Compatibilidad temporal: históricos sin clave causal.
         if not log:
@@ -990,8 +993,20 @@ def evaluar_decisiones_para_entreno(entreno):
             ).exclude(accion='cambiar_variante').filter(
                 aplicable,
             ).order_by('-fecha_creacion').first()
+            candidatas = [log] if log else []
 
         if not log:
+            continue
+
+        # 18-nov-2026 (nota 48): las decisiones más antiguas del mismo ejercicio
+        # ya no tendrán sesión propia que las compruebe; se cierran como
+        # inconclusas en vez de evaluarse semanas después con una sesión ajena.
+        for vieja in candidatas[1:]:
+            _persistir_evaluacion_final(vieja, 'neutra', _motivo_sustituida(vieja, log), entreno)
+
+        no_aplicable = motivo_no_aplicable(log, entreno, _bloques)
+        if no_aplicable:
+            _persistir_evaluacion_final(log, 'neutra', no_aplicable, entreno)
             continue
 
         from rutinas.models import EjercicioBase
@@ -999,10 +1014,50 @@ def evaluar_decisiones_para_entreno(entreno):
         tipo_progresion = ej_base.tipo_progresion if ej_base else 'peso_reps'
 
         _evaluar_log(log, ej, tipo_progresion)
+        # Si la evaluación cerró la decisión, la sesión de hoy es la evaluadora.
+        GymDecisionLog.objects.filter(
+            pk=log.pk, resultado__isnull=False, entreno_evaluador__isnull=True,
+        ).update(entreno_evaluador=entreno)
         _actualizar_perfil(cliente, nombre)
 
 
-def _persistir_evaluacion_final(log, resultado, notas):
+def _fecha_corta(fecha):
+    return fecha.strftime('%d/%m') if fecha else '?'
+
+
+def _motivo_sustituida(vieja, nueva):
+    return (f"Resultado inconcluso: la decisión del {_fecha_corta(vieja.fecha_creacion)} quedó "
+            f"sustituida por otra del {_fecha_corta(nueva.fecha_creacion)} antes de que una sesión "
+            f"pudiera comprobarla.")
+
+
+def motivo_no_aplicable(log, entreno, bloques=None):
+    """Motivo por el que la sesión ``entreno`` no puede evaluar ``log``, o None si sirve.
+
+    Sin caducidad por días: una decisión sigue siendo aplicable mientras la
+    sesión sea elegible (no es de descarga: eso ya se filtra antes) y el bloque
+    del plan no haya cambiado entre la decisión y esa sesión.
+    """
+    from entrenos.services.comparabilidad_service import Bloques
+
+    fecha_decision = (log.entreno_origen.fecha_ejecucion or log.entreno_origen.fecha) if log.entreno_origen_id \
+        else log.fecha_creacion.date()
+    fecha_sesion = entreno.fecha_ejecucion or entreno.fecha
+    if not fecha_decision or not fecha_sesion or fecha_sesion < fecha_decision:
+        return None
+    try:
+        bloques = bloques or Bloques(entreno.cliente)
+        antes, ahora = bloques.de(fecha_decision), bloques.de(fecha_sesion)
+    except Exception:  # noqa: BLE001
+        return None
+    if antes['familia'] != ahora['familia']:
+        return (f"Resultado inconcluso: entre la decisión ({_fecha_corta(fecha_decision)}, bloque "
+                f"{antes['nombre']}) y esta sesión ({_fecha_corta(fecha_sesion)}, bloque "
+                f"{ahora['nombre']}) cambió el bloque; el objetivo ya no es el mismo.")
+    return None
+
+
+def _persistir_evaluacion_final(log, resultado, notas, entreno_evaluador=None):
     """Cierra una evaluación y publica su hecho durable después del commit."""
     from entrenos.models import GymDecisionLog
 
@@ -1013,7 +1068,11 @@ def _persistir_evaluacion_final(log, resultado, notas):
         decision.resultado = resultado
         decision.notas_resultado = notas
         decision.fecha_evaluacion = timezone.now()
-        decision.save(update_fields=['resultado', 'notas_resultado', 'fecha_evaluacion'])
+        campos = ['resultado', 'notas_resultado', 'fecha_evaluacion']
+        if entreno_evaluador is not None:
+            decision.entreno_evaluador = entreno_evaluador
+            campos.append('entreno_evaluador')
+        decision.save(update_fields=campos)
 
         decision_id = decision.pk
 
@@ -1158,9 +1217,9 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
         fatiga = None
     if fatiga:
         # 17-nov-2026 (nota 29): no se promete una comprobación que nadie hace;
-        # se dice que el resultado queda sin evaluar y por qué.
+        # se dice que el resultado es inconcluso y por qué.
         _persistir_evaluacion_final(log, 'neutra', (
-            f"El resultado de hoy queda sin evaluar: llegabas muy cansado ({kg(fatiga['peso'])} kg × "
+            f"Resultado inconcluso: llegabas muy cansado ({kg(fatiga['peso'])} kg × "
             f"{fatiga['reps_hoy']}; antes {kg(fatiga['peso'])} × {fatiga['reps_antes']})"
         ))
         return
@@ -1188,7 +1247,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             contexto = _contexto_de_ese_dia(log, nueva_sesion)
             if contexto:
                 resultado = 'neutra'
-                notas = (f'El resultado de hoy queda sin evaluar: el RPE subió a {float(rpe_nuevo):g} '
+                notas = (f'Resultado inconcluso: el RPE subió a {float(rpe_nuevo):g} '
                          f'(el plan pedía {_rpe_pedido(nueva_sesion.entreno, nombre):g}) y ese día {contexto}')
         elif log.motivo_codigo == 'progresion_peso':
             objetivo = log.peso_sugerido
@@ -1271,7 +1330,7 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             contexto = _contexto_de_ese_dia(log, nueva_sesion)
             if contexto:
                 resultado = 'neutra'
-                notas = ('El resultado de hoy queda sin evaluar: menos reps que la vez anterior con el '
+                notas = ('Resultado inconcluso: menos reps que la vez anterior con el '
                          f'máximo de la máquina y ese día {contexto}')
         else:
             resultado = 'neutra'

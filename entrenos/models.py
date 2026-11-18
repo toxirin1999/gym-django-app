@@ -1346,6 +1346,12 @@ class GymDecisionLog(models.Model):
         'EntrenoRealizado', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='decisiones_generadas',
     )
+    # 18-nov-2026 (nota 48): la sesion que evaluo la decision. NULL en las
+    # evaluadas antes de esta fecha (se deriva de la primera sesion posterior).
+    entreno_evaluador = models.ForeignKey(
+        'EntrenoRealizado', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='decisiones_evaluadas',
+    )
     ejercicio_normalizado = models.CharField(max_length=120, default='', blank=True)
 
     peso_anterior = models.FloatField(null=True, blank=True)
@@ -1437,10 +1443,13 @@ class GymDecisionLog(models.Model):
         # grave aún en bajar_peso/deload, que es una intervención de
         # seguridad. Forzar el siguiente múltiplo de 2.5kg en la dirección
         # esperada garantiza que la decisión siempre se traduzca en cambio.
+        # 18-nov-2026 (nota 48): el siguiente escalón sale de la rejilla de la máquina,
+        # no de sumar al peso anterior (un 20,5 fuera de escala daba 25,5 en una de 5 kg).
+        import math
         if self.accion == 'subir_peso' and candidato <= peso_anterior:
-            return round(peso_anterior + incremento, 1)
+            return round((math.floor(peso_anterior / incremento + 1e-9) + 1) * incremento, 1)
         if self.accion in ('bajar_peso', 'deload') and candidato >= peso_anterior:
-            return round(max(0, peso_anterior - incremento), 1)
+            return round(max(0, (math.ceil(peso_anterior / incremento - 1e-9) - 1) * incremento), 1)
         return candidato
 
     @property

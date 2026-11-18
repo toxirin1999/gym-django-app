@@ -66,17 +66,22 @@ class Marcador(ColaSemanalBase):
         datos = {'filas': [{'grupo': 'Pecho', 'clave': 'pecho', 'hechas': 7, 'plan': 13, 'pendientes': 4,
                             'proyectadas': 11, 'directas': 7, 'indirectas': 0, 'estado': 'falta',
                             'cubren': ['Día 5'], 'aportan': [{'dia': 'Día 5', 'series': 4}],
-                            'hechas_por_sesion': [], 'pct': 54, 'pct_pend': 31, 'pct_plan': 100}],
-                 'periodo': 'Semana 16/11–22/11 · hecho hasta hoy (18/11)',
+                            'hechas_por_sesion': [], 'pct': 54, 'pct_pend': 31, 'pct_plan': 100,
+                            'objetivo': 11, 'bar_hechas': 64, 'bar_pend': 36,
+                            'detalle': {'hechas': 7, 'pendientes': 4, 'sesiones_hechas': [], 'diferencias': [],
+                                        'pendientes_detalle': [{'dia': 'Día 5', 'series': 4, 'ejercicios': []}]}}],
+                 'semana_rango': '16/11–22/11', 'hasta_hoy': 'miércoles 18/11',
+                 'sesiones_detalle': [{'dia': 'Día 5', 'estado': 'pendiente'}],
                  'referencia': {'texto': 'Plan de la semana 16/11–22/11 según el planificador: 5 sesiones, 1 sin hacer (Día 5)'},
                  'frase': 'Pecho: llevas 7 de 13 que pide el plan; las sesiones pendientes (Día 5) aportan 4 y quedarías en 11.'}
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
             self.assertContains(r, 'Tu semana por músculo')
-            self.assertContains(r, '<strong>7</strong> hechas')
-            self.assertContains(r, '· plan 13')
-            self.assertContains(r, 'Pendientes: Día 5 (4)')
-            self.assertContains(r, 'Plan de la semana 16/11–22/11')
+            self.assertContains(r, '7 hechas · 4 pendientes')
+            self.assertContains(r, 'Ver detalle')
+            self.assertContains(r, 'Pendiente · Día 5')
+            self.assertContains(r, 'Provisional.')
+            self.assertContains(r, 'El plan semanal del planificador pide 13 series')
             self.assertNotContains(r, 'solo cansan')
             r = self.client.get(reverse('clientes:cuerpo'))
             self.assertContains(r, 'Pecho: llevas 7 de 13')

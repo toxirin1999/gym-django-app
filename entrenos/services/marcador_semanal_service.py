@@ -230,6 +230,255 @@ def _desvios(sesiones, pendientes, hecho, grupo):
     return out
 
 
+# ─────────────────────────────────────────────────────────────
+# Referencia seguida (18-nov-2026): cada sesión hecha se mide contra la versión
+# que mostró la app ese día, no contra el planificador de hoy.
+# ─────────────────────────────────────────────────────────────
+
+DIAS_SEMANA = ('lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo')
+# Ejercicios cuya presencia en una versión sigue sin explicarse (18-nov-2026, repaso del Día 3).
+CAUSA_PENDIENTE = ('machine shoulder press', 'press arnold')
+
+
+def _series_ejercicio(ej):
+    try:
+        return int(ej.get('series') or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _prescrito_de_version(snapshot, sustituciones, grupo_catalogo):
+    """[(nombre, grupo, series)] que pedía la versión seguida, con las sustituciones aplicadas.
+
+    Un ejercicio sustituido se cambia por el sustituto con las mismas series.
+    """
+    cambio = {_limpio(orig): nuevo for orig, nuevo in sustituciones}
+    out = []
+    for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
+        nombre = ej.get('nombre')
+        n = _series_ejercicio(ej)
+        if not nombre or not n:
+            continue
+        sustituto = cambio.get(_limpio(nombre))
+        if sustituto:
+            out.append((sustituto, grupo_catalogo.get(_limpio(sustituto)), n))
+        else:
+            out.append((nombre, grupo_catalogo.get(_limpio(nombre)) or ej.get('grupo_muscular'), n))
+    return out
+
+
+def _sesiones_seguidas(cliente, lunes, hoy, sesiones_plan):
+    """Una entrada por sesión hecha esta semana, con la versión que se siguió.
+
+    {'entreno_id','dia','fecha','sin_version','reducida','hora_version','regenerada',
+     'prescrito': [(nombre, grupo, series)], 'hechos': {nombre limpio: {grupo: series}},
+     'hechos_nombres': set, 'sustituciones': [(orig, nuevo)], 'completa': bool}
+    """
+    from django.db.models import Q
+    from django.utils import timezone
+    from entrenos.models import EntrenoRealizado, GymDecisionVersion, SerieRealizada
+    from entrenos.services.nombre_rutina import clave_rutina
+
+    entrenos = list(
+        EntrenoRealizado.objects.filter(cliente=cliente, rutina__isnull=False).filter(
+            Q(fecha_ejecucion__gte=lunes, fecha_ejecucion__lte=hoy)
+            | Q(fecha_ejecucion__isnull=True, fecha__gte=lunes, fecha__lte=hoy)
+        ).select_related('rutina', 'gym_decision_version').order_by('fecha_ejecucion', 'fecha', 'id')
+    )
+    if not entrenos:
+        return []
+    ids = [e.id for e in entrenos]
+    nombres = set()
+    hechos = defaultdict(lambda: defaultdict(Counter))
+    for sr in SerieRealizada.objects.filter(entreno_id__in=ids, completado=True, es_aproximacion=False
+                                            ).select_related('ejercicio'):
+        nombres.add(sr.ejercicio.nombre)
+        for g, peso in grupos_de_serie(sr.ejercicio.nombre, sr.ejercicio.grupo_muscular):
+            hechos[sr.entreno_id][_limpio(sr.ejercicio.nombre)][g] += peso
+    sustit = defaultdict(list)
+    hechos_nombres = defaultdict(set)
+    from entrenos.models import EjercicioRealizado
+    for er in EjercicioRealizado.objects.filter(entreno_id__in=ids, completado=True):
+        hechos_nombres[er.entreno_id].add(_limpio(er.nombre_ejercicio))
+        if (er.sustituye_a or '').strip():
+            sustit[er.entreno_id].append((er.sustituye_a.strip(), er.nombre_ejercicio))
+    versiones = defaultdict(list)
+    for v in GymDecisionVersion.objects.filter(cliente=cliente, fecha__in={e.fecha for e in entrenos}).order_by('version'):
+        versiones[v.fecha].append(v)
+
+    out = []
+    for e in entrenos:
+        v = e.gym_decision_version
+        snap = (getattr(v, 'snapshot', None) or {}) if v else {}
+        ejercicios_snap = (snap.get('entrenamiento') or {}).get('ejercicios') or []
+        sin_version = not ejercicios_snap
+        grupo_catalogo = _grupos_catalogo(
+            {ej.get('nombre') for ej in ejercicios_snap} | {n for _o, n in sustit[e.id]})
+        prescrito = [] if sin_version else _prescrito_de_version(snap, sustit[e.id], grupo_catalogo)
+        completa = (not sin_version) and all(_limpio(n) in hechos_nombres[e.id] for n, _g, _s in prescrito)
+        otras = [x for x in versiones.get(e.fecha, []) if v is None or x.pk != v.pk]
+        regenerada = None
+        if otras:
+            ultima = max(otras, key=lambda x: x.version)
+            if v is None or ultima.version > v.version:
+                n_ej = len((ultima.snapshot.get('entrenamiento') or {}).get('ejercicios') or [])
+                regenerada = {'hora': timezone.localtime(ultima.creado_en).strftime('%H:%M'), 'ejercicios': n_ej}
+        fecha = e.fecha_ejecucion or e.fecha
+        out.append({
+            'entreno_id': e.id, 'dia': _dia(e.rutina.nombre), 'clave': clave_rutina(e.rutina.nombre),
+            'fecha': fecha, 'sin_version': sin_version,
+            'reducida': snap.get('estado') == 'version_reducida',
+            'hora_version': timezone.localtime(v.creado_en).strftime('%H:%M') if v else None,
+            'regenerada': regenerada, 'prescrito': prescrito, 'sustituciones': sustit[e.id],
+            'hechos': {k: dict(c) for k, c in hechos[e.id].items()}, 'completa': completa,
+            'n_prescritos': len(prescrito), 'n_hechos_prescritos': sum(
+                1 for n, _g, _s in prescrito if _limpio(n) in hechos_nombres[e.id]),
+        })
+    return out
+
+
+def _linea_entrenador(seguidas):
+    """Un ajuste prescrito (versión reducida, sustitución) o un hueco de datos; None si no hay nada que contar."""
+    if not seguidas:
+        return None
+    ajustes = []
+    for s in seguidas:
+        dia = DIAS_SEMANA[s['fecha'].weekday()]
+        if s['reducida']:
+            ajustes.append(f"la versión reducida del {dia}")
+        for orig, nuevo in s['sustituciones']:
+            ajustes.append(f"la sustitución {_corto(orig)} → {_corto(nuevo)} del {dia}")
+    sin = [s for s in seguidas if s['sin_version']]
+    partes = []
+    n = len(seguidas)
+    todas = all(s['completa'] for s in seguidas)
+    if ajustes:
+        if todas:
+            numero = {1: 'la sesión', 2: 'las dos sesiones', 3: 'las tres sesiones', 4: 'las cuatro sesiones',
+                      5: 'las cinco sesiones'}.get(n, f'las {n} sesiones')
+            partes.append(f"Completaste {numero} con {_unir(ajustes)}.")
+        else:
+            partes.append(f"Esta semana hubo {_unir(ajustes)}.")
+    if sin:
+        partes.append("Sin versión histórica para comprobar " + _unir(
+            [f"el {DIAS_SEMANA[s['fecha'].weekday()]}" for s in sin]) + '.')
+    return ' '.join(partes) or None
+
+
+def _corto(nombre):
+    """«Sissy Squat» → «Sissy»; «Sentadilla Hack» → «Hack» (para la línea del entrenador)."""
+    palabras = [w for w in str(nombre or '').split() if _limpio(w) not in ('squat', 'sentadilla')]
+    return ' '.join(palabras) or str(nombre or '')
+
+
+def _unir(items):
+    items = list(items)
+    if len(items) <= 1:
+        return ''.join(items)
+    return ', '.join(items[:-1]) + ' y ' + items[-1]
+
+
+def _contrib(nombre, grupo_ej, n, grupo):
+    """Lo que aporta ``n`` series de ese ejercicio al músculo ``grupo`` (directa 1, indirecta 0,5)."""
+    return sum(p for g, p in grupos_de_serie(nombre, grupo_ej) if g == grupo) * n
+
+
+def _detalle_musculo(grupo, seguidas, sesiones, pendientes):
+    """Desglose por sesión y ejercicio de un músculo y su objetivo aplicable (18-nov-2026).
+
+    Las sesiones hechas se miden contra la versión que se siguió; las pendientes, contra el plan
+    vigente (provisional). Si una sesión no tiene versión guardada no se comprueba nada.
+    """
+    sesiones_hechas = []
+    objetivo_hecho = 0.0
+    hechas_total = 0.0
+    diferencias = []
+    plan_por_clave = defaultdict(list)
+    pendientes_ids = {id(x) for x in pendientes}
+    for sp in sesiones:
+        if id(sp) not in pendientes_ids:
+            plan_por_clave[_clave(sp['nombre'])].append(sp)
+
+    for sg in seguidas:
+        hecho_sesion = sum(c.get(grupo, 0) for c in sg['hechos'].values())
+        hechas_total += hecho_sesion
+        fila = {'dia': sg['dia'], 'fecha': sg['fecha'], 'hechas': hecho_sesion,
+                'sin_version': sg['sin_version'], 'reducida': sg['reducida'],
+                'sustituciones': [(o, n) for o, n in sg['sustituciones']], 'ejercicios': []}
+        if sg['sin_version']:
+            objetivo_hecho += hecho_sesion
+            fila['ejercicios'] = [{'nombre': n.title(), 'hecho': c[grupo]}
+                                  for n, c in sg['hechos'].items() if c.get(grupo)]
+            if hecho_sesion or fila['ejercicios']:
+                sesiones_hechas.append(fila)
+            continue
+        previsto_ids = set()
+        for nombre, grupo_ej, n in sg['prescrito']:
+            aporte = _contrib(nombre, grupo_ej, n, grupo)
+            if not aporte:
+                continue
+            previsto_ids.add(_limpio(nombre))
+            fila['ejercicios'].append({
+                'nombre': nombre, 'series': n, 'previsto': aporte,
+                'hecho': sg['hechos'].get(_limpio(nombre), {}).get(grupo, 0)})
+            objetivo_hecho += aporte
+        for limpio, c in sg['hechos'].items():
+            if limpio not in previsto_ids and c.get(grupo):
+                fila['ejercicios'].append({'nombre': limpio.title(), 'series': None, 'previsto': 0,
+                                           'hecho': c[grupo], 'de_mas': True})
+        if fila['ejercicios'] or hecho_sesion:
+            sesiones_hechas.append(fila)
+        # Diferencia con el plan vigente de esa misma sesión (solo informa).
+        candidatas = plan_por_clave.get(sg['clave']) or []
+        plan_sesion = candidatas.pop(0) if candidatas else None
+        if plan_sesion is None:
+            continue
+        plan_ej = {_limpio(nom): v for nom, v in (plan_sesion.get('ejercicios') or {}).get(grupo, [])}
+        cambio = {_limpio(o): n for o, n in sg['sustituciones']}
+        usados = set()
+        for nombre, grupo_ej, n in sg['prescrito']:
+            aporte = _contrib(nombre, grupo_ej, n, grupo)
+            limpio = _limpio(nombre)
+            origen = next((o for o, nuevo in cambio.items() if _limpio(nuevo) == limpio), None)
+            ref = plan_ej.get(origen if origen in plan_ej else limpio, 0)
+            usados.add(origen if origen in plan_ej else limpio)
+            if abs(aporte - ref) < 1e-9:
+                continue
+            if origen is not None:
+                texto = f'sustitución: {nombre}'
+            elif ref == 0:
+                texto = f'la versión que seguiste traía {nombre} ({n}) y el plan actual no'
+            elif sg['reducida']:
+                texto = 'versión reducida por la app'
+            else:
+                texto = f'{nombre}: {_num(aporte)} frente a {_num(ref)}'
+            diferencias.append({'dia': sg['dia'], 'texto': texto, 'valor': aporte - ref,
+                                'causa_pendiente': ref == 0 and _limpio(nombre) in CAUSA_PENDIENTE})
+        for limpio, v in plan_ej.items():
+            if limpio not in usados and v:
+                nombre = next((nom for nom, _v in plan_sesion['ejercicios'][grupo] if _limpio(nom) == limpio), limpio)
+                diferencias.append({'dia': sg['dia'], 'texto': f'la versión que seguiste no traía {nombre} ({_num(v)})',
+                                    'valor': -v, 'causa_pendiente': False})
+
+    pend_detalle = []
+    pend_total = 0.0
+    for sp in pendientes:
+        ejercicios = [{'nombre': nom, 'valor': v} for nom, v in (sp.get('ejercicios') or {}).get(grupo, []) if v]
+        total = sp['series'].get(grupo, 0)
+        if total:
+            pend_total += total
+            pend_detalle.append({'dia': _dia(sp['nombre']), 'series': total, 'ejercicios': ejercicios})
+    return {
+        'hechas': hechas_total, 'pendientes': pend_total, 'objetivo': objetivo_hecho + pend_total,
+        'sesiones_hechas': sesiones_hechas, 'pendientes_detalle': pend_detalle, 'diferencias': diferencias,
+    }
+
+
+def _clave(nombre):
+    from entrenos.services.nombre_rutina import clave_rutina
+    return clave_rutina(nombre)
+
+
 def series_hechas(cliente, hoy, dias=7):
     return series_hechas_detalle(cliente, hoy - timedelta(days=dias - 1), hoy)[0]
 
@@ -295,6 +544,7 @@ def marcador_semanal(cliente, hoy):
     por_sesion = series_hechas_por_sesion(cliente, lunes, hoy)
     pendientes = _pendientes(cliente, hoy, sesiones)
     hecho_ej = _hecho_por_ejercicio(cliente, lunes, hoy)
+    seguidas = _sesiones_seguidas(cliente, lunes, hoy, sesiones)
 
     filas = []
     for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
@@ -316,6 +566,15 @@ def marcador_semanal(cliente, hoy):
             'pct_pend': round(min(pend, escala - min(h, escala)) / escala * 100),
             'pct_plan': round(en_plan / escala * 100),
         })
+        # Vista móvil (18-nov-2026): barra a escala propia del músculo sobre su objetivo aplicable.
+        det = _detalle_musculo(grupo, seguidas, sesiones, pendientes)
+        esc = max(det['objetivo'], det['hechas'] + det['pendientes'], 1)
+        filas[-1].update({
+            'objetivo': det['objetivo'], 'detalle': det,
+            'bar_hechas': round(det['hechas'] / esc * 100, 1),
+            'bar_pend': round(det['pendientes'] / esc * 100, 1),
+            'diferencia_plan': det['objetivo'] - en_plan,
+        })
     dias_pend = [_dia(s['nombre']) for s in pendientes]
     referencia = {
         'texto': (f'Plan de la semana {_rango(lunes, domingo)} según el planificador: '
@@ -324,7 +583,17 @@ def marcador_semanal(cliente, hoy):
         'sesiones_plan': len(sesiones), 'sesiones_pendientes': dias_pend,
     }
     etiqueta = 'Semana de descarga' if descarga else 'Semana'
+    sesiones_detalle = [{
+        'dia': sg['dia'], 'fecha': sg['fecha'], 'estado': 'hecha', 'sin_version': sg['sin_version'],
+        'reducida': sg['reducida'], 'hora_version': sg['hora_version'], 'regenerada': sg['regenerada'],
+        'sustituciones': sg['sustituciones'], 'n_prescritos': sg['n_prescritos'],
+        'n_hechos': sg['n_hechos_prescritos'],
+    } for sg in seguidas] + [{
+        'dia': _dia(sp['nombre']), 'estado': 'pendiente',
+    } for sp in pendientes]
     return {'filas': filas, 'frase': _frase(filas), 'descarga': descarga, 'referencia': referencia,
+            'linea_entrenador': _linea_entrenador(seguidas), 'sesiones_detalle': sesiones_detalle,
+            'semana_rango': _rango(lunes, domingo), 'hasta_hoy': f'{DIAS_SEMANA[hoy.weekday()]} {hoy:%d/%m}',
             'periodo': f'{etiqueta} {_rango(lunes, domingo)} · hecho hasta hoy ({hoy:%d/%m})'}
 
 

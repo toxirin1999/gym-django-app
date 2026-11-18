@@ -16,8 +16,13 @@ from django.utils import timezone
 VEREDICTO = {
     'validada': 'funcionó',
     'fallida': 'no funcionó',
-    'neutra': 'aún sin conclusión',
+    'neutra': 'resultado inconcluso',
 }
+PENDIENTE = 'pendiente de comprobar'
+_PREFIJO_INCONCLUSO = 'Resultado inconcluso:'
+# Cierres que no usan los datos de ninguna sesión (decisión sustituida o bloque distinto).
+_SIN_SESION = ('Resultado inconcluso: la decisión del', 'Resultado inconcluso: entre la decisión')
+
 
 
 def _kg(valor):
@@ -76,20 +81,31 @@ def _sesion_evaluadora(log):
     # 17-nov-2026: del historial del ejercicio ya leído en la petición.
     from entrenos.services.historial_ejercicio_service import posteriores
 
-    candidatas = posteriores(
-        log.cliente_id, log.ejercicio,
-        entreno_origen_id=log.entreno_origen_id,
-        desde_fecha=None if log.entreno_origen_id else log.fecha_creacion.date(),
-    )
-    # 12-nov-2026 (nota 28): una semana de descarga no comprueba una decisión de
-    # progreso (dead hang 37 s → «30 con RPE 6, funcionó» era la descarga).
-    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
-    _periodos = periodos_descarga(log.cliente_id)
-    ej = next(
-        (c for c in candidatas
-         if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)),
-        None,
-    )
+    ej = None
+    if log.entreno_evaluador_id:
+        # 18-nov-2026 (nota 48): la sesión que evaluó de verdad, guardada.
+        from entrenos.models import EjercicioRealizado
+        clave = normalizar_ejercicio(log.ejercicio)
+        ej = next(
+            (e for e in EjercicioRealizado.objects.filter(entreno_id=log.entreno_evaluador_id, completado=True)
+             .select_related('entreno') if normalizar_ejercicio(e.nombre_ejercicio) == clave),
+            None,
+        )
+    if ej is None and not log.entreno_evaluador_id:
+        candidatas = posteriores(
+            log.cliente_id, log.ejercicio,
+            entreno_origen_id=log.entreno_origen_id,
+            desde_fecha=None if log.entreno_origen_id else log.fecha_creacion.date(),
+        )
+        # 12-nov-2026 (nota 28): una semana de descarga no comprueba una decisión de
+        # progreso (dead hang 37 s → «30 con RPE 6, funcionó» era la descarga).
+        from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+        _periodos = periodos_descarga(log.cliente_id)
+        ej = next(
+            (c for c in candidatas
+             if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)),
+            None,
+        )
     if ej is None:
         return None
     rendimiento = _rendimiento_representativo_desde_series(ej.entreno, normalizar_ejercicio(ej.nombre_ejercicio))
@@ -211,7 +227,11 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
         despues = _sesion_evaluadora(log)
     accion = _accion_real(log, despues)
     partes = [f'{_capitalizar(log.ejercicio)}: {accion}.']
+    if log.resultado is None or (log.notas_resultado or '').startswith(_SIN_SESION):
+        despues = None  # sin evaluar, o cerrada sin usar los datos de ninguna sesión
     if despues and despues['peso'] is not None and despues['reps']:
+        if etiqueta != 'Hoy' and despues.get('fecha'):
+            etiqueta = f"{etiqueta} ({despues['fecha'].strftime('%d/%m')})"
         c_peso, c_reps, c_rpe = _dato_citado(log, despues)
         if float(c_peso or 0) > 0:
             dato = f"{etiqueta}: {_kg(c_peso)} kg × {c_reps}"
@@ -223,12 +243,18 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
         if posterior and float(c_peso or 0) > 0:
             dato += f" y después {_texto_tramo(posterior)}"
         partes.append(dato + '.')
-    veredicto = VEREDICTO.get(log.resultado, '')
-    if veredicto:
-        frase = _capitalizar(veredicto)
-        if log.resultado != 'validada' and log.notas_resultado:
-            frase += f': {log.notas_resultado[:1].lower()}{log.notas_resultado[1:]}'
-        partes.append(frase.rstrip('.') + '.')
+    if log.resultado is None:
+        partes.append(_capitalizar(PENDIENTE) + '.')
+    else:
+        veredicto = VEREDICTO.get(log.resultado, '')
+        if veredicto:
+            frase = _capitalizar(veredicto)
+            notas = (log.notas_resultado or '').strip()
+            if notas.startswith(_PREFIJO_INCONCLUSO):
+                notas = notas[len(_PREFIJO_INCONCLUSO):].strip()
+            if log.resultado != 'validada' and notas:
+                frase += f': {notas[:1].lower()}{notas[1:]}'
+            partes.append(frase.rstrip('.') + '.')
     return ' '.join(partes)
 
 
