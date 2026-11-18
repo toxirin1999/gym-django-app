@@ -113,6 +113,9 @@ class AjustesVolumen(Base):
         self.assertIn('PENDIENTE DE RESOLVER · Descarga', texto)
         self.assertIn('30/11', texto)
         self.assertIn('sin ajuste', texto)
+        self.assertIn('Proyección con las reglas y los datos actuales. No reconstruye lo prescrito en semanas '
+                      'pasadas o en curso. Las sesiones futuras pueden cambiar al generarse. Para consultar lo '
+                      'prescrito, usa las versiones guardadas de cada sesión.', texto)
 
     def test_si_no_funciono_no_se_queda(self):
         self.propuesta(estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='fallida',

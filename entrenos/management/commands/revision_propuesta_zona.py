@@ -22,6 +22,12 @@ def _f(texto):
         raise CommandError(f'Fecha no válida: {texto} (usa AAAA-MM-DD)') from exc
 
 
+AVISO_PROYECCION = (
+    'Proyección con las reglas y los datos actuales. No reconstruye lo prescrito en semanas '
+    'pasadas o en curso. Las sesiones futuras pueden cambiar al generarse. Para consultar lo '
+    'prescrito, usa las versiones guardadas de cada sesión.')
+
+
 class Command(BaseCommand):
     help = 'Fija, decide y previsualiza la revisión de un ajuste de volumen validado.'
 
@@ -97,6 +103,7 @@ class Command(BaseCommand):
             hoy - timedelta(days=hoy.weekday()), lunes_base - timedelta(days=7), lunes_base,
             lunes_base + timedelta(days=7), lunes_base + timedelta(days=14)]
         self.stdout.write('\nVista previa (solo lectura):')
+        self.stdout.write(AVISO_PROYECCION)
         real = vol.series_por_grupo
         zona = p.zona
         vistos = set()
