@@ -509,20 +509,58 @@ def _peso_propuesto_igual(entreno, nombre):
     return False
 
 
-def _no_hechos(entreno, ejercicios):
-    """27-oct-2026 (nota 21): ejercicios del plan de ese día que no se hicieron.
+def _plan_sin_hacer_y_sustituciones(entreno, ejercicios):
+    """Separa lo que se quedó sin hacer de lo que se cambió por otro ejercicio.
 
-    El rumano, con la máquina ocupada, se cambió por curl femoral y el cierre
-    decía "8 de 8": se dice qué se quedó fuera.
+    18-nov-2026 (nota 21): el sissy squat, con la máquina desmontada, se cambió
+    por la hack squat y el cierre decía «Sin hacer: Sissy Squat». La sustitución
+    se sabe por lo que apuntó la pantalla al cambiar (``sustituye_a``), no por
+    compartir músculo: dos ejercicios del mismo grupo no son uno el relevo del otro.
     """
     from entrenos.services.decision_log_service import normalizar_ejercicio
     version = getattr(entreno, 'gym_decision_version', None)
     plan = ((getattr(version, 'snapshot', None) or {}).get('entrenamiento') or {}).get('ejercicios') or []
     hechos = {normalizar_ejercicio(e.nombre_ejercicio) for e in ejercicios}
-    return [
-        _nombre_visible(e.get('nombre')) for e in plan
-        if e.get('nombre') and normalizar_ejercicio(e.get('nombre')) not in hechos
-    ]
+    cambiados = {}
+    for e in ejercicios:
+        original = normalizar_ejercicio(getattr(e, 'sustituye_a', '') or '')
+        if original and original != normalizar_ejercicio(e.nombre_ejercicio):
+            cambiados.setdefault(original, e)
+    sin_hacer, sustituciones = [], []
+    for e in plan:
+        nombre = e.get('nombre')
+        clave = normalizar_ejercicio(nombre) if nombre else ''
+        if not clave or clave in hechos:
+            continue
+        if clave in cambiados:
+            nuevo = cambiados[clave]
+            asignado = getattr(nuevo, 'objetivo_asignado', None) or {}
+            partes = []
+            if asignado.get('rango'):
+                partes.append(f"{asignado['rango']} reps")
+            if asignado.get('rpe_objetivo'):
+                partes.append(f"RPE {asignado['rpe_objetivo']:g}".replace('.', ','))
+            sustituciones.append({
+                'original': _nombre_visible(nombre), 'nuevo': _nombre_visible(nuevo.nombre_ejercicio),
+                'objetivo': ' · '.join(partes),
+            })
+        else:
+            sin_hacer.append(_nombre_visible(nombre))
+    return sin_hacer, sustituciones
+
+
+def _no_hechos(entreno, ejercicios):
+    """27-oct-2026 (nota 21): ejercicios del plan de ese día que no se hicieron.
+
+    El rumano, con la máquina ocupada, se cambió por curl femoral y el cierre
+    decía "8 de 8": se dice qué se quedó fuera. 18-nov-2026: lo que se cambió
+    por otro del mismo grupo no cuenta como no hecho (ver ``_sustituciones``).
+    """
+    return _plan_sin_hacer_y_sustituciones(entreno, ejercicios)[0]
+
+
+def _sustituciones(entreno, ejercicios):
+    return _plan_sin_hacer_y_sustituciones(entreno, ejercicios)[1]
 
 
 def _resumen_sesion(entreno, ejercicios):
@@ -1180,6 +1218,7 @@ def construir_contexto_cierre(cliente, entreno):
         'que_viene': que_viene,
         'resumen': _resumen_sesion(entreno, ejercicios),
         'no_hechos': _no_hechos(entreno, ejercicios),
+        'sustituciones': _sustituciones(entreno, ejercicios),
         'cambios_relevantes': _cambios_relevantes(cliente, entreno, ejercicios, es_descarga_hoy),
         'lectura_plan': lectura_plan,
         'decisiones_entrenador': decisiones_entrenador,

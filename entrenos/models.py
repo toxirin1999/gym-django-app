@@ -58,6 +58,12 @@ class EjercicioRealizado(models.Model):
 
     nombre_ejercicio = models.CharField(max_length=100)
     grupo_muscular = models.CharField(max_length=50, blank=True, null=True)
+    # 18-nov-2026 (nota 21): si se hizo en lugar de otro ejercicio del plan (máquina ocupada), cuál.
+    sustituye_a = models.CharField(max_length=100, blank=True, default='')
+    # 18-nov-2026: objetivo que gobierna un ejercicio puesto en el hueco de otro (sustitucion).
+    # {'rango': '12-15', 'reps_objetivo': 12, 'rpe_objetivo': 8, 'hereda_de': 'Sissy Squat'}.
+    # Vacio en ejercicios del plan: su objetivo vive en la version de la sesion.
+    objetivo_asignado = models.JSONField(default=dict, blank=True)
 
     peso_kg = models.FloatField(default=0)
     tipo_carga = models.CharField(max_length=10, choices=TIPO_CARGA_CHOICES, null=True, blank=True)

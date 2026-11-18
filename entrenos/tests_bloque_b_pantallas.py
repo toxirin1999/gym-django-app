@@ -27,7 +27,7 @@ class EntrenamientoActivo(SimpleTestCase):
         self.assertNotIn('id="ring-series"', self.src)
 
     def test_pesos_con_coma_en_pantalla(self):
-        self.assertIn("'🏆 NUEVO PR — '+fmtKg(peso)+' kg", self.src)
+        self.assertIn("'🏆 SERÍA RÉCORD — '+fmtKg(peso)+' kg", self.src)
         self.assertIn("Serie '+sn+' — <strong>'+fmtKg(s.peso)+' kg × '", self.src)
 
     def test_numeros_para_el_js_sin_localizar(self):

@@ -69,6 +69,25 @@ def _rendimiento_representativo_desde_series(entreno, ejercicio_normalizado):
     return peso_referencia, reps_media
 
 
+def objetivo_asignado_de(entreno, ejercicio_normalizado):
+    """Objetivo de un ejercicio puesto en el hueco de otro (18-nov-2026), o None.
+
+    Un sustituto no figura en la version de la sesion: su rango de reps y su RPE
+    son los del hueco que ocupa, guardados al cambiarlo. Nunca se toman del
+    mismo ejercicio en otro dia.
+    """
+    try:
+        for ej in entreno.ejercicios_realizados.all():
+            if normalizar_ejercicio(ej.nombre_ejercicio) != ejercicio_normalizado:
+                continue
+            datos = getattr(ej, 'objetivo_asignado', None) or {}
+            if datos.get('reps_objetivo') or datos.get('rango'):
+                return datos
+    except Exception:  # pragma: no cover
+        return None
+    return None
+
+
 def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
     """Lee el objetivo que gobernó la sesión desde su versión inmutable."""
     version = getattr(entreno, 'gym_decision_version', None)
@@ -79,6 +98,12 @@ def _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado):
             continue
         try:
             return Decimal(str(ejercicio.get('reps_objetivo')))
+        except (TypeError, ValueError, ArithmeticError):
+            return None
+    asignado = objetivo_asignado_de(entreno, ejercicio_normalizado)
+    if asignado and asignado.get('reps_objetivo'):
+        try:
+            return Decimal(str(asignado['reps_objetivo']))
         except (TypeError, ValueError, ArithmeticError):
             return None
     return None
@@ -111,6 +136,12 @@ def _rpe_objetivo_snapshot(entreno, ejercicio_normalizado):
         # con el RPE del plan, no con el rebajado.
         try:
             return float(ejercicio.get('rpe_objetivo_plan') or ejercicio.get('rpe_objetivo'))
+        except (TypeError, ValueError):
+            return None
+    asignado = objetivo_asignado_de(entreno, ejercicio_normalizado)
+    if asignado and asignado.get('rpe_objetivo'):
+        try:
+            return float(asignado['rpe_objetivo'])
         except (TypeError, ValueError):
             return None
     return None

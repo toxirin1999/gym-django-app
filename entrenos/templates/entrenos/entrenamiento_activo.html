@@ -1608,6 +1608,8 @@ body{background:
      style="display:{% if forloop.first %}block{% else %}none{% endif %};">
 
   <input type="hidden" name="{{ ejercicio.form_id }}_nombre" value="{{ ejercicio.nombre }}">
+  <input type="hidden" name="{{ ejercicio.form_id }}_sustituye_a" value="">
+  <input type="hidden" name="{{ ejercicio.form_id }}_objetivo_sustituto" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_es_principal" value="{{ ejercicio.es_principal|yesno:'1,0,' }}">
   <input type="hidden" class="ejercicio-historial"
          data-ejercicio-id="{{ ejercicio.form_id }}"
@@ -3190,7 +3192,8 @@ function guardarSeriePanel(fid,sn,total){
     const tecnicaGuardada=STATE.seriesCompletadas[fid][sn-1].tecnica;
     row.innerHTML='<div class="sd-check">✓</div>'
       +'<div class="sd-info">Serie '+sn+' — <strong>'+resumenSerie+'</strong>'
-      +feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnicaGuardada)+'</div>'
+      +feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnicaGuardada)
+      +(prDeSerieHecha(fid,sn,peso,esAproximacion)!==null?' <span class="pr-hecho" style="color:#f6c35b;font-weight:700;">🏆 NUEVO PR (antes: '+fmtKg(prDeSerieHecha(fid,sn,peso,esAproximacion))+' kg)</span>':'')+'</div>'
       +'<div class="sd-rpe">RPE '+Math.round(rpe)+'</div>'
       +'<button type="button" class="sd-edit" onclick="editarSeriePanel(\''+fid+'\','+sn+','+total+')" title="Editar esta serie">✎</button>';
   if(!filaExistente) log.appendChild(row);
@@ -3306,11 +3309,13 @@ function editarSeriePanel(fid,sn,total){
 
 // ── DETECCIÓN PR EN TIEMPO REAL ─────────────────────────────────
 function detectarPR(fid,sn,peso){
+  // 18-nov-2026 (nota 18): con el peso solo propuesto o escrito, «sería récord»;
+  // «NUEVO PR» solo cuando la serie ya está hecha (ver prDeSerieHecha).
   const badge=document.getElementById('pr-badge-'+fid+'-'+sn);
   if(!badge)return;
   const prAnterior=parseFloat(badge.dataset.pr)||0;
   if(prAnterior>0 && peso>prAnterior){
-    badge.innerHTML='🏆 NUEVO PR — '+fmtKg(peso)+' kg (antes: '+fmtKg(prAnterior)+' kg)';
+    badge.innerHTML='🏆 SERÍA RÉCORD — '+fmtKg(peso)+' kg (antes: '+fmtKg(prAnterior)+' kg)';
     badge.classList.add('visible');
     badge.style.animation='none';
     void badge.offsetWidth;
@@ -3318,6 +3323,17 @@ function detectarPR(fid,sn,peso){
   }else{
     badge.classList.remove('visible');
   }
+}
+
+// ¿Esta serie hecha supera el récord anterior y lo mejor ya hecho hoy en este ejercicio?
+function prDeSerieHecha(fid,sn,peso,esAproximacion){
+  if(esAproximacion||!(peso>0))return null;
+  const hist=document.querySelector('#card-'+fid+' .ejercicio-historial');
+  const prAnterior=parseFloat(hist?.dataset.prPeso)||0;
+  if(!(prAnterior>0))return null;
+  const previas=(STATE.seriesCompletadas[fid]||[]).filter((s,i)=>s&&i!==sn-1&&!s.esAproximacion).map(s=>s.peso||0);
+  const techo=Math.max(prAnterior,...previas);
+  return peso>techo?prAnterior:null;
 }
 
 // ── MENSAJE MOTIVACIONAL AL COMPLETAR EJERCICIO ──────────────────
@@ -3457,6 +3473,11 @@ function resumenDeEjercicio(fid){
   // 26-oct-2026: con margen en todas (RPE un punto o más por debajo), dos reps
   // más, como decide el cierre.
   const conMargen=scs.every(s=>Number.isFinite(s.rpe)&&s.rpe>0&&s.rpe<=rpeObjEj-1);
+  // 18-nov-2026 (nota 9): con el esfuerzo real por debajo del pedido, el título y la
+  // frase lo dicen (antes «Ejercicio en objetivo» a secas, aunque sobrara margen).
+  const rpeMaxEj=Math.max(...scs.map(s=>s.rpe||0));
+  const tituloObj=conMargen?'En objetivo, con margen':'Ejercicio en objetivo';
+  const margenTxt=conMargen?` Terminaste con RPE ${rpeMaxEj}, por debajo del ${rpeObjEj} previsto: te sobró margen.`:'';
   // 30-oct-2026 (notas 10 y 18): el número concreto y nunca por encima del
   // máximo del rango (curl araña 18 y 19 en 15-20: "a por 20", no "dos más").
   const cardEj=document.getElementById('card-'+fid);
@@ -3470,7 +3491,7 @@ function resumenDeEjercicio(fid){
   const pesoTopeEj=Math.max(...scs.map(s=>s.peso||0));
   const peorEj=Math.min(...scs.filter(s=>(s.peso||0)===pesoTopeEj).map(s=>s.reps||0));
   if(repsMaxEj>0 && peorEj>=repsMaxEj && !cardEj?.dataset.topeKg){
-    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y te digo cuántas reps calculo con él.`};
+    return {e:'✓',t:tituloObj,s:`${enRango}/${scs.length} series en rango y ${repsMaxEj} en todas: la próxima vez subo el peso y te digo cuántas reps calculo con él.`+margenTxt};
   }
   // 17-nov-2026 (notas 40 y 44): la misma base que la regla del cierre (mediana de las
   // reps al peso más alto, redondeo par como Python): Arnold 8 y 9 → base 8 → «a por 10»,
@@ -3485,9 +3506,9 @@ function resumenDeEjercicio(fid){
   const variosPesos=new Set(scs.map(s=>s.peso||0)).size>1;
   const pesoTxtEj=(variosPesos&&pesoTopeEj>0)?` (${fmtKg(pesoTopeEj)} kg)`:'';
   if(repsMaxEj>0 && objSig>=repsMaxEj){
-    return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${repsMaxEj} en todas; con ${repsMaxEj} en todas, subo el peso.`};
+    return {e:'✓',t:tituloObj,s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${repsMaxEj} en todas; con ${repsMaxEj} en todas, subo el peso.`+margenTxt};
   }
-  return {e:'✓',t:'Ejercicio en objetivo',s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${objSig}.`};
+  return {e:'✓',t:tituloObj,s:`${enRango}/${scs.length} series en rango. La próxima vez, mismo peso${pesoTxtEj} y a por ${objSig}.`+margenTxt};
 }
 
 // ── RPE SLIDER CON DESCRIPCIÓN ──────────────────────────────────
@@ -4092,6 +4113,11 @@ document.querySelectorAll('.weight-input').forEach(inp=>{
     }
   });
   inp.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); this.blur(); } });
+  // 18-nov-2026 (nota 18): el aviso «NUEVO PR» solo saltaba al tocar el peso. Con el peso
+  // propuesto ya puesto (105 sobre un récord de 102,5) no aparecía hasta la serie siguiente.
+  const m0=inp.id.match(/^peso-(.+)-(\d+)$/);
+  const v0=parseFloat((inp.value||'').replace(',','.'));
+  if(m0&&Number.isFinite(v0)&&v0>0){ try{ detectarPR(m0[1],+m0[2],v0); }catch(e){} }
 });
 
 // El resumen es un paso de confirmación: conserva el foco de origen, lo
@@ -4299,6 +4325,31 @@ modalSeriesPendientes.addEventListener('click',event=>{
 // ── SWAP MÁQUINA OCUPADA ─────────────────────────────────────────
 let _swapFormId = null, _swapNombreOriginal = null;
 
+// 18-nov-2026: el objetivo del hueco que se sustituye (rango de reps y RPE del plan).
+// Con un segundo cambio se conserva el del hueco original, no el del primer sustituto.
+function objetivoDelHueco(fid, nombreOriginal) {
+  const card = document.getElementById('card-' + fid);
+  if (!card) return {};
+  const hid = card.querySelector('input[name="' + fid + '_objetivo_sustituto"]');
+  if (hid && hid.value) {
+    try { return JSON.parse(hid.value); } catch (e) { /* se recalcula de la tarjeta */ }
+  }
+  const out = {hereda_de: nombreOriginal || ''};
+  const sinReps = card.dataset.usaTiempo === '1' || card.dataset.usaDistancia === '1';
+  if (!sinReps) {
+    const chip = card.querySelector('.exname-meta-line .chip-n');
+    const m = chip ? (chip.textContent || '').match(/(\d{1,3})(?:\s*-\s*(\d{1,3}))?/) : null;
+    if (m) out.rango = m[2] ? m[1] + '-' + m[2] : m[1];
+    const reg = card.querySelector('.pantalla-registro');
+    const ro = reg ? parseInt(reg.dataset.repsObj || '', 10) : NaN;
+    const rmin = parseInt(card.dataset.repsMin || '', 10);
+    if (!isNaN(ro) && ro > 0) out.reps_objetivo = ro; else if (!isNaN(rmin) && rmin > 0) out.reps_objetivo = rmin;
+  }
+  const rpe = parseFloat(card.dataset.rpeTarget || '');
+  if (!isNaN(rpe) && rpe > 0) out.rpe_objetivo = rpe;
+  return out;
+}
+
 function abrirSwapMaquina(formId, nombre, grupo) {
   _swapFormId = formId;
   _swapNombreOriginal = nombre;
@@ -4313,7 +4364,8 @@ function abrirSwapMaquina(formId, nombre, grupo) {
   fetch(`{% url 'entrenos:api_alternativas_maquina' cliente.id %}`, {
     method: 'POST',
     headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-    body: JSON.stringify({nombre: nombre, grupo_muscular: grupo, excluir: enSesion})
+    body: JSON.stringify({nombre: nombre, grupo_muscular: grupo, excluir: enSesion,
+      rango: (objetivoDelHueco(formId, nombre).rango || ''), rpe_objetivo: (objetivoDelHueco(formId, nombre).rpe_objetivo || '')})
   })
   .then(r => r.json())
   .then(data => {
@@ -4322,9 +4374,9 @@ function abrirSwapMaquina(formId, nombre, grupo) {
       return;
     }
     lista.innerHTML = data.alternativas.map(alt => `
-      <div class="swap-alt-item" onclick='confirmarSwap(${JSON.stringify(alt.nombre)}, ${alt.peso_historico_kg || "null"}, ${JSON.stringify(alt.ultima || "")}, ${alt.reps || "null"})'>
+      <div class="swap-alt-item" onclick='confirmarSwap(${JSON.stringify(alt.nombre)}, ${(alt.peso_hueco_kg || alt.peso_historico_kg) || "null"}, ${JSON.stringify(alt.ultima || "")}, ${alt.reps || "null"}, ${JSON.stringify({tipo_progresion: alt.tipo_progresion || "", usa_peso: alt.usa_peso === true, pr_peso: alt.pr_peso || 0, peso_motivo: alt.peso_hueco_motivo || ""}).replace(/'/g, "\\u0027")})'>
         <span class="swap-alt-name">${alt.nombre}</span>
-        <span class="swap-alt-peso">${alt.peso_historico_kg ? fmtKg(alt.peso_historico_kg) + ' kg' : 'Sin historial'}</span>
+        <span class="swap-alt-peso">${(alt.peso_hueco_kg || alt.peso_historico_kg) ? fmtKg(alt.peso_hueco_kg || alt.peso_historico_kg) + ' kg' : 'Sin historial'}</span>
       </div>
     `).join('');
   })
@@ -4333,9 +4385,119 @@ function abrirSwapMaquina(formId, nombre, grupo) {
   });
 }
 
-function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico) {
+// 18-nov-2026 (notas 14, 21 y 23): sissy squat (solo reps) → hack squat (con peso).
+// La tarjeta se quedaba sin casilla de peso y se guardaba con 0 kg. Ahora el
+// ejercicio nuevo manda: tipo de progresión, casilla de peso en las series que
+// faltan, récord propio y botón de tope.
+function anotarObjetivoHeredado(fid, objetivo, motivoPeso) {
+  const card = document.getElementById('card-' + fid);
+  if (!card) return;
+  const hid = card.querySelector('input[name="' + fid + '_objetivo_sustituto"]');
+  if (hid) hid.value = JSON.stringify(objetivo || {});
+  const partes = [];
+  if (objetivo && objetivo.rango) partes.push(objetivo.rango + ' reps');
+  if (objetivo && objetivo.rpe_objetivo) partes.push('RPE ' + String(objetivo.rpe_objetivo).replace('.', ','));
+  let nota = card.querySelector('.sa-obj-heredado');
+  if (!nota) {
+    nota = document.createElement('div');
+    nota.className = 'sa-obj-heredado';
+    nota.style.cssText = 'font-size:11px;color:#4ade80;margin:4px 0 0;';
+    const meta = card.querySelector('.exname-meta-line');
+    if (meta && meta.parentNode) meta.parentNode.insertBefore(nota, meta.nextSibling);
+    else card.insertBefore(nota, card.firstChild);
+  }
+  nota.textContent = '🎯 Objetivo del hueco de ' + (objetivo.hereda_de || 'el plan') + ': '
+    + (partes.length ? partes.join(' · ') : 'sin rango definido') + (motivoPeso ? '. ' + motivoPeso : '');
+}
+
+function adaptarTarjetaASustituto(fid, meta, pesoHistorico) {
+  const card = document.getElementById('card-' + fid);
+  if (!card) return;
+  const usaPeso = meta.usa_peso === true;
+  const tipo = meta.tipo_progresion || (usaPeso ? 'peso_reps' : 'progresion_reps');
+  const hidTipo = card.querySelector('input[name="' + fid + '_tipo_progresion"]');
+  if (hidTipo) hidTipo.value = tipo;
+  const hist = card.querySelector('.ejercicio-historial');
+  if (hist) {
+    hist.dataset.prPeso = String(meta.pr_peso || 0);
+    hist.dataset.pesoAnterior = String(pesoHistorico || 0);
+  }
+  const total = parseInt(card.dataset.totalSets || '0', 10) || 0;
+  const hechas = (STATE.seriesCompletadas[fid] || []).length;
+  for (let sn = hechas + 1; sn <= total; sn++) {
+    const reg = document.getElementById('reg-' + fid + '-' + sn);
+    if (!reg) continue;
+    reg.dataset.usaPeso = usaPeso ? '1' : '0';
+    reg.dataset.usaTiempo = '0';
+    reg.dataset.usaDistancia = '0';
+    const grid = reg.querySelector('.peso-reps-grid');
+    if (!grid) continue;
+    let zona = grid.querySelector('.peso-zona');
+    const oculto = grid.querySelector('input[type="hidden"][name="' + fid + '_peso_' + sn + '"]');
+    if (usaPeso && !zona) {
+      zona = document.createElement('div');
+      zona.className = 'peso-zona';
+      zona.innerHTML =
+        '<div class="peso-label">Peso de trabajo</div>'
+        + '<div class="peso-ctrl" style="display:flex;align-items:center;justify-content:center;">'
+        + '<button type="button" class="peso-btn menos" onclick="ajustarPesoPanel(\'' + fid + '\',' + sn + ',-incrementoPeso(\'' + fid + '\'))">−</button>'
+        + '<div class="peso-num-wrap"><input type="text" inputmode="decimal" autocomplete="off" class="peso-input weight-input"'
+        + ' id="peso-' + fid + '-' + sn + '" name="' + fid + '_peso_' + sn + '" value=""'
+        + ' data-rec-weight="0" data-plan-weight="" data-eq-name="">'
+        + '<span class="peso-kg">kg</span></div>'
+        + '<button type="button" class="peso-btn mas" onclick="ajustarPesoPanel(\'' + fid + '\',' + sn + ',incrementoPeso(\'' + fid + '\'))">+</button>'
+        + '</div>'
+        + '<div class="peso-lado" id="lado-' + fid + '-' + sn + '"></div>'
+        + '<div class="pr-badge" id="pr-badge-' + fid + '-' + sn + '" data-pr="0">🏆 NUEVO PR</div>';
+      grid.insertBefore(zona, grid.firstChild);
+      if (oculto) oculto.remove();
+    } else if (!usaPeso && zona) {
+      zona.remove();
+      if (!oculto) {
+        const h = document.createElement('input');
+        h.type = 'hidden'; h.name = fid + '_peso_' + sn; h.value = '0';
+        grid.insertBefore(h, grid.firstChild);
+      }
+    }
+    if (usaPeso) {
+      const inp = document.getElementById('peso-' + fid + '-' + sn);
+      if (inp) inp.dataset.eqName = (card.querySelector('.cyber-ejercicio-nombre')?.textContent || '').toLowerCase();
+      const badge = document.getElementById('pr-badge-' + fid + '-' + sn);
+      if (badge) {
+        badge.dataset.pr = String(meta.pr_peso || 0);
+        badge.classList.remove('visible');
+      }
+    }
+    const obj = reg.querySelector('.sa-obj-plan');
+    if (obj) {
+      obj.textContent = usaPeso && pesoHistorico ? '🎯 ' + fmtKg(pesoHistorico) + 'kg × ' + (reg.dataset.repsObj || '') + ' reps' : '🎯 ' + (reg.dataset.repsObj || '') + ' reps';
+    }
+  }
+  // Botón «Tope kg»: solo con ejercicios de peso.
+  const grid = card.querySelector('.contingencia-grid');
+  if (grid) {
+    const btnTope = document.getElementById('tope-btn-' + fid);
+    if (usaPeso && !btnTope) {
+      const b = document.createElement('button');
+      b.type = 'button'; b.className = 'btn-tope-maquina'; b.id = 'tope-btn-' + fid;
+      b.setAttribute('onclick', "toggleTopeMaquina('" + fid + "')");
+      b.innerHTML = '<span>Tope kg</span>';
+      grid.appendChild(b);
+    } else if (!usaPeso && btnTope) {
+      btnTope.remove();
+    }
+    grid.classList.toggle('sin-tope', !usaPeso);
+  }
+  const tope = document.getElementById('tope-' + fid);
+  if (tope) tope.value = 'false';
+}
+
+function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico, meta) {
   if (!_swapFormId || !_swapNombreOriginal) return;
   const fid = _swapFormId;
+  // 18-nov-2026: el objetivo del hueco se lee ANTES de tocar la tarjeta y se guarda
+  // con el ejercicio: es el que se usará para evaluar lo realizado.
+  const objetivoHueco = objetivoDelHueco(fid, _swapNombreOriginal);
 
   // Actualizar nombre visible en el card (27-oct-2026, nota 18: tal cual, no en
   // mayúsculas; el resumen lo mostraba como otro ejercicio).
@@ -4345,7 +4507,15 @@ function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico) {
     if (h2) h2.textContent = nuevoNombre;
     const hidNombre = card.querySelector(`input[name="${fid}_nombre"]`);
     if (hidNombre) hidNombre.value = nuevoNombre;
+    // 18-nov-2026 (nota 21): qué ejercicio del plan sustituye (el original, aunque se cambie dos veces).
+    const hidSust = card.querySelector(`input[name="${fid}_sustituye_a"]`);
+    if (hidSust && !hidSust.value) hidSust.value = _swapNombreOriginal;
   }
+
+  // 18-nov-2026 (notas 14 y 23): la tarjeta se reconstruye según el ejercicio nuevo
+  // (casilla de peso, tipo de progresión, récord, tope), no solo el nombre.
+  adaptarTarjetaASustituto(fid, meta || {}, pesoHistorico);
+  anotarObjetivoHeredado(fid, objetivoHueco, (meta || {}).peso_motivo || '');
 
   // 27-oct-2026 (nota 15): el peso y la "última vez" del ejercicio nuevo en todas
   // las series que faltan. Antes se escribía en un campo que no existe y se
@@ -4357,15 +4527,27 @@ function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico) {
     if (inp) {
       inp.value = pesoHistorico ? String(pesoHistorico) : '';
       inp.dataset.planWeight = pesoHistorico ? String(pesoHistorico) : '';
-      if (pesoHistorico) calcularDiscosInline(fid, sn, pesoHistorico);
+      if (pesoHistorico) { calcularDiscosInline(fid, sn, pesoHistorico); detectarPR(fid, sn, pesoHistorico); }
     }
-    if (repsHistorico) {
+    // 18-nov-2026: las reps que se proponen son las del hueco del plan; las de otro dia
+    // del ejercicio nuevo solo se citan en «última vez».
+    const repsPropuestas = objetivoHueco.reps_objetivo || repsHistorico;
+    if (repsPropuestas) {
       const rh = document.getElementById('reps-hid-' + fid + '-' + sn);
       const rd = document.getElementById('reps-disp-' + fid + '-' + sn);
-      if (rh) rh.value = repsHistorico;
-      if (rd) rd.textContent = repsHistorico;
+      if (rh) rh.value = repsPropuestas;
+      if (rd) rd.textContent = repsPropuestas;
     }
     const reg = document.getElementById('reg-' + fid + '-' + sn);
+    if (reg && !reg.querySelector('.peso-ultima-vez')) {
+      // El ejercicio de partida no tenía caja de «última vez» (sin carga): se crea.
+      const caja = document.createElement('div');
+      caja.className = 'peso-ultima-vez';
+      caja.setAttribute('aria-label', 'Referencia de la última sesión');
+      const g = reg.querySelector('.peso-reps-grid');
+      const z = g?.querySelector('.peso-zona');
+      if (g) (z ? z.after(caja) : g.appendChild(caja));
+    }
     reg?.querySelectorAll('.peso-ultima-vez').forEach(box => {
       box.innerHTML = '<span class="peso-ultima-vez__label">Sustituye a ' + _swapNombreOriginal + '</span>'
         + '<span class="peso-ultima-vez__value">' + (ultimaTexto ? 'Última vez ' + ultimaTexto : 'Sin historial: elige el peso') + '</span>';

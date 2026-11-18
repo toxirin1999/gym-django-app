@@ -185,6 +185,11 @@ def rango_de_sesion(entreno, nombre):
     for ej in (snapshot.get('entrenamiento') or {}).get('ejercicios') or []:
         if normalizar_ejercicio(ej.get('nombre')) == clave:
             return rango_reps(ej.get('repeticiones'))
+    # 18-nov-2026: un sustituto lleva el rango del hueco que ocupa, no el de otro dia.
+    from entrenos.services.decision_log_service import objetivo_asignado_de
+    asignado = objetivo_asignado_de(entreno, clave)
+    if asignado and asignado.get('rango'):
+        return rango_reps(asignado['rango'])
     return None
 
 

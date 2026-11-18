@@ -160,6 +160,37 @@ def _dato_citado(log, despues):
     return peso, reps, rpe
 
 
+def _tramo_posterior(despues, c_peso):
+    """(peso, reps, RPE) de las series más pesadas que la citada, o None (18-nov-2026, nota 22).
+
+    «Subí a 105 kg. Hoy: 105 × 15 con RPE 7» callaba la serie siguiente, 110 × 15
+    con RPE 8, que fue la que marcó el récord. Se cita con sus propios datos.
+    """
+    series = [s for s in (despues.get('series') or []) if s.get('reps', 0) > 0 and s.get('peso')]
+    try:
+        base = float(c_peso or 0)
+    except (TypeError, ValueError):
+        return None
+    if base <= 0:
+        return None
+    mas = [s for s in series if float(s['peso']) > base + 0.01]
+    if not mas:
+        return None
+    tope = max(float(s['peso']) for s in mas)
+    a_tope = [s for s in mas if abs(float(s['peso']) - tope) < 0.01]
+    reps = round(sum(s['reps'] for s in a_tope) / len(a_tope))
+    rpes = [s['rpe'] for s in a_tope if s.get('rpe') is not None]
+    return tope, reps, (max(rpes) if rpes else None)
+
+
+def _texto_tramo(tramo):
+    peso, reps, rpe = tramo
+    texto = f"{_kg(peso)} kg × {reps}"
+    if rpe is not None:
+        texto += f" con RPE {_rpe(rpe)}"
+    return texto
+
+
 def _accion_real(log, despues):
     """La acción con el peso que se propuso de verdad en la sesión que la comprobó."""
     accion = describir_accion(log)
@@ -188,6 +219,9 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
             dato = f"{etiqueta}: {c_reps} {_unidad_ejercicio(log)}"
         if c_rpe is not None:
             dato += f" con RPE {_rpe(c_rpe)}"
+        posterior = _tramo_posterior(despues, c_peso)
+        if posterior and float(c_peso or 0) > 0:
+            dato += f" y después {_texto_tramo(posterior)}"
         partes.append(dato + '.')
     veredicto = VEREDICTO.get(log.resultado, '')
     if veredicto:
@@ -253,6 +287,9 @@ def detalle_decision(log, despues):
             ocurrido = f"{c_reps} reps"
         if c_rpe is not None:
             ocurrido += f" con RPE {_rpe(c_rpe)}"
+        posterior = _tramo_posterior(despues, c_peso)
+        if posterior and float(c_peso or 0) > 0:
+            ocurrido += f" y después {_texto_tramo(posterior)}"
         ocurrido += '.'
     if log.notas_resultado:
         ocurrido = f"{ocurrido + ' ' if ocurrido else ''}{_capitalizar(log.notas_resultado).rstrip('.')}."

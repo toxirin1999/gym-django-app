@@ -5206,6 +5206,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     peso_kg=peso_promedio, series=len(series_data_para_guardar),
                     repeticiones=0 if es_distancia else reps_promedio, fuente_datos='manual',
                     grupo_muscular=grupo, completado=True,
+                    sustituye_a=request.POST.get(f'{form_id}_sustituye_a', '').strip()[:100],
+                    objetivo_asignado=_objetivo_sustituto_del_formulario(
+                        request.POST, form_id, request.POST.get(f'{form_id}_sustituye_a', '').strip()[:100]),
                     rpe=rpe_promedio_ejercicio,
                     is_recovery_load=is_recovery_load,
                     es_tope_maquina=es_tope_maquina,
@@ -9470,6 +9473,75 @@ def api_save_hot_swap(request, cliente_id):
         return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
 
 
+def _objetivo_sustituto_del_formulario(post, form_id, sustituye_a):
+    """Rango de reps y RPE que el sustituto hereda del hueco del plan (18-nov-2026).
+
+    El navegador manda el objetivo que mostraba la tarjeta antes de cambiar de
+    ejercicio. Solo se guarda si de verdad es un sustituto y los valores son
+    razonables; nunca se rellena con datos del mismo ejercicio en otro dia.
+    """
+    import re
+    if not sustituye_a:
+        return {}
+    try:
+        crudo = json.loads(post.get(f'{form_id}_objetivo_sustituto', '') or '{}')
+    except (TypeError, ValueError):
+        return {}
+    if not isinstance(crudo, dict):
+        return {}
+    out = {}
+    rango = str(crudo.get('rango') or '').strip().replace(' ', '')
+    if re.fullmatch(r'\d{1,3}(-\d{1,3})?', rango):
+        out['rango'] = rango
+    try:
+        reps = int(crudo.get('reps_objetivo'))
+        if 1 <= reps <= 200:
+            out['reps_objetivo'] = reps
+    except (TypeError, ValueError):
+        pass
+    try:
+        rpe = float(crudo.get('rpe_objetivo'))
+        if 1 <= rpe <= 10:
+            out['rpe_objetivo'] = rpe
+    except (TypeError, ValueError):
+        pass
+    if not out:
+        return {}
+    out['hereda_de'] = sustituye_a
+    return out
+
+
+def _tipo_y_marca_de_ejercicio(nombre, cliente_id):
+    """Tipo de progresión de un ejercicio (como en la pantalla de entreno) y su mejor peso."""
+    tipo = None
+    try:
+        from analytics.planificador_helms.utils.helpers import buscar_ejercicio_por_nombre
+        ej_dict = buscar_ejercicio_por_nombre(nombre)
+        tipo = ej_dict.get('tipo_progresion') if ej_dict else None
+    except Exception:
+        tipo = None
+    if not tipo:
+        try:
+            from rutinas.models import EjercicioBase as _EjBase
+            _ej = _EjBase.objects.filter(nombre__iexact=nombre).first()
+            tipo = _ej.tipo_progresion if _ej else None
+        except Exception:
+            tipo = None
+    tipo = tipo or 'peso_reps'
+    marca = 0.0
+    try:
+        from django.db.models import Max
+        from entrenos.models import EjercicioRealizado
+        marca = float(
+            EjercicioRealizado.objects.filter(
+                nombre_ejercicio__iexact=nombre, entreno__cliente_id=cliente_id,
+            ).aggregate(m=Max('peso_kg'))['m'] or 0
+        )
+    except Exception:
+        marca = 0.0
+    return tipo, marca
+
+
 @login_required
 @require_POST
 def api_alternativas_maquina(request, cliente_id):
@@ -9483,6 +9555,14 @@ def api_alternativas_maquina(request, cliente_id):
         grupo = data.get('grupo_muscular', '')
         # 27-oct-2026 (nota 16): sin los ejercicios que ya están en la sesión.
         excluir = {' '.join(str(n).casefold().split()) for n in (data.get('excluir') or []) if n}
+        # 18-nov-2026: el rango de reps y el RPE del hueco que se sustituye; el peso
+        # propuesto se calcula para ESE rango, no para el que el ejercicio nuevo
+        # hizo otro dia.
+        rango_hueco = str(data.get('rango') or '').strip().replace(' ', '')
+        try:
+            rpe_hueco = float(data.get('rpe_objetivo')) if data.get('rpe_objetivo') not in (None, '') else None
+        except (TypeError, ValueError):
+            rpe_hueco = None
 
         if not grupo:
             return JsonResponse({'status': 'error', 'message': 'Falta grupo_muscular'}, status=400)
@@ -9511,12 +9591,33 @@ def api_alternativas_maquina(request, cliente_id):
             # 27-oct-2026 (nota 15): de las series reales (la que entró), no la
             # media del resumen; y con su "última vez" para la pantalla.
             peso_hist = reps_hist = ultima = None
+            peso_hueco = motivo_hueco = None
             lectura = ultima_sesion(cliente_obj, nombre_ej, timezone.localdate() + timedelta(days=1))
             if lectura and lectura['referencia']['peso'] > 0:
                 ref = lectura['referencia']
                 peso_hist = round(float(ref['peso']), 2)
                 reps_hist = int(round(float(ref.get('reps_mediana') or ref['reps'])))
                 ultima = f"{_kg_txt(peso_hist)} kg × {reps_hist}"
+                peso_hueco = peso_hist
+                if rango_hueco:
+                    from analytics.planificador_helms.calculo.compatibilidad_fase import resolver_peso_objetivo
+                    from entrenos.services.maquina_service import salto_fisico
+                    from entrenos.services.ultima_sesion_service import rpe_efectivo
+                    salto = salto_fisico(nombre_ej) or 2.5
+                    try:
+                        res = resolver_peso_objetivo(
+                            peso_anterior=peso_hist, reps_anteriores=reps_hist,
+                            rpe_anterior=rpe_efectivo(ref.get('rpe')),
+                            rep_range_hoy=rango_hueco,
+                            rpe_objetivo_hoy=rpe_hueco or 8,
+                            redondear_fn=lambda p: round(round(p / salto) * salto, 1),
+                        )
+                    except Exception:
+                        res = {'aplica': False}
+                    if res.get('aplica') and res.get('peso'):
+                        peso_hueco = float(res['peso'])
+                        motivo_hueco = (f'Peso para {rango_hueco} reps (la última vez '
+                                        f'{_kg_txt(peso_hist)} kg × {reps_hist}).')
             else:
                 ej_realizado = EjercicioRealizado.objects.filter(
                     nombre_ejercicio__iexact=nombre_ej, entreno__cliente_id=cliente_id,
@@ -9524,11 +9625,20 @@ def api_alternativas_maquina(request, cliente_id):
                 if ej_realizado and ej_realizado.peso_kg:
                     peso_hist = round(float(ej_realizado.peso_kg), 1)
 
+            # 18-nov-2026 (notas 14 y 23): el cambio de sissy (solo reps) a hack squat
+            # dejó la tarjeta sin casilla de peso y se guardó con 0 kg: el
+            # navegador necesita saber qué tipo de ejercicio es el nuevo.
+            tipo_nuevo, pr_nuevo = _tipo_y_marca_de_ejercicio(nombre_ej, cliente_id)
             alternativas.append({
                 'nombre': nombre_ej,
                 'peso_historico_kg': peso_hist,
                 'reps': reps_hist,
                 'ultima': ultima,
+                'tipo_progresion': tipo_nuevo,
+                'usa_peso': tipo_nuevo in ('peso_reps', 'peso_corporal_lastre'),
+                'pr_peso': pr_nuevo,
+                'peso_hueco_kg': peso_hueco,
+                'peso_hueco_motivo': motivo_hueco,
             })
 
         return JsonResponse({'status': 'ok', 'alternativas': alternativas})
