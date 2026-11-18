@@ -96,16 +96,25 @@ def _sesion_evaluadora(log):
             log.cliente_id, log.ejercicio,
             entreno_origen_id=log.entreno_origen_id,
             desde_fecha=None if log.entreno_origen_id else log.fecha_creacion.date(),
+            limite=60,
         )
         # 12-nov-2026 (nota 28): una semana de descarga no comprueba una decisión de
         # progreso (dead hang 37 s → «30 con RPE 6, funcionó» era la descarga).
         from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
         _periodos = periodos_descarga(log.cliente_id)
-        ej = next(
-            (c for c in candidatas
-             if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)),
-            None,
-        )
+        elegibles = [c for c in candidatas
+                     if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, _periodos)]
+        if log.resultado is not None and log.fecha_evaluacion:
+            # 18-nov-2026 (nota 48): sin la sesión guardada, la que evaluó es la última elegible
+            # hasta el día de la evaluación (se evalúa al guardar una sesión), no la primera
+            # posterior a la decisión, que pudo ser otra semanas antes.
+            from django.utils import timezone
+            limite_dia = timezone.localtime(log.fecha_evaluacion).date()
+            elegibles = [c for c in elegibles
+                         if (c.entreno.fecha_ejecucion or c.entreno.fecha) <= limite_dia]
+            ej = elegibles[-1] if elegibles else None
+        else:
+            ej = elegibles[0] if elegibles else None
     if ej is None:
         return None
     rendimiento = _rendimiento_representativo_desde_series(ej.entreno, normalizar_ejercicio(ej.nombre_ejercicio))
@@ -246,6 +255,10 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
     if log.resultado is None:
         partes.append(_capitalizar(PENDIENTE) + '.')
     else:
+        if (despues is None and log.resultado in ('validada', 'fallida')
+                and not (log.notas_resultado or '').startswith(_SIN_SESION)
+                and log.accion in ('subir_peso', 'bajar_peso', 'deload', 'subir_reps')):
+            partes.append('No consta la sesión que la evaluó.')
         veredicto = VEREDICTO.get(log.resultado, '')
         if veredicto:
             frase = _capitalizar(veredicto)

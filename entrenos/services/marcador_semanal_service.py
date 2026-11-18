@@ -321,8 +321,12 @@ def _sesiones_seguidas(cliente, lunes, hoy, sesiones_plan):
         if otras:
             ultima = max(otras, key=lambda x: x.version)
             if v is None or ultima.version > v.version:
-                n_ej = len((ultima.snapshot.get('entrenamiento') or {}).get('ejercicios') or [])
-                regenerada = {'hora': timezone.localtime(ultima.creado_en).strftime('%H:%M'), 'ejercicios': n_ej}
+                nombres_v = sorted(_limpio(e.get('nombre')) for e in ejercicios_snap)
+                ejs_u = (ultima.snapshot.get('entrenamiento') or {}).get('ejercicios') or []
+                # Solo se avisa si la regeneración cambió de verdad los ejercicios.
+                if sorted(_limpio(e.get('nombre')) for e in ejs_u) != nombres_v:
+                    regenerada = {'hora': timezone.localtime(ultima.creado_en).strftime('%H:%M'),
+                                  'ejercicios': len(ejs_u)}
         fecha = e.fecha_ejecucion or e.fecha
         out.append({
             'entreno_id': e.id, 'dia': _dia(e.rutina.nombre), 'clave': clave_rutina(e.rutina.nombre),
@@ -418,9 +422,11 @@ def _detalle_musculo(grupo, seguidas, sesiones, pendientes):
             if not aporte:
                 continue
             previsto_ids.add(_limpio(nombre))
+            hecho_ej = sg['hechos'].get(_limpio(nombre), {}).get(grupo, 0)
             fila['ejercicios'].append({
-                'nombre': nombre, 'series': n, 'previsto': aporte,
-                'hecho': sg['hechos'].get(_limpio(nombre), {}).get(grupo, 0)})
+                'nombre': nombre, 'series': n, 'previsto': aporte, 'hecho': hecho_ej,
+                # Prescrito y sin completar: sigue en el objetivo y se dice.
+                'sin_hacer': hecho_ej < aporte})
             objetivo_hecho += aporte
         for limpio, c in sg['hechos'].items():
             if limpio not in previsto_ids and c.get(grupo):
@@ -449,7 +455,7 @@ def _detalle_musculo(grupo, seguidas, sesiones, pendientes):
             elif ref == 0:
                 texto = f'la versión que seguiste traía {nombre} ({n}) y el plan actual no'
             elif sg['reducida']:
-                texto = 'versión reducida por la app'
+                texto = f'{nombre}: versión reducida por la app ({_num(aporte)} frente a {_num(ref)})'
             else:
                 texto = f'{nombre}: {_num(aporte)} frente a {_num(ref)}'
             diferencias.append({'dia': sg['dia'], 'texto': texto, 'valor': aporte - ref,

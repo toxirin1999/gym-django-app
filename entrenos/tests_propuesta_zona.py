@@ -195,3 +195,29 @@ class PropuestaZonaTests(TestCase):
         self._isquios_caen()
         from entrenos.services.propuesta_zona_service import tras_guardar_sesion
         self.assertIsNotNone(tras_guardar_sesion(self.cliente, self.hoy))
+
+    def test_reevaluar_guarda_el_anterior_y_su_motivo_y_lo_dice_la_frase(self):
+        from entrenos.services.propuesta_zona_service import frase_evaluacion, reevaluar_propuesta
+        self._isquios_caen()
+        p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
+        inicio = self.hoy - timedelta(days=35)
+        PropuestaZonaGym.objects.filter(pk=p.pk).update(
+            inicio=inicio, fin=inicio + timedelta(days=27), estado=PropuestaZonaGym.ESTADO_EVALUADA,
+            resultado='validada', notas_resultado='Fuerza estimada +21,0 % frente a las 4 semanas anteriores')
+        p.refresh_from_db()
+        # Solo vista previa: no guarda.
+        r, notas, cambio = reevaluar_propuesta(self.cliente, p, 'motivo', hoy=self.hoy, aplicar=False)
+        p.refresh_from_db()
+        self.assertEqual(p.resultado, 'validada')
+        r, notas, cambio = reevaluar_propuesta(self.cliente, p, 'no medía un antes y un durante', hoy=self.hoy)
+        p.refresh_from_db()
+        self.assertTrue(cambio)
+        self.assertEqual(p.resultado, 'neutra')
+        anterior = p.deteccion['evaluacion_anterior']
+        self.assertEqual(anterior['resultado'], 'validada')
+        self.assertIn('+21,0 %', anterior['notas'])
+        self.assertEqual(anterior['motivo'], 'no medía un antes y un durante')
+        frase = frase_evaluacion(p)
+        self.assertIn(f'Corregido el {self.hoy:%d/%m}: antes constaba «funcionó»', frase)
+        self.assertIn('+21,0 %', frase)
+        self.assertIn('Motivo: no medía un antes y un durante', frase)

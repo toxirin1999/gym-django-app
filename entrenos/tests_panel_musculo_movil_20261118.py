@@ -142,3 +142,48 @@ class PlantillaMovil(Base):
         self.assertContains(r, 'Cómo se cuenta')
         self.assertContains(r, 'Sesiones y versión')
         self.assertNotContains(r, 'Distinto del plan en sesiones ya hechas')
+
+
+class PrescritaSinCompletar(Base):
+    def test_una_serie_prescrita_sin_completar_se_queda_en_el_objetivo(self):
+        # La versión seguida pedía Sissy 3 + Press Arnold 2; solo se hizo el Sissy.
+        self.entreno(SNAP, [(self.sissy, 3)])
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3), ('Press Arnold', 'Hombros', 2)])
+        hom = next(f for f in r['filas'] if f['clave'] == 'hombros')
+        self.assertEqual(hom['objetivo'], 2)          # el objetivo conserva lo prescrito
+        self.assertEqual(hom['detalle']['hechas'], 0)  # y no se da por hecho
+        self.assertEqual(hom['bar_hechas'], 0)
+        ej = hom['detalle']['sesiones_hechas'][0]['ejercicios'][0]
+        self.assertTrue(ej['sin_hacer'])
+        # No se afirma que se completó la sesión.
+        self.assertFalse(r['sesiones_detalle'][0]['n_hechos'] == r['sesiones_detalle'][0]['n_prescritos'])
+        self.assertIsNone(r['linea_entrenador'])  # sin ajustes que contar
+
+    def test_la_linea_no_dice_completaste_si_falto_algo_de_la_version_seguida(self):
+        self.entreno(SNAP, [(self.hack, 3)], sustituye={'Hack Squat': 'Sissy Squat'})  # falta el Arnold
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3)])
+        self.assertNotIn('Completaste', r['linea_entrenador'])
+        self.assertIn('sustitución Sissy → Hack', r['linea_entrenador'])
+
+
+class AvisoDeRegeneracion(Base):
+    def test_no_avisa_si_la_regeneracion_trae_los_mismos_ejercicios(self):
+        self.entreno(SNAP, [(self.sissy, 3), (self.arnold, 2)])
+        GymDecisionVersion.objects.create(
+            cliente=self.cliente, fecha=HOY, version=2, decision_id='d-2', origen=GymDecisionVersion.ORIGEN_MOTOR,
+            fingerprint='c' * 64, base_fingerprint='b' * 64, postura='empujar', snapshot=SNAP)
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3)])
+        self.assertIsNone(r['sesiones_detalle'][0]['regenerada'])
+
+
+class DiferenciasPorEjercicio(Base):
+    def test_la_reduccion_nombra_el_ejercicio(self):
+        snap = {'estado': 'version_reducida', 'entrenamiento': {'ejercicios': [
+            {'nombre': 'Sissy Squat', 'series': 2}, {'nombre': 'Hack Squat', 'series': 2}]}}
+        self.entreno(snap, [(self.sissy, 2), (self.hack, 2)])
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3), ('Hack Squat', 'Cuádriceps', 3)])
+        cuad = next(f for f in r['filas'] if f['clave'] == 'cuádriceps')
+        textos = [d['texto'] for d in cuad['detalle']['diferencias']]
+        self.assertEqual(len(textos), 2)
+        self.assertTrue(any(t.startswith('Sissy Squat: versión reducida') for t in textos))
+        self.assertTrue(any(t.startswith('Hack Squat: versión reducida') for t in textos))

@@ -174,3 +174,46 @@ class GuardaDeBloqueSoloHaciaAdelante(Comun):
         e1 = self.entreno(date(2026, 10, 10), {self.hack.nombre: '8-12'})
         with self.bloques({date(2026, 11, 16): 'fuerza', date(2026, 10, 10): 'hipertrofia'}):
             self.assertIsNone(d.motivo_no_aplicable(log, e1))
+
+
+class CasoHistoricoPressFrances(Comun):
+    """492: creada el 11/10, evaluada el 17/11 con la sesión del 16/11; la primera posterior era del 19/10."""
+
+    def _escenario(self):
+        e0 = self.entreno(date(2026, 10, 11), {self.hack.nombre: '8-12'})
+        self.hacer(e0, self.hack, [(25, 16, 8)] * 3)
+        log = self.log(e0, date(2026, 10, 11))
+        e1 = self.entreno(date(2026, 10, 19), {self.hack.nombre: '8-12'})
+        self.hacer(e1, self.hack, [(30, 16, 8)] * 3)            # primera posterior (RPE 8)
+        e2 = self.entreno(date(2026, 11, 16), {self.hack.nombre: '8-12'})
+        self.hacer(e2, self.hack, [(45, 8, 10)] * 3)            # la que evaluó (RPE 10)
+        return log, e1, e2
+
+    def test_sin_sesion_guardada_se_cita_la_ultima_elegible_hasta_la_evaluacion_no_la_primera(self):
+        log, e1, e2 = self._escenario()
+        GymDecisionLog.objects.filter(pk=log.pk).update(
+            resultado='fallida', notas_resultado='RPE 10, por encima del 8',
+            fecha_evaluacion=timezone.make_aware(datetime(2026, 11, 17, 10, 0)))
+        log.refresh_from_db()
+        with self.bloques({}):
+            ses = _sesion_evaluadora(log)
+            texto = frase_decision(log)
+        self.assertEqual(ses['entreno_id'], e2.id)
+        self.assertIn('Después (16/11): 45 kg × 8 con RPE 10', texto)
+        self.assertNotIn('30 kg × 16', texto)
+        self.assertIn('No funcionó', texto)
+
+    def test_si_no_se_puede_identificar_la_sesion_se_dice(self):
+        e0 = self.entreno(date(2026, 10, 11), {self.hack.nombre: '8-12'})
+        log = self.log(e0, date(2026, 10, 11))
+        # Evaluada el 12/10 y ninguna sesión del ejercicio hasta ese día después de la decisión.
+        e1 = self.entreno(date(2026, 10, 19), {self.hack.nombre: '8-12'})
+        self.hacer(e1, self.hack, [(30, 16, 8)] * 3)
+        GymDecisionLog.objects.filter(pk=log.pk).update(
+            resultado='fallida', notas_resultado='RPE 10, por encima del 8',
+            fecha_evaluacion=timezone.make_aware(datetime(2026, 10, 12, 10, 0)))
+        log.refresh_from_db()
+        texto = frase_decision(log)
+        self.assertNotIn('Después', texto)
+        self.assertIn('No consta la sesión que la evaluó.', texto)
+        self.assertIn('No funcionó', texto)

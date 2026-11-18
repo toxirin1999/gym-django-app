@@ -785,6 +785,92 @@ def _filas_dentro_de_la_ventana(filas, p):
             and e['antes']['fecha'] < p.inicio <= e['ahora']['fecha'] <= p.fin]
 
 
+def resultado_propuesta(cliente, p):
+    """(resultado, notas) de una propuesta ya vencida con la regla vigente (sin guardar nada)."""
+    from entrenos.services.evolucion_muscular_service import comparar_ejercicios
+
+    objetivo = {_plano(n) for n in p.ejercicios}
+    # 2-nov-2026: la ventana es la de la propuesta de verdad (con sus
+    # semanas de pausa), y si los ejercicios elegidos ya no están en el
+    # programa (cambió el bloque), se mide con los de la zona que sí se
+    # hicieron.
+    dias = ((p.fin - p.inicio).days + 1) if p.inicio else p.semanas * 7
+    comparables = [
+        # 8-nov-2026: solo sesiones comparables (sin descarga y en el mismo
+        # tramo de reps): el bloque de fuerza cambia reps y esfuerzo.
+        e for e in comparar_ejercicios(cliente, p.fin, dias, estricto=True)
+        if e['pct'] is not None and not e['dudoso']
+    ]
+    medida = False
+    filas = [e for e in comparables if _plano(e['ejercicio']) in objetivo]
+    if not filas:
+        filas = [e for e in comparables if e.get('zona') == p.zona and not e.get('ligero')]
+    if not filas:
+        resultado = 'neutra'
+        notas = ('Sin evidencia suficiente: no hubo sesiones comparables de esos ejercicios '
+                 '(mismo tramo de reps y fuera de la descarga) antes y durante la propuesta')
+    elif not sesiones_con_ajuste_registrado(cliente, p):
+        # 18-nov-2026 (nota 49): no consta que se aplicara; solo se cuenta lo observado.
+        resultado = 'neutra'
+        notas = (f"Resultado inconcluso: no consta que la propuesta ({p.inicio:%d/%m}–{p.fin:%d/%m}) "
+                 f"se aplicara en ninguna sesión, así que su efecto queda sin determinar. "
+                 f"Evolución observada: {evolucion_observada(filas)}")
+    elif not _filas_dentro_de_la_ventana(filas, p):
+        resultado = 'neutra'
+        notas = (f"Resultado inconcluso: las marcas comparadas no caen antes y durante la propuesta "
+                 f"({p.inicio:%d/%m}–{p.fin:%d/%m}), así que su efecto queda sin determinar. "
+                 f"Evolución observada: {evolucion_observada(filas)}")
+    else:
+        filas = _filas_dentro_de_la_ventana(filas, p)
+        medida = True
+        pct = round(median(e['pct'] for e in filas), 1)
+        pct_txt = f"{'+' if pct > 0 else ''}{str(pct).replace('.', ',')} %"
+        if p.direccion == 'bajar':
+            # Bajar volumen funciona si se recupera margen sin perder fuerza.
+            if pct >= -2:
+                resultado = 'validada'
+                notas = f'Menos volumen sin perder fuerza ({pct_txt} frente a las {p.semanas} semanas anteriores)'
+            else:
+                resultado = 'fallida'
+                notas = f'Con menos volumen la fuerza bajó: {pct_txt} frente a las {p.semanas} semanas anteriores'
+        elif pct >= 2:
+            resultado = 'validada'
+            notas = f'Fuerza estimada {pct_txt} frente a las {p.semanas} semanas anteriores'
+        elif pct <= -5:
+            resultado = 'fallida'
+            notas = f'Siguió cayendo: {pct_txt} frente a las {p.semanas} semanas anteriores'
+        else:
+            resultado = 'neutra'
+            notas = f'Se mantuvo ({pct_txt} frente a las {p.semanas} semanas anteriores)'
+    if medida:
+        notas += f". Datos: {evolucion_observada(filas)}"
+    return resultado, notas
+
+
+def reevaluar_propuesta(cliente, p, motivo, hoy=None, aplicar=True):
+    """Vuelve a evaluar una propuesta ya evaluada con la regla vigente (18-nov-2026, nota 49).
+
+    El resultado anterior no se pierde: queda en ``deteccion['evaluacion_anterior']`` con la
+    fecha y el motivo de la corrección, y ``frase_evaluacion`` lo dice. Devuelve
+    ``(resultado, notas, cambio)``; con ``aplicar=False`` no guarda nada.
+    """
+    resultado, notas = resultado_propuesta(cliente, p)
+    cambio = (resultado, notas) != (p.resultado, p.notas_resultado)
+    if aplicar and cambio:
+        hoy = hoy or timezone.localdate()
+        deteccion = dict(p.deteccion or {})
+        deteccion['evaluacion_anterior'] = {
+            'resultado': p.resultado, 'notas': p.notas_resultado,
+            'evaluada_en': p.evaluada_en.isoformat() if p.evaluada_en else None,
+            'corregida_el': hoy.isoformat(), 'motivo': motivo,
+        }
+        p.deteccion = deteccion
+        p.resultado = resultado
+        p.notas_resultado = notas
+        p.save(update_fields=['deteccion', 'resultado', 'notas_resultado'])
+    return resultado, notas, cambio
+
+
 def evaluar_propuestas_vencidas(cliente, hoy=None):
     """Regla 4: al terminar, compara sus semanas con las anteriores y lo dice."""
     from entrenos.models import PropuestaZonaGym
@@ -796,61 +882,7 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
     for p in PropuestaZonaGym.objects.filter(
         cliente=cliente, estado=PropuestaZonaGym.ESTADO_ACEPTADA, fin__lt=hoy,
     ):
-        objetivo = {_plano(n) for n in p.ejercicios}
-        # 2-nov-2026: la ventana es la de la propuesta de verdad (con sus
-        # semanas de pausa), y si los ejercicios elegidos ya no están en el
-        # programa (cambió el bloque), se mide con los de la zona que sí se
-        # hicieron.
-        dias = ((p.fin - p.inicio).days + 1) if p.inicio else p.semanas * 7
-        comparables = [
-            # 8-nov-2026: solo sesiones comparables (sin descarga y en el mismo
-            # tramo de reps): el bloque de fuerza cambia reps y esfuerzo.
-            e for e in comparar_ejercicios(cliente, p.fin, dias, estricto=True)
-            if e['pct'] is not None and not e['dudoso']
-        ]
-        medida = False
-        filas = [e for e in comparables if _plano(e['ejercicio']) in objetivo]
-        if not filas:
-            filas = [e for e in comparables if e.get('zona') == p.zona and not e.get('ligero')]
-        if not filas:
-            resultado = 'neutra'
-            notas = ('Sin evidencia suficiente: no hubo sesiones comparables de esos ejercicios '
-                     '(mismo tramo de reps y fuera de la descarga) antes y durante la propuesta')
-        elif not sesiones_con_ajuste_registrado(cliente, p):
-            # 18-nov-2026 (nota 49): no consta que se aplicara; solo se cuenta lo observado.
-            resultado = 'neutra'
-            notas = (f"Resultado inconcluso: no consta que la propuesta ({p.inicio:%d/%m}–{p.fin:%d/%m}) "
-                     f"se aplicara en ninguna sesión, así que su efecto queda sin determinar. "
-                     f"Evolución observada: {evolucion_observada(filas)}")
-        elif not _filas_dentro_de_la_ventana(filas, p):
-            resultado = 'neutra'
-            notas = (f"Resultado inconcluso: las marcas comparadas no caen antes y durante la propuesta "
-                     f"({p.inicio:%d/%m}–{p.fin:%d/%m}), así que su efecto queda sin determinar. "
-                     f"Evolución observada: {evolucion_observada(filas)}")
-        else:
-            filas = _filas_dentro_de_la_ventana(filas, p)
-            medida = True
-            pct = round(median(e['pct'] for e in filas), 1)
-            pct_txt = f"{'+' if pct > 0 else ''}{str(pct).replace('.', ',')} %"
-            if p.direccion == 'bajar':
-                # Bajar volumen funciona si se recupera margen sin perder fuerza.
-                if pct >= -2:
-                    resultado = 'validada'
-                    notas = f'Menos volumen sin perder fuerza ({pct_txt} frente a las {p.semanas} semanas anteriores)'
-                else:
-                    resultado = 'fallida'
-                    notas = f'Con menos volumen la fuerza bajó: {pct_txt} frente a las {p.semanas} semanas anteriores'
-            elif pct >= 2:
-                resultado = 'validada'
-                notas = f'Fuerza estimada {pct_txt} frente a las {p.semanas} semanas anteriores'
-            elif pct <= -5:
-                resultado = 'fallida'
-                notas = f'Siguió cayendo: {pct_txt} frente a las {p.semanas} semanas anteriores'
-            else:
-                resultado = 'neutra'
-                notas = f'Se mantuvo ({pct_txt} frente a las {p.semanas} semanas anteriores)'
-        if medida:
-            notas += f". Datos: {evolucion_observada(filas)}"
+        resultado, notas = resultado_propuesta(cliente, p)
         p.estado = PropuestaZonaGym.ESTADO_EVALUADA
         p.resultado = resultado
         p.notas_resultado = notas
@@ -873,6 +905,12 @@ def frase_evaluacion(p):
             notas = notas[len('Resultado inconcluso:'):].strip()
         frase += f' {veredicto[:1].upper()}{veredicto[1:]}: {notas[:1].lower()}{notas[1:]}'
         frase = frase.rstrip('.') + '.'
+    anterior = (p.deteccion or {}).get('evaluacion_anterior')
+    if anterior:
+        antes = VEREDICTO.get(anterior.get('resultado'), '')
+        fecha = (anterior.get('corregida_el') or '')[8:10] + '/' + (anterior.get('corregida_el') or '')[5:7]
+        frase += (f" Corregido el {fecha}: antes constaba «{antes}» ({(anterior.get('notas') or '').rstrip('.')}). "
+                  f"Motivo: {anterior.get('motivo')}")
     return frase
 
 
