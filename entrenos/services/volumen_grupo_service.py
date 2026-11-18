@@ -9,7 +9,15 @@ con un motivo que se puede citar:
    semanas. Un cambio cada vez; al terminar se compara con las 4 anteriores.
 2. **Propuesta que funcionó**: si al evaluarla salió "validada", el cambio se
    queda (hasta 6 meses o hasta que otra propuesta de esa zona diga lo
-   contrario).
+   contrario). 18-nov-2026: si la propuesta tiene una **revisión**
+   (``deteccion['revision']``), manda ella: el ajuste vale hasta la fecha de
+   revisión y después queda pendiente de una decisión explícita (prolongar
+   hasta una fecha o retirar); sin decisión no se prolonga solo.
+
+   PENDIENTE DE RESOLVER (18-nov-2026): un ajuste validado **no se pausa en la
+   semana de descarga** (solo se pausa el de una propuesta aceptada). El
+   planificador lo reduce con el resto del volumen de la descarga (+2 queda en
+   +1), pero sigue aplicándose. Decidir si debe pausarse también.
 3. **Énfasis del bloque** que eliges en el Centro: +2 series semanales en
    cada grupo marcado ("brazos" = bíceps y tríceps). Antes era solo una
    etiqueta que no cambiaba nada.
@@ -18,7 +26,7 @@ El total por grupo se acota a ±4 series y el planificador lo limita al MRV.
 """
 
 from core.memo_peticion import por_peticion
-from datetime import timedelta
+from datetime import date, timedelta
 
 SERIES_POR_AJUSTE = 2
 TOPE_AJUSTE = 4
@@ -33,6 +41,53 @@ GRUPOS_POR_ENFASIS = {
 
 def _signo(propuesta):
     return -1 if getattr(propuesta, 'direccion', 'subir') == 'bajar' else 1
+
+
+def _fecha(valor):
+    try:
+        return date.fromisoformat(valor) if valor else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _vigencia_validada(p, fecha):
+    """(vigente, texto) del ajuste de una propuesta validada en ``fecha``."""
+    revision = (p.deteccion or {}).get('revision')
+    if not revision:
+        vigente = p.fin >= fecha - timedelta(days=VIGENCIA_VALIDADA_DIAS)
+        return vigente, 'el cambio funcionó y se queda'
+    estado = revision.get('estado') or 'pendiente'
+    if estado == 'retirada':
+        return False, ''
+    limite = _fecha(revision.get('hasta')) if estado == 'prolongada' else _fecha(revision.get('fecha'))
+    if limite is None or fecha > limite:
+        return False, ''
+    if estado == 'prolongada':
+        return True, f'el cambio funcionó; lo prolongaste hasta el {limite:%d/%m}'
+    return True, (f'el cambio funcionó; se mantiene hasta el {limite:%d/%m} '
+                  f'y después queda pendiente de tu decisión')
+
+
+def revisiones_pendientes(cliente, fecha):
+    """Propuestas validadas cuya revisión ya llegó y esperan una decisión explícita."""
+    from entrenos.models import PropuestaZonaGym
+
+    pendientes, vistas = [], set()
+    for p in PropuestaZonaGym.objects.filter(
+        cliente=cliente, estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='validada',
+    ).order_by('zona', '-fin'):
+        if p.zona in vistas:
+            continue
+        vistas.add(p.zona)
+        revision = (p.deteccion or {}).get('revision')
+        if not revision or (revision.get('estado') or 'pendiente') == 'retirada':
+            continue
+        estado = revision.get('estado') or 'pendiente'
+        limite = _fecha(revision.get('hasta')) if estado == 'prolongada' else _fecha(revision.get('fecha'))
+        if limite and fecha > limite:
+            pendientes.append({'propuesta': p, 'zona': p.zona, 'nombre_zona': p.nombre_zona,
+                               'limite': limite, 'series': _signo(p) * SERIES_POR_AJUSTE})
+    return pendientes
 
 
 @por_peticion
@@ -68,7 +123,7 @@ def ajustes_volumen(cliente, fecha, incluir_pausadas=False):
                   f'{series:+d} series de {p.nombre_zona} por la propuesta aceptada (hasta el {p.fin:%d/%m})')
         evaluadas = PropuestaZonaGym.objects.filter(
             cliente=cliente, estado=PropuestaZonaGym.ESTADO_EVALUADA,
-            fin__gte=fecha - timedelta(days=VIGENCIA_VALIDADA_DIAS), fin__lt=fecha,
+            fin__lt=fecha,
         ).order_by('zona', '-fin')
         vistas = set()
         for p in evaluadas:
@@ -76,8 +131,10 @@ def ajustes_volumen(cliente, fecha, incluir_pausadas=False):
                 continue
             vistas.add(p.zona)  # solo cuenta la última evaluación de cada zona
             if p.resultado == 'validada':
-                series = _signo(p) * SERIES_POR_AJUSTE
-                sumar(p.zona, series, f'{series:+d} series de {p.nombre_zona}: el cambio funcionó y se queda')
+                vigente, razon = _vigencia_validada(p, fecha)
+                if vigente:
+                    series = _signo(p) * SERIES_POR_AJUSTE
+                    sumar(p.zona, series, f'{series:+d} series de {p.nombre_zona}: {razon}')
     except Exception:
         pass
 

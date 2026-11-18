@@ -17,6 +17,14 @@ from rutinas.models import EjercicioBase, Rutina
 
 class AprendizajeDecisionesTests(TestCase):
     def setUp(self):
+        # 18-nov-2026: la sesión que evalúa una decisión histórica debe ser del mismo bloque;
+        # estos casos tratan un solo bloque (el calendario real cambia con la fecha).
+        from unittest import mock
+        patcher = mock.patch('entrenos.services.comparabilidad_service.Bloques.de',
+                             return_value={'familia': 'hipertrofia', 'nombre': 'Hipertrofia',
+                                           'semana_plan': 1, 'origen': 'test'})
+        patcher.start()
+        self.addCleanup(patcher.stop)
         self.user = get_user_model().objects.create_user('regla4', password='x')
         self.cliente = Cliente.objects.get(user=self.user)
         EjercicioBase.objects.create(nombre='Press banca')

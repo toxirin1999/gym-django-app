@@ -5,8 +5,10 @@
 """
 from django.core.management.base import BaseCommand, CommandError
 
-MOTIVO = ('la comparación no medía un antes y un durante de la propuesta y no consta que se aplicara '
-          '(nota 49, regla nueva del 18/11)')
+def motivo_por_defecto(p, n_sesiones):
+    return (f'se recalcula solo con marcas anteriores al inicio y dentro de la propuesta '
+            f'({p.inicio:%d/%m}-{p.fin:%d/%m}), constando su aplicacion en {n_sesiones} sesiones '
+            f'(nota 49, regla nueva del 18/11)')
 
 
 class Command(BaseCommand):
@@ -16,7 +18,7 @@ class Command(BaseCommand):
         parser.add_argument('cliente_id', type=int)
         parser.add_argument('propuesta_id', type=int)
         parser.add_argument('--aplicar', action='store_true')
-        parser.add_argument('--motivo', default=MOTIVO)
+        parser.add_argument('--motivo', default=None)
 
     def handle(self, *args, cliente_id, propuesta_id, aplicar, motivo, **opts):
         from clientes.models import Cliente
@@ -35,6 +37,9 @@ class Command(BaseCommand):
         self.stdout.write(f'Ventana {p.inicio}–{p.fin}; ejercicios {p.ejercicios}')
         self.stdout.write(f'Sesiones con el ajuste registrado: {sesiones_con_ajuste_registrado(cliente, p)}')
         self.stdout.write(f'Antes: {p.resultado} · {p.notas_resultado}')
+        if not motivo:
+            motivo = motivo_por_defecto(p, len(sesiones_con_ajuste_registrado(cliente, p)))
+        self.stdout.write(f'Motivo: {motivo}')
         resultado, notas, cambio = reevaluar_propuesta(cliente, p, motivo, aplicar=aplicar)
         self.stdout.write(f'Regla nueva: {resultado} · {notas}')
         if not cambio:

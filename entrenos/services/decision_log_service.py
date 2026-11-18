@@ -1556,3 +1556,30 @@ def resumen_decisiones_recientes(cliente, dias=30):
         'mantenidos': mantenidos,
         'total': total,
     }
+
+
+def corregir_decision_a_inconcluso(log, entreno_sesion, motivo, hoy=None, aplicar=True):
+    """Cierra como inconclusa una decisión evaluada sin una evaluación válida (18-nov-2026).
+
+    El resultado y las notas anteriores no se pierden: quedan al final de ``notas_resultado``
+    con la fecha y el motivo de la corrección (sin migración). Devuelve ``(resultado, notas)``;
+    con ``aplicar=False`` no guarda nada. Idempotente: una decisión ya corregida no cambia.
+    """
+    from django.utils import timezone
+
+    if '. Corregido el ' in (log.notas_resultado or '') or log.resultado not in ('validada', 'fallida'):
+        return log.resultado, log.notas_resultado
+    razon = motivo_no_aplicable(log, entreno_sesion)
+    if not razon:
+        raise ValueError('La sesión sí puede evaluar la decisión: no hay nada que corregir.')
+    hoy = hoy or timezone.localdate()
+    veredicto = {'validada': 'funcionó', 'fallida': 'no funcionó'}[log.resultado]
+    antes = (log.notas_resultado or '').strip().rstrip('.')
+    notas = (f"{razon.rstrip('.')}. Corregido el {hoy:%d/%m}: antes constaba «{veredicto}»"
+             f"{' (' + antes + ')' if antes else ''}. Motivo: {motivo}")
+    if aplicar:
+        log.resultado = 'neutra'
+        log.notas_resultado = notas
+        log.save(update_fields=['resultado', 'notas_resultado'])
+        _actualizar_perfil(log.cliente, log.ejercicio)
+    return 'neutra', notas

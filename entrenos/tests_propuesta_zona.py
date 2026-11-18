@@ -196,6 +196,19 @@ class PropuestaZonaTests(TestCase):
         from entrenos.services.propuesta_zona_service import tras_guardar_sesion
         self.assertIsNotNone(tras_guardar_sesion(self.cliente, self.hoy))
 
+    def test_informe_de_evidencia_es_de_solo_lectura(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+        self._isquios_caen()
+        p = aceptar_propuesta(generar_propuesta_si_procede(self.cliente, self.hoy), self.hoy)
+        antes = (p.resultado, p.notas_resultado, p.deteccion)
+        salida = StringIO()
+        call_command('evidencia_propuesta_zona', self.cliente.pk, p.pk, stdout=salida)
+        p.refresh_from_db()
+        self.assertIn('Aplicación registrada:', salida.getvalue())
+        self.assertEqual((p.resultado, p.notas_resultado, p.deteccion), antes)
+
     def test_reevaluar_guarda_el_anterior_y_su_motivo_y_lo_dice_la_frase(self):
         from entrenos.services.propuesta_zona_service import frase_evaluacion, reevaluar_propuesta
         self._isquios_caen()
@@ -221,3 +234,32 @@ class PropuestaZonaTests(TestCase):
         self.assertIn(f'Corregido el {self.hoy:%d/%m}: antes constaba «funcionó»', frase)
         self.assertIn('+21,0 %', frase)
         self.assertIn('Motivo: no medía un antes y un durante', frase)
+
+        # La frase cita la aplicación registrada y la limitación cuando el resultado es medido.
+        PropuestaZonaGym.objects.filter(pk=p.pk).update(
+            resultado='validada', notas_resultado='Fuerza estimada +23,2 % frente a las 4 semanas anteriores',
+            deteccion=dict(p.deteccion, aplicacion_registrada={'sesiones': 10, 'desde': '2026-10-17', 'hasta': '2026-11-17'}))
+        p.refresh_from_db()
+        frase = frase_evaluacion(p)
+        self.assertIn('Aplicación registrada en 10 sesiones (17/10–17/11).', frase)
+        self.assertIn('no prueba por sí solo que las series extra lo causaran', frase)
+        PropuestaZonaGym.objects.filter(pk=p.pk).update(
+            resultado='neutra', notas_resultado=notas)
+        p.refresh_from_db()
+        # Repetir la corrección con otro motivo: el original sigue siendo el primero y la
+        # primera corrección queda en el historial.
+        r, notas, cambio = reevaluar_propuesta(self.cliente, p, 'motivo corregido', hoy=self.hoy)
+        p.refresh_from_db()
+        self.assertTrue(cambio)
+        anterior = p.deteccion['evaluacion_anterior']
+        self.assertEqual(anterior['resultado'], 'validada')
+        self.assertIn('+21,0 %', anterior['notas'])
+        self.assertEqual(anterior['motivo'], 'motivo corregido')
+        historial = p.deteccion['historial_correcciones']
+        self.assertEqual(len(historial), 1)
+        self.assertEqual(historial[0]['motivo'], 'no medía un antes y un durante')
+        # Con el mismo motivo y el mismo resultado no se guarda nada más.
+        r, notas, cambio = reevaluar_propuesta(self.cliente, p, 'motivo corregido', hoy=self.hoy)
+        p.refresh_from_db()
+        self.assertFalse(cambio)
+        self.assertEqual(len(p.deteccion['historial_correcciones']), 1)

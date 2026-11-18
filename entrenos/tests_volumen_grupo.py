@@ -50,6 +50,70 @@ class AjustesVolumen(Base):
                        inicio=HOY - timedelta(days=40))
         self.assertEqual(series_por_grupo(self.cliente, HOY), {'isquios': 2})
 
+    def _validada_con_revision(self, **revision):
+        p = self.propuesta(estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='validada',
+                           inicio=HOY - timedelta(days=40))
+        from entrenos.services.propuesta_zona_service import fijar_revision
+        fijar_revision(p, date(2026, 12, 6), 'fin del bloque', hoy=HOY)
+        return p
+
+    def test_con_revision_el_ajuste_vale_hasta_la_fecha_y_despues_no_se_prolonga_solo(self):
+        p = self._validada_con_revision()
+        self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 6)), {'isquios': 2})
+        motivo = ajustes_volumen(self.cliente, date(2026, 12, 6))['isquios']['motivos'][0]
+        self.assertIn('se mantiene hasta el 06/12 y después queda pendiente de tu decisión', motivo)
+        # El 7/12 ya no rige: antes seguía 182 días.
+        self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 7)), {})
+        from entrenos.services.volumen_grupo_service import revisiones_pendientes
+        self.assertEqual(revisiones_pendientes(self.cliente, date(2026, 12, 6)), [])
+        pend = revisiones_pendientes(self.cliente, date(2026, 12, 7))
+        self.assertEqual([x['zona'] for x in pend], ['isquios'])
+        self.assertIn('pendiente de tu decisión', frase_evaluacion(p))
+
+    def test_decision_explicita_prolonga_o_retira(self):
+        from entrenos.services.propuesta_zona_service import decidir_revision
+        p = self._validada_con_revision()
+        decidir_revision(p, 'prolongar', 'sigue progresando', hasta=date(2027, 1, 31), hoy=date(2026, 12, 7))
+        self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 20)), {'isquios': 2})
+        self.assertEqual(series_por_grupo(self.cliente, date(2027, 2, 1)), {})
+        decidir_revision(p, 'retirar', 'ya no hace falta', hoy=date(2027, 1, 5))
+        self.assertEqual(series_por_grupo(self.cliente, date(2027, 1, 10)), {})
+        p.refresh_from_db()
+        self.assertEqual(len(p.deteccion['revision']['decisiones']), 2)
+        with self.assertRaises(ValueError):
+            decidir_revision(p, 'prolongar', 'sin fecha')
+
+    def test_sin_revision_rige_la_regla_antigua_de_182_dias(self):
+        self.propuesta(estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='validada',
+                       inicio=HOY - timedelta(days=40))
+        self.assertEqual(series_por_grupo(self.cliente, HOY + timedelta(days=100)), {'isquios': 2})
+        self.assertEqual(series_por_grupo(self.cliente, HOY + timedelta(days=300)), {})
+
+    def test_el_ajuste_validado_no_se_pausa_en_descarga_comportamiento_pendiente_de_resolver(self):
+        """PENDIENTE (18-nov-2026): una propuesta aceptada se pausa en la descarga; una validada no."""
+        self._validada_con_revision()
+        with patch('entrenos.services.propuesta_zona_service.en_pausa_por_descarga', return_value=True):
+            self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 1)), {'isquios': 2})
+
+    def test_el_comando_de_revision_hace_vista_previa_sin_guardar(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+        p = self.propuesta(estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='validada',
+                           inicio=HOY - timedelta(days=40))
+        salida = StringIO()
+        with patch('entrenos.services.marcador_semanal_service.series_plan_semana',
+                   return_value=(__import__('collections').Counter({'isquios': 4}), [])):
+            call_command('revision_propuesta_zona', self.cliente.pk, p.pk, fijar='2026-12-06',
+                         semanas=['2026-11-30', '2026-12-07'], stdout=salida)
+        p.refresh_from_db()
+        self.assertNotIn('revision', p.deteccion or {})
+        texto = salida.getvalue()
+        self.assertIn('no se guarda nada', texto)
+        self.assertIn('PENDIENTE DE RESOLVER · Descarga', texto)
+        self.assertIn('30/11', texto)
+        self.assertIn('sin ajuste', texto)
+
     def test_si_no_funciono_no_se_queda(self):
         self.propuesta(estado=PropuestaZonaGym.ESTADO_EVALUADA, resultado='fallida',
                        inicio=HOY - timedelta(days=40))

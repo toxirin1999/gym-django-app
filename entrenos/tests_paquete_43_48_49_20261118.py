@@ -203,6 +203,64 @@ class CasoHistoricoPressFrances(Comun):
         self.assertNotIn('30 kg × 16', texto)
         self.assertIn('No funcionó', texto)
 
+    def test_la_sesion_posterior_de_otro_bloque_no_evalua_y_la_propuesta_sigue_siendo_la_original(self):
+        # 492 real: 25 -> 30 kg el 11/10 (hipertrofia); la sesion del 16/11 es de fuerza y su plan era 45 kg.
+        log, e1, e2 = self._escenario()
+        GymDecisionLog.objects.filter(pk=log.pk).update(
+            peso_anterior=25, valor_cambio=30,
+            resultado='fallida', notas_resultado='El objetivo exigió un RPE 10, por encima del 8 que pedía el plan',
+            fecha_evaluacion=timezone.make_aware(datetime(2026, 11, 17, 10, 0)))
+        log.refresh_from_db()
+        with self.bloques({date(2026, 10, 11): 'hipertrofia', date(2026, 10, 19): 'hipertrofia',
+                           date(2026, 11, 16): 'fuerza'}):
+            self.assertIsNone(_sesion_evaluadora(log))
+            texto = frase_decision(log)
+        from entrenos.services.aprendizaje_decisiones_service import _kg
+        self.assertIn(f'subí el peso a {_kg(log.peso_sugerido)} kg', texto)
+        self.assertNotIn('45 kg', texto)
+        self.assertNotIn('30 kg × 16', texto)       # tampoco cae a la sesión del 19/10
+        self.assertIn('No consta la sesión que la evaluó.', texto)
+        self.assertIn('es de otro bloque', texto)
+        self.assertIn('Según el registro antiguo, no funcionó', texto)
+        log.refresh_from_db()
+        self.assertEqual(float(log.peso_anterior), 25.0)   # los campos originales no se tocan
+        self.assertEqual(float(log.peso_sugerido), float(GymDecisionLog.objects.get(pk=log.pk).peso_sugerido))
+
+    def test_corregir_a_inconcluso_conserva_lo_anterior_y_deja_de_contar_como_fallo(self):
+        from entrenos.services.aprendizaje_decisiones_service import decisiones_evaluadas
+        log, e1, e2 = self._escenario()
+        GymDecisionLog.objects.filter(pk=log.pk).update(
+            peso_anterior=25, valor_cambio=30, resultado='fallida',
+            notas_resultado='El objetivo exigió un RPE 10, por encima del 8 que pedía el plan',
+            fecha_evaluacion=timezone.make_aware(datetime(2026, 11, 17, 10, 0)))
+        log.refresh_from_db()
+        hoy = timezone.make_aware(datetime(2026, 11, 18, 12, 0))
+        with self.bloques({date(2026, 10, 11): 'hipertrofia', date(2026, 10, 19): 'hipertrofia',
+                           date(2026, 11, 16): 'fuerza'}):
+            self.assertEqual(decisiones_evaluadas(self.cliente, hoy=hoy)['no_funcionaron'], 1)
+            # Vista previa: no guarda.
+            from entrenos.services.decision_log_service import corregir_decision_a_inconcluso
+            corregir_decision_a_inconcluso(log, e2, 'motivo', hoy=date(2026, 11, 18), aplicar=False)
+            log.refresh_from_db()
+            self.assertEqual(log.resultado, 'fallida')
+            corregir_decision_a_inconcluso(log, e2, 'no hay evaluacion valida', hoy=date(2026, 11, 18))
+            log.refresh_from_db()
+            self.assertEqual(log.resultado, 'neutra')
+            self.assertIn('cambió el bloque', log.notas_resultado)
+            self.assertIn('Corregido el 18/11: antes constaba «no funcionó» (El objetivo exigió un RPE 10', log.notas_resultado)
+            self.assertIn('Motivo: no hay evaluacion valida', log.notas_resultado)
+            resumen = decisiones_evaluadas(self.cliente, hoy=hoy)
+            self.assertEqual(resumen['no_funcionaron'], 0)
+            self.assertEqual(resumen['con_conclusion'], 0)
+            notas = log.notas_resultado
+            corregir_decision_a_inconcluso(log, e2, 'otro', hoy=date(2026, 11, 19))   # idempotente
+            log.refresh_from_db()
+            self.assertEqual(log.notas_resultado, notas)
+            texto = frase_decision(log)
+        self.assertIn('subí el peso a', texto)
+        self.assertNotIn('No funcionó', texto)
+        self.assertNotIn('45 kg', texto)
+
     def test_si_no_se_puede_identificar_la_sesion_se_dice(self):
         e0 = self.entreno(date(2026, 10, 11), {self.hack.nombre: '8-12'})
         log = self.log(e0, date(2026, 10, 11))

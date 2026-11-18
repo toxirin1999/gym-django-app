@@ -7013,6 +7013,13 @@ def _cambios_plan_ahora(cliente, hoy):
             if not motivos or (zona_en_curso and grupo.casefold() == zona_en_curso):
                 continue
             cambios.append({'titulo': f"{item['series']:+d} series por semana de {grupo}", 'porque': '; '.join(motivos).capitalize() + '.'})
+        # 18-nov-2026: un ajuste cuya revisión ya llegó no se prolonga solo: queda esperando tu decisión.
+        from entrenos.services.volumen_grupo_service import revisiones_pendientes
+        for r in revisiones_pendientes(cliente, hoy):
+            cambios.append({
+                'titulo': f"Decidir si siguen las {abs(r['series'])} series por semana de {r['nombre_zona'].lower()}",
+                'porque': f"El ajuste valía hasta el {r['limite']:%d/%m} y ya no se aplica. No se prolonga sin una decisión tuya.",
+            })
     except Exception:
         logger.exception('Centro: no se pudieron leer los ajustes de volumen')
 

@@ -112,7 +112,13 @@ def _sesion_evaluadora(log):
             limite_dia = timezone.localtime(log.fecha_evaluacion).date()
             elegibles = [c for c in elegibles
                          if (c.entreno.fecha_ejecucion or c.entreno.fecha) <= limite_dia]
+            # 18-nov-2026: una sesión posterior no basta; debe poder evaluar la decisión
+            # (mismo bloque entre la decisión y la sesión).
+            from entrenos.services.decision_log_service import motivo_no_aplicable
             ej = elegibles[-1] if elegibles else None
+            # Solo la que dio el veredicto: si no vale, no se cae a otra anterior (sería mezclar).
+            if ej is not None and motivo_no_aplicable(log, ej.entreno) is not None:
+                ej = None
         else:
             ej = elegibles[0] if elegibles else None
     if ej is None:
@@ -227,6 +233,51 @@ def _accion_real(log, despues):
     return accion
 
 
+def _ultima_elegible_hasta_evaluacion(log):
+    """La última sesión elegible del ejercicio hasta el día en que se evaluó la decisión, o None."""
+    from django.utils import timezone
+    from entrenos.services.historial_ejercicio_service import posteriores
+    from entrenos.services.sesion_descarga_service import es_sesion_descarga, periodos_descarga
+
+    if not log.fecha_evaluacion:
+        return None
+    candidatas = posteriores(
+        log.cliente_id, log.ejercicio, entreno_origen_id=log.entreno_origen_id,
+        desde_fecha=None if log.entreno_origen_id else log.fecha_creacion.date(), limite=60)
+    periodos = periodos_descarga(log.cliente_id)
+    limite_dia = timezone.localtime(log.fecha_evaluacion).date()
+    elegibles = [c for c in candidatas
+                 if not es_sesion_descarga(c.entreno, c.nombre_ejercicio, periodos)
+                 and (c.entreno.fecha_ejecucion or c.entreno.fecha) <= limite_dia]
+    return elegibles[-1] if elegibles else None
+
+
+def _posterior_de_otro_bloque(log):
+    """«la sesión posterior del 16/11 es de otro bloque (…)» si esa es la razón de no poder citarla."""
+    if log.entreno_evaluador_id or log.resultado is None or not log.fecha_evaluacion:
+        return None
+    try:
+        from entrenos.services.comparabilidad_service import Bloques
+        from entrenos.services.decision_log_service import motivo_no_aplicable
+        ultima_c = _ultima_elegible_hasta_evaluacion(log)
+        if ultima_c is None or motivo_no_aplicable(log, ultima_c.entreno) is None:
+            return None
+        ultima = ultima_c.entreno
+        fecha_decision = (log.entreno_origen.fecha_ejecucion or log.entreno_origen.fecha) \
+            if log.entreno_origen_id else log.fecha_creacion.date()
+        fecha_sesion = ultima.fecha_ejecucion or ultima.fecha
+        bloques = Bloques(log.cliente)
+        antes, ahora = bloques.de(fecha_decision), bloques.de(fecha_sesion)
+        return (f"La sesión posterior del {_fecha_corta_ad(fecha_sesion)} es de otro bloque "
+                f"({ahora['nombre']}, frente a {antes['nombre']}) y no vale como comprobación.")
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _fecha_corta_ad(fecha):
+    return fecha.strftime('%d/%m') if fecha else '?'
+
+
 def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
     """'Press banca: subí el peso a 62,5 kg. Después: 62,5 kg × 10 con RPE 7. Funcionó.'
 
@@ -252,6 +303,7 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
         if posterior and float(c_peso or 0) > 0:
             dato += f" y después {_texto_tramo(posterior)}"
         partes.append(dato + '.')
+    otro_bloque = None
     if log.resultado is None:
         partes.append(_capitalizar(PENDIENTE) + '.')
     else:
@@ -259,9 +311,14 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
                 and not (log.notas_resultado or '').startswith(_SIN_SESION)
                 and log.accion in ('subir_peso', 'bajar_peso', 'deload', 'subir_reps')):
             partes.append('No consta la sesión que la evaluó.')
+            otro_bloque = _posterior_de_otro_bloque(log)
+            if otro_bloque:
+                partes.append(otro_bloque)
         veredicto = VEREDICTO.get(log.resultado, '')
         if veredicto:
             frase = _capitalizar(veredicto)
+            if despues is None and log.resultado in ('validada', 'fallida') and otro_bloque:
+                frase = f'Según el registro antiguo, {veredicto}'
             notas = (log.notas_resultado or '').strip()
             if notas.startswith(_PREFIJO_INCONCLUSO):
                 notas = notas[len(_PREFIJO_INCONCLUSO):].strip()

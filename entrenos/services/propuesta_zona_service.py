@@ -847,6 +847,19 @@ def resultado_propuesta(cliente, p):
     return resultado, notas
 
 
+def _guardar_aplicacion(cliente, p):
+    """``deteccion['aplicacion_registrada']``: cuántas sesiones recogen la propuesta y entre qué fechas."""
+    fechas = sesiones_con_ajuste_registrado(cliente, p)
+    deteccion = dict(p.deteccion or {})
+    deteccion['aplicacion_registrada'] = {
+        'sesiones': len(fechas),
+        'desde': fechas[0].isoformat() if fechas else None,
+        'hasta': fechas[-1].isoformat() if fechas else None,
+    }
+    p.deteccion = deteccion
+    p.save(update_fields=['deteccion'])
+
+
 def reevaluar_propuesta(cliente, p, motivo, hoy=None, aplicar=True):
     """Vuelve a evaluar una propuesta ya evaluada con la regla vigente (18-nov-2026, nota 49).
 
@@ -856,19 +869,36 @@ def reevaluar_propuesta(cliente, p, motivo, hoy=None, aplicar=True):
     """
     resultado, notas = resultado_propuesta(cliente, p)
     cambio = (resultado, notas) != (p.resultado, p.notas_resultado)
-    if aplicar and cambio:
+    deteccion = dict(p.deteccion or {})
+    previa = deteccion.get('evaluacion_anterior')
+    # El motivo también cuenta: repetir la corrección con otro motivo (mismo resultado) lo actualiza.
+    motivo_nuevo = bool(previa) and previa.get('motivo') != motivo
+    if aplicar and (cambio or motivo_nuevo):
         hoy = hoy or timezone.localdate()
-        deteccion = dict(p.deteccion or {})
-        deteccion['evaluacion_anterior'] = {
-            'resultado': p.resultado, 'notas': p.notas_resultado,
-            'evaluada_en': p.evaluada_en.isoformat() if p.evaluada_en else None,
-            'corregida_el': hoy.isoformat(), 'motivo': motivo,
-        }
+        if previa:
+            # 18-nov-2026: el resultado original (el primero) no se pisa nunca; la corrección
+            # anterior pasa al historial y la vigente lleva el motivo más reciente.
+            historial = list(deteccion.get('historial_correcciones') or [])
+            historial.append({
+                'corregida_el': previa.get('corregida_el'), 'motivo': previa.get('motivo'),
+                'resultado': p.resultado, 'notas': p.notas_resultado,
+            })
+            deteccion['historial_correcciones'] = historial
+            deteccion['evaluacion_anterior'] = dict(previa, corregida_el=hoy.isoformat(), motivo=motivo)
+        else:
+            deteccion['evaluacion_anterior'] = {
+                'resultado': p.resultado, 'notas': p.notas_resultado,
+                'evaluada_en': p.evaluada_en.isoformat() if p.evaluada_en else None,
+                'corregida_el': hoy.isoformat(), 'motivo': motivo,
+            }
         p.deteccion = deteccion
         p.resultado = resultado
         p.notas_resultado = notas
         p.save(update_fields=['deteccion', 'resultado', 'notas_resultado'])
-    return resultado, notas, cambio
+    # 18-nov-2026: la aplicación registrada se guarda con la evaluación para citarla.
+    if aplicar and 'aplicacion_registrada' not in (p.deteccion or {}):
+        _guardar_aplicacion(cliente, p)
+    return resultado, notas, cambio or motivo_nuevo
 
 
 def evaluar_propuestas_vencidas(cliente, hoy=None):
@@ -888,6 +918,7 @@ def evaluar_propuestas_vencidas(cliente, hoy=None):
         p.notas_resultado = notas
         p.evaluada_en = timezone.now()
         p.save(update_fields=['estado', 'resultado', 'notas_resultado', 'evaluada_en'])
+        _guardar_aplicacion(cliente, p)
         evaluadas.append(p)
     return evaluadas
 
@@ -905,6 +936,25 @@ def frase_evaluacion(p):
             notas = notas[len('Resultado inconcluso:'):].strip()
         frase += f' {veredicto[:1].upper()}{veredicto[1:]}: {notas[:1].lower()}{notas[1:]}'
         frase = frase.rstrip('.') + '.'
+    aplicacion = (p.deteccion or {}).get('aplicacion_registrada') or {}
+    if veredicto and p.resultado in ('validada', 'fallida') and aplicacion.get('sesiones'):
+        def _d(iso):
+            return f'{iso[8:10]}/{iso[5:7]}' if iso else '?'
+        frase += (f" Aplicación registrada en {aplicacion['sesiones']} sesiones "
+                  f"({_d(aplicacion.get('desde'))}–{_d(aplicacion.get('hasta'))}). "
+                  f"Es lo observado durante el periodo: no prueba por sí solo que las series extra lo causaran.")
+    revision = (p.deteccion or {}).get('revision')
+    if veredicto and p.resultado == 'validada' and revision:
+        def _dm(iso):
+            return f'{iso[8:10]}/{iso[5:7]}' if iso else '?'
+        estado = revision.get('estado') or 'pendiente'
+        if estado == 'pendiente':
+            frase += (f" El ajuste se mantiene hasta el {_dm(revision.get('fecha'))}; "
+                      f"después queda pendiente de tu decisión.")
+        elif estado == 'prolongada':
+            frase += f" Lo prolongaste hasta el {_dm(revision.get('hasta'))}."
+        elif estado == 'retirada':
+            frase += ' Lo retiraste.'
     anterior = (p.deteccion or {}).get('evaluacion_anterior')
     if anterior:
         antes = VEREDICTO.get(anterior.get('resultado'), '')
@@ -918,3 +968,51 @@ def tras_guardar_sesion(cliente, hoy=None):
     """Punto de enganche tras cerrar un entreno: evaluar lo vencido y detectar."""
     evaluar_propuestas_vencidas(cliente, hoy)
     return generar_propuesta_si_procede(cliente, hoy)
+
+
+def fijar_revision(p, fecha, motivo, hoy=None, aplicar=True):
+    """Fija el límite de un ajuste validado: vale hasta ``fecha`` y luego queda pendiente de decisión.
+
+    18-nov-2026: sustituye al mantenimiento automático de 182 días para esa propuesta. Devuelve la
+    revisión resultante; con ``aplicar=False`` no guarda nada.
+    """
+    if p.resultado != 'validada':
+        raise ValueError('Solo una propuesta validada tiene un ajuste que revisar.')
+    hoy = hoy or timezone.localdate()
+    revision = {
+        'fecha': fecha.isoformat(), 'estado': 'pendiente', 'fijada_el': hoy.isoformat(), 'motivo': motivo,
+        # Comportamiento sin resolver que debe tratarse en la revisión (no cambia nada hoy).
+        'pendientes': [
+            'Descarga: el ajuste validado no se pausa en la semana de descarga y queda en +1; '
+            'decidir si debe pausarse.',
+        ],
+    }
+    if aplicar:
+        deteccion = dict(p.deteccion or {})
+        deteccion['revision'] = revision
+        p.deteccion = deteccion
+        p.save(update_fields=['deteccion'])
+    return revision
+
+
+def decidir_revision(p, decision, motivo, hasta=None, hoy=None, aplicar=True):
+    """Decisión explícita sobre un ajuste en revisión: ``prolongar`` (hasta una fecha) o ``retirar``."""
+    revision = dict((p.deteccion or {}).get('revision') or {})
+    if not revision:
+        raise ValueError('La propuesta no tiene una revisión fijada.')
+    if decision not in ('prolongar', 'retirar'):
+        raise ValueError('La decisión debe ser prolongar o retirar.')
+    if decision == 'prolongar' and not hasta:
+        raise ValueError('Para prolongar hace falta una fecha límite.')
+    hoy = hoy or timezone.localdate()
+    historial = list(revision.get('decisiones') or [])
+    historial.append({'decidida_el': hoy.isoformat(), 'decision': decision, 'motivo': motivo,
+                      'hasta': hasta.isoformat() if hasta else None})
+    revision.update({'estado': 'prolongada' if decision == 'prolongar' else 'retirada',
+                     'hasta': hasta.isoformat() if hasta else None, 'decisiones': historial})
+    if aplicar:
+        deteccion = dict(p.deteccion or {})
+        deteccion['revision'] = revision
+        p.deteccion = deteccion
+        p.save(update_fields=['deteccion'])
+    return revision
