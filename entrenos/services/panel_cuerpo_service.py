@@ -156,18 +156,16 @@ def _serie_manana(cliente, hoy, campo, dias, franja, malo, lectura=None, fmt=Non
     hoy y de la tendencia: con un valor suelto que sube y baja 40 ms de un día a
     otro, el gráfico solo no se entendía.
     """
-    from clientes.models import BitacoraDiaria
-    from entrenos.services.recuperacion_service import _medias_base
+    from entrenos.services.recuperacion_service import _medias_base, bitacora_entre
 
     # 13-nov-2026: ``fmt`` da el valor que se enseña (sueño: «6,7»); por defecto, el entero.
     fmt = fmt or (lambda v: round(v))
     desde = hoy - timedelta(days=dias - 1)
     valores = {}
-    for fecha, v in BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha__gte=desde - timedelta(days=DIAS_TENDENCIA - 1), fecha__lte=hoy,
-        **{f'{campo}__isnull': False},
-    ).values_list('fecha', campo):
-        valores[fecha] = float(v)
+    # 18-nov-2026: de la lectura única de la bitácora (en orden de id: si hay dos, vale la última).
+    for fila in bitacora_entre(cliente, desde=desde - timedelta(days=DIAS_TENDENCIA - 1), hasta=hoy):
+        if fila[campo] is not None:
+            valores[fila['fecha']] = float(fila[campo])
     previos = {f: v for f, v in valores.items() if f < desde}
     valores = {f: v for f, v in valores.items() if f >= desde}
     # 28-oct-2026 (nota 9): la misma media que usan los días (sin la mañana de hoy).

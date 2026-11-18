@@ -28,6 +28,9 @@ dato, no hay frase.
 from datetime import timedelta
 from statistics import median
 
+from core import memo_peticion
+from core.memo_peticion import por_peticion
+
 VENTANA_BASE_DIAS = 28
 MIN_DIAS_BASE = 5
 HRV_BAJO = 0.15          # −15 % de tu media
@@ -58,12 +61,51 @@ def _f(valor):
 
 # ── 1. Recuperación (reloj) ──────────────────────────────────────────────────
 
-def _medias_base(cliente, hoy):
+_CAMPOS_BITACORA = ('fecha', 'hrv_ms', 'fc_reposo', 'horas_sueno', 'energia_subjetiva')
+
+@por_peticion
+def _bitacora_del_cliente(cliente_id):
+    """Toda la bitácora del cliente (los campos del reloj), en orden de id. 18-nov-2026.
+
+    Cuerpo leía la bitácora una y otra vez: cada día de las gráficas, su mañana
+    y las 4 semanas anteriores (``_medias_base`` x33, ``_datos_hoy`` x31). Con
+    todo el historial, ningún punto se queda sin los días anteriores al inicio
+    de la gráfica. Tupla de dicts de solo lectura.
+    """
     from clientes.models import BitacoraDiaria
 
-    filas = BitacoraDiaria.objects.filter(
-        cliente=cliente, fecha__lt=hoy, fecha__gte=hoy - timedelta(days=VENTANA_BASE_DIAS),
-    ).values('fecha', 'hrv_ms', 'fc_reposo', 'horas_sueno')
+    return tuple(BitacoraDiaria.objects.filter(cliente_id=cliente_id).order_by('pk').values(*_CAMPOS_BITACORA))
+
+
+def bitacora_entre(cliente, desde=None, hasta=None, antes_de=None, fecha=None):
+    """Filas de la bitácora del cliente (dicts con ``_CAMPOS_BITACORA``) en orden de id.
+
+    Rango: ``desde`` ≤ fecha ≤ ``hasta``, fecha < ``antes_de`` o fecha == ``fecha``.
+    Dentro de una petición, de la lectura única; fuera, una consulta.
+    """
+    cliente_id = getattr(cliente, 'pk', cliente)
+    if memo_peticion.activa() and cliente_id is not None:
+        return [
+            f for f in _bitacora_del_cliente(cliente_id)
+            if (desde is None or f['fecha'] >= desde) and (hasta is None or f['fecha'] <= hasta)
+            and (antes_de is None or f['fecha'] < antes_de) and (fecha is None or f['fecha'] == fecha)
+        ]
+    from clientes.models import BitacoraDiaria
+
+    qs = BitacoraDiaria.objects.filter(cliente=cliente)
+    if desde is not None:
+        qs = qs.filter(fecha__gte=desde)
+    if hasta is not None:
+        qs = qs.filter(fecha__lte=hasta)
+    if antes_de is not None:
+        qs = qs.filter(fecha__lt=antes_de)
+    if fecha is not None:
+        qs = qs.filter(fecha=fecha)
+    return list(qs.order_by('pk').values(*_CAMPOS_BITACORA))
+
+
+def _medias_base(cliente, hoy):
+    filas = bitacora_entre(cliente, desde=hoy - timedelta(days=VENTANA_BASE_DIAS), antes_de=hoy)
     por_campo = {'hrv_ms': {}, 'fc_reposo': {}, 'horas_sueno': {}}
     for fila in filas:  # una por día (si hubiera dos, vale la última)
         # 26-oct-2026: solo los días con datos del reloj (variabilidad o pulso).
@@ -96,12 +138,10 @@ def media_variabilidad(cliente, hoy):
 
 
 def _datos_hoy(cliente, hoy):
-    from clientes.models import BitacoraDiaria
-
     datos = {}
-    for fila in BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).order_by('pk'):
+    for fila in bitacora_entre(cliente, fecha=hoy):
         for campo in ('hrv_ms', 'fc_reposo', 'horas_sueno', 'energia_subjetiva'):
-            v = _f(getattr(fila, campo, None))
+            v = _f(fila.get(campo))
             if v is not None:
                 datos[campo] = v
     return datos

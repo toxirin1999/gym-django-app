@@ -35,6 +35,9 @@ mientras el reloj aún está conociéndote.
 
 from datetime import timedelta
 
+from core import memo_peticion
+from core.memo_peticion import por_peticion
+
 DIAS_AGUDA = 7
 SEMANAS_NORMAL = 4
 DESCANSA_MALOS, DESCANSA_VENTANA = 3, 5
@@ -87,18 +90,39 @@ def _dias_en_parada(cliente, desde, hasta):
     return dias
 
 
-def carga_por_dia(cliente, desde, hasta):
-    """{fecha: carga} con la carga de cada día (el día en que se hizo, no el del plan)."""
+def _consulta_cargas(cliente):
     from django.db.models.functions import Coalesce
     from entrenos.models import ActividadRealizada
 
-    por_dia = {}
-    for a in (
+    return (
         ActividadRealizada.objects.filter(cliente=cliente, carga_ua__isnull=False)
         .annotate(fecha_carga=Coalesce('fecha_realizado', 'fecha'))
-        .filter(fecha_carga__gte=desde, fecha_carga__lte=hasta)
-        .values('fecha_carga', 'carga_ua', 'duracion_minutos')
-    ):
+    )
+
+
+@por_peticion
+def _cargas_del_cliente(cliente_id):
+    """Todas las actividades con carga del cliente, en orden de id. 18-nov-2026.
+
+    Cuerpo calculaba la carga de cada día de la gráfica con su propia consulta
+    (``carga_por_dia`` x35). Todo el historial: ningún día se queda sin sus
+    4 semanas anteriores. Tupla de dicts de solo lectura.
+    """
+    return tuple(_consulta_cargas(cliente_id).order_by('pk').values('fecha_carga', 'carga_ua', 'duracion_minutos'))
+
+
+def carga_por_dia(cliente, desde, hasta):
+    """{fecha: carga} con la carga de cada día (el día en que se hizo, no el del plan)."""
+    cliente_id = getattr(cliente, 'pk', cliente)
+    if memo_peticion.activa() and cliente_id is not None:
+        filas = [a for a in _cargas_del_cliente(cliente_id) if desde <= a['fecha_carga'] <= hasta]
+    else:
+        filas = (
+            _consulta_cargas(cliente).filter(fecha_carga__gte=desde, fecha_carga__lte=hasta)
+            .order_by('pk').values('fecha_carga', 'carga_ua', 'duracion_minutos')
+        )
+    por_dia = {}
+    for a in filas:
         if (a['duracion_minutos'] or 0) > DURACION_MAX_MIN:
             continue
         por_dia[a['fecha_carga']] = por_dia.get(a['fecha_carga'], 0.0) + float(a['carga_ua'] or 0)
