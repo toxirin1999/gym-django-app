@@ -13,6 +13,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 
 from clientes.models import Cliente
+from clientes.salud_captura_temporal import capturar
 from clientes.salud_iphone_service import guardar_checkin_iphone
 
 logger = logging.getLogger(__name__)
@@ -61,6 +62,7 @@ def api_salud_iphone(request):
     if payload is None:
         return JsonResponse({'ok': False, 'error': 'El cuerpo no es JSON.'}, status=400)
     guardado = guardar_checkin_iphone(cliente, payload)
+    capturar(cliente.id, payload, guardado)  # temporal; apagada salvo SALUD_CAPTURA_HASTA
     if not guardado:
         sin_token = {k: v for k, v in payload.items() if k != 'token'} if isinstance(payload, dict) else payload
         logger.warning('salud-iphone: llegó sin datos útiles: %s', str(sin_token)[:500])
