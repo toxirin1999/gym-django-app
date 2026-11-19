@@ -5,6 +5,7 @@ from . import views
 from . import views_salud
 from . import views_errores
 from . import views_pendientes
+from . import views_evolucion_ejercicio
 from .views import calendario_bitacoras
 from .views import registrar_bitacora
 from clientes import views as clientes_views
@@ -47,6 +48,9 @@ urlpatterns = [
 
     path('cliente/<int:cliente_id>/dashboard-adherencia/', views.dashboard_adherencia, name='dashboard_adherencia'),
     path('cliente/<int:cliente_id>/memoria-entrenador/', views.memoria_entrenador, name='memoria_entrenador'),
+    path('cliente/<int:cliente_id>/memoria-entrenador/ejercicio/<slug:slug>/', views_evolucion_ejercicio.evolucion_ejercicio, name='evolucion_ejercicio'),
+    path('cliente/<int:cliente_id>/memoria-entrenador/ejercicio/<slug:slug>/detalle/', views_evolucion_ejercicio.evolucion_ejercicio_detalle, name='evolucion_ejercicio_detalle'),
+    path('cliente/<int:cliente_id>/memoria-entrenador/ejercicio/<slug:slug>/confirmar/', views_evolucion_ejercicio.confirmar_carga, name='confirmar_carga_ejercicio'),
     path('sesion/<int:cliente_id>/', views.portal_sesion_unificado, name='portal_sesion'),
     path('detalle/<int:cliente_id>/', views.detalle_cliente, name='detalle_cliente'),
     path('cliente/<int:cliente_id>/educacion/', views.vista_educacion_helms, name='vista_educacion_helms'),

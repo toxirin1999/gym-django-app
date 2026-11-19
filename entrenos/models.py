@@ -2882,3 +2882,52 @@ class EdicionHistoria(models.Model):
 
     def __str__(self):
         return f'{self.cliente_id} edición {self.anio}'
+
+
+class ConfirmacionCargaEjercicio(models.Model):
+    """
+    19-nov-2026 · Respuesta del usuario a una ambigüedad identificada en el
+    historial de un ejercicio (unidad de la carga o de la medida).
+
+    Solo guarda la respuesta y las fechas a las que se aplica: NUNCA modifica
+    ``SerieRealizada`` ni ``EjercicioRealizado``. Las filas no se editan ni se
+    borran: corregir es guardar otra fila; para una fecha manda la más reciente
+    que la cubre, y las anteriores quedan como historial.
+    """
+    AMBIGUEDAD_UNIDAD_CARGA = 'unidad_carga'
+    AMBIGUEDAD_UNIDAD_MEDIDA = 'unidad_medida'
+    AMBIGUEDAD_CHOICES = [
+        (AMBIGUEDAD_UNIDAD_CARGA, 'Unidad de la carga'),
+        (AMBIGUEDAD_UNIDAD_MEDIDA, 'Unidad de la medida'),
+    ]
+    RESPUESTA_NO_RECUERDO = 'no_recuerdo'
+    RESPUESTAS_POR_AMBIGUEDAD = {
+        AMBIGUEDAD_UNIDAD_CARGA: ('por_mancuerna', 'total_dos', RESPUESTA_NO_RECUERDO),
+        AMBIGUEDAD_UNIDAD_MEDIDA: ('metros', 'repeticiones', RESPUESTA_NO_RECUERDO),
+    }
+    RESPUESTA_CHOICES = [
+        ('por_mancuerna', 'Por mancuerna'),
+        ('total_dos', 'Total de las dos'),
+        ('metros', 'Metros'),
+        ('repeticiones', 'Repeticiones'),
+        (RESPUESTA_NO_RECUERDO, 'No lo recuerdo'),
+    ]
+
+    cliente = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='confirmaciones_carga')
+    ejercicio_clave = models.CharField(max_length=200, db_index=True,
+                                       help_text='Nombre del ejercicio sin tildes ni mayúsculas.')
+    ejercicio_nombre = models.CharField(max_length=200)
+    ambiguedad = models.CharField(max_length=20, choices=AMBIGUEDAD_CHOICES)
+    respuesta = models.CharField(max_length=20, choices=RESPUESTA_CHOICES)
+    desde = models.DateField()
+    hasta = models.DateField()
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Confirmación de carga'
+        verbose_name_plural = 'Confirmaciones de carga'
+        ordering = ['-id']
+        indexes = [models.Index(fields=['cliente', 'ejercicio_clave', 'ambiguedad'])]
+
+    def __str__(self):
+        return f'{self.ejercicio_nombre}: {self.get_respuesta_display()} ({self.desde}–{self.hasta})'

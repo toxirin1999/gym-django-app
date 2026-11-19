@@ -1,0 +1,86 @@
+{% extends 'clientes/evolucion_ejercicio/base.html' %}
+{% block contenido %}
+<a class="back" href="{% url 'clientes:memoria_entrenador' cliente.id %}">‹ Memoria</a>
+<h1>{{ titulo }}</h1>
+<div class="sub">{{ sub }}</div>
+
+{% if confirmado %}<div class="ok" role="status">Confirmación guardada. Puedes corregirla cuando quieras desde el detalle; las anteriores se conservan.</div>{% endif %}
+
+{% if not c.tiene_historial or not c.carga %}
+<section class="card"><div class="lab">Historial</div>
+  <div class="big">Sin registros de este ejercicio</div>
+  <p>Cuando lo entrenes aparecerá aquí con sus sesiones y su evolución.</p>
+</section>
+{% else %}
+
+<section class="card" aria-labelledby="concl">
+  <div class="lab" id="concl">Conclusión</div>
+  <div class="big">{{ c.conclusion.titulo }}</div>
+  <p>{{ c.conclusion.detalle }}</p>
+  {% for a in c.conclusion.avisos %}
+  <div class="aviso">{{ a }}{% if tramos_pendientes and 'comprobar' in a %} <a href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id c.slug %}">Comprobar</a>{% endif %}</div>
+  {% endfor %}
+  {% if c.conclusion.extra %}<div class="small">{{ c.conclusion.extra }}</div>{% endif %}
+  {% if c.conclusion.nota %}<div class="small">{{ c.conclusion.nota }}</div>{% endif %}
+</section>
+
+<section class="card" aria-labelledby="evo">
+  <div class="lab" id="evo">Evolución</div>
+  <nav class="pills tres" aria-label="Periodo">
+    {% for p in c.periodos %}<a class="pill" href="?dias={{ p }}&carga={{ c.carga.token|urlencode }}" {% if p == c.dias %}aria-current="true"{% endif %}>{{ p }} días</a>{% endfor %}
+  </nav>
+  <nav class="pills" aria-label="Carga">
+    <span class="small" style="margin:0">Carga</span>
+    {% for k in c.cargas %}<a class="pill" href="?dias={{ c.dias }}&carga={{ k.token|urlencode }}" {% if k.activa %}aria-current="true"{% endif %}>{{ k.etiqueta }}</a>{% endfor %}
+  </nav>
+  {% if c.mas_cargas %}<div class="small">Hay {{ c.mas_cargas }} carga{{ c.mas_cargas|pluralize:",s" }} más en este periodo: están en el detalle.</div>{% endif %}
+  <div class="cap">{% if c.medida == 'distancia' %}Distancia por sesión (m){% elif c.medida == 'tiempo' %}Segundos por sesión{% else %}Repeticiones por sesión{% endif %} con la carga elegida</div>
+  {% if grafica %}
+    {{ grafica }}
+    <div class="leyenda">{% for l in leyenda %}<span><i class="dot" style="background:{{ l.color }}"></i>{{ l.nombre }}</span>{% endfor %}{% if c.conclusion.estado == 'pendiente_carga' or c.carga.pendiente %}<span><i class="dot" style="background:transparent;border:2px solid #9da5ad;width:6px;height:6px"></i>Carga por comprobar</span>{% endif %}</div>
+    <div class="small">Color: bloque del plan. La línea une sesiones consecutivas con la misma carga confirmada.</div>
+  {% else %}
+    <p class="small">Sin sesiones con esta carga en {{ c.dias }} días. Prueba otro periodo u otra carga; el historial completo está en el detalle.</p>
+  {% endif %}
+</section>
+
+<section class="card" aria-labelledby="ult">
+  <div class="lab" id="ult">Últimas sesiones</div>
+  {% if c.ultimas %}
+  <div class="small">Las marcadas con la carga elegida cuentan en la gráfica; toca una de otra carga para verla.</div>
+  {% for u in c.ultimas %}
+    {% if u.con_carga %}
+    <div class="fila">
+      <div><div class="l1"><b>{{ u.fecha|date:"d/m" }}</b><span class="tag">{{ c.carga.etiqueta }}</span></div><div class="val">{{ u.valor_txt }}{{ u.rpe_txt }}</div>
+        <div class="l2">{{ u.series }} serie{{ u.series|pluralize }} con esta carga{% if u.excluida %} · {{ u.bloque }}, no entra en la conclusión{% endif %}{% if u.pendiente %} · carga por comprobar{% endif %}</div></div>
+      <span class="fam" style="color:{{ u.color }};border-color:{{ u.color }}">{{ u.familia_txt }}</span>
+    </div>
+    {% elif u.token %}
+    <a class="fila otra" href="?dias={{ c.dias }}&carga={{ u.token|urlencode }}">
+      <div><div class="l1"><b>{{ u.fecha|date:"d/m" }}</b> · Otra carga: {{ u.carga_txt }}</div><div class="val" style="font-weight:600">{{ u.valor_txt }}{{ u.rpe_txt }}</div>
+        <div class="l2">Tocar para ver esta carga{% if u.excluida %} · {{ u.bloque }}{% endif %}</div></div>
+      <span class="fam" style="color:{{ u.color }};border-color:{{ u.color }}">{{ u.familia_txt }}</span>
+    </a>
+    {% else %}
+    <div class="fila otra"><div><div class="l1"><b>{{ u.fecha|date:"d/m" }}</b> · Sin carga registrada</div><div class="l2">Se ve en el detalle</div></div>
+      <span class="fam" style="color:{{ u.color }};border-color:{{ u.color }}">{{ u.familia_txt }}</span></div>
+    {% endif %}
+  {% endfor %}
+  {% else %}
+  <p class="small">Sin sesiones en los últimos {{ c.dias }} días. Prueba un periodo más largo o consulta el detalle.</p>
+  {% endif %}
+  <a class="enlace" href="{% url 'clientes:evolucion_ejercicio_detalle' cliente.id c.slug %}">Ver todas las series y otras cargas <span aria-hidden="true">›</span></a>
+</section>
+
+{% if tramos_pendientes %}
+<section class="card">
+  <div class="lab">Carga por comprobar</div>
+  <p class="small" style="margin-top:6px">Hay registros con una unidad sin confirmar. Se siguen mostrando; confirmarlos solo afina las comparaciones.</p>
+  {% for t in tramos_pendientes %}
+  <a class="enlace" href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id c.slug %}?tramo={{ t.indice }}"><span>{{ t.desde|date:"d/m/Y" }} – {{ t.hasta|date:"d/m/Y" }} · {{ t.n }} sesion{{ t.n|pluralize:"es" }}<br><span class="nota">Consta como: {{ t.firma_txt }}</span></span> <span aria-hidden="true">›</span></a>
+  {% endfor %}
+  {% if hay_tramos_antiguos %}<a class="enlace" href="{% url 'clientes:evolucion_ejercicio_detalle' cliente.id c.slug %}">Tramos anteriores por comprobar <span aria-hidden="true">›</span></a>{% endif %}
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

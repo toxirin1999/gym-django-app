@@ -1,0 +1,50 @@
+{% extends 'clientes/evolucion_ejercicio/base.html' %}
+{% block titulo %}Confirmar la carga{% endblock %}
+{% block contenido %}
+<a class="back" href="{% url 'clientes:evolucion_ejercicio' cliente.id slug %}">‹ {{ titulo }}</a>
+<h1>Confirmar la carga</h1>
+<div class="sub">{{ titulo }} · {{ tramo.desde|date:"d/m/Y" }} – {{ tramo.hasta|date:"d/m/Y" }} · {{ tramo.n }} sesion{{ tramo.n|pluralize:"es" }}</div>
+
+{% if tramos|length > 1 %}
+<nav class="pills" aria-label="Tramo">
+  {% for t in tramos %}<a class="pill" href="?tramo={{ t.indice }}" {% if t.indice == tramo.indice %}aria-current="true"{% endif %}>{{ t.desde|date:"d/m" }}–{{ t.hasta|date:"d/m" }}{% if t.estado == 'confirmada' %} ✓{% endif %}</a>{% endfor %}
+</nav>
+{% endif %}
+
+<form method="post" class="card" novalidate>
+  {% csrf_token %}
+  <input type="hidden" name="tramo" value="{{ tramo.indice }}">
+  <div class="lab">Tu respuesta</div>
+  <p style="margin-top:8px">{{ textos.pregunta }}</p>
+  {% if error %}<div class="err" role="alert">{{ error }}</div>{% endif %}
+  <fieldset style="border:0">
+    <legend class="small" style="margin-top:6px">Elige una opción</legend>
+    {% for valor, texto in opciones %}
+    <label class="opt"><input type="radio" name="respuesta" value="{{ valor }}" {% if form.respuesta == valor %}checked{% endif %}>{{ texto }}</label>
+    {% endfor %}
+  </fieldset>
+  <div class="small">«No lo recuerdo» deja estas fechas por comprobar: se siguen mostrando.</div>
+
+  <div class="lab" style="margin-top:18px">Fechas a las que se aplica</div>
+  <div class="campos">
+    <label class="campo"><span>Desde</span><input type="date" name="desde" value="{{ form.desde }}" min="{{ tramo.desde|date:'Y-m-d' }}" max="{{ tramo.hasta|date:'Y-m-d' }}"></label>
+    <label class="campo"><span>Hasta</span><input type="date" name="hasta" value="{{ form.hasta }}" min="{{ tramo.desde|date:'Y-m-d' }}" max="{{ tramo.hasta|date:'Y-m-d' }}"></label>
+  </div>
+  <div class="small">Se aplicará a {{ aplicara }} sesion{{ aplicara|pluralize:"es" }}. Acota las fechas si solo recuerdas una parte; el resto sigue por comprobar. Confirmar cómo anotas hoy no valida los registros antiguos.</div>
+  <button class="guardar" type="submit">Guardar</button>
+  <details>
+    <summary>Por qué te lo pregunto</summary>
+    <p class="small">{{ textos.detalle }}</p>
+  </details>
+</form>
+
+<section class="card">
+  <div class="lab">Confirmaciones anteriores</div>
+  {% for h in historial_confirmaciones %}
+  <div class="hist">
+    <b>{{ h.c.get_respuesta_display }}</b> · {{ h.c.desde|date:"d/m/Y" }} – {{ h.c.hasta|date:"d/m/Y" }}
+    <div class="nota">Guardada el {{ h.c.creada_en|date:"d/m/Y H:i" }} · {% if h.vigente %}vigente{% else %}sustituida o sin efecto{% endif %}</div>
+  </div>
+  {% empty %}<p class="small">Todavía no has confirmado nada para este ejercicio.</p>{% endfor %}
+</section>
+{% endblock %}

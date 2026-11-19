@@ -5645,31 +5645,17 @@ def _estaciones_paradas_desde(estaciones, dias=60):
 
 
 def _perfil_fuerza_90d(cliente, hoy):
-    """[{'ejercicio', 'rm', 'fecha'}] con la mejor fuerza estimada de 90 días, de mayor a menor.
+    """[{'ejercicio', 'rm', 'fecha', 'peso', 'reps', 'registrada', 'record'}] de 90 días, de mayor a menor.
 
-    Sin ejercicios de tiempo o distancia (plancha, dead hang, farmer) y sin
+    19-nov-2026: sale de las series registradas (``evolucion_ejercicio_service.perfil_fuerza``) y no de la
+    pareja de marcas que elige la comparación entre periodos, que podía dejar fuera la mejor marca del
+    periodo. Separa la mejor serie registrada, el 1RM estimado (``rm``) y el récord guardado. Solo se muestra:
+    no alimenta ninguna decisión. Sin ejercicios de tiempo o distancia (plancha, dead hang, farmer) y sin
     repetir el mismo ejercicio escrito de dos formas ("Face pull" / "Face pulls").
     """
     try:
-        from entrenos.services.evolucion_muscular_service import _plano, comparar_ejercicios
-        from rutinas.models import EjercicioBase
-
-        sin_1rm = {
-            _plano(n) for n in EjercicioBase.objects.filter(
-                tipo_progresion__in=('progresion_tiempo', 'progresion_distancia'),
-            ).values_list('nombre', flat=True)
-        }
-        mejores = {}
-        for fila in comparar_ejercicios(cliente, hoy, 90):
-            ahora = fila.get('ahora')
-            if not ahora or not ahora.get('e1rm') or _plano(fila['ejercicio']) in sin_1rm:
-                continue
-            clave = ' '.join(p[:-1] if len(p) > 3 and p.endswith('s') else p
-                             for p in _plano(fila['ejercicio']).split())
-            if clave not in mejores or ahora['e1rm'] > mejores[clave]['rm']:
-                mejores[clave] = {'ejercicio': fila['ejercicio'], 'rm': round(float(ahora['e1rm']), 1),
-                                  'fecha': ahora.get('fecha')}
-        return sorted(mejores.values(), key=lambda x: -x['rm'])
+        from entrenos.services.evolucion_ejercicio_service import perfil_fuerza
+        return perfil_fuerza(cliente, hoy, 90)
     except Exception:  # noqa: BLE001
         logger.exception('memoria_entrenador: perfil de fuerza a 90 días no disponible')
         return []
@@ -5794,6 +5780,16 @@ def _progreso_estaciones_comparables(hyrox_obj):
             'sugerencia': info.get('sugerencia', ''),
         })
     return sorted(progreso, key=lambda item: -item['sesiones'])
+
+
+def _ejercicios_consulta(cliente, hoy):
+    """Accesos a la consulta de evolución por ejercicio (Entrega 1: tres ejemplos)."""
+    try:
+        from entrenos.services.evolucion_ejercicio_service import ejemplos_disponibles
+        return ejemplos_disponibles(cliente, hoy)
+    except Exception:  # noqa: BLE001
+        logger.exception('memoria_entrenador: ejercicios de consulta no disponibles')
+        return []
 
 
 @login_required
@@ -6116,6 +6112,7 @@ def memoria_entrenador(request, cliente_id):
         'lesiones_activas': lesiones_activas,
         'modelo': modelo_usuario,
         'evolucion_muscular': evolucion_muscular,
+        'ejercicios_consulta': _ejercicios_consulta(cliente, hoy),
         'periodos_evolucion': (30, 90, 180),
         'bio_resumen': bio_resumen,
         'cuerpo_resumen': cuerpo_resumen,

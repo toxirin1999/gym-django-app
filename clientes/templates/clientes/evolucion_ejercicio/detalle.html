@@ -1,0 +1,55 @@
+{% extends 'clientes/evolucion_ejercicio/base.html' %}
+{% block titulo %}Detalle · {{ titulo }}{% endblock %}
+{% block contenido %}
+<a class="back" href="{% url 'clientes:evolucion_ejercicio' cliente.id h.slug %}">‹ {{ titulo }}</a>
+<h1>Detalle</h1>
+<div class="sub">{{ titulo }} · {{ sesiones|length }} sesion{{ sesiones|length|pluralize:"es" }} registradas</div>
+
+<section class="card">
+  <div class="lab">Método</div>
+  <details open>
+    <summary>Cómo se elige la serie de cada sesión</summary>
+    <p class="small">Con una carga elegida, la serie representativa es la de más {% if h.medida == 'distancia' %}metros{% else %}repeticiones{% endif %} con esa carga (a igualdad, la de menos RPE). Sin carga elegida, la de mayor fuerza estimada: peso × (1 + reps / 30), con tope de 30 reps; a igualdad, la de más peso. Los calentamientos no cuentan. Aquí ves todas las series tal y como se registraron.</p>
+  </details>
+  <details>
+    <summary>Qué entra en las conclusiones</summary>
+    <p class="small">Solo cuentan sesiones con exactamente la misma carga (39,9 y 40 kg son cargas distintas; solo se convierte una carga si tú lo confirmas para esa unidad y esas fechas). El bloque del plan es contexto, no un filtro. Las semanas de descarga y las cargas de recuperación se ven aquí y en la gráfica, pero no entran en las conclusiones que piden un esfuerzo comparable. Una comparación «cumple los filtros» cuando es la misma carga y el mismo tramo de repeticiones; es «válida» solo si además la carga está confirmada. Describe tu rendimiento; no cambia el plan.</p>
+  </details>
+</section>
+
+{% if tramos %}
+<section class="card">
+  <div class="lab">Ambigüedades en el historial</div>
+  {% for t in tramos %}
+  <a class="enlace" href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id h.slug %}?tramo={{ t.indice }}">
+    <span>{{ t.desde|date:"d/m/Y" }} – {{ t.hasta|date:"d/m/Y" }} · {{ t.firma_txt }} · <b>{% if t.estado == 'confirmada' %}confirmada{% elif t.estado == 'parcial' %}confirmada en parte{% else %}por comprobar{% endif %}</b></span><span aria-hidden="true">›</span></a>
+  {% endfor %}
+  <div class="lab" style="margin-top:14px">Confirmaciones guardadas</div>
+  {% for x in historial_confirmaciones %}
+  <div class="hist"><b>{{ x.c.get_respuesta_display }}</b> · {{ x.c.desde|date:"d/m/Y" }} – {{ x.c.hasta|date:"d/m/Y" }}
+    <div class="nota">Guardada el {{ x.c.creada_en|date:"d/m/Y H:i" }} · {% if x.vigente %}vigente{% else %}sustituida o sin efecto{% endif %}</div></div>
+  {% empty %}<p class="small">Sin confirmaciones todavía.</p>{% endfor %}
+</section>
+{% endif %}
+
+{% for s in sesiones %}
+<section class="sesion">
+  <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
+    <b style="font-size:16px">{{ s.fecha|date:"d/m/Y" }}</b>
+    <span class="fam" style="color:{{ s.color }};border-color:{{ s.color }}">{{ s.familia_txt }}</span>
+  </div>
+  <div class="nota">{{ s.bloque }}{% if s.excluida %} · {% if s.excluida == 'descarga' %}descarga: no entra en conclusiones{% else %}carga de recuperación: no entra en conclusiones{% endif %}{% endif %}{% if s.fuente == 'media' %} · entreno sin detalle por serie (media){% endif %}{% if s.otra_unidad %} · registrada con otra unidad{% endif %}</div>
+  {% if s.ambiguedad %}<div class="nota">{% if s.pendiente %}Carga por comprobar{% else %}Confirmada: {{ s.confirmacion.get_respuesta_display }}{% endif %}</div>{% endif %}
+  <table>
+    <thead><tr><th>Serie</th><th>Peso</th><th>{% if unidad == 'm' %}Metros{% elif unidad == 's' %}Seg.{% else %}Reps{% endif %}</th><th>RPE</th></tr></thead>
+    <tbody>
+    {% for x in s.series %}
+    <tr><td>{{ x.n }}{% if x.aprox %} <span class="nota">calent.</span>{% endif %}</td>
+      <td>{{ x.peso_txt }}{% if x.tipo_txt %} <span class="nota">{{ x.tipo_txt }}</span>{% endif %}</td>
+      <td>{{ x.valor_orig_txt }}</td><td>{{ x.rpe_txt_plano }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% load static %}<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>{% block titulo %}{{ titulo }}{% endblock %} · Memoria del entrenador</title>
+<style>
+  :root{color-scheme:dark;--cyan:#72ddff;--green:#53d88b;--gold:#d1a732;--red:#ff7a7a;--ink:#f2f3f5;--muted:#a3aeaa;--faint:#7f8992;--surface:#0d1115;--line:#273039;--font:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;--mono:'SF Mono',ui-monospace,Menlo,monospace}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#05080b}
+  body{color:var(--ink);font-family:var(--font);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+  a{color:inherit;text-decoration:none}
+  .ev{width:min(100%,720px);margin:0 auto;padding:16px 16px 110px}
+  .back{display:inline-flex;align-items:center;min-height:44px;color:var(--cyan);font-weight:700;font-size:15px;gap:6px}
+  h1{font-size:30px;line-height:1.1;letter-spacing:-.02em;margin:4px 0 4px}
+  .sub{color:var(--muted);font-size:15px}
+  .card{margin-top:14px;border:1px solid var(--line);border-radius:18px;background:var(--surface);padding:16px}
+  .lab{color:var(--cyan);font:700 11px/1.3 var(--mono);letter-spacing:.15em;text-transform:uppercase}
+  .big{margin-top:8px;font-size:24px;line-height:1.15;font-weight:800;letter-spacing:-.01em}
+  p,.txt{margin-top:8px;font-size:15px;line-height:1.5;color:#dfe5e2}
+  .small{margin-top:8px;font-size:13px;line-height:1.5;color:var(--muted)}
+  .aviso{margin-top:10px;border:1px solid #5a4a1f;background:#1c1708;border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45}
+  .aviso a{color:var(--cyan);font-weight:700;text-decoration:underline}
+  .ok{margin-top:14px;border:1px solid #1f5a3a;background:#08170f;border-radius:12px;padding:10px 12px;font-size:14px}
+  .err{margin-top:12px;border:1px solid #6a2b2b;background:#1c0b0b;border-radius:12px;padding:10px 12px;font-size:14px;color:#ffd0d0}
+  .pills{margin-top:10px;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .pills.tres{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .pill{min-height:44px;display:inline-flex;align-items:center;justify-content:center;padding:0 10px;white-space:nowrap;border-radius:999px;border:1px solid #2a4237;font-size:15px;font-weight:700;color:#cdd6d2}
+  .pill[aria-current=true]{border-color:#65caff;background:rgba(101,202,255,.16);color:#fff}
+  .cap{margin-top:12px;font-size:14px;font-weight:700}
+  .leyenda{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+  .fila{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0;border-bottom:1px solid #1c2a23;min-height:56px}
+  .fila:last-of-type{border-bottom:0}
+  .fila .l1{font-size:15px;line-height:1.35;white-space:nowrap}
+  .fila .val{font-size:17px;font-weight:800;line-height:1.3;margin-top:2px}
+  .fila .l2{font-size:13px;color:var(--muted);line-height:1.35}
+  .fila.otra{color:#c6cfcb}
+  .tag{display:inline-block;margin-left:6px;padding:1px 9px;border-radius:999px;background:rgba(101,202,255,.16);border:1px solid #65caff;font-size:12px;font-weight:700;white-space:nowrap}
+  .fam{flex:none;padding:3px 10px;border-radius:999px;border:1px solid;font-size:12px;font-weight:700;white-space:nowrap}
+  .enlace{display:flex;justify-content:space-between;align-items:center;min-height:48px;margin-top:6px;color:var(--cyan);font-weight:700;font-size:15px}
+  details{margin-top:12px;border-top:1px solid #1c2a23;padding-top:6px}
+  summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:var(--cyan);font-weight:700;font-size:15px}
+  .opt{margin-top:10px;min-height:52px;display:flex;align-items:center;gap:12px;padding:0 14px;border-radius:14px;border:1px solid #2a4237;font-size:16px;font-weight:700;cursor:pointer}
+  .opt input{width:20px;height:20px;accent-color:#65caff;flex:none}
+  .opt:has(input:checked){border-color:#65caff;background:rgba(101,202,255,.16)}
+  .campos{margin-top:10px;display:flex;gap:10px}
+  .campo{flex:1;min-width:0}
+  .campo span{display:block;font-size:13px;color:var(--muted)}
+  .campo input{margin-top:4px;width:100%;min-height:48px;border-radius:12px;border:1px solid #2a4237;background:#0a0f0d;color:var(--ink);padding:0 10px;font:600 16px var(--font)}
+  .guardar{margin-top:14px;width:100%;min-height:52px;border-radius:14px;border:0;background:#65caff;color:#04121c;font:800 16px var(--font);cursor:pointer}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:14px}
+  th,td{text-align:left;padding:7px 6px;border-bottom:1px solid #1c2a23;vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .sesion{margin-top:14px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#0a0e11}
+  .hist{padding:10px 0;border-bottom:1px solid #1c2a23;font-size:14px;line-height:1.45}
+  .hist:last-child{border-bottom:0}
+  .nota{color:var(--muted);font-size:13px}
+</style>
+</head>
+<body>
+<main class="ev">
+{% block contenido %}{% endblock %}
+</main>
+{% include 'includes/bottom_nav.html' with activo='memoria' %}
+</body>
+</html>

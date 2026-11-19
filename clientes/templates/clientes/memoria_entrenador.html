@@ -456,15 +456,18 @@
       <div class="mem-label">Perfil de fuerza</div>
       <details class="mem-collapse">
         <summary>
-          1RM estimado · mejor de 90 días
+          Mejor serie y 1RM estimado · últimos 90 días
           <span class="mem-count">{{ perfil_atletico|length }} {{ perfil_atletico|length|pluralize:"ejercicio,ejercicios" }}</span>
         </summary>
+        <p class="mem-desc" style="margin:8px 0">La mejor serie es lo que registraste; el 1RM es una estimación a partir de ella (peso × (1 + reps / 30)).{% if perfil_atletico.0.record is not None %} El récord es el guardado aparte.{% endif %}</p>
         <div class="mem-list">
           {% for item in perfil_atletico %}
           <div class="mem-row">
             <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
-            <div><div class="name">{{ item.ejercicio }}</div></div>
-            <div class="v">{{ item.rm|floatformat:1 }}<small>KG</small></div>
+            <div><div class="name">{{ item.ejercicio }}</div>
+              {% if item.registrada %}<div class="meta">Mejor serie: {{ item.registrada }} · {{ item.fecha|date:"d/m" }}{% if item.fuente == 'media' %} (media del entreno){% endif %}</div>{% endif %}
+              {% if item.record %}<div class="meta">Récord guardado: {{ item.record|floatformat:"-1" }} kg</div>{% endif %}</div>
+            <div class="v">{{ item.rm|floatformat:1 }}<small>1RM EST.</small></div>
           </div>
           {% endfor %}
         </div>
@@ -472,6 +475,23 @@
       {% if rm_metadatos_descartados %}
       <p class="mem-desc">Se han omitido {{ rm_metadatos_descartados }} datos de metadatos no numéricos; estos valores requieren una fuente de 1RM explícita.</p>
       {% endif %}
+    </article>
+    {% endif %}
+
+    {# ── §03b EVOLUCIÓN POR EJERCICIO (consulta) ── #}
+    {% if ejercicios_consulta %}
+    <article class="mem-node mem-node--good">
+      <div class="mem-label">Evolución por ejercicio</div>
+      <p class="mem-desc" style="margin:8px 0">Consulta tu historial ejercicio a ejercicio: sesiones, gráfica y qué cambió. Solo consulta: no cambia tu plan.</p>
+      <div class="mem-list">
+        {% for e in ejercicios_consulta %}
+        <a class="mem-row" href="{% url 'clientes:evolucion_ejercicio' cliente.id e.slug %}" style="min-height:56px">
+          <div class="idx">{{ forloop.counter|stringformat:"02d" }}</div>
+          <div><div class="name">{{ e.titulo }}</div><div class="meta">{{ e.sub }} · última sesión {{ e.ultima|date:"d/m" }}</div></div>
+          <div class="v" aria-hidden="true">›</div>
+        </a>
+        {% endfor %}
+      </div>
     </article>
     {% endif %}
 
