@@ -136,11 +136,12 @@ class VerMotivoAhoraYPropiedadTests(TestCase):
 
     def test_el_enlace_de_ahora_fija_la_version_que_la_pantalla_representa(self):
         from clientes.views import _url_ver_motivo
-        url = _url_ver_motivo({'version_persistida': 1}, DIA)
+        url, etiqueta = _url_ver_motivo({'version_persistida': 1}, DIA)
+        self.assertEqual(etiqueta, 'Ver motivo')
         self.assertEqual(url, reverse('clientes:ver_motivo') + '?fecha=2026-11-20&version=1')
         # sin version persistida: sin parametros (cae en la vigente)
-        self.assertEqual(_url_ver_motivo({}, DIA), reverse('clientes:ver_motivo'))
-        self.assertEqual(_url_ver_motivo({'version_persistida': True}, DIA), reverse('clientes:ver_motivo'))
+        self.assertEqual(_url_ver_motivo({}, DIA)[0], reverse('clientes:ver_motivo'))
+        self.assertEqual(_url_ver_motivo({'version_persistida': True}, DIA)[0], reverse('clientes:ver_motivo'))
 
     def test_la_url_fijada_abre_esa_version_aunque_haya_otra_vigente(self):
         self._v(self.cliente, 1, vigente=False)
@@ -176,3 +177,71 @@ class VerMotivoAhoraYPropiedadTests(TestCase):
         self.assertEqual(resp.context['quiet_decision']['motivo_url'], esperado)
         self.assertIn('version=3', resp.context['quiet_decision']['motivo_url'])
         self.assertContains(resp, 'href="%s">Ver motivo' % resp.context['quiet_decision']['motivo_url'].replace('&', '&amp;'))
+
+
+class VerMotivoHechoYPosteriorTests(TestCase):
+    """HECHO enlaza a la decision que origino el entrenamiento; las posteriores se identifican."""
+
+    def setUp(self):
+        from entrenos.models import EntrenoRealizado
+        from rutinas.models import Rutina
+        self.user = User.objects.create_user('motivo_hecho', password='x')
+        self.cliente = Cliente.objects.get(user=self.user)
+        self.client.force_login(self.user)
+        rutina, _ = Rutina.objects.get_or_create(nombre='Dia 4 - Fuerza')
+        def v(n, dia, vigente):
+            return GymDecisionVersion.objects.create(
+                cliente=self.cliente, fecha=DIA, version=n, decision_id=f'h{n}', origen='motor', vigente=vigente,
+                fingerprint='f' * 64, base_fingerprint='b' * 64, postura='sostener',
+                snapshot=_snapshot({'resting_hr': 52, 'hrv_ms': None, 'sleep_hours': None, 'energy': None},
+                                   extra={'entrenamiento': {'dia': dia, 'nombre_rutina': f'Dia {dia} - Fuerza', 'ejercicios': []}}))
+        self.v1, self.v2, self.v3 = v(1, 4, False), v(2, 5, False), v(3, 5, True)
+        self.entreno = EntrenoRealizado.objects.create(cliente=self.cliente, rutina=rutina, fecha=DIA,
+                                                       gym_decision_version=self.v1)
+
+    def test_con_hecho_el_enlace_abre_la_version_que_origino_el_entreno(self):
+        from clientes.views import _url_ver_motivo
+        url, etiqueta = _url_ver_motivo({'version_persistida': 3}, DIA, self.cliente, 'HECHO')
+        self.assertIn('version=1', url)
+        self.assertEqual(etiqueta, 'Ver motivo del entrenamiento de hoy')
+
+    def test_sin_hecho_abre_la_version_mostrada(self):
+        from clientes.views import _url_ver_motivo
+        url, etiqueta = _url_ver_motivo({'version_persistida': 3}, DIA, self.cliente, 'ENTRENAR')
+        self.assertIn('version=3', url)
+        self.assertEqual(etiqueta, 'Ver motivo')
+
+    def test_hecho_sin_version_de_origen_cae_en_la_mostrada(self):
+        from clientes.views import _url_ver_motivo
+        self.entreno.gym_decision_version = None
+        self.entreno.save()
+        url, _ = _url_ver_motivo({'version_persistida': 3}, DIA, self.cliente, 'HECHO')
+        self.assertIn('version=3', url)
+
+    def test_la_pagina_identifica_que_representa_cada_version(self):
+        r1 = motivo_de_version(self.v1)['representa']
+        self.assertEqual(r1['tipo'], 'origen')
+        self.assertIn('originó el entrenamiento completado el 20/11', r1['texto'])
+        r3 = motivo_de_version(self.v3)['representa']
+        self.assertEqual(r3['tipo'], 'posterior')
+        self.assertEqual(r3['origen_version'], 1)
+        self.assertIn('explica la próxima sesión', r3['texto'])
+        self.assertIn('Dia 5', r3['texto'])
+        self.assertIn('No originó el entrenamiento ya hecho', r3['texto'])
+        resp = self.client.get(reverse('clientes:ver_motivo'), {'fecha': '2026-11-20', 'version': '3'})
+        self.assertContains(resp, 'Decisión posterior al entrenamiento de hoy')
+        self.assertContains(resp, 'version=1')
+        self.assertContains(resp, '1 (Dia 4 - Fuerza)')
+
+    def test_sin_entreno_previo_la_vigente_es_para_una_sesion_sin_hacer(self):
+        from entrenos.models import EntrenoRealizado
+        EntrenoRealizado.objects.all().delete()
+        self.assertEqual(motivo_de_version(self.v3)['representa']['tipo'], 'vigente')
+        self.assertEqual(motivo_de_version(self.v2)['representa']['tipo'], 'anterior')
+
+    def test_otro_usuario_no_puede_abrir_estas_versiones(self):
+        self.client.logout()
+        User.objects.create_user('intruso', password='x')
+        self.client.login(username='intruso', password='x')
+        resp = self.client.get(reverse('clientes:ver_motivo'), {'fecha': '2026-11-20', 'version': '1'})
+        self.assertContains(resp, 'Sin decisión registrada')

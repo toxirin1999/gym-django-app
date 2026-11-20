@@ -10,7 +10,7 @@ con un motivo que se puede citar:
 2. **Propuesta que funcionó**: si al evaluarla salió "validada", el cambio se
    queda (hasta 6 meses o hasta que otra propuesta de esa zona diga lo
    contrario). 18-nov-2026: si la propuesta tiene una **revisión**
-   (``deteccion['revision']``), manda ella: el ajuste vale hasta la fecha de
+   (``deteccion['revision']``), manda ella (lenguaje: «evolución observada favorable», sin afirmar que el cambio funcionó): el ajuste vale hasta la fecha de
    revisión y después queda pendiente de una decisión explícita (prolongar
    hasta una fecha o retirar); sin decisión no se prolonga solo.
 
@@ -55,7 +55,7 @@ def _vigencia_validada(p, fecha):
     revision = (p.deteccion or {}).get('revision')
     if not revision:
         vigente = p.fin >= fecha - timedelta(days=VIGENCIA_VALIDADA_DIAS)
-        return vigente, 'el cambio funcionó y se queda'
+        return vigente, 'evolución observada favorable; el ajuste se mantiene'
     estado = revision.get('estado') or 'pendiente'
     if estado == 'retirada':
         return False, ''
@@ -63,10 +63,10 @@ def _vigencia_validada(p, fecha):
     if limite is None or fecha > limite:
         return False, ''
     if estado == 'prolongada':
-        return True, f'el cambio funcionó; lo prolongaste hasta el {limite:%d/%m}'
+        return True, f'evolución observada favorable; lo prolongaste hasta el {limite:%d/%m}'
     # 20-nov-2026: el límite es inclusive (``fecha > limite`` deja de aplicarlo).
-    return True, (f'el cambio funcionó; se mantiene hasta el {limite:%d/%m} inclusive '
-                  f'y el {limite + timedelta(days=1):%d/%m} deja de aplicarse si no decides')
+    return True, (f'evolución observada favorable; se aplica hasta el {limite:%d/%m} inclusive '
+                  f'(revisión como máximo ese día) y el {limite + timedelta(days=1):%d/%m} deja de aplicarse si no decides')
 
 
 def revisiones_pendientes(cliente, fecha):

@@ -85,6 +85,47 @@ def _datos_fisicos(snapshot):
     return {'filas': filas, 'origen': origen}, avisos
 
 
+def _sesion_de(version):
+    entreno = (version.snapshot or {}).get('entrenamiento') or {}
+    return entreno.get('nombre_rutina') or (f"Día {entreno['dia']}" if entreno.get('dia') else None)
+
+
+def _representa(version):
+    """Qué representa esta versión: originó un entrenamiento hecho, o es otra decision (20-nov-2026).
+
+    - ``origen``: de ella salió un entrenamiento ya registrado (``EntrenoRealizado.gym_decision_version``).
+    - ``posterior``: se tomó después de un entrenamiento del día y explica la próxima sesión; no
+      originó el entrenamiento ya hecho (se indica cuál versión sí).
+    - ``vigente``: la decisión vigente del día para una sesión todavía sin hacer.
+    - ``anterior``: sustituida por una versión posterior.
+    """
+    from entrenos.models import EntrenoRealizado
+
+    sesion = _sesion_de(version)
+    hechos = list(EntrenoRealizado.objects.filter(gym_decision_version=version).order_by('id'))
+    if hechos:
+        e = hechos[-1]
+        nombre = getattr(getattr(e, 'rutina', None), 'nombre', None) or sesion or 'la sesión'
+        estado = 'completado' if getattr(e, 'estado_cierre', 'completa') == 'completa' else 'registrado (parcial)'
+        return {'tipo': 'origen', 'sesion': sesion, 'origen_version': None,
+                'texto': f"Esta decisión originó el entrenamiento {estado} el {e.fecha:%d/%m}: {nombre}."}
+    previo = EntrenoRealizado.objects.filter(
+        cliente=version.cliente, fecha=version.fecha, gym_decision_version__isnull=False,
+        gym_decision_version__version__lt=version.version,
+    ).select_related('gym_decision_version', 'rutina').order_by('-id').first()
+    if previo is not None:
+        nombre = getattr(getattr(previo, 'rutina', None), 'nombre', None) or 'la sesión de hoy'
+        return {'tipo': 'posterior', 'sesion': sesion, 'origen_version': previo.gym_decision_version.version,
+                'texto': (f"Decisión posterior al entrenamiento de hoy ({nombre}): explica la próxima sesión"
+                          f"{f', {sesion}' if sesion else ''}. No originó el entrenamiento ya hecho; "
+                          f"ese salió de la versión {previo.gym_decision_version.version}.")}
+    if version.vigente:
+        return {'tipo': 'vigente', 'sesion': sesion, 'origen_version': None,
+                'texto': f"Decisión vigente para la sesión{f' {sesion}' if sesion else ''}, todavía sin hacer."}
+    return {'tipo': 'anterior', 'sesion': sesion, 'origen_version': None,
+            'texto': 'Versión anterior: otra posterior la sustituyó.'}
+
+
 def motivo_de_version(version) -> dict:
     """Explicación de una ``GymDecisionVersion`` con solo lo que guardó."""
     snap = version.snapshot or {}
@@ -116,4 +157,5 @@ def motivo_de_version(version) -> dict:
         'avisos': avisos,
         'cambios': cambios,
         'modo_reducido': bool(snap.get('modo_reducido')),
+        'representa': _representa(version),
     }

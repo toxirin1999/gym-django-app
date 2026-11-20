@@ -10,7 +10,7 @@ from clientes.models import Cliente
 VOL = 'entrenos.services.volumen_grupo_service.'
 PAUSA = 'entrenos.services.propuesta_zona_service.pausa_subir_volumen'
 AJUSTE_ISQUIOS = {'isquios': {'series': 2, 'motivos': [
-    '+2 series de Isquios: el cambio funcionó; se mantiene hasta el 06/12 inclusive y el 07/12 deja de aplicarse si no decides',
+    '+2 series de Isquios: evolución observada favorable; se aplica hasta el 06/12 inclusive (revisión como máximo ese día) y el 07/12 deja de aplicarse si no decides',
 ]}}
 PAUSA_TRI_TRAP = {'zonas': ('triceps', 'trapecios'), 'fin_previsto': date(2026, 12, 6),
                   'bloque': 'Fuerza — Hipertrofia'}
@@ -35,7 +35,7 @@ class PlanLeeLosAjustesEfectivosTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, '+2 series por semana de isquios')
-        self.assertContains(response, 'se mantiene hasta el 06/12')
+        self.assertContains(response, 'se aplica hasta el 06/12')
         self.assertNotContains(response, 'No hay ajustes activos')
         self.assertEqual(response.context['ajustes_efectivos_plan'][0]['tipo'], 'series')
 

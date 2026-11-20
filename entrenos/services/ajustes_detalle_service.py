@@ -92,14 +92,25 @@ def _historial(cliente, p, aplicaciones):
         res = {'validada': 'validada', 'fallida': 'no funcionó', 'neutra': 'sin conclusión'}.get(p.resultado, '')
         ev.append((timezone.localtime(p.evaluada_en).date(), f'Propuesta evaluada{": " + res if res else ""}.'))
     revision = (p.deteccion or {}).get('revision') or {}
+    sin_fecha = []
     if revision.get('fecha'):
+        # 20-nov-2026: el evento se fecha cuando se fijo la revision (``fijada_el``); el 06/12 es
+        # solo su fecha limite y va en el texto.
         try:
             limite = date.fromisoformat(revision['fecha'])
-            ev.append((limite, f'Revisión fijada como máximo para el {_f(limite)}.'))
+            texto_limite = f'Revisión fijada: fecha límite el {_f(limite)}.'
+            try:
+                fijada = date.fromisoformat(revision['fijada_el']) if revision.get('fijada_el') else None
+            except ValueError:
+                fijada = None
+            if fijada:
+                ev.append((fijada, texto_limite))
+            else:
+                sin_fecha.append(('sin fecha', texto_limite + ' No consta el día en que se fijó.'))
         except ValueError:
             pass
     ev.sort(key=lambda x: x[0], reverse=True)
-    return [{'fecha': f'{d:%d/%m}', 'texto': t} for d, t in ev]
+    return [{'fecha': f'{d:%d/%m}', 'texto': t} for d, t in ev] + [{'fecha': f, 'texto': t} for f, t in sin_fecha]
 
 
 def _vigencia(p, hoy):
@@ -158,7 +169,10 @@ def detalle_ajustes(cliente, hoy) -> list[dict]:
                     'texto': 'Nota original conservada (describe «semanas anteriores» sin dar las ventanas): '
                              + tarjeta['medicion']['nota_antigua'],
                 })
-                tarjeta['historial'].sort(key=lambda h: (h['fecha'][3:], h['fecha'][:2]), reverse=True)
+                fechados = [h for h in tarjeta['historial'] if h['fecha'][:1].isdigit()]
+                sin_fechar = [h for h in tarjeta['historial'] if not h['fecha'][:1].isdigit()]
+                fechados.sort(key=lambda h: (h['fecha'][3:], h['fecha'][:2]), reverse=True)
+                tarjeta['historial'] = fechados + sin_fechar
         else:
             tarjeta['motivo'] = '; '.join(item['motivos']).capitalize() + '.'
         tarjetas.append(tarjeta)

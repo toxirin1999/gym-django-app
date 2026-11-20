@@ -14,7 +14,7 @@ VOL = 'entrenos.services.volumen_grupo_service.'
 PAUSA = 'entrenos.services.propuesta_zona_service.pausa_subir_volumen'
 APLIC = 'entrenos.services.propuesta_zona_service.sesiones_con_ajuste_registrado'
 HOY = date(2026, 11, 20)
-AJUSTE = {'isquios': {'series': 2, 'motivos': ['+2 series de Isquios: el cambio funcionó']}}
+AJUSTE = {'isquios': {'series': 2, 'motivos': ['+2 series de Isquios: evolución observada favorable']}}
 
 
 class VerAjustesTests(TestCase):
@@ -28,7 +28,7 @@ class VerAjustesTests(TestCase):
             cliente=self.cliente, zona='isquios', series_extra=2, texto='t', estado='evaluada',
             inicio=date(2026, 10, 14), fin=date(2026, 11, 17), resultado='validada',
             notas_resultado='Mejora observada: Buenos Días +36,4 %; Curl femoral +10 %.',
-            deteccion={'revision': {'estado': 'pendiente', 'fecha': '2026-12-06'}},
+            deteccion={'revision': {'estado': 'pendiente', 'fecha': '2026-12-06', 'fijada_el': '2026-11-18'}},
             evaluada_en=datetime(2026, 11, 18, 9, 0, tzinfo=tz.utc), respondida_en=datetime(2026, 10, 13, 9, 0, tzinfo=tz.utc))
         datos.update(kw)
         p = PropuestaZonaGym.objects.create(**datos)
@@ -69,7 +69,7 @@ class VerAjustesTests(TestCase):
 
     def test_sin_propuesta_el_motivo_es_el_del_planificador(self):
         (t,) = self._detalle()
-        self.assertEqual(t['motivo'], '+2 series de isquios: el cambio funcionó.')
+        self.assertEqual(t['motivo'], '+2 series de isquios: evolución observada favorable.')
         self.assertEqual(t['historial'], [])
 
     def test_pausa_y_revision_pendiente(self):
@@ -141,3 +141,21 @@ class MedicionEstructuradaTests(VerAjustesTests):
         (t,) = self._detalle()
         self.assertNotIn('medicion', t)
         self.assertIn('+23,2 %', t['motivo'])
+
+
+class HistorialRevisionTests(VerAjustesTests):
+    def test_la_revision_se_fecha_el_dia_que_se_fijo_y_el_6_12_es_el_limite(self):
+        self._propuesta()
+        (t,) = self._detalle(aplic=[date(2026, 10, 17)])
+        fila = next(h for h in t['historial'] if h['texto'].startswith('Revisión fijada'))
+        self.assertEqual(fila['fecha'], '18/11')
+        self.assertIn('fecha límite el 06/12', fila['texto'])
+        self.assertFalse(any(h['fecha'] == '06/12' for h in t['historial']))
+
+    def test_si_no_consta_cuando_se_fijo_no_se_inventa_la_fecha(self):
+        self._propuesta(deteccion={'revision': {'estado': 'pendiente', 'fecha': '2026-12-06'}})
+        (t,) = self._detalle()
+        fila = next(h for h in t['historial'] if h['texto'].startswith('Revisión fijada'))
+        self.assertEqual(fila['fecha'], 'sin fecha')
+        self.assertIn('No consta el día en que se fijó', fila['texto'])
+        self.assertEqual(t['historial'][-1], fila)

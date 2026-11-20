@@ -61,7 +61,7 @@ class AjustesVolumen(Base):
         p = self._validada_con_revision()
         self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 6)), {'isquios': 2})
         motivo = ajustes_volumen(self.cliente, date(2026, 12, 6))['isquios']['motivos'][0]
-        self.assertIn('se mantiene hasta el 06/12 inclusive y el 07/12 deja de aplicarse si no decides', motivo)
+        self.assertIn('se aplica hasta el 06/12 inclusive (revisión como máximo ese día) y el 07/12 deja de aplicarse si no decides', motivo)
         # El 7/12 ya no rige: antes seguía 182 días.
         self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 7)), {})
         from entrenos.services.volumen_grupo_service import revisiones_pendientes

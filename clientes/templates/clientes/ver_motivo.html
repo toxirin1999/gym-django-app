@@ -26,13 +26,14 @@ h1{margin:8px 0 0;font-size:30px;line-height:1.1;font-weight:800}
 {% else %}
 <h1>{{ motivo.titulo }}</h1>
 {% if motivo.mensaje %}<p class="lead">{{ motivo.mensaje }}</p>{% endif %}
+{% if motivo.representa %}<div class="card{% if motivo.representa.tipo == 'posterior' %} aviso{% endif %}"><div class="label">Qué decisión es{% if motivo.representa.sesion %} · {{ motivo.representa.sesion }}{% endif %}</div><p>{{ motivo.representa.texto }}</p>{% if motivo.representa.origen_version %}<p><a href="?fecha={{ fecha|date:'Y-m-d' }}&version={{ motivo.representa.origen_version }}">Ver la decisión que originó ese entrenamiento →</a></p>{% endif %}</div>{% endif %}
 <p class="vers">Versión {{ motivo.version }}{% if motivo.vigente %} (vigente){% endif %}{% if motivo.creada_texto %} · decidida el {{ motivo.creada_texto }} (hora de Madrid){% endif %}. Esta explicación usa solo lo que esa versión guardó.</p>
 {% for a in motivo.avisos %}<div class="card aviso"><div class="label">Datos que faltaban</div><p>{{ a }}</p></div>{% endfor %}
 {% for c in motivo.causas %}<div class="card"><div class="label">{% if c.principal %}Causa principal{% else %}Otra causa{% endif %} · {{ c.titulo }}</div>{% if c.texto %}<p>{{ c.texto }}</p>{% endif %}</div>{% endfor %}
 {% if motivo.datos %}<div class="card"><div class="label">Datos que leyó al decidir</div><div style="margin-top:6px">{% for f in motivo.datos.filas %}<div class="fila"><span>{{ f.nombre }}</span><span>{{ f.texto }}</span></div>{% endfor %}</div>
 {% if motivo.datos.origen %}<div class="nota">Del {{ motivo.datos.origen.fecha }}{% if motivo.datos.origen.fila %}, fila {{ motivo.datos.origen.fila }}{% endif %}{% if motivo.datos.origen.filas_combinadas %} (filas combinadas: {{ motivo.datos.origen.filas_combinadas|join:", " }}){% endif %}.</div>{% endif %}</div>{% endif %}
 {% if motivo.cambios %}<div class="card"><div class="label">Qué cambió en la sesión</div>{% for c in motivo.cambios %}<p>{% if c.ejercicio %}<b>{{ c.ejercicio }}</b>: {% endif %}{{ c.razon }}</p>{% endfor %}</div>{% endif %}
-{% if otras_versiones %}<p class="vers">Otras versiones de ese día: {% for v in otras_versiones %}<a href="?fecha={{ fecha|date:'Y-m-d' }}&version={{ v.version }}">{{ v.version }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% if otras_versiones %}<p class="vers">Otras versiones de ese día: {% for v in otras_versiones %}<a href="?fecha={{ fecha|date:'Y-m-d' }}&version={{ v.version }}">{{ v.version }}{% if v.sesion %} ({{ v.sesion }}){% endif %}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
 {% endif %}
 <a class="cta" href="{% url 'clientes:dashboard_silencioso_preview' %}">Volver a Ahora</a>
 </main></body></html>

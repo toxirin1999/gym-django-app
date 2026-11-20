@@ -2422,6 +2422,7 @@ def dashboard_silencioso_preview(request):
     else:
         titulo_semana = 'RECUPERANDO BIEN'
 
+    motivo_url, motivo_label = _url_ver_motivo(decision_gym, hoy, cliente, estado_operativo)
     context.update({
         'quiet_decision': {
             'estado': estado_operativo,
@@ -2435,7 +2436,8 @@ def dashboard_silencioso_preview(request):
             'porque': porque_decision,
             # 20-nov-2026: «Ver motivo» abre exactamente la version que esta pantalla
             # representa (la que trae la autoridad diaria), no "la vigente" al abrir.
-            'motivo_url': _url_ver_motivo(decision_gym, hoy),
+            'motivo_url': motivo_url,
+            'motivo_label': motivo_label,
         },
         'quiet_week': {
             'titulo': titulo_semana,
@@ -2480,15 +2482,30 @@ def dashboard_silencioso_preview(request):
     return render(request, 'clientes/dashboard_silencioso_preview.html', context)
 
 
-def _url_ver_motivo(decision_gym, hoy):
-    """URL de «Ver motivo» fijada a la version concreta de la decision que se muestra."""
+def _url_ver_motivo(decision_gym, hoy, cliente=None, estado=None):
+    """URL de «Ver motivo» fijada a la version que explica lo que Ahora muestra.
+
+    - Con el entrenamiento de hoy ya hecho («HECHO»): la decision de la que salio ese
+      entrenamiento (no la vigente, que es posterior y explica la proxima sesion).
+    - En otro caso: la version de la decision mostrada.
+    Devuelve ``(url, etiqueta)``.
+    """
     from urllib.parse import urlencode
 
     base = reverse('clientes:ver_motivo')
+    if estado == 'HECHO' and cliente is not None:
+        from entrenos.models import EntrenoRealizado
+        entreno = (EntrenoRealizado.objects
+                   .filter(cliente=cliente, fecha=hoy, gym_decision_version__isnull=False)
+                   .select_related('gym_decision_version').order_by('-id').first())
+        if entreno is not None:
+            v = entreno.gym_decision_version
+            return ('{}?{}'.format(base, urlencode({'fecha': v.fecha.isoformat(), 'version': v.version})),
+                    'Ver motivo del entrenamiento de hoy')
     numero = (decision_gym or {}).get('version_persistida')
     if isinstance(numero, int) and not isinstance(numero, bool):
-        return '{}?{}'.format(base, urlencode({'fecha': hoy.isoformat(), 'version': numero}))
-    return base
+        return '{}?{}'.format(base, urlencode({'fecha': hoy.isoformat(), 'version': numero})), 'Ver motivo'
+    return base, 'Ver motivo'
 
 
 @login_required
@@ -2502,7 +2519,7 @@ def ver_motivo(request):
     from datetime import date as _date
 
     from entrenos.models import GymDecisionVersion
-    from entrenos.services.motivo_decision_service import motivo_de_version
+    from entrenos.services.motivo_decision_service import _sesion_de, motivo_de_version
 
     cliente = get_object_or_404(Cliente, user=request.user)
     try:
@@ -2515,7 +2532,7 @@ def ver_motivo(request):
     else:
         version = versiones.filter(vigente=True).order_by('-version').first()
     otras = [
-        {'version': v.version, 'vigente': v.vigente}
+        {'version': v.version, 'vigente': v.vigente, 'sesion': _sesion_de(v)}
         for v in versiones.order_by('version')
     ]
     return render(request, 'clientes/ver_motivo.html', {
@@ -2574,7 +2591,7 @@ def trayectoria_plan(request):
 
 _ORDEN_MUSCULO_PLAN = (
     ('cuadriceps', 'isquios', 'gluteos', 'gemelos', 'pecho', 'hombros'),
-    ('triceps', 'espalda', 'trapecios', 'biceps', 'antebrazos', 'core'),
+    ('triceps', 'espalda', 'trapecio', 'biceps', 'antebrazos', 'core'),
 )
 
 
@@ -2584,8 +2601,14 @@ def _columnas_musculo_plan(marcador):
     Un grupo con datos que no este en el orden fijo se anade al final de la segunda columna:
     no se oculta nada que el marcador calcule, ni se inventa lo que no calcula.
     """
-    filas = {f['clave']: f for f in ((marcador or {}).get('filas') or [])}
-    columnas = [[filas.pop(c) for c in col if c in filas] for col in _ORDEN_MUSCULO_PLAN]
+    import unicodedata
+
+    def llave(clave):
+        plano = ''.join(c for c in unicodedata.normalize('NFD', str(clave)) if unicodedata.category(c) != 'Mn')
+        return {'trapecios': 'trapecio'}.get(plano.lower(), plano.lower())
+
+    filas = {llave(f['clave']): f for f in ((marcador or {}).get('filas') or [])}
+    columnas = [[filas.pop(llave(c)) for c in col if llave(c) in filas] for col in _ORDEN_MUSCULO_PLAN]
     columnas[1].extend(filas.values())
     return columnas
 

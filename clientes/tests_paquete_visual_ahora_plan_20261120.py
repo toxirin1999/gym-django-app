@@ -53,7 +53,7 @@ class PlanVisualTests(TestCase):
     def test_isquios_dice_hasta_el_6_12_inclusive_y_el_7_12_deja_de_aplicarse(self):
         u = get_user_model().objects.create_user(username='plan-visual', password='x')
         self.client.force_login(u)
-        motivo = ('+2 series de Isquios: el cambio funcionó; se mantiene hasta el 06/12 inclusive '
+        motivo = ('+2 series de Isquios: evolución observada favorable; se aplica hasta el 06/12 inclusive '
                   'y el 07/12 deja de aplicarse si no decides')
         with patch('entrenos.services.volumen_grupo_service.ajustes_volumen',
                    return_value={'isquios': {'series': 2, 'motivos': [motivo]}}), \
