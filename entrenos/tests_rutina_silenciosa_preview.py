@@ -37,8 +37,9 @@ class RutinaSilenciosaPreviewTests(TestCase):
         response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Fase actual")
-        self.assertContains(response, "Elegir día")
+        # 20-nov-2026: cuatro bloques en lugar de «Fase actual / Elegir día».
+        for bloque in ("hoy", "semana", "seleccionado", "fase"):
+            self.assertContains(response, f'data-bloque="{bloque}"')
 
     @patch("entrenos.views._obtener_contexto_rutina_silenciosa")
     def test_dueno_ve_fase_hoy_y_destinos_reales(self, contexto):
@@ -66,7 +67,8 @@ class RutinaSilenciosaPreviewTests(TestCase):
         self.assertContains(response, reverse("clientes:trayectoria_plan"))
         self.assertContains(response, reverse("estiramientos:panel"))
         self.assertContains(response, 'data-day-preview="0"')
-        self.assertContains(response, 'id="routine-day-modal"')
+        self.assertNotContains(response, 'id="routine-day-modal"')
+        self.assertContains(response, 'id="routine-selected-day"')
 
     def test_otro_usuario_no_puede_ver_la_preview(self):
         otro = get_user_model().objects.create_user(
@@ -168,12 +170,9 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('id="routine-day-sync-status"', plantilla)
-        self.assertIn('role="status"', plantilla)
-        self.assertIn("renderPreview(preview, { openModal: true });", plantilla)
+        self.assertIn("renderDetalle(preview);", plantilla)
         self.assertNotIn("resolverPreviewLegacy", plantilla)
         self.assertNotIn("entrenamientosMesUrl", plantilla)
-        self.assertIn("if (openModal && !modal.open)", plantilla)
 
     @patch("entrenos.views.agregar_educacion_a_plan")
     @patch("entrenos.views.PlanificadorHelms")
@@ -311,33 +310,21 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("const hasExercises = (preview.ejercicios || []).length > 0;", plantilla)
-        self.assertIn("empty.hidden = hasExercises;", plantilla)
-        self.assertIn(
-            "La sesión está preparada. Ábrela para revisar el detalle antes de empezar.",
-            plantilla,
-        )
+        self.assertIn("empty.hidden = ejercicios.length > 0;", plantilla)
+        self.assertIn("La sesión está preparada. Se abre desde «Preparar entrenamiento» el día que toque.", plantilla)
 
-    def test_dialogo_de_preview_cierra_con_escape_y_devuelve_el_foco_al_dia(self):
-        """Cerrar no deja el teclado perdido detrás del diálogo nativo.
-
-        El mismo cierre centralizado cubre el botón, el fondo y Escape; tras
-        cerrar, el selector que abrió la preview recupera el foco para seguir
-        recorriendo la semana sin empezar desde el principio de la página.
-        """
+    def test_consultar_un_dia_no_abre_ventana_ni_navega(self):
+        """20-nov-2026: el día seleccionado se enseña en la página, sin diálogo."""
         from pathlib import Path
 
         plantilla = Path(
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn("let opener = null;", plantilla)
-        self.assertIn("opener = button;", plantilla)
-        self.assertIn("modal.addEventListener('cancel'", plantilla)
-        self.assertIn("event.preventDefault();", plantilla)
-        self.assertIn("modal.addEventListener('close'", plantilla)
-        self.assertIn("if (trigger && trigger.isConnected) trigger.focus();", plantilla)
-        self.assertIn(".modal-close:focus-visible", plantilla)
+        self.assertNotIn("<dialog", plantilla)
+        self.assertNotIn("showModal", plantilla)
+        self.assertNotIn("location.href", plantilla)
+        self.assertNotIn("window.location", plantilla)
 
     # 2-nov-2026: sin la cola real de la semana (semana_rutina_service), que con
     # la base de pruebas genera su propia semana; aquí se prueba SesionProgramada.
@@ -501,8 +488,7 @@ class RutinaSilenciosaPreviewTests(TestCase):
         ).read_text()
 
         self.assertIn('data-day-preview', plantilla)
-        self.assertIn('role="dialog"', plantilla)
-        self.assertIn('id="routine-day-modal"', plantilla)
+        self.assertIn('id="routine-selected-day"', plantilla)
         self.assertNotIn('href="{{ calendario_url }}?año={{ dia.fecha.year }}', plantilla)
 
     def test_selector_hace_visible_el_dia_elegido_y_anuncia_la_preview(self):
@@ -513,12 +499,14 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('aria-selected="{% if dia.es_hoy %}true{% else %}false{% endif %}"', plantilla)
+        self.assertIn('aria-selected="{% if dia_seleccionado and dia.fecha == dia_seleccionado.fecha %}true{% else %}false{% endif %}"', plantilla)
         self.assertIn('class="selector-status" data-day-selection aria-live="polite"', plantilla)
         self.assertIn("function seleccionarDia(button, preview)", plantilla)
         self.assertIn("day.classList.toggle('is-selected', selected)", plantilla)
         self.assertIn("day.setAttribute('aria-selected', String(selected));", plantilla)
         self.assertIn("seleccionarDia(button, preview);", plantilla)
+        # El texto ya no promete abrir nada: solo dice qué día está seleccionado.
+        self.assertNotIn("Abriendo la vista previa", plantilla)
 
     def test_preview_explica_quien_fija_el_peso(self):
         """La preview no enseña peso: lo fija el briefing con la última sesión."""
@@ -563,5 +551,5 @@ class RutinaSilenciosaPreviewTests(TestCase):
             "entrenos/templates/entrenos/rutina_silenciosa_preview.html"
         ).read_text(encoding="utf-8")
 
-        self.assertIn('href="{{ calendario_url }}">Ver el calendario completo</a>', plantilla)
+        self.assertIn('href="{{ calendario_url }}"><span>Abrir calendario completo</span>', plantilla)
         self.assertNotIn('href="{{ calendario_url }}">Elegir otra rutina</a>', plantilla)

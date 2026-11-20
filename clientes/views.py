@@ -2494,7 +2494,56 @@ def trayectoria_plan(request):
         'propuesta_plan': _propuesta_zona_visible(cliente, timezone.localdate()),
         # 5-nov-2026: en vez de repetir fase y semana, lo que cambia esta semana.
         'cambios_semana': _cambios_semana(cliente),
+        # 20-nov-2026: lo que de verdad aplica el planificador (ajustes de volumen y pausa).
+        'ajustes_efectivos_plan': _ajustes_efectivos_plan(cliente, timezone.localdate()),
     })
+
+
+_NOMBRES_ZONA_PAUSA = {'triceps': 'tríceps', 'trapecios': 'trapecio'}
+
+
+def _ajustes_efectivos_plan(cliente, hoy):
+    """Los ajustes de series que el planificador aplica hoy, cada uno con su porqué y su fecha.
+
+    20-nov-2026: «Decisiones del plan» solo leía preferencias, intervenciones, hipótesis y la
+    propuesta en curso, y decía «No hay ajustes activos» aunque ``ajustes_volumen`` (lo que de
+    verdad aplica el planificador) tuviera isquios +2 y la subida de series de tríceps y trapecio
+    estuviera en pausa. Solo cita lo que sale de un dato registrado.
+    """
+    lineas = []
+    try:
+        from entrenos.services.volumen_grupo_service import ajustes_volumen, revisiones_pendientes
+        for grupo, item in sorted(ajustes_volumen(cliente, hoy).items()):
+            if not item.get('series'):
+                continue
+            lineas.append({
+                'tipo': 'series',
+                'titulo': f"{item['series']:+d} series por semana de {grupo}",
+                'detalle': '; '.join(item['motivos']).capitalize() + '.',
+            })
+        for r in revisiones_pendientes(cliente, hoy):
+            lineas.append({
+                'tipo': 'revision',
+                'titulo': f"Decidir si siguen las {abs(r['series'])} series por semana de {r['nombre_zona'].lower()}",
+                'detalle': f"El ajuste valía hasta el {r['limite']:%d/%m} y ya no se aplica. No se prolonga sin una decisión tuya.",
+            })
+    except Exception:
+        logger.exception('Plan: no se pudieron leer los ajustes de volumen')
+    try:
+        from entrenos.services.propuesta_zona_service import pausa_subir_volumen
+        pausa = pausa_subir_volumen(cliente, hoy)
+        if pausa:
+            zonas = [_NOMBRES_ZONA_PAUSA.get(z, z) for z in pausa['zonas']]
+            nombres = zonas[0] if len(zonas) == 1 else ', '.join(zonas[:-1]) + ' y ' + zonas[-1]
+            lineas.append({
+                'tipo': 'pausa',
+                'titulo': f"Sin subir series de {nombres}",
+                'detalle': (f"El aumento de series está en pausa hasta el {pausa['fin_previsto']:%d/%m} "
+                            f"({pausa['bloque']}). El peso y las repeticiones siguen su progresión."),
+            })
+    except Exception:
+        logger.exception('Plan: no se pudo leer la pausa de subir volumen')
+    return lineas
 
 
 def _cambios_semana(cliente):

@@ -21,7 +21,10 @@ class TrayectoriaPlanDecisionesTests(TestCase):
         return self.client.get(reverse('clientes:trayectoria_plan'))
 
     def test_muestra_un_resumen_vacio_honesto_y_enlaza_al_centro_canonico(self):
-        response = self._get()
+        # 20-nov-2026: Plan lee también la pausa de subir series; sin ella, y sin
+        # ajustes, el texto honesto sigue siendo «No hay ajustes activos».
+        with patch('entrenos.services.propuesta_zona_service.pausa_subir_volumen', return_value=None):
+            response = self._get()
 
         self.assertEqual(response.status_code, 200)
         resumen = response.context['resumen_decisiones_plan']

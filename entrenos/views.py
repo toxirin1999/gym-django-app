@@ -5985,13 +5985,33 @@ def _obtener_contexto_rutina_silenciosa(cliente, hoy=None, semana_inicio=None):
             'rpe': (str(parametros_fase['rpe_min']) if parametros_fase['rpe_min'] == parametros_fase['rpe_max']
                     else '{}–{}'.format(parametros_fase['rpe_min'], parametros_fase['rpe_max'])),
             'reps': parametros_fase['rep_range'],
+            'semana_texto': _semana_de_fase_texto(fase_actual, hoy),
         },
         'semana': semana,
         'semana_inicio': inicio_semana,
         'hoy': hoy_card,
         'rms': rms[:4],
         'insight': nota_semana,
+        # 20-nov-2026: «3 de 5 completadas» y «Semana 2 de 4» salen de los
+        # mismos datos de la semana y del bloque; no son reglas nuevas.
+        'resumen_semana': {
+            'hechas': sum(1 for d in semana if d.get('tipo') == 'hecha'),
+            'total': sum(1 for d in semana if d.get('tipo') in ('hecha', 'sesion')),
+        },
     }
+
+
+def _semana_de_fase_texto(fase, hoy):
+    """«Semana 2 de 4» del bloque en curso, o '' si no se puede afirmar."""
+    try:
+        inicio = fase.get('_preview_inicio')
+        duracion = int(fase.get('duracion') or 0)
+        if not inicio or duracion <= 0 or not (inicio <= hoy):
+            return ''
+        n = (hoy - inicio).days // 7 + 1
+        return f'Semana {n} de {duracion}' if n <= duracion else ''
+    except (AttributeError, TypeError, ValueError):
+        return ''
 
 
 def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
@@ -6155,9 +6175,16 @@ def rutina_silenciosa_preview(request, cliente_id):
         semana_inicio.day, meses_cortos[semana_inicio.month - 1],
         semana_fin.day, meses_cortos[semana_fin.month - 1],
     )
+    dias_semana = datos.get('semana') or []
+    # Día que se enseña abierto: hoy si está en la semana; si no, el primero.
+    dia_seleccionado = next((d for d in dias_semana if d.get('es_hoy')), None)
+    if dia_seleccionado is None and dias_semana:
+        dia_seleccionado = dias_semana[0]
     return render(request, 'entrenos/rutina_silenciosa_preview.html', {
         'cliente': cliente,
         'hoy_fecha': hoy,
+        'dia_seleccionado': dia_seleccionado,
+        'plan_url': reverse('clientes:trayectoria_plan'),
         'calendario_url': calendario_url,
         'semana_inicio': semana_inicio,
         'semana_rango': semana_rango,
