@@ -6060,7 +6060,7 @@ def _semana_rutina_real(cliente, hoy, inicio_semana, semana):
 
     def preview_sin_entreno(fecha):
         return {
-            'tipo': 'descanso', 'etiqueta': 'Sin entreno', 'titulo': 'Sin entreno',
+            'tipo': 'descanso', 'etiqueta': 'Sin entreno', 'titulo': 'Sin sesión registrada',
             'detalle': 'No hay ninguna sesión registrada este día.',
             'fecha_efectiva': fecha.isoformat(), 'ejercicios': [],
         }
@@ -9920,10 +9920,8 @@ def timeline_atleta(request, cliente_id):
     for a, carga in zip(actividades, cargas):
         a.ring_dash = round((carga / max_carga) * CIRC, 2)
 
-    bitacoras = list(
-        BitacoraDiaria.objects
-        .filter(cliente=cliente, fecha__range=(fecha_inicio, hoy))
-    )
+    from clientes.bitacora_dia import combinadas_por_dia
+    bitacoras = list(combinadas_por_dia(cliente, desde=fecha_inicio, hasta=hoy).values())  # 20-nov-2026
 
     actos_por_dia = defaultdict(list)
     for a in actividades:

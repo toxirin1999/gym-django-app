@@ -92,11 +92,13 @@ def salud_iphone(request):
     # caché es por proceso y se borra al recargar: decía "no ha llegado nada"
     # aunque los datos estuvieran guardados).
     hoy = timezone.localdate()
-    recibidos = (
-        BitacoraDiaria.objects.filter(cliente=cliente, fecha__gte=hoy - timedelta(days=6))
-        .filter(Q(hrv_ms__isnull=False) | Q(fc_reposo__isnull=False) | Q(horas_sueno__isnull=False))
-        .order_by('-fecha', '-pk')
-    )
+    from clientes.bitacora_dia import combinadas_por_dia
+    # 20-nov-2026: un dia = una lectura (con filas repartidas, los valores se combinan).
+    recibidos = [
+        d for _f, d in sorted(
+            combinadas_por_dia(cliente, desde=hoy - timedelta(days=6)).items(), reverse=True)
+        if d.hrv_ms is not None or d.fc_reposo is not None or d.horas_sueno is not None
+    ]
     from entrenos.services.estado_carga_service import parada_en
     return render(request, 'clientes/salud_iphone.html', {
         'parada': parada_en(cliente, hoy),

@@ -47,22 +47,37 @@ def _checkin_signal(cliente, as_of_date):
         return _missing_signal("clientes.BitacoraDiaria")
 
     age_days = (as_of_date - record.fecha).days
+    # 20-nov-2026: si el día tiene filas duplicadas, se lee el día entero (por campo,
+    # el último valor no vacío); la última fila sola ocultaba variabilidad y sueño.
+    from clientes.bitacora_dia import filas_del_dia, lectura_del_dia
+    filas = filas_del_dia(cliente, record.fecha)
+    provenance = {
+        "source": "clientes.BitacoraDiaria",
+        "record_id": record.pk,
+    }
+    if len(filas) > 1:
+        dia, fuentes = lectura_del_dia(filas)
+        provenance["merged_record_ids"] = [f.pk for f in filas]
+        provenance["field_sources"] = fuentes
+    else:
+        dia = {
+            "horas_sueno": record.horas_sueno, "energia_subjetiva": record.energia_subjetiva,
+            "calidad_sueno": record.calidad_sueno, "fc_reposo": record.fc_reposo,
+            "hrv_ms": record.hrv_ms, "dolor_articular": record.dolor_articular,
+        }
     return {
         "status": "available" if age_days <= CHECKIN_FRESH_DAYS else "stale",
         "observed_on": record.fecha.isoformat(),
         "age_days": age_days,
         "values": {
-            "sleep_hours": _number(record.horas_sueno),
-            "energy": record.energia_subjetiva,
-            "sleep_quality": record.calidad_sueno,
-            "resting_hr": record.fc_reposo,
-            "hrv_ms": record.hrv_ms,
-            "joint_pain": record.dolor_articular,
+            "sleep_hours": _number(dia["horas_sueno"]),
+            "energy": dia["energia_subjetiva"],
+            "sleep_quality": dia["calidad_sueno"],
+            "resting_hr": dia["fc_reposo"],
+            "hrv_ms": dia["hrv_ms"],
+            "joint_pain": dia["dolor_articular"],
         },
-        "provenance": {
-            "source": "clientes.BitacoraDiaria",
-            "record_id": record.pk,
-        },
+        "provenance": provenance,
     }
 
 

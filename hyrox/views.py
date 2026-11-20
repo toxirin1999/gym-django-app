@@ -9,10 +9,10 @@ def _checkin_hoy(cliente):
     """Returns today's BitacoraDiaria if morning check-in was done, else None."""
     try:
         from datetime import date
-        from clientes.models import BitacoraDiaria
-        return BitacoraDiaria.objects.filter(
-            cliente=cliente, fecha=date.today(), fc_reposo__isnull=False
-        ).first()
+        from clientes.bitacora_dia import combinada_del_dia
+        # 20-nov-2026: el día entero (con filas duplicadas, el pulso puede estar en otra fila).
+        dia = combinada_del_dia(cliente, date.today())
+        return dia if dia is not None and dia.fc_reposo is not None else None
     except Exception:
         return None
 from django.contrib.auth.decorators import login_required
@@ -426,23 +426,17 @@ def hyrox_dashboard(request):
             from clientes.models import BitacoraDiaria
             from datetime import timedelta as _td_bita
             from hyrox.services import calcular_delta_readiness_checkin as _calc_delta_bita
-            _bita = BitacoraDiaria.objects.filter(
-                cliente=objetivo_activo.cliente,
-                fecha__gte=hoy - _td_bita(days=1),
-            ).order_by('-fecha').first()
+            from clientes.bitacora_dia import combinadas_por_dia, serie_por_dia
+            _dias_bita = combinadas_por_dia(objetivo_activo.cliente, desde=hoy - _td_bita(days=1))
+            _bita = _dias_bita[max(_dias_bita)] if _dias_bita else None  # 20-nov-2026: el día entero
             if _bita:
                 _energia_checkin = _bita.energia_subjetiva
                 _hrv_hoy_b = _bita.hrv_ms
                 _hrv_base_b, _hrv_5_b = None, []
                 if _hrv_hoy_b:
-                    _hist_b = list(
-                        BitacoraDiaria.objects.filter(
-                            cliente=objetivo_activo.cliente,
-                            hrv_ms__isnull=False,
-                            fecha__gte=hoy - _td_bita(days=30),
-                            fecha__lt=hoy,
-                        ).order_by('-fecha').values_list('hrv_ms', flat=True)
-                    )
+                    _hist_b = [v for _f, v in serie_por_dia(
+                        objetivo_activo.cliente, 'hrv_ms',
+                        desde=hoy - _td_bita(days=30), antes_de=hoy)]  # un valor por día
                     if len(_hist_b) >= 5:
                         _hrv_base_b = sum(_hist_b) / len(_hist_b)
                         _hrv_5_b = list(_hist_b[:5])

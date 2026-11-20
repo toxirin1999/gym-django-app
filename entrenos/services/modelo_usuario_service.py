@@ -421,12 +421,8 @@ def _get_hrv_patron(cliente, hoy):
         from entrenos.models import EntrenoRealizado
         hace_60 = hoy - timedelta(days=60)
 
-        bitacoras = {
-            b.fecha: b.hrv_ms
-            for b in BitacoraDiaria.objects.filter(
-                cliente=cliente, fecha__gte=hace_60, hrv_ms__isnull=False
-            )
-        }
+        from clientes.bitacora_dia import serie_por_dia
+        bitacoras = dict(serie_por_dia(cliente, 'hrv_ms', desde=hace_60))  # un valor por dia
 
         if len(bitacoras) < 7:
             return None

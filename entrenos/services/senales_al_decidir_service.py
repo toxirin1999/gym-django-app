@@ -61,12 +61,20 @@ def calcular_senales(decision, ahora=None):
 
     try:
         from clientes.models import BitacoraDiaria
-        b = (BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).order_by('-id').first())
-        if b is not None:
+        # 20-nov-2026: con filas duplicadas el día se lee entero (último valor no vacío por campo).
+        from clientes.bitacora_dia import filas_del_dia, importado_en, lectura_del_dia
+        filas = filas_del_dia(cliente, hoy)
+        if filas:
+            dia, fuentes = lectura_del_dia(filas, ('hrv_ms', 'horas_sueno'))
             out['salud_hoy'] = {
-                'hrv_ms': b.hrv_ms,
-                'horas_sueno': float(b.horas_sueno) if b.horas_sueno is not None else None,
-                'disponible_desde': _iso(b.salud_importado_en),
+                'hrv_ms': dia['hrv_ms'],
+                'horas_sueno': float(dia['horas_sueno']) if dia['horas_sueno'] is not None else None,
+                # Última importación entre las filas del día; NO es la hora en que llegó cada valor
+                # (salud_importado_en se sobrescribe en cada importación). `disponible_desde` se
+                # conserva por compatibilidad con los registros ya guardados.
+                'disponible_desde': _iso(importado_en(filas)),
+                'ultima_importacion_de_la_fila': _iso(importado_en(filas)),
+                **({'fuentes': fuentes, 'filas_del_dia': [f.pk for f in filas]} if len(filas) > 1 else {}),
             }
         else:
             out['salud_hoy'] = None
@@ -234,11 +242,12 @@ def lineas_para_mostrar(decision):
         lineas.append(f"Veredicto del día al decidir: {v['valor']} (carga {v.get('ratio_carga')}).")
     h = s.get('salud_hoy')
     if h:
-        llegada = h.get('disponible_desde')
+        llegada = h.get('ultima_importacion_de_la_fila') or h.get('disponible_desde')
         lineas.append('Reloj de hoy: variabilidad %s ms, sueño %s h%s.' % (
             h.get('hrv_ms') if h.get('hrv_ms') is not None else '—',
             h.get('horas_sueno') if h.get('horas_sueno') is not None else '—',
-            f', llegó {llegada[:16].replace("T", " ")}' if llegada else ', sin hora de llegada'))
+            f', última importación de esa fila {llegada[:16].replace("T", " ")}'
+            if llegada else ', sin hora de importación'))
     elif 'salud_hoy' in s:
         lineas.append('Reloj de hoy: sin datos cuando decidió.')
     o = s.get('sesion_origen')

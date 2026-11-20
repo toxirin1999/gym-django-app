@@ -509,10 +509,8 @@ def _obtener_contexto_fisico(cliente, fecha_hoy, physical_snapshot=None):
                     ctx['energia_valor'] = int(values['energy'])
                     ctx['energia_baja'] = ctx['energia_valor'] <= 3
         else:
-            from clientes.models import BitacoraDiaria
-            bitacora = BitacoraDiaria.objects.filter(
-                cliente=cliente, fecha=fecha_hoy
-            ).first()
+            from clientes.bitacora_dia import combinada_del_dia
+            bitacora = combinada_del_dia(cliente, fecha_hoy)  # 20-nov-2026: el día entero
             if bitacora:
                 ctx.update({
                     'evidencia_fecha': bitacora.fecha,

@@ -224,12 +224,10 @@ class DailyDecisionEngine:
                 from django.utils import timezone
                 from django.db.models import Avg
                 hoy = timezone.now().date()
-                hrv_mean = BitacoraDiaria.objects.filter(
-                    cliente=cliente,
-                    hrv_ms__isnull=False,
-                    fecha__gte=hoy - timezone.timedelta(days=14),
-                    fecha__lt=hoy,
-                ).aggregate(avg=Avg('hrv_ms'))['avg']
+                from clientes.bitacora_dia import serie_por_dia
+                _hrvs = [v for _f, v in serie_por_dia(
+                    cliente, 'hrv_ms', desde=hoy - timezone.timedelta(days=14), antes_de=hoy)]
+                hrv_mean = (sum(_hrvs) / len(_hrvs)) if _hrvs else None  # un valor por día
                 if hrv_mean and bio['hrv_ms'] < hrv_mean * 0.85:
                     hrv_hundido = True
             except Exception:
@@ -450,13 +448,11 @@ def detectar_patron_resistencia(cliente) -> bool:
 
     # 2. Contar ocurrencias de energía baja en 14 días
     hoy = timezone.now().date()
-    ocurrencias = list(
-        BitacoraDiaria.objects.filter(
-            cliente=cliente,
-            fecha__gte=hoy - timedelta(days=14),
-            energia_subjetiva__lte=4,
-        ).order_by('fecha')
-    )
+    from clientes.bitacora_dia import combinadas_por_dia
+    ocurrencias = [  # días (no filas) con energía baja
+        d for _f, d in sorted(combinadas_por_dia(cliente, desde=hoy - timedelta(days=14)).items())
+        if d.energia_subjetiva is not None and d.energia_subjetiva <= 4
+    ]
     if len(ocurrencias) < 3:
         return False
 

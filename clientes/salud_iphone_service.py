@@ -426,15 +426,10 @@ def guardar_checkin_iphone(cliente, payload, hoy=None):
             guardado[dia.isoformat()] = {'peso_kg': peso}
             continue
         with transaction.atomic():
-            fila = (
-                BitacoraDiaria.objects.select_for_update()
-                .filter(cliente=cliente, fecha=dia).order_by('pk').first()
-            )
-            if fila is None:
-                fila = BitacoraDiaria.objects.create(cliente=cliente, **valores)
-                if fila.fecha != dia:  # ``fecha`` es auto_now_add: se corrige al día real
-                    BitacoraDiaria.objects.filter(pk=fila.pk).update(fecha=dia)
-            else:
+            # 20-nov-2026: puerta única (bloqueo por cliente); ver clientes/bitacora_dia.py.
+            from clientes.bitacora_dia import fila_del_dia_para_escribir
+            fila, creada = fila_del_dia_para_escribir(cliente, dia, valores)
+            if not creada:
                 for campo, valor in valores.items():
                     setattr(fila, campo, valor)
                 fila.save(update_fields=list(valores))

@@ -94,11 +94,10 @@ def senales_fatiga(cliente, fecha):
         pass
 
     try:
-        from clientes.models import BitacoraDiaria
-        valores = [
-            v for v in BitacoraDiaria.objects.filter(
-                cliente=cliente, fecha__gt=fecha - timedelta(days=7), fecha__lte=fecha,
-            ).values_list('energia_subjetiva', flat=True) if v is not None
+        from clientes.bitacora_dia import serie_por_dia
+        valores = [  # un valor por día (20-nov-2026: un duplicado no pesa doble)
+            v for _f, v in serie_por_dia(
+                cliente, 'energia_subjetiva', desde=fecha - timedelta(days=6), hasta=fecha)
         ]
         if len(valores) >= 3:
             media = sum(valores) / len(valores)

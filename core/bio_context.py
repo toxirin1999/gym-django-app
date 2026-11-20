@@ -131,12 +131,8 @@ class BioContextProvider:
         from django.utils import timezone
 
         hoy = timezone.now().date()
-        entrada = (
-            BitacoraDiaria.objects
-            .filter(cliente=cliente, fecha=hoy)
-            .order_by('-fecha')
-            .first()
-        )
+        from clientes.bitacora_dia import combinada_del_dia
+        entrada = combinada_del_dia(cliente, hoy)  # 20-nov-2026: el día entero, no la primera fila
         if not entrada:
             return {
                 'energia': None, 'horas_sueno': None, 'calidad_sueno': None,

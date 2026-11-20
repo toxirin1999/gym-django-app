@@ -146,8 +146,8 @@ def mapa_energia(request):
     inicio = hoy - timedelta(days=27)  # últimas 4 semanas
     dias = []
 
-    bitacoras = BitacoraDiaria.objects.filter(cliente=cliente, fecha__range=(inicio, hoy))
-    bit_dict = {b.fecha: b for b in bitacoras}
+    from clientes.bitacora_dia import combinadas_por_dia
+    bit_dict = combinadas_por_dia(cliente, desde=inicio, hasta=hoy)  # 20-nov-2026: un valor por dia
 
     for i in range(28):
         fecha = inicio + timedelta(days=i)
@@ -180,8 +180,8 @@ from clientes.models import BitacoraDiaria
 def obtener_energia_semanal(cliente):
     hoy = date.today()
     inicio = hoy - timedelta(days=27)
-    bitacoras = BitacoraDiaria.objects.filter(cliente=cliente, fecha__range=(inicio, hoy))
-    bit_dict = {b.fecha: b for b in bitacoras}
+    from clientes.bitacora_dia import combinadas_por_dia
+    bit_dict = combinadas_por_dia(cliente, desde=inicio, hasta=hoy)  # 20-nov-2026: un valor por dia
     dias = []
 
     for i in range(28):
@@ -437,7 +437,7 @@ def resumen_bitacora(cliente):
 def registrar_bitacora(request):
     cliente = get_object_or_404(Cliente, user=request.user)
     hoy = date.today()
-    bitacora_existente = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).first()
+    bitacora_existente = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).order_by('pk').first()
 
     # ── Actividades físicas del día desde el hub ────────────────────────────
     from entrenos.models import ActividadRealizada
@@ -447,12 +447,20 @@ def registrar_bitacora(request):
     )
 
     if request.method == 'POST':
-        form = BitacoraDiariaForm(request.POST, instance=bitacora_existente)
-        if form.is_valid():
-            bitacora = form.save(commit=False)
-            bitacora.cliente = cliente
-            bitacora.fecha = hoy
-            bitacora.save()
+        # 20-nov-2026: se escribe sobre la fila mas antigua del dia, con el bloqueo por cliente.
+        from clientes.bitacora_dia import fila_del_dia_para_escribir
+        with transaction.atomic():
+            bitacora_existente, _creada = fila_del_dia_para_escribir(cliente, hoy)
+            form = BitacoraDiariaForm(request.POST, instance=bitacora_existente)
+            valido = form.is_valid()
+            if not valido and _creada:
+                transaction.set_rollback(True)  # un envio invalido no deja una fila vacia
+            if valido:
+                bitacora = form.save(commit=False)
+                bitacora.cliente = cliente
+                bitacora.fecha = hoy
+                bitacora.save()
+        if valido:
             # Phase 59E.1: la bitácora es registro puro. Cualquier voz JOI debe
             # nacer del sistema JOI canónico (MensajeJOI), no de frases
             # hardcodeadas por condiciones en esta vista.
@@ -545,18 +553,13 @@ def checkin_matutino(request):
             values[field] = value
 
     with transaction.atomic():
-        registros = list(
-            BitacoraDiaria.objects.select_for_update()
-            .filter(cliente=cliente, fecha=hoy)
-            .order_by('pk')
-        )
-        if registros:
-            bitacora = registros[0]
+        # 20-nov-2026: puerta unica con bloqueo por cliente (clientes/bitacora_dia.py).
+        from clientes.bitacora_dia import fila_del_dia_para_escribir
+        bitacora, creada = fila_del_dia_para_escribir(cliente, hoy, values)
+        if not creada:
             for field, value in values.items():
                 setattr(bitacora, field, value)
             bitacora.save(update_fields=list(values))
-        else:
-            bitacora = BitacoraDiaria.objects.create(cliente=cliente, **values)
 
     # Detector de patrón de resistencia (solo cuando energía es baja)
     if energia is not None and energia <= 4:
@@ -1619,7 +1622,8 @@ def _panel_cliente_full(request):
     # ── Check-in matutino ─────────────────────────────────────────────
     from datetime import date as _today
     _hoy2 = _today.today()
-    bitacora_hoy = BitacoraDiaria.objects.filter(cliente=cliente, fecha=_hoy2).first()
+    from clientes.bitacora_dia import combinada_del_dia
+    bitacora_hoy = combinada_del_dia(cliente, _hoy2)  # 20-nov-2026: el día entero
     context['checkin_hoy'] = bitacora_hoy  # None if not done yet
 
     return render(request, 'clientes/panel_cliente.html', context)
@@ -1634,12 +1638,10 @@ def mockup_demo(request):
     from nutricion_app_django.models import TargetNutricionalDiario
     _hoy = timezone.localdate()
 
-    checkin_hoy = BitacoraDiaria.objects.filter(
-        cliente=cliente,
-        fecha=_hoy,
-        horas_sueno__isnull=False,
-        energia_subjetiva__isnull=False,
-    ).first()
+    from clientes.bitacora_dia import combinada_del_dia
+    checkin_hoy = combinada_del_dia(cliente, _hoy)  # 20-nov-2026: el día entero
+    if checkin_hoy is not None and (checkin_hoy.horas_sueno is None or checkin_hoy.energia_subjetiva is None):
+        checkin_hoy = None
     context['checkin_hoy'] = checkin_hoy
     context['checkin_pendiente'] = checkin_hoy is None
 
@@ -2247,7 +2249,8 @@ def dashboard_silencioso_preview(request):
     cliente = get_object_or_404(Cliente, user=request.user)
     context = _get_dashboard_context_data(request, cliente, con_estadisticas_plan=False)
     hoy = timezone.localdate()
-    checkin = BitacoraDiaria.objects.filter(cliente=cliente, fecha=hoy).first()
+    from clientes.bitacora_dia import combinada_del_dia
+    checkin = combinada_del_dia(cliente, hoy)  # 20-nov-2026: el día entero
     decision_gym = context.get('_decision_gym_raw') or {}
 
     try:
@@ -5103,14 +5106,16 @@ def portal_sesion_unificado(request, cliente_id):
     if request.method == 'POST':
         form = CheckinDiarioForm(request.POST)
         if form.is_valid():
-            bitacora_hoy, created = BitacoraDiaria.objects.get_or_create(
-                cliente=cliente, fecha=hoy,
-                defaults=form.cleaned_data
-            )
+            # 20-nov-2026: antes get_or_create (sin bloqueo, y con filas duplicadas lanzaba
+            # MultipleObjectsReturned) y un campo en blanco borraba el dato previo.
+            from clientes.bitacora_dia import fila_del_dia_para_escribir
+            datos = {k: v for k, v in form.cleaned_data.items() if v is not None}
+            bitacora_hoy, created = fila_del_dia_para_escribir(cliente, hoy, datos)
             if not created:
-                for field, value in form.cleaned_data.items():
+                for field, value in datos.items():
                     setattr(bitacora_hoy, field, value)
-                bitacora_hoy.save()
+                if datos:
+                    bitacora_hoy.save(update_fields=list(datos))
             messages.success(request, "Check-in registrado. ¡Tu sesión ha sido ajustada!")
             return redirect('clientes:portal_sesion', cliente_id=cliente.id)
 
