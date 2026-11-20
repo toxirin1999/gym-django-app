@@ -187,3 +187,31 @@ class DiferenciasPorEjercicio(Base):
         self.assertEqual(len(textos), 2)
         self.assertTrue(any(t.startswith('Sissy Squat: versión reducida') for t in textos))
         self.assertTrue(any(t.startswith('Hack Squat: versión reducida') for t in textos))
+
+
+class MusculoHechoFueraDelPlan(Base):
+    """20-nov-2026: el trabajo real cuenta aunque el plan actual no lo pida (sustitucion o sesion distinta)."""
+
+    def test_hombros_hechos_aparecen_aunque_el_plan_actual_no_los_pida(self):
+        # El plan vigente solo pide cuadriceps; el dia 3 se hizo con Press Arnold (hombros) y Sissy.
+        self.entreno(SNAP, [(self.sissy, 3), (self.arnold, 2)])
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3)])
+        claves = {f['clave']: f for f in r['filas']}
+        self.assertIn('hombros', claves)
+        h = claves['hombros']
+        self.assertEqual(h['hechas'], 2)
+        self.assertEqual(h['detalle']['hechas'], 2)
+        self.assertEqual(h['plan'], 0)
+        self.assertEqual(h['pendientes'], 0)
+        self.assertEqual(claves['cuádriceps']['hechas'], 3)
+
+    def test_un_grupo_sin_plan_ni_series_no_se_inventa(self):
+        self.entreno(SNAP, [(self.sissy, 3)])
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3)])
+        self.assertNotIn('glúteos', [f['clave'] for f in r['filas']])
+        self.assertNotIn('gluteos', [f['clave'] for f in r['filas']])
+
+    def test_la_frase_no_dice_que_el_plan_pide_cero(self):
+        self.entreno(SNAP, [(self.sissy, 3), (self.arnold, 2)])
+        r = self.marcador([('Sissy Squat', 'Cuádriceps', 3)])
+        self.assertNotIn('pide 0', r['frase'] or '')

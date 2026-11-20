@@ -553,7 +553,10 @@ def marcador_semanal(cliente, hoy):
     seguidas = _sesiones_seguidas(cliente, lunes, hoy, sesiones)
 
     filas = []
-    for grupo, en_plan in sorted(plan.items(), key=lambda kv: (-kv[1], kv[0])):
+    # 20-nov-2026: tambien cuentan los grupos con series hechas que el plan actual no pide
+    # (una sustitucion o una sesion distinta): el trabajo real no se pierde. Sin plan ni series, no hay fila.
+    grupos_con_trabajo = {g: plan.get(g, 0) for g in set(plan) | {g for g, n in hechas.items() if n}}
+    for grupo, en_plan in sorted(grupos_con_trabajo.items(), key=lambda kv: (-kv[1], kv[0])):
         h = hechas.get(grupo, 0)
         aportan = [{'dia': _dia(s['nombre']), 'series': s['series'].get(grupo, 0)}
                    for s in pendientes if s['series'].get(grupo, 0) > 0]
@@ -626,7 +629,7 @@ def _frase(filas):
             + (f"las sesiones pendientes ({' y '.join(f['cubren'])}) aportan {_num(f['pendientes'])}"
                if f['cubren'] else 'ninguna sesión pendiente lo trabaja')
             + f" y quedarías en {_num(f['proyectadas'])}.")
-    supera = sorted((f for f in filas if f['estado'] == 'supera'),
+    supera = sorted((f for f in filas if f['estado'] == 'supera' and f['plan'] > 0),
                     key=lambda x: x['proyectadas'] - x['plan'], reverse=True)
     for f in supera[:2]:
         partes.append(
