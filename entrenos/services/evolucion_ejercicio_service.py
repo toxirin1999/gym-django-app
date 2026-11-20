@@ -483,9 +483,7 @@ def _conclusion(historial, desde, hoy, valor, pendiente, etiqueta):
                           f'y {_val_txt(la[1]["valor"], unidad)}{_rpe_txt(la[1]["rpe"])} el {fecha_corta(ls["fecha"])}')
         base['detalle'] = f'{rango}.'
         par = (f, la)
-        if ctx(f, la):
-            base['avisos'].append(f'Cambió el bloque ({FAMILIAS[fs["familia"]].lower()} → {FAMILIAS[ls["familia"]].lower()}): '
-                                  'es contexto; no se lee como mejora ni como pérdida por sí solo.')
+        base['cambio_bloque'] = ctx(f, la)
     else:
         base['titulo'] = f'{etiqueta}: de {num(f[1]["valor"], 0 if unidad != "m" else 2)} a {_val_txt(pk[1]["valor"], unidad)}'
         base['detalle'] = (f'{fecha_corta(fs["fecha"])}: {_val_txt(f[1]["valor"], unidad)}{_rpe_txt(f[1]["rpe"])} → '
@@ -494,9 +492,7 @@ def _conclusion(historial, desde, hoy, valor, pendiente, etiqueta):
             base['detalle'] += (f' Última: {_val_txt(la[1]["valor"], unidad)}{_rpe_txt(la[1]["rpe"])} el {fecha_corta(ls["fecha"])}'
                                 + (f', en otro bloque ({FAMILIAS[ls["familia"]].lower()}).' if ctx(pk, la) else '.'))
         par = (f, pk)
-        if ctx(f, pk):
-            base['avisos'].append(f'Cambió el bloque ({FAMILIAS[fs["familia"]].lower()} → {FAMILIAS[ps["familia"]].lower()}): '
-                                  'la mejora se ve; su causa no es concluyente.')
+        base['cambio_bloque'] = ctx(f, pk)
     comparadas = {id(t[0]): t[0] for t in (f, pk, la)}
     base['comparadas'] = list(comparadas.values())
 
@@ -513,6 +509,12 @@ def _conclusion(historial, desde, hoy, valor, pendiente, etiqueta):
         base['extra'] = f'Información adicional: {pct} de distancia.' if pct and par[0] is not par[1] else None
         cumple = True
     pendiente_comp = any(s['pendiente'] for s in comparadas.values())
+    if not pendiente_comp and par[0] is not par[1]:
+        va, vb = par[0][1]['valor'], par[1][1]['valor']
+        dec = 0 if unidad != 'm' else 2
+        verbo = 'aumentado' if vb > va else 'bajado' if vb < va else None
+        if verbo:
+            base['resumen'] = f'Has {verbo} de {num(va, dec)} a {_val_txt(vb, unidad)} con la misma carga.'
     base['filtros'] = {'cumple_filtros': bool(cumple), 'carga_confirmada': not pendiente_comp,
                        'valida': bool(cumple) and not pendiente_comp}
     if pendiente_comp:
