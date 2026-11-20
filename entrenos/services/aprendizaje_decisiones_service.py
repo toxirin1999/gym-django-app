@@ -62,6 +62,17 @@ def describir_accion(log):
     if log.accion == 'subir_reps':
         reps = log.reps_sugeridas
         unidad = _unidad_ejercicio(log)
+        if unidad == 'm':
+            # 21-nov-2026 (N1): ``reps_sugeridas`` es 0 + el incremento (5), no un objetivo en
+            # metros. El objetivo es la mejor serie de la sesión de origen + el incremento.
+            try:
+                from entrenos.services.decision_log_service import incremento_metros, objetivo_metros
+                objetivo = objetivo_metros(log)
+                if objetivo is not None:
+                    return f'subí el objetivo a {int(objetivo)} m'
+                return f'subí la distancia {incremento_metros(log)} m'
+            except Exception:  # noqa: BLE001
+                return 'subí la distancia'
         if unidad != 'reps':
             return f'subí el objetivo a {reps} {unidad}' if reps else 'subí el objetivo'
         return f'subí el objetivo a {reps} reps' if reps else 'subí las repeticiones'
@@ -137,8 +148,17 @@ def _sesion_evaluadora(log):
         series = series_de_trabajo(ej.entreno, ej.nombre_ejercicio)
     except Exception:  # noqa: BLE001
         series = []
+    metros = [s for s in series if s.get('metros')]
+    datos_metros = None
+    if metros:  # ejercicios por distancia (Farmer): reps = 0, el dato es metros a la carga mayor
+        peso_m = max(s['peso'] for s in metros)
+        a_esa = [s for s in metros if s['peso'] == peso_m]
+        rpes = [s['rpe'] for s in a_esa if s.get('rpe') is not None]
+        datos_metros = {'peso': peso_m, 'minimo': min(s['metros'] for s in a_esa),
+                        'maximo': max(s['metros'] for s in a_esa), 'series': len(a_esa),
+                        'rpe': max(rpes) if rpes else None}
     return {
-        'peso': peso, 'reps': reps, 'rpe': ej.rpe, 'series': series,
+        'peso': peso, 'reps': reps, 'rpe': ej.rpe, 'series': series, 'metros': datos_metros,
         'fecha': ej.entreno.fecha_ejecucion or ej.entreno.fecha, 'entreno_id': ej.entreno_id,
     }
 
@@ -289,7 +309,18 @@ def frase_decision(log, etiqueta='Después', despues=_SIN_DESPUES):
     partes = [f'{_capitalizar(log.ejercicio)}: {accion}.']
     if log.resultado is None or (log.notas_resultado or '').startswith(_SIN_SESION):
         despues = None  # sin evaluar, o cerrada sin usar los datos de ninguna sesión
-    if despues and despues['peso'] is not None and despues['reps']:
+    if despues and despues.get('metros') and _unidad_ejercicio(log) == 'm':
+        # 21-nov-2026 (N1): en metros se cita la carga y los metros de las series, no reps (que son 0).
+        if etiqueta != 'Hoy' and despues.get('fecha'):
+            etiqueta = f"{etiqueta} ({despues['fecha'].strftime('%d/%m')})"
+        dm = despues['metros']
+        m = lambda v: f'{v:g}'.replace('.', ',')
+        tramo = m(dm['maximo']) if dm['minimo'] == dm['maximo'] else f"{m(dm['minimo'])}-{m(dm['maximo'])}"
+        dato = f"{etiqueta}: {_kg(dm['peso'])} kg × {tramo} m en {dm['series']} series"
+        if dm['rpe'] is not None:
+            dato += f" con RPE {_rpe(dm['rpe'])}"
+        partes.append(dato + '.')
+    elif despues and despues['peso'] is not None and despues['reps']:
         if etiqueta != 'Hoy' and despues.get('fecha'):
             etiqueta = f"{etiqueta} ({despues['fecha'].strftime('%d/%m')})"
         c_peso, c_reps, c_rpe = _dato_citado(log, despues)

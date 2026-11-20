@@ -348,6 +348,20 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
             else:
                 # 23-oct-2026: el rango del ejercicio se sigue enseñando tal cual
                 # (sissy 15-20, no "9-20"); el objetivo de hoy va aparte.
+                # 21-nov-2026 (N1): con el contrato carga-distancia el log guarda los metros en
+                # ``distancia_metros`` y ``reps_anteriores`` = 0, así que ``reps_sugeridas`` es solo el
+                # salto (+5). El objetivo del día es la mejor serie de origen + el salto (el mismo
+                # número que el briefing: «apunta a 72 m»). Antes se guardaba 5 como objetivo.
+                partida_m = None
+                if (ej.get('tipo_progresion') or '') == 'progresion_distancia' and not log.reps_anteriores:
+                    try:
+                        from entrenos.services.decision_log_service import distancia_de_partida, objetivo_metros
+                        objetivo_m = objetivo_metros(log)
+                        if objetivo_m is not None:
+                            reps_sugeridas = int(objetivo_m)
+                            partida_m = int(distancia_de_partida(log))
+                    except Exception:  # noqa: BLE001
+                        partida_m = None
                 ej.setdefault('repeticiones_plan', ej.get('repeticiones'))
                 ej['repeticiones'] = _bump_rango_reps(ej.get('repeticiones', reps_sugeridas), reps_sugeridas)
                 ej['reps_objetivo'] = reps_sugeridas
@@ -358,7 +372,9 @@ def _aplicar_progresion_ejecutiva(cliente, ejercicios_mod, hoy, cambios, es_desc
                 # (el objetivo en metros ya lo da el tope).
                 _tipo = ej.get('tipo_progresion') or ''
                 _unidad = 'm' if _tipo == 'progresion_distancia' else ('s' if _tipo == 'progresion_tiempo' else 'reps')
-                if (_unidad == 'm' and log.reps_anteriores and reps_sugeridas
+                if _unidad == 'm' and partida_m is not None:
+                    ej['progresion_motivo'] = f'Hoy a por {reps_sugeridas} m (la última vez {partida_m}).'
+                elif (_unidad == 'm' and log.reps_anteriores and reps_sugeridas
                         and reps_sugeridas < log.reps_anteriores):
                     # 8-nov-2026: con el tope de peso, el log guarda el salto de
                     # metros (+5), no el objetivo: decía «Hoy a por 5 m».

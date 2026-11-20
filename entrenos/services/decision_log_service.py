@@ -1166,6 +1166,143 @@ def _contexto_de_ese_dia(log, nueva_sesion):
         return None
 
 
+def _series_con_metros(entreno, ejercicio_normalizado):
+    """Series de trabajo con distancia de ese ejercicio: [(peso_kg, metros)]."""
+    from entrenos.models import SerieRealizada
+
+    out = []
+    for serie in SerieRealizada.objects.filter(
+        entreno=entreno, completado=True, es_aproximacion=False,
+        distancia_metros__isnull=False,
+    ).select_related('ejercicio'):
+        if normalizar_ejercicio(serie.ejercicio.nombre) != ejercicio_normalizado:
+            continue
+        out.append((Decimal(str(serie.peso_kg or 0)), Decimal(str(serie.distancia_metros))))
+    return out
+
+
+def distancia_de_partida(log, entreno_evaluador=None):
+    """Metros de los que partió la decisión: la mejor serie de la sesión de origen.
+
+    Es la misma referencia que usa el briefing para el objetivo de la próxima vez
+    (mejor serie de la última sesión con tope). Sin sesión de origen verificable se
+    usa la sesión anterior a la que evalúa; sin ninguna, None (no se inventa).
+    """
+    nombre = normalizar_ejercicio(log.ejercicio)
+    if getattr(log, 'entreno_origen_id', None):
+        series = _series_con_metros(log.entreno_origen, nombre)
+        if series:
+            return max(m for _p, m in series)
+    if getattr(log, 'reps_anteriores', None):
+        # Logs anteriores al contrato carga-distancia: los metros iban en ``repeticiones``.
+        return Decimal(str(log.reps_anteriores))
+    if entreno_evaluador is not None:
+        return _distancia_sesion_anterior(entreno_evaluador, nombre)
+    return None
+
+
+def incremento_metros(log):
+    from entrenos.services.progreso_service import SALTO_METROS_TOPE
+    try:
+        return int(log.valor_cambio) if log.valor_cambio else SALTO_METROS_TOPE
+    except (TypeError, ValueError):
+        return SALTO_METROS_TOPE
+
+
+def objetivo_metros(log, entreno_evaluador=None):
+    """Objetivo en metros de una decisión por distancia: partida + incremento, o None."""
+    partida = distancia_de_partida(log, entreno_evaluador)
+    if partida is None:
+        return None
+    return partida + incremento_metros(log)
+
+
+def prescripcion_distancia(entreno, ejercicio_normalizado, partida=None, incremento=None):
+    """(objetivo_m, series_previstas, fuente) que gobernaron esa sesion.
+
+    21-nov-2026: se lee de la version inmutable de la sesion evaluada (``reps_objetivo`` y
+    ``series``). El objetivo solo vale si es una cifra de metros: con el contrato antiguo
+    ``reps_objetivo`` podia ser el incremento (5) y eso no es un objetivo. Sin cifra valida,
+    el objetivo se calcula (partida + incremento) y la fuente lo dice.
+    """
+    from entrenos.services.progreso_service import SALTO_METROS_TOPE
+
+    objetivo, fuente = None, 'calculado'
+    leido = _objetivo_repeticiones_snapshot(entreno, ejercicio_normalizado)
+    if leido is not None and leido > SALTO_METROS_TOPE and (partida is None or leido >= partida):
+        objetivo, fuente = leido, 'prescrito'
+    if objetivo is None and partida is not None and incremento is not None:
+        objetivo = partida + incremento
+    previstas = None
+    version = getattr(entreno, 'gym_decision_version', None)
+    for ej in ((getattr(version, 'snapshot', None) or {}).get('entrenamiento') or {}).get('ejercicios') or []:
+        if normalizar_ejercicio(ej.get('nombre')) == ejercicio_normalizado:
+            try:
+                previstas = int(ej.get('series')) or None
+            except (TypeError, ValueError):
+                previstas = None
+            break
+    return objetivo, previstas, fuente
+
+
+def _m(valor):
+    texto = f'{Decimal(str(valor)):f}'
+    return texto.rstrip('0').rstrip('.') if '.' in texto else texto
+
+
+def evaluar_tope_distancia(log, nueva_sesion):
+    """(resultado, notas) de una decisión de subir metros con el peso fijo (Farmer).
+
+    21-nov-2026 (N1): antes se comparaban repeticiones (0 en ejercicios por metros)
+    con el incremento (+5), así que 72 m con objetivo 72 salían «mismo rendimiento».
+    Ahora: misma carga por mano; metros de TODAS las series a esa carga frente al
+    objetivo (mejor serie de partida + incremento).
+    """
+    from entrenos.services.ultima_sesion_service import kg as _kg
+
+    nombre = normalizar_ejercicio(nueva_sesion.nombre_ejercicio)
+    rpe_nuevo, fallo = nueva_sesion.rpe, nueva_sesion.fallo_muscular
+    series = _series_con_metros(nueva_sesion.entreno, nombre)
+    if not series:
+        return 'neutra', 'No constan metros en esa sesión; no se puede comprobar el objetivo'
+    if fallo or (rpe_nuevo is not None and rpe_nuevo >= 10):
+        return 'fallida', 'El intento en el tope produjo fallo o RPE extremo'
+    peso_ref = max(p for p, _m_ in series)
+    peso_prev = Decimal(str(log.peso_anterior or 0))
+    if peso_prev and abs(peso_ref - peso_prev) > Decimal('0.5'):
+        return 'neutra', (f'La carga cambió ({_kg(float(peso_prev))} → {_kg(float(peso_ref))} kg por mano); '
+                          'los metros no son comparables')
+    a_esa_carga = [m for p, m in series if p == peso_ref]
+    minimo, maximo, n = min(a_esa_carga), max(a_esa_carga), len(a_esa_carga)
+    partida = distancia_de_partida(log, nueva_sesion.entreno)
+    if partida is None:
+        return 'neutra', 'No consta la distancia de partida; no se puede comprobar el objetivo'
+    # Objetivo y numero de series: los de la sesion evaluada (version inmutable); sin ellos, los calculados.
+    objetivo, previstas, _fuente = prescripcion_distancia(
+        nueva_sesion.entreno, nombre, partida, incremento_metros(log))
+    carga = f'{_kg(float(peso_ref))} kg por mano'
+    # La regla de progreso NO cambia (todas las series hechas a esa carga >= objetivo; las opcionales,
+    # incompletas o adicionales cuentan si estan completadas); solo se dice cuantas se hicieron.
+    n_txt = f'{n} series' if not previstas or previstas == n else f'{n} de las {previstas} series previstas'
+    if minimo >= objetivo:
+        return 'validada', (f'Objetivo de {_m(objetivo)} m alcanzado en {n_txt} con {carga} '
+                            f'(antes {_m(partida)} m)')
+    if maximo >= objetivo:
+        return 'neutra', (f'Llegó a {_m(maximo)} m en alguna serie, pero no en todas (mínimo {_m(minimo)} m): '
+                          f'objetivo {_m(objetivo)} m con {carga}')
+    if maximo > partida:
+        return 'neutra', (f'Mejoró de {_m(partida)} a {_m(maximo)} m con {carga}, '
+                          f'sin llegar al objetivo de {_m(objetivo)} m')
+    if maximo < partida:
+        contexto = _contexto_de_ese_dia(log, nueva_sesion)
+        if contexto:
+            return 'neutra', (f'Resultado inconcluso: {_m(maximo)} m frente a los {_m(partida)} m de la vez anterior '
+                              f'con {carga} y ese día {contexto}')
+        return 'fallida', f'Rendimiento inferior con {carga}: {_m(maximo)} m frente a {_m(partida)} m'
+    return 'neutra', f'Mismo rendimiento ({_m(maximo)} m con {carga}); objetivo de {_m(objetivo)} m no alcanzado'
+
+
+
 def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
     """Actualiza resultado y notas del log según la nueva sesión."""
     rpe_nuevo = nueva_sesion.rpe
@@ -1300,6 +1437,12 @@ def _evaluar_log(log, nueva_sesion, tipo_progresion='peso_reps'):
             resultado = 'neutra'
             notas = 'Técnica recuperada, pero la carga no se mantuvo para aislar el ajuste'
 
+        _persistir_evaluacion_final(log, resultado, notas)
+        return
+
+    if log.motivo_codigo == 'tope_maquina' and tipo_progresion == 'progresion_distancia':
+        # 21-nov-2026 (N1): por metros y carga comparable, no por repeticiones.
+        resultado, notas = evaluar_tope_distancia(log, nueva_sesion)
         _persistir_evaluacion_final(log, resultado, notas)
         return
 

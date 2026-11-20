@@ -226,8 +226,9 @@ class Nota29SinPromesaVacia(SimpleTestCase):
         from pathlib import Path
         texto = (Path(__file__).parent / 'services' / 'decision_log_service.py').read_text(encoding='utf-8')
         self.assertNotIn('lo vuelvo a comprobar', texto)
-        # 3 textos de «inconcluso» de la nota 29 + 2 cierres sin sesión propia (18-nov-2026, nota 48).
-        self.assertEqual(texto.count('Resultado inconcluso'), 5)
+        # 3 textos de «inconcluso» de la nota 29 + 2 cierres sin sesión propia (18-nov-2026, nota 48)
+        # + 1 del Farmer walk en metros sin mejora (21-nov-2026).
+        self.assertEqual(texto.count('Resultado inconcluso'), 6)
 
 
 class SinApretar(Base):
