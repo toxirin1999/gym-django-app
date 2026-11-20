@@ -48,7 +48,7 @@ class VerAjustesTests(TestCase):
         self.assertIn('repartidas por el planificador', t['alcance'])
         self.assertIn('+36,4 %', t['motivo'])
         self.assertEqual(t['aplicacion'], 'Ajuste registrado en 2 sesiones, del 17/10 al 17/11.')
-        self.assertEqual(t['vigencia'], 'Revisar como máximo el 06/12. Sin decisión, el ajuste deja de aplicarse el 07/12.')
+        self.assertEqual(t['vigencia'], 'Se aplica hasta el 06/12 inclusive; revisión como máximo ese día. Sin decisión, deja de aplicarse el 07/12.')
         self.assertIn('no permite atribuir', t['sabe'])
         fechas = [h['fecha'] for h in t['historial']]
         self.assertEqual(fechas, sorted(fechas, key=lambda f: (f[3:], f[:2]), reverse=True))

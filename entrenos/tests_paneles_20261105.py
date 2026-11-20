@@ -30,7 +30,8 @@ class QueCambiaEstaSemana(SimpleTestCase):
 
     def test_plantilla_plan(self):
         src = _src('trayectoria_plan.html')
-        self.assertIn('Qué cambia esta semana', src)
+        # 20-nov-2026: la comparacion semanal sale de Plan hasta justificarla.
+        self.assertNotIn('cambios_semana', src)
         # 20-nov-2026: Plan en cuatro bloques; el panel por músculo es el cuarto («Trabajo por músculo»)
         # y conserva un único «Ver detalle por músculo».
         self.assertIn('Trabajo por músculo', src)

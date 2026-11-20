@@ -283,6 +283,8 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         # Frases que no se justifican todavia: no aparecen.
         self.assertNotIn('Objetivo del bloque', html)
         self.assertNotIn('frente a la anterior', html)
+        self.assertNotIn('frente a la semana pasada', html)
+        self.assertNotIn('Qué cambia esta semana', html)
 
     def test_detalle_semanal_senala_la_sesion_con_fecha_efectiva_de_hoy(self):
         """Plan conecta con la decisión diaria incluso cuando una sesión fue aplazada."""
@@ -586,10 +588,11 @@ class SemanaYMusculosParaPlanTests(TestCase):
 
     def test_columnas_de_musculos_en_orden_fijo_sin_inventar_ni_perder_grupos(self):
         from clientes.views import _columnas_musculo_plan
-        filas = [{'clave': c, 'grupo': c.title()} for c in ('espalda', 'pecho', 'triceps', 'cuadriceps', 'raro')]
+        # Las claves reales del marcador llevan tilde («cuádriceps», «tríceps»).
+        filas = [{'clave': c, 'grupo': c.title()} for c in ('espalda', 'pecho', 'tríceps', 'cuádriceps', 'trapecio', 'raro')]
         izq, der = _columnas_musculo_plan({'filas': filas})
-        self.assertEqual([f['clave'] for f in izq], ['cuadriceps', 'pecho'])
-        self.assertEqual([f['clave'] for f in der], ['triceps', 'espalda', 'raro'])
+        self.assertEqual([f['clave'] for f in izq], ['cuádriceps', 'pecho'])
+        self.assertEqual([f['clave'] for f in der], ['tríceps', 'espalda', 'trapecio', 'raro'])
         self.assertEqual(_columnas_musculo_plan(None), [[], []])
 
     def test_aplazada_con_fecha_pasada_sigue_pendiente_y_no_es_no_registrada(self):

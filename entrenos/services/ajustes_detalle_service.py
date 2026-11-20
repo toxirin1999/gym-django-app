@@ -114,8 +114,8 @@ def _vigencia(p, hoy):
         return f'Prolongado por ti hasta el {_f(limite)}.'
     if limite:
         from datetime import timedelta
-        return (f'Revisar como máximo el {_f(limite)}. Sin decisión, el ajuste deja de aplicarse '
-                f'el {_f(limite + timedelta(days=1))}.')
+        return (f'Se aplica hasta el {_f(limite)} inclusive; revisión como máximo ese día. Sin decisión, '
+                f'deja de aplicarse el {_f(limite + timedelta(days=1))}.')
     return None
 
 
