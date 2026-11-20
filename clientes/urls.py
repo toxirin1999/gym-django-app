@@ -82,6 +82,8 @@ urlpatterns = [
     path('mockup-dashboard-silencioso/', views.dashboard_silencioso_preview,
          name='dashboard_silencioso_preview'),
     path('mi-panel/trayectoria-plan/', views.trayectoria_plan, name='trayectoria_plan'),
+    path('mi-panel/ver-motivo/', views.ver_motivo, name='ver_motivo'),
+    path('mi-panel/ver-ajustes/', views.ver_ajustes, name='ver_ajustes'),
     path('responder-sugerencia/', views.responder_sugerencia, name='responder_sugerencia'),
 
     # Historial

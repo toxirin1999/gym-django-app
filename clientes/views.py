@@ -2433,6 +2433,9 @@ def dashboard_silencioso_preview(request):
             ) or sesion.get('nombre') or sesion.get('rutina_nombre'),
             # Regla 3 del rumbo: por qué, en una frase y con el dato.
             'porque': porque_decision,
+            # 20-nov-2026: «Ver motivo» abre exactamente la version que esta pantalla
+            # representa (la que trae la autoridad diaria), no "la vigente" al abrir.
+            'motivo_url': _url_ver_motivo(decision_gym, hoy),
         },
         'quiet_week': {
             'titulo': titulo_semana,
@@ -2477,6 +2480,68 @@ def dashboard_silencioso_preview(request):
     return render(request, 'clientes/dashboard_silencioso_preview.html', context)
 
 
+def _url_ver_motivo(decision_gym, hoy):
+    """URL de «Ver motivo» fijada a la version concreta de la decision que se muestra."""
+    from urllib.parse import urlencode
+
+    base = reverse('clientes:ver_motivo')
+    numero = (decision_gym or {}).get('version_persistida')
+    if isinstance(numero, int) and not isinstance(numero, bool):
+        return '{}?{}'.format(base, urlencode({'fecha': hoy.isoformat(), 'version': numero}))
+    return base
+
+
+@login_required
+@require_GET
+def ver_motivo(request):
+    """«Ver motivo»: explica la versión concreta de la decisión (20-nov-2026).
+
+    Solo lee lo que esa versión guardó; nunca la bitácora actual. ``?version=N`` y ``?fecha=``
+    eligen otra versión; sin ellos, la vigente de hoy.
+    """
+    from datetime import date as _date
+
+    from entrenos.models import GymDecisionVersion
+    from entrenos.services.motivo_decision_service import motivo_de_version
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    try:
+        fecha = _date.fromisoformat(request.GET.get('fecha', ''))
+    except ValueError:
+        fecha = timezone.localdate()
+    versiones = GymDecisionVersion.objects.filter(cliente=cliente, fecha=fecha)
+    if request.GET.get('version', '').isdigit():
+        version = versiones.filter(version=int(request.GET['version'])).first()
+    else:
+        version = versiones.filter(vigente=True).order_by('-version').first()
+    otras = [
+        {'version': v.version, 'vigente': v.vigente}
+        for v in versiones.order_by('version')
+    ]
+    return render(request, 'clientes/ver_motivo.html', {
+        'cliente': cliente,
+        'fecha': fecha,
+        'motivo': motivo_de_version(version) if version else None,
+        'otras_versiones': otras if len(otras) > 1 else [],
+    })
+
+
+@login_required
+@require_GET
+def ver_ajustes(request):
+    """«Ver ajustes»: alcance, motivo, vigencia e historial de lo que aplica el planificador."""
+    from entrenos.services.ajustes_detalle_service import detalle_ajustes
+
+    cliente = get_object_or_404(Cliente, user=request.user)
+    hoy = timezone.localdate()
+    try:
+        tarjetas = detalle_ajustes(cliente, hoy)
+    except Exception:
+        logger.exception('Plan: no se pudo leer el detalle de ajustes')
+        tarjetas = []
+    return render(request, 'clientes/ver_ajustes.html', {'cliente': cliente, 'hoy': hoy, 'ajustes': tarjetas})
+
+
 @login_required
 @require_GET
 def trayectoria_plan(request):
@@ -2485,6 +2550,7 @@ def trayectoria_plan(request):
 
     cliente = get_object_or_404(Cliente, user=request.user)
     trayectoria = proyectar_trayectoria_plan(cliente)
+    _marcador = _marcador_semanal(cliente)
     return render(request, 'clientes/trayectoria_plan.html', {
         'cliente': cliente,
         'trayectoria': trayectoria,
@@ -2492,14 +2558,69 @@ def trayectoria_plan(request):
         'resumen_decisiones_plan': _resumen_decisiones_para_trayectoria(cliente),
         'progreso_temporal_plan': _progreso_temporal_para_trayectoria(trayectoria),
         # 26-oct-2026: semana adaptativa, paso 2 (solo muestra).
-        'marcador_semanal': _marcador_semanal(cliente),
+        'marcador_semanal': _marcador,
         # 31-oct-2026 (A4): "Ver por qué" desde Ahora; la propuesta en curso es un ajuste activo.
         'propuesta_plan': _propuesta_zona_visible(cliente, timezone.localdate()),
         # 5-nov-2026: en vez de repetir fase y semana, lo que cambia esta semana.
         'cambios_semana': _cambios_semana(cliente),
         # 20-nov-2026: lo que de verdad aplica el planificador (ajustes de volumen y pausa).
         'ajustes_efectivos_plan': _ajustes_efectivos_plan(cliente, timezone.localdate()),
+        # 20-nov-2026: Plan en cuatro bloques (bloque, ajustes, semana, trabajo por musculo).
+        'semana_plan': _semana_para_plan(trayectoria),
+        'semanas_barra_plan': range(1, int(((trayectoria.get('periodizacion') or {}).get('semanas')) or 0) + 1),
+        'columnas_musculo_plan': _columnas_musculo_plan(_marcador),
     })
+
+
+_ORDEN_MUSCULO_PLAN = (
+    ('cuadriceps', 'isquios', 'gluteos', 'gemelos', 'pecho', 'hombros'),
+    ('triceps', 'espalda', 'trapecios', 'biceps', 'antebrazos', 'core'),
+)
+
+
+def _columnas_musculo_plan(marcador):
+    """Dos columnas fijas de musculos (orden de la maqueta); solo los que tienen dato.
+
+    Un grupo con datos que no este en el orden fijo se anade al final de la segunda columna:
+    no se oculta nada que el marcador calcule, ni se inventa lo que no calcula.
+    """
+    filas = {f['clave']: f for f in ((marcador or {}).get('filas') or [])}
+    columnas = [[filas.pop(c) for c in col if c in filas] for col in _ORDEN_MUSCULO_PLAN]
+    columnas[1].extend(filas.values())
+    return columnas
+
+
+def _semana_para_plan(trayectoria):
+    """Los dias de la semana con su estado y el recuento «N completadas · M pendientes».
+
+    Estados: completada, parcial, hoy, aplazada (pasa a otro dia), sin_registrar (dia pasado sin
+    registro: no es deuda), pendiente. Sale de las
+    sesiones de la trayectoria; no se calcula nada nuevo.
+    """
+    semana = (trayectoria or {}).get('semana') or {}
+    hoy = (trayectoria or {}).get('fecha_corte')
+    dias = []
+    for n, sesion in enumerate(semana.get('sesiones') or [], start=1):
+        if sesion.get('realizada'):
+            estado = 'completada' if sesion.get('completa') else 'parcial'
+            fecha = sesion.get('fecha_realizada') or sesion.get('fecha_efectiva')
+        elif sesion.get('fecha_efectiva') == hoy:
+            estado, fecha = 'hoy', sesion.get('fecha_efectiva')
+        elif sesion.get('en_cola') or sesion.get('fecha_pospuesta'):
+            estado, fecha = 'aplazada', sesion.get('fecha_efectiva')
+        elif sesion.get('fecha_efectiva') and hoy and sesion['fecha_efectiva'] < hoy:
+            estado, fecha = 'sin_registrar', sesion.get('fecha_efectiva')
+        else:
+            estado, fecha = 'pendiente', sesion.get('fecha_efectiva')
+        dias.append({'n': n, 'nombre': sesion.get('nombre'), 'estado': estado, 'fecha': fecha})
+    completadas = sum(1 for d in dias if d['estado'] == 'completada')
+    parciales = sum(1 for d in dias if d['estado'] == 'parcial')
+    return {
+        'dias': dias, 'completadas': completadas, 'parciales': parciales,
+        'sin_registrar': sum(1 for d in dias if d['estado'] == 'sin_registrar'),
+        'pendientes': sum(1 for d in dias if d['estado'] in ('pendiente', 'hoy', 'aplazada')),
+        'inicio': semana.get('inicio'), 'fin': semana.get('fin'),
+    }
 
 
 _NOMBRES_ZONA_PAUSA = {'triceps': 'tríceps', 'trapecios': 'trapecio'}

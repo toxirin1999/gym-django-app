@@ -1,0 +1,38 @@
+{% load static %}
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#030604"><title>Motivo · {{ fecha|date:"d M" }}</title>
+<style>
+body{margin:0;background:#030604;color:#f4f0e9;font-family:-apple-system,system-ui,"Segoe UI",sans-serif}
+main{max-width:430px;margin:0 auto;padding:8px 16px calc(96px + env(safe-area-inset-bottom))}
+a{color:#bfe6ff}
+.top{display:flex;align-items:center;gap:4px}
+.back{width:48px;height:48px;display:grid;place-items:center;text-decoration:none}
+.eyebrow{font:700 14px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase}
+h1{margin:8px 0 0;font-size:30px;line-height:1.1;font-weight:800}
+.lead{margin:10px 0 0;font-size:15px;line-height:1.5;color:#c4cdc9}
+.card{margin-top:14px;padding:18px;border:1px solid #21332b;border-radius:20px;background:#08110d}
+.card.aviso{border-color:#6b5a2a;background:#14100a}
+.label{font:700 12px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:#42e4a0}
+.card.aviso .label{color:#f7bf54}
+.card p{margin:10px 0 0;font-size:15px;line-height:1.5;color:#dfe6e2}
+.fila{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid #21332b;font-size:15px}
+.fila:last-child{border-bottom:0}.fila span:first-child{color:#c4cdc9}
+.nota{margin-top:8px;font-size:13px;line-height:1.45;color:#a3aeaa}
+.vers{margin-top:14px;font-size:13px;color:#a3aeaa}
+.cta{display:flex;align-items:center;justify-content:center;height:56px;margin-top:18px;border-radius:14px;background:#42e4a0;color:#03140c;font-size:17px;font-weight:800;text-decoration:none}
+</style></head><body><main>
+<div class="top"><a class="back" href="{% url 'clientes:dashboard_silencioso_preview' %}" aria-label="Volver a Ahora"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#f4f0e9" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></a><div class="eyebrow">Motivo · {{ fecha|date:"l j M" }}</div></div>
+{% if not motivo %}
+<h1>Sin decisión registrada</h1><p class="lead">No hay una versión de la decisión guardada para este día.</p>
+{% else %}
+<h1>{{ motivo.titulo }}</h1>
+{% if motivo.mensaje %}<p class="lead">{{ motivo.mensaje }}</p>{% endif %}
+<p class="vers">Versión {{ motivo.version }}{% if motivo.vigente %} (vigente){% endif %}{% if motivo.creada_texto %} · decidida el {{ motivo.creada_texto }} (hora de Madrid){% endif %}. Esta explicación usa solo lo que esa versión guardó.</p>
+{% for a in motivo.avisos %}<div class="card aviso"><div class="label">Datos que faltaban</div><p>{{ a }}</p></div>{% endfor %}
+{% for c in motivo.causas %}<div class="card"><div class="label">{% if c.principal %}Causa principal{% else %}Otra causa{% endif %} · {{ c.titulo }}</div>{% if c.texto %}<p>{{ c.texto }}</p>{% endif %}</div>{% endfor %}
+{% if motivo.datos %}<div class="card"><div class="label">Datos que leyó al decidir</div><div style="margin-top:6px">{% for f in motivo.datos.filas %}<div class="fila"><span>{{ f.nombre }}</span><span>{{ f.texto }}</span></div>{% endfor %}</div>
+{% if motivo.datos.origen %}<div class="nota">Del {{ motivo.datos.origen.fecha }}{% if motivo.datos.origen.fila %}, fila {{ motivo.datos.origen.fila }}{% endif %}{% if motivo.datos.origen.filas_combinadas %} (filas combinadas: {{ motivo.datos.origen.filas_combinadas|join:", " }}){% endif %}.</div>{% endif %}</div>{% endif %}
+{% if motivo.cambios %}<div class="card"><div class="label">Qué cambió en la sesión</div>{% for c in motivo.cambios %}<p>{% if c.ejercicio %}<b>{{ c.ejercicio }}</b>: {% endif %}{{ c.razon }}</p>{% endfor %}</div>{% endif %}
+{% if otras_versiones %}<p class="vers">Otras versiones de ese día: {% for v in otras_versiones %}<a href="?fecha={{ fecha|date:'Y-m-d' }}&version={{ v.version }}">{{ v.version }}</a>{% if not forloop.last %} · {% endif %}{% endfor %}</p>{% endif %}
+{% endif %}
+<a class="cta" href="{% url 'clientes:dashboard_silencioso_preview' %}">Volver a Ahora</a>
+</main></body></html>

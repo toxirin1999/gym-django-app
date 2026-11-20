@@ -57,6 +57,16 @@ PLAN_HELMS_CON_SESIONES = {
 }
 
 
+
+def _render_plan(cliente, trayectoria, **extra):
+    """Renderiza la plantilla como la vista: con la semana ya resuelta en dias con estado."""
+    from clientes.views import _semana_para_plan
+    return render_to_string('clientes/trayectoria_plan.html', {
+        'cliente': cliente, 'trayectoria': trayectoria,
+        'semana_plan': _semana_para_plan(trayectoria), **extra,
+    })
+
+
 class TrayectoriaPlanTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user('trayectoria', password='x')
@@ -248,9 +258,9 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         ):
             response = self.client.get(reverse('clientes:trayectoria_plan'))
         html = response.content.decode()
-        self.assertIn('Fase actual del plan', html)
+        self.assertIn('Tu bloque actual', html)
         self.assertIn('aria-label=', html)
-        self.assertIn('min-height: 44px', html)
+        self.assertIn('min-height:64px', html)
         self.assertNotIn('<table', html)
         self.assertNotIn('https://', html)
         self.assertNotIn('http://', html)
@@ -263,23 +273,24 @@ class TrayectoriaPlanViewTests(TrayectoriaPlanTests):
         ):
             response = self.client.get(reverse('clientes:trayectoria_plan'))
         html = response.content.decode()
-        self.assertIn('tp-hero', html)
-        self.assertIn('Recorrido del plan', html)
-        self.assertIn('Objetivo del bloque', html)
-        self.assertIn('Próximo hito', html)
+        # Cuatro bloques, en este orden, y el recorrido completo al final.
+        for texto in ('Tu bloque actual', 'Ajustes del entrenador', 'Tu semana', 'Ver recorrido completo'):
+            self.assertIn(texto, html)
         self.assertIn('tp-archive', html)
-        self.assertIn('Esta semana · detalle', html)
-        self.assertLess(html.index('tp-hero'), html.index('Recorrido del plan'))
-        self.assertLess(html.index('Recorrido del plan'), html.index('Objetivo del bloque'))
-        self.assertLess(html.index('Objetivo del bloque'), html.index('Esta semana · detalle'))
+        self.assertLess(html.index('Tu bloque actual'), html.index('Ajustes del entrenador'))
+        self.assertLess(html.index('Ajustes del entrenador'), html.index('Tu semana'))
+        self.assertLess(html.index('Tu semana'), html.index('Ver recorrido completo'))
+        # Frases que no se justifican todavia: no aparecen.
+        self.assertNotIn('Objetivo del bloque', html)
+        self.assertNotIn('frente a la anterior', html)
 
     def test_detalle_semanal_senala_la_sesion_con_fecha_efectiva_de_hoy(self):
         """Plan conecta con la decisión diaria incluso cuando una sesión fue aplazada."""
         plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
 
-        self.assertIn('tp-session--today', plantilla)
-        self.assertIn('{% if sesion.fecha_efectiva == trayectoria.fecha_corte %}', plantilla)
-        self.assertIn('<span class="tp-session-today">Hoy</span>', plantilla)
+        # El estado «hoy» lo decide la fecha efectiva (ver _semana_para_plan y su test).
+        self.assertIn('pl-day--{{ d.estado }}', plantilla)
+        self.assertIn('Sesión efectiva de hoy: {{ d.nombre }}', plantilla)
 
     def test_plan_ofrece_siguiente_accion_amable_si_hay_sesiones_sin_registrar(self):
         plantilla = Path('clientes/templates/clientes/trayectoria_plan.html').read_text()
@@ -375,9 +386,7 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
     def test_semana_sin_materializar_no_expone_lenguaje_de_backend(self):
         resultado = self._proyectar(fecha=date(2026, 8, 31))  # semana 2 del bloque, nunca creada
         self.assertIn('semana_no_materializada', resultado['limitations'])
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente, 'trayectoria': resultado,
-        })
+        html = _render_plan(self.cliente, resultado)
         self.assertNotIn('Aún no materializada', html)
         self.assertNotIn('La trayectoria no anticipa ni crea sesiones', html)
         self.assertIn('Sin sesiones concretas aún', html)
@@ -385,9 +394,7 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
 
     def test_plantilla_no_incluye_disclaimer_ni_panel_de_limitaciones_crudo(self):
         resultado = self._proyectar()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente, 'trayectoria': resultado,
-        })
+        html = _render_plan(self.cliente, resultado)
         self.assertNotIn('Una lectura vertical desde la periodización anual', html)
         self.assertNotIn('Qué no puede afirmar esta lectura', html)
 
@@ -402,52 +409,42 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
     def test_estados_incompletos_explican_el_limite_y_conservan_una_salida_util(self):
         """Sin bloque, fase, sesiones o hito el Plan no finge precisión ni deja callejón sin salida."""
         hoy = date.today()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente,
-            'trayectoria': {
-                'fecha_corte': hoy,
-                'estado': 'unknown',
-                'periodizacion': None,
-                'bloque': None,
-                'macrociclo': None,
-                'proximo_hito': None,
-                'semana': None,
-            },
+        html = _render_plan(self.cliente, {
+            'fecha_corte': hoy,
+            'estado': 'unknown',
+            'periodizacion': None,
+            'bloque': None,
+            'macrociclo': None,
+            'proximo_hito': None,
+            'semana': None,
         })
 
         self.assertIn('Plan sin configurar', html)
         self.assertIn('Revisar configuración del plan', html)
         self.assertIn(reverse('clientes:plan_decisiones'), html)
-        self.assertIn('Sin hito fechado aún', html)
-        self.assertIn('Calendario pendiente', html)
         self.assertIn('Sin sesiones concretas aún', html)
-        # Contamos el enlace renderizado, no la regla CSS que comparte el
-        # mismo selector.
-        self.assertEqual(html.count('class="tp-hero-action"'), 1)
+        self.assertEqual(html.count('Revisar configuración del plan'), 1)
 
     def test_semana_vacia_dirige_a_preparar_las_sesiones_del_bloque(self):
         hoy = date.today()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente,
-            'trayectoria': {
-                'fecha_corte': hoy,
-                'estado': 'available',
-                'periodizacion': {'nombre': 'Base', 'objetivo': 'Construir base', 'semana_actual': 1,
-                                   'semanas': 4, 'inicio': hoy, 'fin': hoy + timedelta(days=27),
-                                   'rpe_inicio': 6, 'rpe_fin': 7, 'reps': '10-12', 'descanso_seg': 90},
-                'bloque': {'objetivo': 'Construir base', 'objetivos_secundarios': []},
-                'macrociclo': None,
-                'proximo_hito': None,
-                'semana': {'inicio': hoy, 'fin': hoy + timedelta(days=6), 'sesiones': [],
-                           'objetivo_sesiones': 0, 'evaluacion': None},
-            },
+        html = _render_plan(self.cliente, {
+            'fecha_corte': hoy,
+            'estado': 'available',
+            'periodizacion': {'nombre': 'Base', 'objetivo': 'Construir base', 'semana_actual': 1,
+                               'semanas': 4, 'inicio': hoy, 'fin': hoy + timedelta(days=27),
+                               'rpe_inicio': 6, 'rpe_fin': 7, 'reps': '10-12', 'descanso_seg': 90},
+            'bloque': {'objetivo': 'Construir base', 'objetivos_secundarios': []},
+            'macrociclo': None,
+            'proximo_hito': None,
+            'semana': {'inicio': hoy, 'fin': hoy + timedelta(days=6), 'sesiones': [],
+                       'objetivo_sesiones': 0, 'evaluacion': None},
         })
 
         self.assertIn('Esta semana no tiene sesiones registradas en el plan.', html)
         self.assertIn('La siguiente acción es preparar las sesiones del bloque.', html)
         self.assertIn('Preparar sesiones del bloque', html)
         self.assertIn('href="%s"' % reverse('clientes:plan_decisiones'), html)
-        self.assertEqual(html.count('class="tp-hero-action"'), 1)
+        self.assertEqual(html.count('Preparar sesiones del bloque'), 1)
 
     def test_semana_pendiente_no_secuestra_plan_con_el_checkin_diario(self):
         """El check-in es una acción de Ahora; Plan sigue explicando dirección."""
@@ -460,110 +457,150 @@ class TrayectoriaPlanLenguajeTemplateTests(TrayectoriaPlanTests):
     def test_detalle_semanal_destaca_la_sesion_efectiva_de_hoy_incluso_si_fue_pospuesta(self):
         """La fecha efectiva, no la prevista, determina qué sesión es la de hoy."""
         hoy = date.today()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente,
-            'trayectoria': {
-                'fecha_corte': hoy,
-                'periodizacion': None,
-                'bloque': None,
-                'macrociclo': None,
-                'proximo_hito': None,
-                'semana': {
-                    'inicio': hoy - timedelta(days=hoy.weekday()),
-                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
-                    'objetivo_sesiones': 1,
-                    'evaluacion': None,
-                    'sesiones': [{
-                        'nombre': 'Fuerza reprogramada',
-                        'estado': 'pendiente',
-                        'fecha_prevista': hoy - timedelta(days=1),
-                        'fecha_pospuesta': hoy,
-                        'fecha_efectiva': hoy,
-                        'fecha_realizada': None,
-                        'realizada': False,
-                    }],
-                },
+        html = _render_plan(self.cliente, {
+            'fecha_corte': hoy,
+            'periodizacion': None,
+            'bloque': None,
+            'macrociclo': None,
+            'proximo_hito': None,
+            'semana': {
+                'inicio': hoy - timedelta(days=hoy.weekday()),
+                'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                'objetivo_sesiones': 1,
+                'evaluacion': None,
+                'sesiones': [{
+                    'nombre': 'Fuerza reprogramada',
+                    'estado': 'pendiente',
+                    'fecha_prevista': hoy - timedelta(days=1),
+                    'fecha_pospuesta': hoy,
+                    'fecha_efectiva': hoy,
+                    'fecha_realizada': None,
+                    'realizada': False,
+                }],
             },
         })
 
-        self.assertIn('tp-session--today', html)
+        self.assertIn('pl-day--hoy', html)
         self.assertIn('Sesión efectiva de hoy: Fuerza reprogramada', html)
-        self.assertIn('Hoy</span>', html)
+        self.assertIn('<small>Hoy</small>', html)
 
     def test_sesion_pasada_sin_registro_no_se_presenta_como_deuda(self):
         hoy = date.today()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente,
-            'trayectoria': {
-                'fecha_corte': hoy,
-                'periodizacion': None,
-                'bloque': None,
-                'macrociclo': None,
-                'proximo_hito': None,
-                'semana': {
-                    'inicio': hoy - timedelta(days=hoy.weekday()),
-                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
-                    'objetivo_sesiones': 1,
-                    'evaluacion': None,
-                    'sesiones': [{
-                        'nombre': 'Fuerza anterior',
-                        'fecha_efectiva': hoy - timedelta(days=1),
-                        'fecha_pospuesta': None,
-                        'fecha_realizada': None,
-                        'realizada': False,
-                    }],
-                },
+        html = _render_plan(self.cliente, {
+            'fecha_corte': hoy,
+            'periodizacion': None,
+            'bloque': None,
+            'macrociclo': None,
+            'proximo_hito': None,
+            'semana': {
+                'inicio': hoy - timedelta(days=hoy.weekday()),
+                'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                'objetivo_sesiones': 1,
+                'evaluacion': None,
+                'sesiones': [{
+                    'nombre': 'Fuerza anterior',
+                    'fecha_efectiva': hoy - timedelta(days=1),
+                    'fecha_pospuesta': None,
+                    'fecha_realizada': None,
+                    'realizada': False,
+                }],
             },
         })
 
-        self.assertIn('No registrada', html)
+        self.assertIn('aria-label="No registrada"', html)
+        self.assertIn('1 sin registrar', html)
+        self.assertIn('0 pendientes', html)
         self.assertNotIn('Pendiente desde', html)
-        self.assertIn('→', html)
 
     def test_detalle_semanal_traduce_estados_sin_convertir_cada_sesion_en_un_cta(self):
         """El plan informa del calendario; la única acción sigue siendo volver a Ahora."""
         hoy = date.today()
-        html = render_to_string('clientes/trayectoria_plan.html', {
-            'cliente': self.cliente,
-            'trayectoria': {
-                'fecha_corte': hoy,
-                'periodizacion': None,
-                'bloque': None,
-                'macrociclo': None,
-                'proximo_hito': None,
-                'semana': {
-                    'inicio': hoy - timedelta(days=hoy.weekday()),
-                    'fin': hoy + timedelta(days=6 - hoy.weekday()),
-                    'objetivo_sesiones': 4,
-                    'evaluacion': None,
-                    'sesiones': [
-                        {
-                            'nombre': 'Sesión completada', 'estado': 'completada',
-                            'fecha_prevista': hoy - timedelta(days=2),
-                            'fecha_pospuesta': None, 'fecha_efectiva': hoy - timedelta(days=2),
-                            'fecha_realizada': hoy - timedelta(days=2),
-                            'realizada': True, 'completa': True,
-                        },
-                        {
-                            'nombre': 'Sesión reubicada', 'estado': 'pendiente',
-                            'fecha_prevista': hoy - timedelta(days=1),
-                            'fecha_pospuesta': hoy + timedelta(days=1),
-                            'fecha_efectiva': hoy + timedelta(days=1),
-                            'fecha_realizada': None, 'realizada': False, 'completa': False,
-                        },
-                        {
-                            'nombre': 'Sesión futura', 'estado': 'pendiente',
-                            'fecha_prevista': hoy + timedelta(days=2),
-                            'fecha_pospuesta': None, 'fecha_efectiva': hoy + timedelta(days=2),
-                            'fecha_realizada': None, 'realizada': False, 'completa': False,
-                        },
-                    ],
-                },
+        html = _render_plan(self.cliente, {
+            'fecha_corte': hoy,
+            'periodizacion': None,
+            'bloque': None,
+            'macrociclo': None,
+            'proximo_hito': None,
+            'semana': {
+                'inicio': hoy - timedelta(days=hoy.weekday()),
+                'fin': hoy + timedelta(days=6 - hoy.weekday()),
+                'objetivo_sesiones': 4,
+                'evaluacion': None,
+                'sesiones': [
+                    {
+                        'nombre': 'Sesión completada', 'estado': 'completada',
+                        'fecha_prevista': hoy - timedelta(days=2),
+                        'fecha_pospuesta': None, 'fecha_efectiva': hoy - timedelta(days=2),
+                        'fecha_realizada': hoy - timedelta(days=2),
+                        'realizada': True, 'completa': True,
+                    },
+                    {
+                        'nombre': 'Sesión reubicada', 'estado': 'pendiente',
+                        'fecha_prevista': hoy - timedelta(days=1),
+                        'fecha_pospuesta': hoy + timedelta(days=1),
+                        'fecha_efectiva': hoy + timedelta(days=1),
+                        'fecha_realizada': None, 'realizada': False, 'completa': False,
+                    },
+                    {
+                        'nombre': 'Sesión futura', 'estado': 'pendiente',
+                        'fecha_prevista': hoy + timedelta(days=2),
+                        'fecha_pospuesta': None, 'fecha_efectiva': hoy + timedelta(days=2),
+                        'fecha_realizada': None, 'realizada': False, 'completa': False,
+                    },
+                ],
             },
         })
 
-        self.assertIn('Completada', html)
-        self.assertIn('Reprogramada', html)
-        self.assertIn('Pendiente ·', html)
-        self.assertNotIn('>pendiente<', html)
-        self.assertEqual(html.count('<a class="tp-hero-action"'), 1)
+        self.assertIn('aria-label="Completada"', html)
+        self.assertIn('aria-label="Aplazada"', html)
+        self.assertIn('aria-label="Pendiente"', html)
+        self.assertIn('1 completada · 2 pendientes', html)
+        # Los dias no son enlaces: la unica salida de la semana es «Abrir Rutina».
+        self.assertEqual(html.count('Abrir Rutina'), 1)
+
+
+class SemanaYMusculosParaPlanTests(TestCase):
+    """Los estados de los dias y las dos columnas de musculos de la maqueta aprobada."""
+
+    def test_estados_de_los_dias_y_recuento(self):
+        from clientes.views import _semana_para_plan
+        hoy = date(2026, 11, 19)
+        def ses(nombre, efectiva, **kw):
+            base = {'nombre': nombre, 'fecha_efectiva': efectiva, 'fecha_pospuesta': None,
+                    'fecha_realizada': None, 'realizada': False, 'completa': False, 'en_cola': False}
+            base.update(kw)
+            return base
+        semana = {'inicio': date(2026, 11, 16), 'fin': date(2026, 11, 22), 'sesiones': [
+            ses('A', date(2026, 11, 16), realizada=True, completa=True, fecha_realizada=date(2026, 11, 16)),
+            ses('B', date(2026, 11, 17), realizada=True, completa=False, fecha_realizada=date(2026, 11, 17)),
+            ses('C', date(2026, 11, 18)),
+            ses('D', hoy),
+            ses('E', date(2026, 11, 21), fecha_pospuesta=date(2026, 11, 21), en_cola=True),
+            ses('F', date(2026, 11, 22)),
+        ]}
+        r = _semana_para_plan({'fecha_corte': hoy, 'semana': semana})
+        self.assertEqual([d['estado'] for d in r['dias']],
+                         ['completada', 'parcial', 'sin_registrar', 'hoy', 'aplazada', 'pendiente'])
+        self.assertEqual((r['completadas'], r['parciales'], r['sin_registrar'], r['pendientes']), (1, 1, 1, 3))
+        self.assertEqual(_semana_para_plan({'fecha_corte': hoy, 'semana': None})['dias'], [])
+
+    def test_columnas_de_musculos_en_orden_fijo_sin_inventar_ni_perder_grupos(self):
+        from clientes.views import _columnas_musculo_plan
+        filas = [{'clave': c, 'grupo': c.title()} for c in ('espalda', 'pecho', 'triceps', 'cuadriceps', 'raro')]
+        izq, der = _columnas_musculo_plan({'filas': filas})
+        self.assertEqual([f['clave'] for f in izq], ['cuadriceps', 'pecho'])
+        self.assertEqual([f['clave'] for f in der], ['triceps', 'espalda', 'raro'])
+        self.assertEqual(_columnas_musculo_plan(None), [[], []])
+
+    def test_aplazada_con_fecha_pasada_sigue_pendiente_y_no_es_no_registrada(self):
+        from clientes.views import _semana_para_plan
+        hoy = date(2026, 11, 19)
+        base = {'nombre': 'Dia 4', 'fecha_pospuesta': None, 'fecha_realizada': None,
+                'realizada': False, 'completa': False}
+        semana = {'inicio': date(2026, 11, 16), 'fin': date(2026, 11, 22), 'sesiones': [
+            dict(base, fecha_efectiva=date(2026, 11, 17), fecha_pospuesta=date(2026, 11, 17), en_cola=True),
+            dict(base, fecha_efectiva=date(2026, 11, 17), en_cola=False),
+        ]}
+        r = _semana_para_plan({'fecha_corte': hoy, 'semana': semana})
+        self.assertEqual([d['estado'] for d in r['dias']], ['aplazada', 'sin_registrar'])
+        self.assertEqual((r['pendientes'], r['sin_registrar']), (1, 1))

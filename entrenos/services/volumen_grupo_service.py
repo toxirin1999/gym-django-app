@@ -64,8 +64,9 @@ def _vigencia_validada(p, fecha):
         return False, ''
     if estado == 'prolongada':
         return True, f'el cambio funcionó; lo prolongaste hasta el {limite:%d/%m}'
-    return True, (f'el cambio funcionó; se mantiene hasta el {limite:%d/%m} '
-                  f'y después queda pendiente de tu decisión')
+    # 20-nov-2026: el límite es inclusive (``fecha > limite`` deja de aplicarlo).
+    return True, (f'el cambio funcionó; se mantiene hasta el {limite:%d/%m} inclusive '
+                  f'y el {limite + timedelta(days=1):%d/%m} deja de aplicarse si no decides')
 
 
 def revisiones_pendientes(cliente, fecha):

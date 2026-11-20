@@ -71,7 +71,7 @@
       {% with p=dia_seleccionado.preview %}
       <div class="sel-head"><span class="eyebrow" id="sel-label">Día seleccionado</span><span class="pill{% if dia_seleccionado.es_hoy %} is-today{% endif %}" data-sel-badge>{% if dia_seleccionado.es_hoy %}Es hoy{% else %}No es hoy{% endif %}</span></div>
       <h2 class="sel-title" data-sel-title>{% if dia_seleccionado.es_hoy %}Hoy · {% endif %}{{ dia_seleccionado.fecha|date:"l j/n"|capfirst }}</h2>
-      <p class="sel-sub" data-sel-sub>{{ p.titulo }} · {{ p.etiqueta }}</p>
+      <p class="sel-sub" data-sel-sub>{{ p.titulo }}{% if p.etiqueta and p.etiqueta != p.titulo %} · {{ p.etiqueta }}{% endif %}</p>
       <div data-sel-list>{% for e in p.ejercicios|slice:":3" %}<div class="ex"><strong>{{ e.nombre }}</strong><span>{{ e.series }} series · {{ e.reps }}{% if e.unidad != '' %} {{ e.unidad|default:'reps' }}{% endif %}</span></div>{% endfor %}{% if p.ejercicios|length > 3 %}<details class="more"><summary><span>{{ p.ejercicios|length|add:"-3" }} ejercicios más</span></summary>{% for e in p.ejercicios|slice:"3:" %}<div class="ex"><strong>{{ e.nombre }}</strong><span>{{ e.series }} series · {{ e.reps }}{% if e.unidad != '' %} {{ e.unidad|default:'reps' }}{% endif %}</span></div>{% endfor %}</details>{% endif %}</div>
       <p class="sel-empty" data-sel-empty{% if p.ejercicios %} hidden{% endif %}>{% if p.tipo == 'descanso' %}{{ p.detalle }}{% elif p.tipo == 'hecha' %}Sesión registrada sin detalle de ejercicios.{% else %}La sesión está preparada. Se abre desde «Preparar entrenamiento» el día que toque.{% endif %}</p>
       <p class="sel-peso" data-sel-peso{% if p.tipo != 'sesion' %} hidden{% endif %}>El peso de cada ejercicio lo fija el briefing con tu última sesión.</p>
@@ -130,7 +130,8 @@
         badge.textContent = esHoy ? 'Es hoy' : 'No es hoy';
         badge.classList.toggle('is-today', esHoy);
         q('[data-sel-title]').textContent = esHoy ? `Hoy · ${fechaCorta(preview.fecha_efectiva)}` : fechaCorta(preview.fecha_efectiva);
-        q('[data-sel-sub]').textContent = `${preview.titulo} · ${preview.etiqueta || (preview.tipo === 'sesion' ? 'Prevista' : 'Recuperación')}`;
+        const etiqueta = preview.etiqueta || (preview.tipo === 'sesion' ? 'Prevista' : 'Recuperación');
+        q('[data-sel-sub]').textContent = etiqueta === preview.titulo ? preview.titulo : `${preview.titulo} · ${etiqueta}`;
         const list = q('[data-sel-list]');
         list.replaceChildren();
         const ejercicios = preview.ejercicios || [];

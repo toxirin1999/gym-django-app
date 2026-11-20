@@ -61,14 +61,14 @@ class AjustesVolumen(Base):
         p = self._validada_con_revision()
         self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 6)), {'isquios': 2})
         motivo = ajustes_volumen(self.cliente, date(2026, 12, 6))['isquios']['motivos'][0]
-        self.assertIn('se mantiene hasta el 06/12 y después queda pendiente de tu decisión', motivo)
+        self.assertIn('se mantiene hasta el 06/12 inclusive y el 07/12 deja de aplicarse si no decides', motivo)
         # El 7/12 ya no rige: antes seguía 182 días.
         self.assertEqual(series_por_grupo(self.cliente, date(2026, 12, 7)), {})
         from entrenos.services.volumen_grupo_service import revisiones_pendientes
         self.assertEqual(revisiones_pendientes(self.cliente, date(2026, 12, 6)), [])
         pend = revisiones_pendientes(self.cliente, date(2026, 12, 7))
         self.assertEqual([x['zona'] for x in pend], ['isquios'])
-        self.assertIn('pendiente de tu decisión', frase_evaluacion(p))
+        self.assertIn('el 07/12 deja de aplicarse si no decides', frase_evaluacion(p))
 
     def test_decision_explicita_prolonga_o_retira(self):
         from entrenos.services.propuesta_zona_service import decidir_revision

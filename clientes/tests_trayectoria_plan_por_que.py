@@ -77,9 +77,10 @@ class TrayectoriaPlanPorQueTests(TestCase):
         self.assertEqual(progreso['porcentaje'], 29)
         self.assertEqual(progreso['semana_iso'], 42)
         self.assertEqual(progreso['semanas_restantes'], 3)
-        self.assertContains(response, 'Progreso temporal')
-        self.assertContains(response, '29%')
-        self.assertContains(response, '2 de 4')  # semana del bloque, no la ISO (14-oct-2026)
+        # Maqueta aprobada: semana del bloque y fechas reales, sin porcentaje.
+        self.assertContains(response, 'Semana 2 de 4')  # del bloque, no la ISO (14-oct-2026)
+        self.assertContains(response, '05/10 — 01/11')
+        self.assertNotContains(response, '29%')
 
     def test_no_finge_un_progreso_anual_sin_rango_fechado(self):
         trayectoria = self._trayectoria(periodizacion=False)
@@ -87,4 +88,4 @@ class TrayectoriaPlanPorQueTests(TestCase):
         response = self._get(trayectoria)
 
         self.assertFalse(response.context['progreso_temporal_plan']['disponible'])
-        self.assertNotContains(response, 'Progreso temporal')
+        self.assertNotContains(response, '05/10 —')

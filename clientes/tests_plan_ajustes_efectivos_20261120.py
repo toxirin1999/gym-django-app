@@ -10,7 +10,7 @@ from clientes.models import Cliente
 VOL = 'entrenos.services.volumen_grupo_service.'
 PAUSA = 'entrenos.services.propuesta_zona_service.pausa_subir_volumen'
 AJUSTE_ISQUIOS = {'isquios': {'series': 2, 'motivos': [
-    '+2 series de Isquios: el cambio funcionó; se mantiene hasta el 06/12 y después queda pendiente de tu decisión',
+    '+2 series de Isquios: el cambio funcionó; se mantiene hasta el 06/12 inclusive y el 07/12 deja de aplicarse si no decides',
 ]}}
 PAUSA_TRI_TRAP = {'zonas': ('triceps', 'trapecios'), 'fin_previsto': date(2026, 12, 6),
                   'bloque': 'Fuerza — Hipertrofia'}

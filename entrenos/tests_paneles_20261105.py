@@ -31,11 +31,13 @@ class QueCambiaEstaSemana(SimpleTestCase):
     def test_plantilla_plan(self):
         src = _src('trayectoria_plan.html')
         self.assertIn('Qué cambia esta semana', src)
-        # 18-nov-2026: panel móvil rediseñado (filas compactas y un único «Ver detalle»).
-        self.assertIn('Tu semana por músculo', src)
-        self.assertIn('Ver detalle', src)
+        # 20-nov-2026: Plan en cuatro bloques; el panel por músculo es el cuarto («Trabajo por músculo»)
+        # y conserva un único «Ver detalle por músculo».
+        self.assertIn('Trabajo por músculo', src)
+        self.assertIn('Ver detalle por músculo', src)
         self.assertIn('pide {{ f.plan|num_es }} series', src)
-        self.assertIn('{% if trayectoria.periodizacion.rpe_fin != trayectoria.periodizacion.rpe_inicio %}', src)
+        # Maqueta aprobada: los rangos generales de RPE, repeticiones y descanso salen de Plan.
+        self.assertNotIn('periodizacion.rpe_fin', src)
 
 
 class OtrosPaneles(SimpleTestCase):

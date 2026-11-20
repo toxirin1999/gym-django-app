@@ -169,3 +169,12 @@ class RutinaPaqueteVisualTests(TestCase):
         from pathlib import Path
         t = Path('entrenos/templates/entrenos/rutina_silenciosa_preview.html').read_text(encoding='utf-8')
         self.assertIn('[hidden]{display:none !important}', t)
+
+    def test_dia_sin_entreno_no_repite_titulo_y_etiqueta(self):
+        """19/11 decía «Sin entreno · Sin entreno»."""
+        from pathlib import Path
+        t = Path('entrenos/templates/entrenos/rutina_silenciosa_preview.html').read_text(encoding='utf-8')
+        self.assertIn('etiqueta === preview.titulo ? preview.titulo', t)
+        self.assertIn('{% if p.etiqueta and p.etiqueta != p.titulo %}', t)
+        v = Path('entrenos/views.py').read_text(encoding='utf-8')
+        self.assertIn("'etiqueta': 'Sin entreno', 'titulo': 'Sin sesión registrada'", v)

@@ -76,9 +76,10 @@ class Marcador(ColaSemanalBase):
                  'frase': 'Pecho: llevas 7 de 13 que pide el plan; las sesiones pendientes (Día 5) aportan 4 y quedarías en 11.'}
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
-            self.assertContains(r, 'Tu semana por músculo')
-            self.assertContains(r, '7 hechas · 4 pendientes')
-            self.assertContains(r, 'Ver detalle')
+            self.assertContains(r, 'Trabajo por músculo')
+            self.assertContains(r, '7 hechas')
+            self.assertContains(r, '4 pendientes')
+            self.assertContains(r, 'Ver detalle por músculo')
             self.assertContains(r, 'Pendiente · Día 5')
             self.assertContains(r, 'Provisional.')
             self.assertContains(r, 'El plan semanal del planificador pide 13 series')

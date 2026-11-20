@@ -1,0 +1,24 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta name="theme-color" content="#030604"><title>Ajustes del entrenador</title>
+<style>
+body{margin:0;background:#030604;color:#f4f0e9;font-family:-apple-system,system-ui,"Segoe UI",sans-serif}
+main{max-width:430px;margin:0 auto;padding:0 16px calc(96px + env(safe-area-inset-bottom))}
+a{color:#bfe6ff}
+.back{display:flex;align-items:center;gap:8px;min-height:48px;margin-top:8px;font-size:15px;font-weight:600;text-decoration:none}
+h1{margin:0;font-size:26px;line-height:1.15;font-weight:800}
+.card{margin-top:14px;padding:18px;border:1px solid #21332b;border-radius:20px;background:#08110d}
+.label{font:700 12px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.16em;text-transform:uppercase;color:#6fd3ff}
+dl{margin:0}dt{margin-top:12px;font-size:13px;color:#a3aeaa}dd{margin:2px 0 0;font-size:15px;line-height:1.45;color:#dfe6e2}
+.h{padding:8px 0;border-bottom:1px solid #21332b;font-size:15px;line-height:1.45}.h:last-child{border-bottom:0}.h span{display:block;font-size:13px;color:#a3aeaa}
+</style></head><body><main>
+<a class="back" href="{% url 'clientes:trayectoria_plan' %}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#bfe6ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>Plan</a>
+<h1>Ajustes del entrenador</h1>
+{% for a in ajustes %}<section class="card"><div class="label">{{ a.titulo }}</div><dl>
+<dt>Alcance</dt><dd>{{ a.alcance }}</dd>
+{% if a.motivo %}<dt>Motivo</dt><dd>{{ a.motivo }}</dd>{% endif %}{% if a.medicion %}<dt>Qué se midió</dt><dd>Ventana de la propuesta: {{ a.medicion.ventana_actual }}. Comparada con {{ a.medicion.ventana_anterior }}. Cambio de fuerza (mediana): {{ a.medicion.mediana }}.<ul>{% for e in a.medicion.ejercicios %}<li>{{ e.nombre }}: {{ e.antes }} → {{ e.ahora }}, {{ e.pct }}</li>{% endfor %}</ul></dd>{% endif %}
+{% if a.aplicacion %}<dt>Aplicación</dt><dd>{{ a.aplicacion }}</dd>{% endif %}
+{% if a.sabe %}<dt>Lo que se sabe</dt><dd>{{ a.sabe }}</dd>{% endif %}
+{% if a.vigencia %}<dt>Vigencia</dt><dd>{{ a.vigencia }}</dd>{% endif %}
+</dl>
+{% if a.historial %}<div class="label" style="margin-top:18px">Historial</div>{% for h in a.historial %}<div class="h"><span>{{ h.fecha }}</span>{{ h.texto }}</div>{% endfor %}{% endif %}
+</section>{% empty %}<section class="card"><div class="label">Sin ajustes</div><dl><dd>El planificador no aplica ningún ajuste de series ahora mismo.</dd></dl></section>{% endfor %}
+</main></body></html>

@@ -30,7 +30,7 @@ class TrayectoriaPlanDecisionesTests(TestCase):
         resumen = response.context['resumen_decisiones_plan']
         self.assertFalse(resumen['hay_senales_activas'])
         self.assertEqual(resumen['total_senales_activas'], 0)
-        self.assertContains(response, 'Decisiones del plan')
+        self.assertContains(response, 'Ajustes del entrenador')
         self.assertContains(response, 'No hay ajustes activos que cambien el plan hoy.')
         self.assertContains(response, reverse('clientes:plan_decisiones'))
 

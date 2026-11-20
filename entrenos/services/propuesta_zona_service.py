@@ -949,8 +949,14 @@ def frase_evaluacion(p):
             return f'{iso[8:10]}/{iso[5:7]}' if iso else '?'
         estado = revision.get('estado') or 'pendiente'
         if estado == 'pendiente':
-            frase += (f" El ajuste se mantiene hasta el {_dm(revision.get('fecha'))}; "
-                      f"después queda pendiente de tu decisión.")
+            try:
+                from datetime import date as _date, timedelta as _td
+                _sig = (_date.fromisoformat(revision.get('fecha')) + _td(days=1)).strftime('%d/%m')
+            except (TypeError, ValueError):
+                _sig = None
+            frase += (f" El ajuste se mantiene hasta el {_dm(revision.get('fecha'))} inclusive"
+                      + (f"; el {_sig} deja de aplicarse si no decides." if _sig
+                         else "; después queda pendiente de tu decisión."))
         elif estado == 'prolongada':
             frase += f" Lo prolongaste hasta el {_dm(revision.get('hasta'))}."
         elif estado == 'retirada':

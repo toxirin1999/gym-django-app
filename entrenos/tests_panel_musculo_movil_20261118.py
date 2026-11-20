@@ -135,10 +135,10 @@ class PlantillaMovil(Base):
         with patch('entrenos.services.marcador_semanal_service.marcador_cacheado', return_value=datos):
             r = self.client.get(reverse('clientes:trayectoria_plan'))
         html = r.content.decode()
-        self.assertContains(r, '3 hechas · sin pendientes')
-        self.assertContains(r, '0 hechas · 5 pendientes')
+        self.assertContains(r, '3 hechas</small><small>sin pendientes')
+        self.assertContains(r, '0 hechas</small><small>5 pendientes')
         self.assertContains(r, 'sustitución Sissy → Hack')
-        self.assertEqual(html.count('>Ver detalle<'), 1)
+        self.assertEqual(html.count('>Ver detalle por músculo<'), 1)
         self.assertContains(r, 'Cómo se cuenta')
         self.assertContains(r, 'Sesiones y versión')
         self.assertNotContains(r, 'Distinto del plan en sesiones ya hechas')
