@@ -146,7 +146,7 @@ class PeriodoYCarga(Base):
         self.assertTrue(por_fecha[date(2026, 11, 10)]['con_carga'])
 
     def test_las_cargas_son_exactas_a_ambos_lados_de_cualquier_limite(self):
-        pesos = [39.9, 40, 40.4, 40.5, 40.6, 40.0001]       # el último lo guarda la BD como 40.00
+        pesos = [39.9, 40, 40.4, 40.5, 40.6, 40.0001]       # la BD guarda 2 decimales: 40.0001 se almacena como 40.00 y es lo que se compara
         for i, p in enumerate(pesos):
             self.reg(date(2026, 10, 1) + timedelta(days=i), self.curl, [(p, 10 + i, 8)])
         c = svc.consulta(self.cliente, 'Curl Femoral Tumbado', 90, None, HOY)
@@ -160,7 +160,7 @@ class PeriodoYCarga(Base):
             self.assertEqual([p['valor'] for p in cc['puntos']], esperado, token)
         h = svc.cargar_historial(self.cliente, 'Curl Femoral Tumbado')
         originales = [x['peso'] for s in h['sesiones'] for x in s['series']]
-        self.assertEqual(originales, [39.9, 40.0, 40.4, 40.5, 40.6, 40.0])      # el original se conserva siempre
+        self.assertEqual(originales, [39.9, 40.0, 40.4, 40.5, 40.6, 40.0])      # se comparan los valores efectivamente guardados (2 decimales), sin agrupar
 
     def test_39_9_y_40_no_se_unen_en_una_linea(self):
         self.reg(date(2026, 10, 17), self.curl, [(39.9, 12, 9)])
@@ -614,3 +614,27 @@ class ConfirmacionExacta(Base):
         self.assertEqual(e['01/07'], 'pend')
         self.reg(date(2026, 10, 8), self.curl, [(40, 10, 8)])
         self.assertEqual(svc.cargar_historial(self.cliente, 'Curl Femoral Tumbado')['tramos'], [])
+
+
+class NombreDelCatalogoEnProduccion(Base):
+    """En producción el Farmer se llama «Farmer Walk (Paseo Del Granjero)»: debe verse como ejemplo."""
+
+    def test_farmer_con_el_nombre_completo_del_catalogo_sale_en_memoria_y_se_abre(self):
+        EjercicioBase.objects.filter(pk=self.farmer.pk).update(nombre='Farmer Walk (Paseo Del Granjero)')
+        self.farmer.refresh_from_db()
+        self.reg(date(2026, 9, 15), self.farmer, [(36, 47, None)], tipo='por_mano', metros=True)
+        self.reg(date(2026, 11, 12), self.farmer, [(36, 67, None)], tipo='por_mano', metros=True)
+        ej = {e['slug']: e for e in svc.ejemplos_disponibles(self.cliente, HOY)}
+        self.assertEqual(ej['farmer-walk']['nombre'], 'Farmer Walk (Paseo Del Granjero)')
+        for slug in ('farmer-walk', 'farmer-walk-paseo-del-granjero'):
+            r = self.client.get(reverse('clientes:evolucion_ejercicio', args=[self.cliente.id, slug]) + '?dias=180')
+            self.assertEqual(r.status_code, 200, slug)
+            self.assertContains(r, 'Farmer Walk (Paseo Del Granjero)')
+        r = self.client.get(reverse('clientes:memoria_entrenador', args=[self.cliente.id]))
+        self.assertContains(r, 'farmer-walk')
+
+    def test_el_nombre_exacto_tiene_prioridad_sobre_el_prefijo(self):
+        otro = EjercicioBase.objects.create(nombre='Press Arnold Alterno', grupo_muscular='hombros', tipo_progresion='peso_reps')
+        self.reg(date(2026, 10, 1), otro, [(20, 10, 7)])
+        self.reg(date(2026, 10, 1), self.arnold, [(40, 10, 7)])
+        self.assertEqual(svc.resolver_ejercicio(self.cliente, 'press-arnold'), 'Press Arnold')

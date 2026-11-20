@@ -105,9 +105,16 @@ def resolver_ejercicio(cliente, slug):
                   .values_list('ejercicio__nombre', flat=True).distinct())
     nombres |= set(EjercicioRealizado.objects.filter(entreno__cliente=cliente)
                    .values_list('nombre_ejercicio', flat=True).distinct())
-    for nombre in sorted(n for n in nombres if n):
+    validos = sorted(n for n in nombres if n)
+    for nombre in validos:
         if slug_de(nombre) == slug:
             return nombre
+    # Los tres ejemplos admiten el nombre completo del catálogo: en producción el ejercicio se llama
+    # «Farmer Walk (Paseo Del Granjero)» y su dirección corta es «farmer-walk». Solo tras fallar la exacta.
+    if slug in {s for s, _, _ in EJEMPLOS}:
+        for nombre in validos:
+            if slug_de(nombre).startswith(slug + '-'):
+                return nombre
     return None
 
 
