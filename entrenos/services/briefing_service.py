@@ -284,7 +284,7 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
             mensajes.append({
                 'icono': '🔥',
                 'tipo': 'carga',
-                'texto': f'Llevas 2 semanas con RPE medio {rpe_medio} — sesión intensa. Hoy para en RIR 2, no vayas al fallo.',
+                'texto': f'Llevas 2 semanas con RPE medio por ejercicio {rpe_medio} — sesión intensa. Hoy para en RIR 2, no vayas al fallo.',
             })
         elif rpe_medio <= 6.0:
             # No contradecir el freno del motor: si la progresión de los
@@ -334,19 +334,19 @@ def get_briefing_gym(cliente, ejercicios_planificados, fecha):
                 mensajes.append({
                     'icono': '🔝',
                     'tipo': 'carga',
-                    'texto': f'RPE medio {rpe_medio} — conserva la carga de los topes y progresa por repeticiones.',
+                    'texto': f'RPE medio por ejercicio {rpe_medio} en 2 semanas — conserva la carga de los topes y progresa por repeticiones.',
                 })
             elif _frenado:
                 mensajes.append({
                     'icono': '⚡',
                     'tipo': 'carga',
-                    'texto': f'RPE medio {rpe_medio} — tendrías margen para subir, pero hoy el plan mantiene la carga ({_razon}).',
+                    'texto': f'RPE medio por ejercicio {rpe_medio} en 2 semanas — tendrías margen para subir, pero hoy el plan mantiene la carga ({_razon}).',
                 })
             else:
                 mensajes.append({
                     'icono': '⚡',
                     'tipo': 'carga',
-                    'texto': f'RPE medio {rpe_medio} las últimas 2 semanas — tienes margen. Puedes intentar subir peso en el primer ejercicio.',
+                    'texto': f'RPE medio por ejercicio {rpe_medio} las últimas 2 semanas — tienes margen. Puedes intentar subir peso en el primer ejercicio.',
                 })
 
     # Energía baja

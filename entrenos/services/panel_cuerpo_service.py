@@ -89,7 +89,7 @@ def frase_camino(cliente, hoy):
     """25-oct-2026: la carga de la semana contada con sesiones e intensidad, no con puntos.
 
     'Esta semana has acumulado un 75 % más de esfuerzo que en una semana normal tuya:
-    más sesiones (6 frente a 4) y más intensas (esfuerzo medio 7,9 frente a 7,3).'
+    más sesiones (6 frente a 4) y más intensas (esfuerzo medio por sesión 7,9 frente a 7,3).'
     """
     from entrenos.services.estado_carga_service import DIAS_AGUDA, SEMANAS_NORMAL, lectura_carga
 
@@ -117,11 +117,11 @@ def frase_camino(cliente, hoy):
         partes.append(f'las mismas sesiones ({n_sem})')
     if rpe_sem is not None and rpe_ant is not None:
         if rpe_sem >= rpe_ant + 0.3:
-            partes.append(f'más intensas (esfuerzo medio {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
+            partes.append(f'más intensas (esfuerzo medio por sesión {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
         elif rpe_sem <= rpe_ant - 0.3:
-            partes.append(f'más suaves (esfuerzo medio {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
+            partes.append(f'más suaves (esfuerzo medio por sesión {_n1(rpe_sem)} frente a {_n1(rpe_ant)})')
         else:
-            partes.append(f'con la intensidad de siempre (esfuerzo medio {_n1(rpe_sem)})')
+            partes.append(f'con la intensidad de siempre (esfuerzo medio por sesión {_n1(rpe_sem)})')
     unidas = partes[0] if len(partes) == 1 else f'{partes[0]} y {partes[1]}'
     if partes[0].startswith('las mismas') and len(partes) == 2:
         unidas = f'{partes[0]}, {partes[1]}'

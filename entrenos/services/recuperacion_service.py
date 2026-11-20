@@ -402,6 +402,11 @@ def comprobacion_cierre(cliente, entreno):
     que = ' y '.join(ajustes)
     hoy_txt = f'{rpe_hoy:.1f}'.replace('.', ',')
     antes_txt = f'{rpe_antes:.1f}'.replace('.', ',')
+    # 21-nov-2026 (N3): las dos cifras son medias del RPE guardado por EJERCICIO (no por serie),
+    # la de hoy de esta sesión y la otra de las 4 semanas anteriores; la cabecera del cierre usa
+    # la media por serie de la sesión, que puede diferir. Cada cifra dice qué mide y de cuándo.
+    def_hoy = ' de media por ejercicio hoy'
+    def_antes = ', media por ejercicio de las 4 semanas anteriores'
     # 3-nov-2026 (nota 9): en la semana de descarga el esfuerzo ya venía
     # rebajado (RPE 6); compararlo con tu media no dice nada.
     try:
@@ -412,17 +417,17 @@ def comprobacion_cierre(cliente, entreno):
     if en_descarga:
         if rpe_hoy <= 6.5:
             return (f'Hoy ajusté la sesión: {que}. Era semana de descarga y todo iba a RPE 6: '
-                    f'lo hiciste a {hoy_txt}, justo lo que tocaba.')
-        return (f'Hoy ajusté la sesión: {que}. Era semana de descarga (RPE 6) y te costó {hoy_txt}: '
+                    f'lo hiciste a {hoy_txt} de media por ejercicio, justo lo que tocaba.')
+        return (f'Hoy ajusté la sesión: {que}. Era semana de descarga (RPE 6) y te costó {hoy_txt} de media por ejercicio: '
                 f'llegabas cansado de verdad. Mañana descansa bien.')
     if rpe_hoy >= rpe_antes + 0.5:
         return (f'Hoy ajusté la sesión: {que}. Aun así te costó más de lo normal '
-                f'(esfuerzo {hoy_txt} sobre 10; sueles estar en {antes_txt}). Bien hecho no forzar: '
+                f'(esfuerzo {hoy_txt} sobre 10{def_hoy}; sueles estar en {antes_txt}{def_antes}). Bien hecho no forzar: '
                 f'mañana descansa bien.')
     if rpe_hoy <= rpe_antes - 0.5:
         # 17-nov-2026 (nota 45): con menos esfuerzo del habitual, los datos no
         # dicen que el ajuste fuera justo: dicen que quizá sobró.
-        return (f'Hoy ajusté la sesión: {que}. Te costó menos de lo normal (esfuerzo {hoy_txt} sobre 10; '
-                f'sueles estar en {antes_txt}): quizá no hacía falta ajustar tanto.')
-    return (f'Hoy ajusté la sesión: {que}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10, '
-            f'como tus {antes_txt} de siempre): el ajuste fue justo y no pierdes nada.')
+        return (f'Hoy ajusté la sesión: {que}. Te costó menos de lo normal (esfuerzo {hoy_txt} sobre 10{def_hoy}; '
+                f'sueles estar en {antes_txt}{def_antes}): quizá no hacía falta ajustar tanto.')
+    return (f'Hoy ajusté la sesión: {que}. Te costó lo normal (esfuerzo {hoy_txt} sobre 10{def_hoy}, '
+            f'como tus {antes_txt} de las 4 semanas anteriores, también por ejercicio): el ajuste fue justo y no pierdes nada.')

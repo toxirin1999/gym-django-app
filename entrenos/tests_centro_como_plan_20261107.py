@@ -267,3 +267,67 @@ class FarmerEnMetros(Base):
                 patch('clientes.views._propuesta_zona_visible', return_value=None):
             d = _carga_por_vigencia(self.cliente, SABADO, {'bloque': {'inicio': LUNES}})['vigentes'][0]
         self.assertNotIn('nota', d)
+
+
+class VigenteMuestraLoQueSeAplica20261121(CargaPorVigencia):
+    """21-nov-2026 (N2): Buenos Dias decia «Subir peso» en el Plan y «Mantengo 35 kg» en el cierre."""
+
+    def _vigentes(self):
+        from entrenos.services.centro_decisiones_service import decisiones_por_vigencia
+        logs = GymDecisionLog.objects.filter(cliente=self.cliente).select_related('entreno_origen')
+        return decisiones_por_vigencia(self.cliente, logs, LUNES, SABADO)['vigentes']
+
+    def test_si_la_regla_unica_mantiene_se_muestra_mantener_y_se_conserva_el_apunte(self):
+        from unittest.mock import patch
+        self.log('Buenos Dias', 'subir_peso', LUNES + timedelta(days=1),
+                 motivo='Media 8 frente al objetivo 8 — objetivo superado con esfuerzo controlado')
+        texto = 'Mantengo 35 kg: la próxima vez a por 6 reps. Con 8 en todas las series, subo el peso.'
+        with patch('entrenos.services.cerebro_carga_service.proxima_vez_texto',
+                   return_value=(texto, 'Mantener', 'A por 6 reps')):
+            (v,) = self._vigentes()
+        self.assertEqual(v['label'], 'Mantener carga')
+        self.assertEqual(v['accion'], 'mantener')
+        self.assertEqual(v['motivo'], texto)
+        self.assertEqual(v['accion_registro'], 'subir_peso')
+        self.assertIn('objetivo superado', v['motivo_registro'])
+
+    def test_si_la_regla_unica_sube_no_cambia_nada(self):
+        from unittest.mock import patch
+        self.log('Curl Femoral', 'subir_peso', LUNES + timedelta(days=1))
+        with patch('entrenos.services.cerebro_carga_service.proxima_vez_texto',
+                   return_value=('15 reps con 45 kg: subo a 50 kg.', 'Subir peso', 'Subirá a 50 kg')):
+            (v,) = self._vigentes()
+        self.assertEqual(v['label'], 'Subir peso')
+        self.assertEqual(v['accion'], 'subir_peso')
+        self.assertNotIn('accion_registro', v)
+
+    def test_plan_llama_a_la_misma_funcion_que_el_cierre_y_no_copia_la_regla(self):
+        """Plan no tiene su version de la regla: llama a proxima_vez_texto (la del cierre, que a su
+        vez llama a decidir_carga, la de la proxima sesion) con los mismos argumentos."""
+        from pathlib import Path
+        from unittest.mock import patch
+        log = self.log('Buenos Dias', 'subir_peso', LUNES + timedelta(days=1))
+        with patch('entrenos.services.cerebro_carga_service.proxima_vez_texto',
+                   return_value=('Mantengo 35 kg', 'Mantener', 'x')) as m:
+            self._vigentes()
+        args, kwargs = m.call_args
+        self.assertEqual(args[0], self.cliente)
+        self.assertEqual(args[1].pk, log.entreno_origen_id)
+        self.assertEqual(args[2], log.ejercicio)
+        self.assertIsNone(args[4])
+        self.assertTrue(kwargs.get('con_efecto'))
+        fuente = (Path(__file__).parent / 'services' / 'centro_decisiones_service.py').read_text(encoding='utf-8')
+        self.assertNotIn('decidir_carga', fuente)
+        self.assertNotIn('limitar_esfuerzo', fuente)
+        cierre = (Path(__file__).parent / 'services' / 'cierre_entrenamiento_service.py').read_text(encoding='utf-8')
+        self.assertIn('proxima_vez_texto(cliente, entreno, log.ejercicio, tipo_progresion, porque, con_efecto=True)', cierre)
+
+    def test_no_se_toca_el_registro(self):
+        from unittest.mock import patch
+        log = self.log('Buenos Dias', 'subir_peso', LUNES + timedelta(days=1))
+        with patch('entrenos.services.cerebro_carga_service.proxima_vez_texto',
+                   return_value=('Mantengo 35 kg', 'Mantener', 'x')):
+            self._vigentes()
+        log.refresh_from_db()
+        self.assertEqual(log.accion, 'subir_peso')
+        self.assertIsNone(log.resultado)

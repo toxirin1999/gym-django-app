@@ -225,7 +225,7 @@ class TestPostEntrenoResumenView(PostEntrenoResumenViewBase):
             resp = self.client.get(self._url())
 
         contenido = resp.content.decode()
-        self.assertIn('RPE 6.2', contenido)
+        self.assertIn('RPE medio por serie 6.2', contenido)
         self.assertNotIn('6.181818181818182', contenido)
 
     def test_record_unico_solo_peso_sigue_mostrandose_correctamente(self):

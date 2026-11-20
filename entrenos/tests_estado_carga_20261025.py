@@ -259,7 +259,7 @@ class FraseCamino(Base):
         self.assertEqual(
             frase_camino(self.cliente, HOY),
             'Esta semana has acumulado un 75 % más de esfuerzo que en una semana normal tuya: '
-            'más sesiones (6 frente a 4) y más intensas (esfuerzo medio 7,9 frente a 7,3).')
+            'más sesiones (6 frente a 4) y más intensas (esfuerzo medio por sesión 7,9 frente a 7,3).')
 
     def test_semana_parecida(self):
         from entrenos.services.panel_cuerpo_service import frase_camino
@@ -269,7 +269,7 @@ class FraseCamino(Base):
         self.assertEqual(
             frase_camino(self.cliente, HOY),
             'Esta semana llevas un esfuerzo parecido al de una semana normal tuya: '
-            'las mismas sesiones (4), con la intensidad de siempre (esfuerzo medio 7,5).')
+            'las mismas sesiones (4), con la intensidad de siempre (esfuerzo medio por sesión 7,5).')
 
     def test_sin_historial_no_dice_nada(self):
         from entrenos.services.panel_cuerpo_service import frase_camino

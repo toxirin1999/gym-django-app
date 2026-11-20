@@ -431,3 +431,15 @@ class ComandoVerRecuperacion(ConCliente):
         self.assertIn('Nivel: rojo', out.getvalue())
         self.assertIn('FÚTBOL', out.getvalue())
         self.assertEqual(antes, (BitacoraDiaria.objects.count(), ActividadRealizada.objects.count()))
+
+
+class CierreRotulaLasMedias20261121(ComprobacionCierre):
+    """21-nov-2026 (N3): «como tus 7,3» no decia de que ejercicio ni de cuando."""
+
+    def test_cada_cifra_dice_que_mide_y_su_periodo(self):
+        self._entreno(5, None, 8)
+        e = self._entreno(0, 'recuperacion_baja', 8)
+        frase = rec.comprobacion_cierre(self.cliente, e)
+        self.assertIn('de media por ejercicio hoy', frase)
+        self.assertIn('de las 4 semanas anteriores', frase)
+        self.assertNotIn('de siempre', frase)

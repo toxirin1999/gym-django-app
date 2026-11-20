@@ -261,6 +261,34 @@ def _fecha_entreno(entreno):
     return getattr(entreno, 'fecha_ejecucion', None) or getattr(entreno, 'fecha', None)
 
 
+def _accion_efectiva(cliente, log):
+    """(label, motivo) de lo que se aplicará de verdad si difiere de ``log.accion``, o None.
+
+    21-nov-2026 (N2): el registro decía «Subir peso» (media 8 frente al objetivo 8 con esfuerzo
+    controlado) mientras el cierre y el briefing, con la regla única (regla «sin apretar»: con el
+    esfuerzo de ese día habría que pasarse del rango), decían «Mantengo 35 kg». Lo que se muestra
+    como vigente es lo que la regla única aplicará, no el primer apunte del registro.
+    """
+    if log.accion != 'subir_peso' or not log.entreno_origen_id:
+        return None
+    try:
+        from entrenos.services.cerebro_carga_service import proxima_vez_texto
+        from rutinas.models import EjercicioBase
+        tipo = (EjercicioBase.objects.filter(nombre__iexact=log.ejercicio)
+                .values_list('tipo_progresion', flat=True).first()) or 'peso_reps'
+        regla = proxima_vez_texto(cliente, log.entreno_origen, log.ejercicio, tipo, None, con_efecto=True)
+    except Exception:  # noqa: BLE001
+        return None
+    if not regla:
+        return None
+    texto, accion = regla[0], regla[1]
+    if accion == 'Subir peso':
+        return None
+    etiqueta = {'Mantener': 'Mantener carga', 'Bajar peso': 'Reducir peso',
+                'Subir repeticiones': 'Subir repeticiones'}.get(accion)
+    return (etiqueta, texto) if etiqueta else None
+
+
 def decisiones_por_vigencia(cliente, decisiones, desde, hoy, en_plan=None):
     """Separa las decisiones de carga en vigentes e historial.
 
@@ -308,6 +336,13 @@ def decisiones_por_vigencia(cliente, decisiones, desde, hoy, en_plan=None):
         if (primera and sigue_en_plan and log.accion in _ACCIONES_QUE_CAMBIAN and log.resultado is None
                 and not (ultima_vez.get(clave) and ultima_vez[clave] > origen)):
             item['estado'] = _ESTADO_VIGENTE.get(log.estado_aplicacion, 'para la próxima sesión')
+            efectiva = _accion_efectiva(cliente, log)
+            if efectiva:
+                # El apunte del registro se conserva aparte; lo vigente es lo que se aplicará.
+                item['accion_registro'] = log.accion
+                item['motivo_registro'] = log.motivo
+                item['label'], item['motivo'] = efectiva
+                item['accion'] = 'mantener' if efectiva[0] == 'Mantener carga' else item['accion']
             item['rango_proximo'] = (en_plan or {}).get(clave)
             item['rango_anterior'] = None
             if log.entreno_origen_id:

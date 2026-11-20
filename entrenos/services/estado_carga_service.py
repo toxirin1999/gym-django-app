@@ -306,7 +306,8 @@ def estado_carga(cliente, hoy):
             and not esfuerzo['subiendo'] and not molestias):
         detalle = ''
         if esfuerzo['ahora'] is not None and esfuerzo['antes'] is not None:
-            detalle = f' y tu esfuerzo medio va en {_n(esfuerzo["ahora"])} (antes {_n(esfuerzo["antes"])})'
+            detalle = (f' y tu esfuerzo medio por ejercicio va en {_n(esfuerzo["ahora"])} en 2 semanas '
+                       f'(antes {_n(esfuerzo["antes"])}, las 2 anteriores)')
         return {**base, 'respuesta': 'dar_mas', 'frase': (
             f'{buenos14} de los últimos {len(ultimos14)} días recuperándote bien, la carga en lo tuyo'
             f'{detalle}. Te veo para más: es buen momento para subir un poco el volumen.')}

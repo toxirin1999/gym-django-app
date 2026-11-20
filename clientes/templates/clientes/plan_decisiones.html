@@ -1512,7 +1512,7 @@
           <li><strong>{{ metricas.duracion_total_minutos }} min</strong>duración registrada</li>
           {% endif %}
           {% if metricas.rpe_medio is not None and cobertura.rpe.disponibles %}
-          <li><strong>{{ cierre_metricas_ui.rpe_medio }}</strong>RPE medio</li>
+          <li><strong>{{ cierre_metricas_ui.rpe_medio }}</strong>RPE medio por serie · sesión</li>
           {% endif %}
           {% if metricas.energia_pre_sesion_media is not None and cobertura.energia_pre_sesion.disponibles %}
           <li><strong>{{ cierre_metricas_ui.energia_pre_sesion_media }}</strong>energía media</li>
@@ -1558,7 +1558,7 @@
         <ul class="dc-close-metrics" aria-label="Métricas con evidencia disponible">
           {% if balance_semana.volumen_kg %}<li><strong>{{ balance_semana.volumen_kg }} kg</strong>volumen total</li>{% endif %}
           {% if balance_semana.minutos %}<li><strong>{{ balance_semana.minutos }} min</strong>duración registrada</li>{% endif %}
-          {% if balance_semana.rpe_medio %}<li><strong>{{ balance_semana.rpe_medio }}</strong>RPE medio</li>{% endif %}
+          {% if balance_semana.rpe_medio %}<li><strong>{{ balance_semana.rpe_medio }}</strong>RPE medio · semana</li>{% endif %}
           {% if balance_semana.energia_media %}<li><strong>{{ balance_semana.energia_media }}</strong>energía media</li>{% endif %}
         </ul>
       </article>
