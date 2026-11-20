@@ -3,7 +3,7 @@
 {% block contenido %}
 <a class="back" href="{% url 'clientes:evolucion_ejercicio' cliente.id slug %}">‹ {{ titulo }}</a>
 <h1>Confirmar la carga</h1>
-<div class="sub">{{ titulo }} · {{ tramo.desde|date:"d/m/Y" }} – {{ tramo.hasta|date:"d/m/Y" }} · {{ tramo.n }} sesion{{ tramo.n|pluralize:"es" }}</div>
+<div class="sub">{{ titulo }} · {{ tramo.desde|date:"d/m/Y" }} – {{ tramo.hasta|date:"d/m/Y" }} · {{ tramo.n }} sesi{{ tramo.n|pluralize:"ón,ones" }}</div>
 
 {% if tramos|length > 1 %}
 <nav class="pills" aria-label="Tramo">
@@ -30,7 +30,7 @@
     <label class="campo"><span>Desde</span><input type="date" name="desde" value="{{ form.desde }}" min="{{ tramo.desde|date:'Y-m-d' }}" max="{{ tramo.hasta|date:'Y-m-d' }}"></label>
     <label class="campo"><span>Hasta</span><input type="date" name="hasta" value="{{ form.hasta }}" min="{{ tramo.desde|date:'Y-m-d' }}" max="{{ tramo.hasta|date:'Y-m-d' }}"></label>
   </div>
-  <div class="small">Se aplicará a {{ aplicara }} sesion{{ aplicara|pluralize:"es" }}. Acota las fechas si solo recuerdas una parte; el resto sigue por comprobar. Confirmar cómo anotas hoy no valida los registros antiguos.</div>
+  <div class="small">Se aplicará a {{ aplicara }} sesi{{ aplicara|pluralize:"ón,ones" }}. Acota las fechas si solo recuerdas una parte; el resto sigue por comprobar. Confirmar cómo anotas hoy no valida los registros antiguos.</div>
   <button class="guardar" type="submit">Guardar</button>
   <details>
     <summary>Por qué te lo pregunto</summary>

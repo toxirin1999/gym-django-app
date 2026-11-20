@@ -3,7 +3,7 @@
 {% block contenido %}
 <a class="back" href="{% url 'clientes:evolucion_ejercicio' cliente.id h.slug %}">‹ {{ titulo }}</a>
 <h1>Detalle</h1>
-<div class="sub">{{ titulo }} · {{ sesiones|length }} sesion{{ sesiones|length|pluralize:"es" }} registradas</div>
+<div class="sub">{{ titulo }} · {{ sesiones|length }} sesi{{ sesiones|length|pluralize:"ón,ones" }} registradas</div>
 
 <section class="card">
   <div class="lab">Método</div>
@@ -13,7 +13,7 @@
   </details>
   <details>
     <summary>Qué entra en las conclusiones</summary>
-    <p class="small">Solo cuentan sesiones con exactamente la misma carga (39,9 y 40 kg son cargas distintas; solo se convierte una carga si tú lo confirmas para esa unidad y esas fechas). El bloque del plan es contexto, no un filtro. Las semanas de descarga y las cargas de recuperación se ven aquí y en la gráfica, pero no entran en las conclusiones que piden un esfuerzo comparable. Una comparación «cumple los filtros» cuando es la misma carga y el mismo tramo de repeticiones; es «válida» solo si además la carga está confirmada. Describe tu rendimiento; no cambia el plan.</p>
+    <p class="small">Solo cuentan sesiones con exactamente la misma carga (39,9 y 40 kg son cargas distintas; solo se convierte una carga si tú lo confirmas para esa unidad y esas fechas). El bloque del plan es contexto, no un filtro. Si entre las sesiones comparadas cambió el bloque, el cambio se ve, pero su causa no es concluyente: no se lee como mejora ni como pérdida por sí solo. Las semanas de descarga y las cargas de recuperación se ven aquí y en la gráfica, pero no entran en las conclusiones que piden un esfuerzo comparable. Una comparación «cumple los filtros» cuando es la misma carga y el mismo tramo de repeticiones; es «válida» solo si además la carga está confirmada. Describe tu rendimiento; no cambia el plan.</p>
   </details>
 </section>
 

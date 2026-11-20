@@ -16,6 +16,7 @@
 <section class="card" aria-labelledby="concl">
   <div class="lab" id="concl">Conclusión</div>
   <div class="big">{{ c.conclusion.titulo }}</div>
+  {% if c.conclusion.resumen %}<p><strong>{{ c.conclusion.resumen }}</strong></p>{% endif %}
   <p>{{ c.conclusion.detalle }}</p>
   {% for a in c.conclusion.avisos %}
   <div class="aviso">{{ a }}{% if tramos_pendientes and 'comprobar' in a %} <a href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id c.slug %}">Comprobar</a>{% endif %}</div>
@@ -77,7 +78,7 @@
   <div class="lab">Carga por comprobar</div>
   <p class="small" style="margin-top:6px">Hay registros con una unidad sin confirmar. Se siguen mostrando; confirmarlos solo afina las comparaciones.</p>
   {% for t in tramos_pendientes %}
-  <a class="enlace" href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id c.slug %}?tramo={{ t.indice }}"><span>{{ t.desde|date:"d/m/Y" }} – {{ t.hasta|date:"d/m/Y" }} · {{ t.n }} sesion{{ t.n|pluralize:"es" }}<br><span class="nota">Consta como: {{ t.firma_txt }}</span></span> <span aria-hidden="true">›</span></a>
+  <a class="enlace" href="{% url 'clientes:confirmar_carga_ejercicio' cliente.id c.slug %}?tramo={{ t.indice }}"><span>{{ t.desde|date:"d/m/Y" }} – {{ t.hasta|date:"d/m/Y" }} · {{ t.n }} sesi{{ t.n|pluralize:"ón,ones" }}<br><span class="nota">Consta como: {{ t.firma_txt }}</span></span> <span aria-hidden="true">›</span></a>
   {% endfor %}
   {% if hay_tramos_antiguos %}<a class="enlace" href="{% url 'clientes:evolucion_ejercicio_detalle' cliente.id c.slug %}">Tramos anteriores por comprobar <span aria-hidden="true">›</span></a>{% endif %}
 </section>

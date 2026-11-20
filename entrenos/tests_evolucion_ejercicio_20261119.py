@@ -101,11 +101,29 @@ class ConclusionCurl(Base):
         self.plan(date(2026, 10, 27), 40)     # hipertrofia metabólica
         self.plan(date(2026, 11, 10), 46)     # fuerza
         c = svc.consulta(self.cliente, 'Curl Femoral Tumbado', 90, '40', HOY)['conclusion']
-        texto = ' '.join(c['avisos'] + [c['titulo'], c['detalle']]).lower()
-        self.assertIn('contexto', texto)
+        texto = ' '.join(c['avisos'] + [c['titulo'], c['detalle'], c.get('resumen', '')]).lower()
         self.assertNotIn('has perdido', texto)
         self.assertNotIn('retroced', texto)
         self.assertEqual(c['estado'], 'comparada')       # el cambio de bloque no la invalida
+        self.assertTrue(c['cambio_bloque'])
+        self.assertNotIn('bloque', texto)                # la pantalla principal no lo comenta...
+        d = self.client.get(reverse('clientes:evolucion_ejercicio_detalle', args=[self.cliente.id, 'curl-femoral-tumbado']))
+        self.assertContains(d, 'su causa no es concluyente')   # ...queda explicado en el detalle
+
+    def test_frase_de_lo_observado_con_la_misma_carga(self):
+        self.reg(date(2026, 10, 23), self.farmer, [(36, 54, 8)], tipo='por_mano', metros=True)
+        self.reg(date(2026, 11, 12), self.farmer, [(36, 67, 7)], tipo='por_mano', metros=True)
+        c = svc.consulta(self.cliente, 'Farmer Walk', 90, '36', HOY)['conclusion']
+        self.assertEqual(c['resumen'], 'Has aumentado de 54 a 67 m con la misma carga.')
+        r = self.client.get(reverse('clientes:evolucion_ejercicio', args=[self.cliente.id, 'farmer-walk']))
+        self.assertContains(r, 'Has aumentado de 54 a 67 m con la misma carga.')
+        self.assertNotContains(r, 'su causa no es concluyente')
+
+    def test_sesion_en_singular_lleva_tilde(self):
+        self.reg(date(2026, 10, 1), self.arnold, [(30, 12, 7)])
+        r = self.client.get(reverse('clientes:confirmar_carga_ejercicio', args=[self.cliente.id, 'press-arnold']))
+        self.assertContains(r, '1 sesión')
+        self.assertNotContains(r, '1 sesion<')
 
     def test_descarga_visible_pero_fuera_de_la_conclusion(self):
         self.reg(date(2026, 10, 8), self.curl, [(40, 10, 8)])
