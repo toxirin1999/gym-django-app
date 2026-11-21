@@ -3975,6 +3975,11 @@ def vista_entrenamiento_activo(request, cliente_id):
                 )
             )
 
+        # 21-nov-2026 (etapa 3): el día del fútbol, sin versión reducida, la pierna
+        # opcional también va al final (como dice el aviso); orden estable.
+        if not modo_reducido and any(e.get('opcional_futbol') for e in ejercicios_planificados):
+            ejercicios_planificados.sort(key=lambda e: 1 if e.get('opcional_futbol') else 0)
+
         # Phase Gym Peso 2 — calculado una vez para todo el bucle (no por ejercicio).
         if es_sesion_canonica:
             _es_descarga_sesion = False
@@ -3989,6 +3994,12 @@ def vista_entrenamiento_activo(request, cliente_id):
             if ejercicio.get('opcional_futbol'):
                 # 8-nov-2026: el día del fútbol, la pierna es opcional (como en el briefing).
                 ejercicio['es_principal'] = False
+            # 21-nov-2026 (etapa 3): qué es opcional HOY, con o sin versión reducida.
+            # (es_principal por sí solo no sirve: en un día normal los accesorios
+            # no son «principales» y tampoco son opcionales.)
+            ejercicio['opcional_hoy'] = bool(ejercicio.get('opcional_futbol')) or (
+                not ejercicio['es_principal'] and (
+                    modo_reducido or ejercicio.get('motivo_bloqueo') == 'intervencion_reducir_accesorios'))
             # Phase 11.1: set/merge origen_opcional for non-principal exercises
             if modo_reducido and not ejercicio.get('es_principal'):
                 existing = ejercicio.get('origen_opcional')
@@ -4786,9 +4797,13 @@ def vista_entrenamiento_activo(request, cliente_id):
         except (TypeError, ValueError):
             continue
         _rpe_txt = str(int(_rpe)) if _rpe.is_integer() else f'{_rpe:g}'.replace('.', ',')
+        # Etapa 3: la misma regla que el móvil (aplicarSugerenciaSiguienteSerie):
+        # en el tope del rango sube con RPE <= objetivo - 1 (antes decía «6» fijo).
+        _rpe_sube = _rpe - 1
+        _rpe_sube_txt = str(int(_rpe_sube)) if float(_rpe_sube).is_integer() else f'{_rpe_sube:g}'.replace('.', ',')
         _ej['regla_parada'] = (f"Para al llegar a {_ej['reps_max']} reps o a RPE {_rpe_txt}, "
                                f"lo que llegue antes. Luego apunta el RPE real. "
-                               f"Si llegas al tope con RPE 6 o menos, la app sube más peso en la siguiente serie.")
+                               f"Si llegas al tope con RPE {_rpe_sube_txt} o menos, la app sube más peso en la siguiente serie.")
         # 10-nov-2026 (nota 10): el Pallof con pausa lo dice la tarjeta, no solo el briefing.
         if _ej.get('con_pausa'):
             _ej['regla_parada'] = ("Con pausa de 2 s con los brazos estirados en cada repetición. "
@@ -4811,6 +4826,16 @@ def vista_entrenamiento_activo(request, cliente_id):
         _permiso_prog_template = evaluar_permiso_progresion(cliente, fecha_obj)
     except Exception:
         pass
+
+    # 21-nov-2026 (etapa 3): si la versión reducida no deja ningún principal, no se
+    # convierte todo en opcional (no quedaría nada obligatorio que cerrar).
+    # Clasificación efectiva única: etiqueta (OPCIONAL), contadores, separadores y
+    # cierre del servidor salen de ``opcional_hoy``.
+    if ejercicios_planificados and all(e.get('opcional_hoy') for e in ejercicios_planificados) and not any(
+            e.get('opcional_futbol') for e in ejercicios_planificados):
+        for _e in ejercicios_planificados:
+            _e['opcional_hoy'] = False
+            _e['sin_principales'] = True
 
     context = {
         'cliente': cliente,
@@ -4838,7 +4863,9 @@ def vista_entrenamiento_activo(request, cliente_id):
         'sesion_programada_id': sesion_programada_id,
         'sello_autoridad_gym': sello_autoridad_gym,
         'modo_reducido': modo_reducido,
-        'num_principales': sum(1 for e in ejercicios_planificados if e.get('es_principal')) if modo_reducido else 0,
+        'num_principales': sum(1 for e in ejercicios_planificados if not e.get('opcional_hoy')) if any(
+            e.get('opcional_hoy') for e in ejercicios_planificados) else 0,
+        'hay_opcionales': any(e.get('opcional_hoy') for e in ejercicios_planificados),
         'permiso_progresion': _permiso_prog_template,
         'retorno_tras_ausencia': _retorno_tras_ausencia,
         'aviso_energia': aviso_energia,
@@ -4953,6 +4980,20 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     raise ValueError(f'RPE real inválido en la serie {i}.') from exc
                 if not 1 <= rpe_num <= 10:
                     raise ValueError(f'El RPE real de la serie {i} debe estar entre 1 y 10.')
+        # 21-nov-2026 (etapa 3): el cierre es parcial por lo que falta del bloque
+        # PRINCIPAL. Un opcional sin hacer (versión reducida o pierna opcional del
+        # fútbol) no convierte la sesión en parcial ni pide motivo. El móvil envía
+        # ``<id>_opcional``=1/0; una página antigua (sin esa clave) con versión
+        # reducida usa ``_es_principal`` como antes.
+        _modo_reducido_cierre = request.POST.get('modo_reducido') == '1'
+
+        def _es_opcional_hoy(fid):
+            marca = request.POST.get(f'{fid}_opcional', '').strip()
+            if marca in ('0', '1'):
+                return marca == '1'
+            return _modo_reducido_cierre and request.POST.get(f'{fid}_es_principal', '').strip() == '0'
+
+        _ids_omitidos_principales = [fid for fid in _ids_omitidos if not _es_opcional_hoy(fid)]
         _hay_series_pendientes = any(
             sum(1 for i in range(1, 11) if f'{fid}_reps_{i}' in request.POST)
             > sum(
@@ -4961,10 +5002,13 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 and request.POST.get(f'{fid}_aproximacion_{i}', '').lower() not in ('1', 'true', 'on')
             )
             for fid in _ids_planificados
+            if not _es_opcional_hoy(fid) or fid in _ids_con_serie
+            # un opcional empezado y dejado a medias sí cuenta como pendiente;
+            # uno sin empezar, no.
         )
         _motivo_cierre = request.POST.get('motivo_cierre', '').strip()
         _estado_cierre = (
-            EntrenoRealizado.ESTADO_PARCIAL if (_ids_omitidos or _hay_series_pendientes)
+            EntrenoRealizado.ESTADO_PARCIAL if (_ids_omitidos_principales or _hay_series_pendientes)
             else EntrenoRealizado.ESTADO_COMPLETA
         )
         if _estado_cierre == EntrenoRealizado.ESTADO_PARCIAL:
@@ -5166,6 +5210,14 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     reps = int(reps_str) if reps_str else 0
                     rpe_real = float(rpe_str.replace(',', '.')) if rpe_str else None
                     tecnica = tecnica_str if tecnica_str in ('buena', 'aceptable', 'comprometida') else None
+                    # 21-nov-2026 (etapa 3): «elegida» solo si el móvil lo declara al tocar;
+                    # una página antigua que marcaba «buena» sola queda como «desconocida».
+                    if tecnica is None:
+                        tecnica_origen = 'sin_valorar'
+                    elif request.POST.get(f"{form_id}_tecnica_origen_{i}", '').strip() == 'elegida':
+                        tecnica_origen = 'elegida'
+                    else:
+                        tecnica_origen = 'desconocida'
 
                     # Distancia: válida con metros > 0; el peso es opcional pero se guarda si > 0
                     serie_valida = (reps > 0) if es_distancia else (
@@ -5194,6 +5246,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                             'rpe_real': rpe_real,
                             'tipo_progresion': tipo_progresion,
                             'tecnica': tecnica,
+                            'tecnica_origen': tecnica_origen,
                             'es_aproximacion': es_aproximacion,
                             **semantica_carga,
                         }
@@ -5265,8 +5318,11 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
                 # Bloque esencial: None=sesión normal, True/False=modo_reducido
                 _es_principal_str = request.POST.get(f'{form_id}_es_principal', '').strip()
+                _opcional_str = request.POST.get(f'{form_id}_opcional', '').strip()
                 _es_bloque_principal = None
-                if _modo_reducido and _es_principal_str in ('1', '0'):
+                if _opcional_str in ('0', '1'):
+                    _es_bloque_principal = (_opcional_str == '0')
+                elif _modo_reducido and _es_principal_str in ('1', '0'):
                     _es_bloque_principal = (_es_principal_str == '1')
 
                 ej_realizado = EjercicioRealizado.objects.create(
@@ -5312,6 +5368,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                         peso_kg=Decimal(str(s_data['peso'])),
                         rpe_real=s_data['rpe_real'],
                         tecnica_calidad=s_data.get('tecnica'),
+                        tecnica_origen=s_data.get('tecnica_origen', 'desconocida'),
                         es_aproximacion=s_data['es_aproximacion'],
                         reps_editadas=bool(s_data.get('reps_editadas')),
                         completado=True,
@@ -5395,18 +5452,25 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 messages.info(request, "¡Récords de fuerza actualizados!")
 
         _modo_reducido = request.POST.get('modo_reducido') == '1'
-        if _modo_reducido:
-            entreno.modo_reducido = True
-            # Compute planned totals from all form_ids present in POST
-            _all_form_ids = [k.replace('_es_principal', '') for k in request.POST if k.endswith('_es_principal')]
-            entreno.principales_planificados = sum(
-                1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '1'
-            )
-            entreno.opcionales_planificados = sum(
-                1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '0'
-            )
+        _ids_con_marca_opcional = [k[:-len('_opcional')] for k in request.POST if k.endswith('_opcional')]
+        _opcionales_hoy = sum(1 for fid in _ids_con_marca_opcional if request.POST.get(f'{fid}_opcional') == '1')
+        if _modo_reducido or _opcionales_hoy:
+            if _modo_reducido:
+                entreno.modo_reducido = True
+            if _ids_con_marca_opcional:
+                entreno.principales_planificados = sum(
+                    1 for fid in _ids_con_marca_opcional if request.POST.get(f'{fid}_opcional') == '0')
+                entreno.opcionales_planificados = _opcionales_hoy
+            else:
+                # Página antigua: como antes, por _es_principal.
+                _all_form_ids = [k.replace('_es_principal', '') for k in request.POST if k.endswith('_es_principal')]
+                entreno.principales_planificados = sum(
+                    1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '1')
+                entreno.opcionales_planificados = sum(
+                    1 for fid in _all_form_ids if request.POST.get(f'{fid}_es_principal') == '0')
             entreno.save(update_fields=['modo_reducido', 'principales_planificados', 'opcionales_planificados'])
-            messages.success(request, "Versión reducida completada. El bloque principal ya es suficiente para hoy.")
+            messages.success(request, "Versión reducida completada. El bloque principal ya es suficiente para hoy."
+                             if _modo_reducido else "¡Entrenamiento guardado con éxito!")
         else:
             messages.success(request, "¡Entrenamiento guardado con éxito!")
 

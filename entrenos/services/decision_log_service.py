@@ -35,6 +35,10 @@ def _tecnicas_sesion(entreno, ejercicio_normalizado):
         )
         .exclude(tecnica_calidad__isnull=True)
         .exclude(tecnica_calidad='')
+        # 21-nov-2026 (etapa 3): «buena» solo cuenta si la eligió el usuario
+        # (antes podía venir marcada por defecto); aceptable/comprometida
+        # siempre fueron una elección.
+        .exclude(tecnica_calidad='buena', tecnica_origen__in=('desconocida', 'sin_valorar'))
         .select_related('ejercicio')
         if normalizar_ejercicio(serie.ejercicio.nombre) == ejercicio_normalizado
     ]

@@ -58,11 +58,13 @@ class Briefing(SimpleTestCase):
 
 
 class MenosToques(SimpleTestCase):
-    """14-oct-2026: la técnica se marca 'buena' por defecto en el descanso."""
+    """14-oct-2026 marcaba la técnica «buena» por defecto; 21-nov-2026 (etapa 3) lo revierte:
+    sin tocar nada queda «sin valorar»."""
 
-    def test_tecnica_buena_por_defecto(self):
+    def test_tecnica_ya_no_es_buena_por_defecto(self):
         src = (BASE / 'entrenamiento_activo.html').read_text(encoding='utf-8')
         i = src.index('iniciarDescanso(fid,descansoSeg,snDescanso,total);')
-        bloque = src[i:i + 600]
-        self.assertIn("selTecnica(fid,'buena')", bloque)
+        bloque = src[i:i + 900]
+        self.assertNotIn("selTecnica(fid,'buena')", bloque)
         self.assertIn('if(serieHecha && !serieHecha.tecnica)', bloque)
+        self.assertIn('textoImpactoTecnica(null)', bloque)

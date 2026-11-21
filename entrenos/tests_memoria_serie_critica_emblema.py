@@ -29,7 +29,7 @@ class SerieCriticaTests(TestCase):
         for n, calidad in enumerate(calidades, start=1):
             SerieRealizada.objects.create(
                 entreno=entreno, ejercicio=self.base, serie_numero=n, repeticiones=8,
-                peso_kg=60, completado=True, tecnica_calidad=calidad,
+                peso_kg=60, completado=True, tecnica_calidad=calidad, tecnica_origen='elegida',
                 es_aproximacion=aproximacion_s1 and n == 1,
             )
 

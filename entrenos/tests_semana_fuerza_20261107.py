@@ -171,7 +171,7 @@ class SesionComoElBriefing(SimpleTestCase):
     def test_plantilla_opcional_por_futbol(self):
         src = (Path(settings.BASE_DIR) / 'entrenos' / 'templates' / 'entrenos' / 'entrenamiento_activo.html').read_text(
             encoding='utf-8')
-        self.assertIn("or ejercicio.opcional_futbol %}", src)
+        self.assertIn("{% if ejercicio.opcional_hoy %}", src)
 
 
 class EstimacionPrudente(Base):

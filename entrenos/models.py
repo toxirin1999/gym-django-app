@@ -289,6 +289,16 @@ class SerieRealizada(models.Model):
         max_length=15, choices=TECNICA_CHOICES, null=True, blank=True,
         help_text="Calidad de técnica percibida en esta serie"
     )
+    tecnica_origen = models.CharField(
+        max_length=12, default='desconocida',
+        choices=[('elegida', 'Elegida por el usuario'), ('sin_valorar', 'Sin valorar'),
+                 ('desconocida', 'Anterior al registro de origen')],
+        help_text=(
+            "21-nov-2026 (etapa 3): 'elegida' solo si el usuario tocó la técnica de esta serie; "
+            "'sin_valorar' si no la eligió; 'desconocida' en series anteriores, cuando «buena» "
+            "podía venir marcada por defecto."
+        ),
+    )
     es_aproximacion = models.BooleanField(
         default=False,
         help_text=(

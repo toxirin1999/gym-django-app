@@ -45,6 +45,7 @@ class CicloTecnicaComprometidaTests(TestCase):
                 repeticiones=8,
                 peso_kg=peso,
                 tecnica_calidad=tecnica,
+                tecnica_origen='elegida',  # etapa 3: «buena» solo cuenta si la eligió el usuario
                 completado=True,
             )
         return entreno

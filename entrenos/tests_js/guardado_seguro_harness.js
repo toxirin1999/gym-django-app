@@ -30,6 +30,7 @@ function crearEntorno(opts) {
   const doc = {
     body: el('body'), documentElement: el('html'),
     getElementById: (id) => (id === 'save-acciones' && !elementos[id]) ? null : (id === 'aviso-almacen' ? (elementos[id] || null) : el(id)),
+    querySelector: () => null,
     createElement: (t) => { const e = el('creado_' + Math.random()); e.tag = t; return e; },
   };
   // 'save-acciones' y 'aviso-almacen' se crean desde el codigo: se registran al insertarse.

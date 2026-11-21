@@ -136,8 +136,8 @@ def get_resumen_semanal_gym(cliente, inicio=None, fin=None):
         })
     else:
         series_con_tecnica = SerieRealizada.objects.filter(
-            entreno__in=entrenos, tecnica_calidad__isnull=False
-        ).count()
+            entreno__in=entrenos, tecnica_origen='elegida'
+        ).count()  # solo técnica valorada por el usuario
         if series_con_tecnica > 0:
             items.append({
                 'tipo': 'tecnica',

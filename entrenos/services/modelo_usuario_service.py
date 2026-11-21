@@ -175,6 +175,7 @@ def _get_serie_critica_global(cliente, hoy):
     """
     try:
         from collections import Counter
+        from django.db.models import Q
         from entrenos.models import SerieRealizada
         hace_90 = hoy - timedelta(days=90)
 
@@ -182,6 +183,9 @@ def _get_serie_critica_global(cliente, hoy):
             SerieRealizada.objects
             .filter(entreno__cliente=cliente, entreno__fecha__gte=hace_90, es_aproximacion=False)
             .exclude(tecnica_calidad__isnull=True).exclude(tecnica_calidad='')
+            # etapa 3: el denominador solo cuenta técnica valorada por el usuario
+            # (más las comprometidas, que siempre son elección).
+            .filter(Q(tecnica_origen='elegida') | Q(tecnica_calidad='comprometida'))
             .values_list('serie_numero', 'tecnica_calidad')
         )
         total = Counter(n for n, _ in filas)

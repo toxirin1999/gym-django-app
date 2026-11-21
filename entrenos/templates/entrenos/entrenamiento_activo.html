@@ -267,6 +267,15 @@ input{background:transparent!important;border:none!important;outline:none!import
 .pd-calc-txt{font-size:12px;color:var(--td);text-align:center;}
 .pd-calc-txt strong{color:#fff;}
 /* Técnica */
+.hoy-card{margin:0 16px 12px;border:1px solid var(--bd,rgba(255,255,255,0.1));border-radius:12px;background:var(--surf2,rgba(255,255,255,0.04));}
+.hoy-card>summary{list-style:none;display:flex;align-items:center;gap:10px;padding:11px 14px;cursor:pointer;min-height:44px;font-family:var(--fm);font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--td);}
+.hoy-card>summary::-webkit-details-marker{display:none;}
+.hoy-card>summary::after{content:'Ver';margin-left:auto;text-decoration:underline;text-transform:none;letter-spacing:0;}
+.hoy-card[open]>summary::after{content:'Ocultar';}
+.hoy-tit{font-weight:700;color:var(--gb,#eaf3f2);}
+.hoy-res{text-transform:none;letter-spacing:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
+.hoy-body{padding:0 12px 4px;}
+.hoy-body>*{margin-left:0 !important;margin-right:0 !important;}
 .pd-tecnica-wrap{
   margin-bottom:10px;
   background:var(--surf2,rgba(255,255,255,0.05));
@@ -418,6 +427,14 @@ input{background:transparent!important;border:none!important;outline:none!import
   color:var(--td);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;
 }
 .sticky-final-btn:hover,.sticky-final-btn:active{color:#fff;border-color:rgba(255,255,255,0.28);}
+/* Etapa 3: con texto al 130 % la barra inferior no debe recortar «Revisar y finalizar» ni
+   los contadores (principales + opcionales). */
+.sticky{height:auto;min-height:58px;padding-top:6px;padding-bottom:max(6px,env(safe-area-inset-bottom,0px));}
+.sticky-timer,.sticky-stats,.sticky-stat{min-width:0;}
+.sticky-stats{flex:1 1 auto;justify-content:center;gap:10px;}
+.sticky-val{white-space:nowrap;}
+#series-completadas-sticky{white-space:normal;text-align:center;line-height:1.15;}
+.sticky-final-btn{flex-shrink:1;min-width:0;max-width:42%;line-height:1.15;text-align:left;}
 .sticky-final-btn:disabled{opacity:.38;cursor:not-allowed;color:var(--td);border-color:var(--border);}
 
 /* ── LAYOUT ── */
@@ -1455,9 +1472,15 @@ body{background:
 </div>
 <div id="session-feedback" role="alert" aria-live="assertive" hidden></div>
 
+<!-- ══ «HOY» (etapa 3, EA-11): los avisos de contexto del día, agrupados en una
+     sola tarjeta que desplaza el contenido y nunca lo tapa. Ninguno sustituye a
+     otro; el resumen lista cuáles hay. ══ -->
+<details class="hoy-card" id="hoy-card" hidden>
+  <summary><span class="hoy-tit">Hoy</span><span class="hoy-res" id="hoy-res"></span></summary>
+  <div class="hoy-body" id="hoy-body">
 <!-- ══ BANNER VERSIÓN ESENCIAL ══ -->
 {% if modo_reducido %}
-<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(255,200,100,0.07);border:1px solid rgba(255,200,100,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+<div data-hoy-titulo="Versión reducida" style="margin:0 16px 12px;padding:14px 16px;background:rgba(255,200,100,0.07);border:1px solid rgba(255,200,100,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">⚡</span>
   <div>
     <div style="font-size:11px;font-weight:700;color:rgba(255,200,100,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Versión reducida activa</div>
@@ -1471,7 +1494,7 @@ body{background:
 {% endif %}
 
 {% if retorno_tras_ausencia %}
-<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.22);border-radius:12px;">
+<div data-hoy-titulo="Vuelta progresiva" style="margin:0 16px 12px;padding:14px 16px;background:rgba(74,222,128,0.07);border:1px solid rgba(74,222,128,0.22);border-radius:12px;">
   <div style="font-size:12px;font-weight:700;color:#4ade80;margin-bottom:4px;">Vuelta progresiva</div>
   <div style="font-size:12px;color:var(--td);opacity:.75;">Hoy hacemos como máximo el 75% de las series. Conservamos los movimientos principales y recortamos accesorios primero.</div>
 </div>
@@ -1479,7 +1502,7 @@ body{background:
 
 <!-- ══ BANNER REDUCIR ACCESORIOS — Phase 11 ══ -->
 {% if not modo_reducido and permiso_progresion and permiso_progresion.accion == 'reducir_accesorios' %}
-<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(180,140,255,0.07);border:1px solid rgba(180,140,255,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+<div data-hoy-titulo="Accesorios opcionales" style="margin:0 16px 12px;padding:14px 16px;background:rgba(180,140,255,0.07);border:1px solid rgba(180,140,255,0.22);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">📉</span>
   <div>
     <div style="font-size:11px;font-weight:700;color:rgba(180,140,255,0.9);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:4px;">Accesorios opcionales esta semana</div>
@@ -1490,7 +1513,7 @@ body{background:
 
 <!-- ══ BANNER DELOAD ══ -->
 {% if deload_activo %}
-<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.25);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+<div data-hoy-titulo="Descarga" style="margin:0 16px 12px;padding:14px 16px;background:rgba(241,196,15,0.08);border:1px solid rgba(241,196,15,0.25);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">🔄</span>
   <div style="flex:1;">
     <div style="font-size:13px;font-weight:700;color:#F1C40F;margin-bottom:3px;">Semana de descarga automática</div>
@@ -1505,7 +1528,7 @@ body{background:
 
 <!-- ══ BANNER TRANSICIÓN BIO ══ -->
 {% if is_in_transition %}
-<div style="margin:0 16px 12px;padding:14px 16px;background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.20);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
+<div data-hoy-titulo="Lesión en retorno" style="margin:0 16px 12px;padding:14px 16px;background:rgba(34,211,238,0.07);border:1px solid rgba(34,211,238,0.20);border-radius:12px;display:flex;align-items:flex-start;gap:12px;">
   <span style="font-size:20px;flex-shrink:0;margin-top:1px;">🌱</span>
   <div>
     <div style="font-size:13px;font-weight:700;color:rgba(34,211,238,0.85);margin-bottom:3px;">Lesión en retorno</div>
@@ -1523,7 +1546,7 @@ body{background:
 
 <!-- ══ BANNER BIO-SAFETY ══ -->
 {% if has_bio_adjustments %}
-<div class="bio-banner" id="bio-banner">
+<div class="bio-banner" id="bio-banner" data-hoy-titulo="Bio-Safety">
   <div class="bio-banner-icon">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
@@ -1545,6 +1568,9 @@ body{background:
   <button type="button" class="bio-banner-toggle" onclick="this.closest('.bio-banner').style.display='none'" title="Cerrar">×</button>
 </div>
 {% endif %}
+
+  </div>
+</details>
 
 <!-- ── Energía pre-sesión (17-oct-2026): se pregunta en el briefing; aquí,
      una vez respondida, queda en una línea que se puede tocar para cambiarla. ── -->
@@ -1574,7 +1600,7 @@ body{background:
   <button type="button" class="nav-btn btn-ej-prev" onclick="navEjercicio(-1)">‹ Anterior</button>
   <div class="nav-centro">
     {% for ejercicio in ejercicios_planificados %}
-    {% if modo_reducido and num_principales > 0 and forloop.counter == num_principales %}
+    {% if hay_opcionales and num_principales > 0 and forloop.counter == num_principales %}
     <div class="ej-dot {% if forloop.first %}activo{% endif %}"
          id="dot-{{ forloop.counter0 }}"
          onclick="irEjercicio({{ forloop.counter0 }})"
@@ -1593,7 +1619,7 @@ body{background:
 
 <!-- ══ EJERCICIOS ══ -->
 {% for ejercicio in ejercicios_planificados %}
-{% if modo_reducido and not ejercicio.es_principal and forloop.counter == num_principales|add:1 %}
+{% if hay_opcionales and ejercicio.opcional_hoy and forloop.counter == num_principales|add:1 %}
 <div id="separador-opcional" style="display:none;margin:0 4px 12px;padding:10px 14px;background:rgba(255,200,100,0.05);border:1px solid rgba(255,200,100,0.18);border-radius:10px;text-align:center;">
   <span style="font-size:10px;font-weight:700;color:rgba(255,200,100,0.7);letter-spacing:0.14em;text-transform:uppercase;">Bloque opcional — si te queda energía</span>
 </div>
@@ -1617,6 +1643,7 @@ body{background:
   <input type="hidden" name="{{ ejercicio.form_id }}_sustituye_a" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_objetivo_sustituto" value="">
   <input type="hidden" name="{{ ejercicio.form_id }}_es_principal" value="{{ ejercicio.es_principal|yesno:'1,0,' }}">
+  <input type="hidden" name="{{ ejercicio.form_id }}_opcional" value="{{ ejercicio.opcional_hoy|yesno:'1,0' }}" data-opcional="{{ ejercicio.opcional_hoy|yesno:'1,0' }}">
   <input type="hidden" class="ejercicio-historial"
          data-ejercicio-id="{{ ejercicio.form_id }}"
          data-peso-anterior="{{ ejercicio.peso_anterior_kg|default:0|unlocalize }}"
@@ -1644,10 +1671,9 @@ body{background:
     <div class="exname-toprow">
       <span class="exname-counter">Ejercicio actual · {{ forloop.counter }} de {{ ejercicios_planificados|length }}</span>
       {# 6-nov-2026 (nota 2): la misma regla que el briefing (con fútbol, solo la pierna). #}
-      {% if not ejercicio.es_principal %}
-        {% if modo_reducido or ejercicio.motivo_bloqueo == 'intervencion_reducir_accesorios' or ejercicio.opcional_futbol %}
+      {# Etapa 3: la etiqueta sale de la misma clasificación que el cierre (opcional_hoy). #}
+      {% if ejercicio.opcional_hoy %}
         <span style="font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:rgba(255,200,100,0.7);border:1px solid rgba(255,200,100,0.3);border-radius:6px;padding:2px 7px;flex-shrink:0;">OPCIONAL</span>
-        {% endif %}
       {% endif %}
     </div>
 
@@ -2560,7 +2586,22 @@ function seriesDeTrabajo(series){
   return (series||[]).filter(serie=>serie && !serie.esAproximacion);
 }
 
+// Etapa 3 (EA-11): «Hoy» agrupa los avisos de contexto; con uno se muestra
+// abierto, con varios queda cerrado y lista cuáles hay.
+(function iniciarHoy(){
+  const card=document.getElementById('hoy-card');
+  const body=document.getElementById('hoy-body');
+  if(!card||!body)return;
+  const items=[...body.children].filter(e=>e.dataset&&e.dataset.hoyTitulo);
+  if(!items.length){card.remove();return;}
+  card.hidden=false;
+  document.getElementById('hoy-res').textContent=items.length===1?items[0].dataset.hoyTitulo
+    :items.length+' avisos · '+items.map(e=>e.dataset.hoyTitulo).join(', ');
+  card.open=items.length===1;
+})();
+
 function tecnicaSerieBadge(tecnica){
+  if(!tecnica)return '<span class="serie-technique" style="color:var(--td);">Técnica: sin valorar</span>';
   if(tecnica==='buena')return '<span class="serie-technique" style="color:#10B981;">✔ Técnica: buena</span>';
   if(tecnica==='aceptable')return '<span class="serie-technique" style="color:#F1C40F;">~ Técnica: aceptable</span>';
   if(tecnica==='comprometida')return '<span class="serie-technique" style="color:#E74C3C;">⚠ Técnica: comprometida</span>';
@@ -2568,7 +2609,7 @@ function tecnicaSerieBadge(tecnica){
 }
 
 function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
-  const tecnicaBadge=tecnicaSerieBadge(tecnica);
+  const tecnicaBadge=esAproximacion?'':tecnicaSerieBadge(tecnica);
   const resultado=resultadoPlanSerie(fid,sn,reps,esAproximacion);
   const resultadoBadge=resultado
     ? '<span class="serie-plan-result '+resultado.clase+'">'+resultado.texto+'</span>' : '';
@@ -2801,8 +2842,12 @@ function actualizarBarraPendientes(){
     barra.setAttribute('role','region');
     barra.setAttribute('aria-label','Pendientes de la sesión');
     barra.hidden=true;
+    // Etapa 3: antes de la tira de navegación (alto 0, con las flechas
+    // superpuestas a 49 px), no después: así las flechas caían encima de la barra.
+    const nav=document.querySelector('.nav-ej');
     const primera=document.querySelector('.cyber-ejercicio-card');
-    (primera?.parentNode||wrap).insertBefore(barra,primera?.parentNode?primera:null);
+    if(nav&&nav.parentNode)nav.parentNode.insertBefore(barra,nav);
+    else (primera?.parentNode||wrap).insertBefore(barra,primera?.parentNode?primera:null);
   }
   const acciones=[];
   ESTADO.molestias.forEach(m=>{
@@ -3092,6 +3137,15 @@ function siguientePendiente(){
   return -1;
 }
 
+// Etapa 3: siguiente ejercicio PRINCIPAL con series pendientes (ignora opcionales).
+function siguientePrincipalPendiente(){
+  for(let paso=1;paso<cards.length;paso++){
+    const idx=(STATE.ejActual+paso)%cards.length;
+    if(!esCardOpcional(cards[idx])&&tieneSeriesPendientes(cards[idx]))return idx;
+  }
+  return -1;
+}
+
 function navEjercicio(delta, confirmarSalto=false){
   const destino=Math.max(0,Math.min(cards.length-1,STATE.ejActual+delta));
   const cardActual=cards[STATE.ejActual];
@@ -3120,6 +3174,7 @@ function toggleCalentamiento(button, formId){
 
 function irEjercicio(idx){
   if(idx===STATE.ejActual)return;
+  limpiarErrorSesion();  // etapa 3 (EA-2): un error de otro ejercicio no se arrastra
   cards[STATE.ejActual].style.display='none';
   STATE.ejActual=idx;
   cards[idx].style.display='block';
@@ -3127,7 +3182,7 @@ function irEjercicio(idx){
   actualizarDots();
   actualizarNavegacion();
   window.scrollTo({top:0,behavior:'smooth'});
-  {% if modo_reducido and num_principales > 0 %}
+  {% if hay_opcionales and num_principales > 0 %}
   // Show optional block separator when entering the optional section
   const sep=document.getElementById('separador-opcional');
   if(sep) sep.style.display = (idx >= {{ num_principales }}) ? 'block' : 'none';
@@ -3197,6 +3252,55 @@ function fmtKg(n) {
   return String(Number((+n).toFixed(2))).replace('.', ',');
 }
 
+// Etapa 3 (EA-7): toda propuesta que cambia peso o reps de la serie siguiente deja
+// un mensaje, y si el usuario toca luego el valor, el mensaje deja de afirmar
+// lo que ya no coincide.
+function mostrarAjusteSerie(fid, sn, texto, pesoProp, repsProp, htmlCompleto){
+  const panel = document.getElementById('reg-'+fid+'-'+sn);
+  const banner = document.getElementById('sugerencia-'+fid+'-'+sn);
+  if (panel) {
+    panel.dataset.propPeso = Number.isFinite(pesoProp) ? String(Number(pesoProp.toFixed(2))) : '';
+    panel.dataset.propReps = Number.isFinite(repsProp) ? String(repsProp) : '';
+  }
+  if (!banner) return;
+  banner.dataset.propHtml = htmlCompleto || ('<div style="font-size:11px;opacity:0.9;">'+texto+'</div>');
+  banner.innerHTML = banner.dataset.propHtml;
+  banner.style.display = 'block';
+}
+function revisarAjusteEditado(panel){
+  if (!panel || panel.dataset.propReps === undefined) return;
+  const m = /^reg-(.+)-(\d+)$/.exec(panel.id || '');
+  if (!m) return;
+  const fid = m[1], sn = m[2];
+  const banner = document.getElementById('sugerencia-'+fid+'-'+sn);
+  if (!banner || !banner.dataset.propHtml) return;
+  const peso = parseFloat(document.getElementById('peso-'+fid+'-'+sn)?.value);
+  const reps = parseInt(document.getElementById('reps-hid-'+fid+'-'+sn)?.value, 10);
+  const pp = panel.dataset.propPeso === '' ? NaN : parseFloat(panel.dataset.propPeso);
+  const pr = panel.dataset.propReps === '' ? NaN : parseInt(panel.dataset.propReps, 10);
+  const cambioPeso = Number.isFinite(pp) && Number.isFinite(peso) && Math.abs(peso - pp) > 0.001;
+  const cambioReps = Number.isFinite(pr) && Number.isFinite(reps) && reps !== pr;
+  if (cambioPeso || cambioReps) {
+    const partes = [];
+    if (Number.isFinite(peso) && peso > 0) partes.push(fmtKg(peso)+' kg');
+    if (Number.isFinite(reps)) partes.push(reps+' reps');
+    banner.style.color = 'var(--td)';
+    banner.style.borderLeftColor = 'var(--bd)';
+    banner.innerHTML = 'Has cambiado la propuesta: <strong>'+partes.join(' × ')+'</strong>'
+      + '<div style="font-size:10px;opacity:0.8;margin-top:3px;">Se guarda lo que apuntes, no lo propuesto.</div>';
+    banner.dataset.editado = '1';
+  } else if (banner.dataset.editado === '1') {
+    banner.innerHTML = banner.dataset.propHtml;
+    banner.style.color = '';
+    banner.style.borderLeftColor = '';
+    banner.dataset.editado = '';
+  }
+}
+['input','change','click'].forEach(ev => document.addEventListener(ev, e => {
+  const panel = e.target.closest && e.target.closest('[id^="reg-"]');
+  if (panel) setTimeout(() => revisarAjusteEditado(panel), 0);
+}));
+
 function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) {
   const snSig = snActual + 1;
 
@@ -3219,8 +3323,9 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     if (dispD) dispD.textContent = panelSig.dataset.usaTiempo === '1' ? objetivo+'s' : objetivo;
     const pesoD = document.getElementById('peso-'+fid+'-'+snSig);
     if (pesoD && panelSig.dataset.usaPeso === '1' && Number.isFinite(peso) && peso > 0) pesoD.value = String(Number(peso.toFixed(2)));
-    const bannerD = document.getElementById('sugerencia-'+fid+'-'+snSig);
-    if (bannerD) bannerD.style.display = 'none';
+    mostrarAjusteSerie(fid, snSig, 'Descarga: repites el objetivo ('+objetivo+(panelSig.dataset.usaTiempo === '1' ? ' s' : ' reps')+')'
+      + (Number.isFinite(peso) && peso > 0 && panelSig.dataset.usaPeso === '1' ? ' con '+fmtKg(peso)+' kg' : '')+'.',
+      (panelSig.dataset.usaPeso === '1' && peso > 0) ? peso : NaN, objetivo);
     return;
   }
 
@@ -3241,7 +3346,8 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
       if (hid) hid.value = objetivo;
       if (disp) disp.textContent = objetivo;
       const texto = `RPE ${rpe} con margen: a por ${objetivo} reps.`;
-      if (bannerSigR) { bannerSigR.innerHTML = `Siguiente serie: <strong>${objetivo} reps</strong><div style="font-size:10px;opacity:0.8;margin-top:3px;">${texto}</div>`; bannerSigR.style.display = 'block'; }
+      if (panelSig) { panelSig.dataset.propPeso = ''; panelSig.dataset.propReps = String(objetivo); }
+      if (bannerSigR) { bannerSigR.dataset.propHtml = `Siguiente serie: <strong>${objetivo} reps</strong><div style="font-size:10px;opacity:0.8;margin-top:3px;">${texto}</div>`; bannerSigR.innerHTML = `Siguiente serie: <strong>${objetivo} reps</strong><div style="font-size:10px;opacity:0.8;margin-top:3px;">${texto}</div>`; bannerSigR.style.display = 'block'; }
       if (bannerDescanso) { bannerDescanso.innerHTML = `<div style="font-size:9px;color:var(--td);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:4px;">Siguiente serie</div><div style="font-size:13px;font-weight:700;color:var(--ok);">${objetivo} reps</div><div style="font-size:10px;color:var(--td);margin-top:2px;">${texto}</div>`; bannerDescanso.style.display = 'block'; }
     } else if (rMin > 0) {
       const hid = document.getElementById('reps-hid-'+fid+'-'+snSig);
@@ -3249,6 +3355,7 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
       const mismas = Math.max(rMin, Math.min(rMax, reps));
       if (hid) hid.value = mismas;
       if (disp) disp.textContent = mismas;
+      mostrarAjusteSerie(fid, snSig, 'Siguiente serie: mismas reps ('+mismas+'), dentro del rango.', NaN, mismas);
     }
     return;
   }
@@ -3265,8 +3372,8 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
       calcularDiscosInline(fid, snSig, peso);
       detectarPR(fid, snSig, peso);
     }
-    const bannerSig = document.getElementById('sugerencia-'+fid+'-'+snSig);
-    if (bannerSig) bannerSig.style.display = 'none';
+    mostrarAjusteSerie(fid, snSig, 'Tope de máquina: mismo peso ('+fmtKg(peso)+' kg), sin subir.',
+      peso, parseInt(document.getElementById('reps-hid-'+fid+'-'+snSig)?.value, 10));
     return;
   }
 
@@ -3311,7 +3418,12 @@ function aplicarSugerenciaSiguienteSerie(fid, snActual, total, peso, rpe, reps) 
     bannerSig.style.background = bajada ? 'rgba(200,75,49,0.06)' : 'rgba(74,222,128,0.06)';
     bannerSig.innerHTML = `Siguiente serie: <strong>${fmtKg(plan.peso)} kg × ${plan.reps} reps</strong>`
       + `<div style="font-size:10px;opacity:0.8;margin-top:3px;">${plan.texto}</div>`;
+    bannerSig.dataset.propHtml = bannerSig.innerHTML;
     bannerSig.style.display = 'block';
+  }
+  if (panelSig) {
+    panelSig.dataset.propPeso = String(Number(plan.peso.toFixed(2)));
+    panelSig.dataset.propReps = String(plan.reps);
   }
 }
 
@@ -3444,6 +3556,8 @@ function guardarSeriePanel(fid,sn,total){
     mostrarErrorSesion('Selecciona el RPE real antes de guardar la serie.', grid?.querySelector('.rpe-pick-btn'));
     return;
   }
+  // Etapa 3 (EA-2): con el RPE ya elegido, el error anterior deja de valer.
+  limpiarErrorSesion();
   const esEdicion = _serieEnEdicion[fid] === sn;
   const seriePrevia = STATE.seriesCompletadas[fid]?.[sn-1];
 
@@ -3513,7 +3627,8 @@ function guardarSeriePanel(fid,sn,total){
     usaDistancia,
     usaTiempo,
     esAproximacion,
-    tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null
+    tecnica: esEdicion ? (seriePrevia?.tecnica || tecnicaInput.value || null) : null,
+    tecnicaOrigen: esEdicion ? (seriePrevia?.tecnicaOrigen || null) : null
   };
 
   // Log visual — el badge de técnica empieza vacío y lo rellena selTecnica()
@@ -3542,6 +3657,10 @@ function guardarSeriePanel(fid,sn,total){
   }
 
   if(!esAproximacion)actualizarORM(fid,sn);
+
+  // Etapa 3: editar una serie invalida el resumen de «ejercicio terminado»
+  // anterior; se vuelve a pintar al acabar el descanso con los datos nuevos.
+  if(esEdicion)document.getElementById('card-'+fid)?.querySelectorAll('[data-ej-done]').forEach(x=>x.remove());
 
   if(navigator.vibrate)navigator.vibrate(40);
 
@@ -3615,12 +3734,13 @@ function guardarSeriePanel(fid,sn,total){
   iniciarDescanso(fid,descansoSeg,snDescanso,total);
   // 14-oct-2026: la técnica viene marcada "buena" por defecto; solo hay que
   // tocar si fue otra (antes era un toque más en cada serie).
+  // 21-nov-2026 (etapa 3): ya NO se marca «buena» sola. Sin tocar nada, la
+  // técnica queda «sin valorar» y no cuenta como buena para ninguna decisión.
   if(!esEdicion){
     const serieHecha=STATE.seriesCompletadas[fid]?.[snDescanso-1];
     if(serieHecha && !serieHecha.tecnica){
-      selTecnica(fid,'buena');
       const impacto=document.getElementById('tecnica-impacto-'+fid);
-      if(impacto)impacto.textContent='Marcada como buena por defecto. Toca otra opción si no lo fue.';
+      if(impacto)impacto.textContent=textoImpactoTecnica(null);
     }
   }
   actualizarProgreso();
@@ -4256,9 +4376,11 @@ function saltarDescanso(fid){
   if(snSiguiente>totalSeries){
     // Ejercicio terminado
     const card=document.getElementById('card-'+fid);
-    // Guard: evitar badge duplicado si saltarDescanso se llama dos veces
-    // (race entre setInterval y visibilitychange al volver de background)
-    if(card&&card.querySelector('[data-ej-done]'))return;
+    // Etapa 3: el bloque de «ejercicio terminado» se REGENERA siempre (una sola
+    // copia): si se editó una serie, su resumen, volumen y siguiente paso deben
+    // reflejar los datos nuevos. Evita también el duplicado por la carrera entre
+    // setInterval y visibilitychange al volver de background.
+    card?.querySelectorAll('[data-ej-done]').forEach(x=>x.remove());
     const div=document.createElement('div');
     div.setAttribute('data-ej-done','1');
     div.style.cssText='padding:20px 16px;text-align:center;border-top:1px solid var(--bd);';
@@ -4266,7 +4388,11 @@ function saltarDescanso(fid){
     const frase=resumenDeEjercicio(fid);
     // 26-oct-2026: al primer ejercicio que quede pendiente (también los que
     // dejaste para después), no al siguiente del plan aunque ya esté hecho.
-    const idxPendiente=siguientePendiente();
+    let idxPendiente=siguientePendiente();
+    // Etapa 3: mientras falte bloque principal, no se empuja a un opcional.
+    const idxPrincipal=siguientePrincipalPendiente();
+    if(idxPendiente>=0&&esCardOpcional(cards[idxPendiente])&&idxPrincipal>=0)idxPendiente=idxPrincipal;
+    const soloOpcionalesPendientes=idxPendiente>=0&&esCardOpcional(cards[idxPendiente])&&idxPrincipal<0;
     const siguienteNombre=idxPendiente>=0?cards[idxPendiente]?.querySelector('.cyber-ejercicio-nombre')?.textContent?.trim():null;
     const metricas=seriesTrabajo.reduce((total,serie)=>{
       const m=metricasSerie(serie);
@@ -4281,7 +4407,10 @@ function saltarDescanso(fid){
       +'<div style="font-family:var(--fd);font-size:14px;font-weight:700;color:var(--gb);letter-spacing:2px;text-transform:uppercase;margin-top:8px;">'+frase.t+'</div>'
       +'<div style="font-family:var(--fm);font-size:11px;color:var(--td);margin-top:4px;">'+resumenTrabajo.join(' · ')+'</div>'
       +'<div style="font-family:var(--fm);font-size:10px;color:var(--tdm);margin-top:2px;font-style:italic;">'+frase.s+'</div>'
-      +(siguienteNombre
+      +(soloOpcionalesPendientes
+        ?'<button type="button" class="ejercicio-continuar" onclick="document.getElementById(\'btn-mostrar-resumen\')?.click()">Terminar: bloque principal hecho</button>'
+          +'<button type="button" class="ejercicio-continuar ejercicio-continuar-sec" style="background:transparent;border:1px solid var(--bd);margin-top:8px;" onclick="irEjercicio('+idxPendiente+')">Seguir con '+siguienteNombre+' (opcional)</button>'
+        :siguienteNombre
         ?'<button type="button" class="ejercicio-continuar" onclick="irEjercicio('+idxPendiente+')">'
           +textoSiguiente(idxPendiente,siguienteNombre)+' →</button>'
         :'<button type="button" class="ejercicio-continuar" onclick="document.getElementById(\'btn-mostrar-resumen\')?.click()">Todo hecho: revisar y finalizar →</button>');
@@ -4354,6 +4483,28 @@ function textoMetricas(tonelaje, cargaDistancia){
   return partes.join(' · ')||'0 kg';
 }
 
+// 21-nov-2026 (etapa 3): el cierre parcial se mide sobre el bloque PRINCIPAL.
+// Los opcionales (versión reducida o pierna opcional del fútbol) suman aparte y
+// no obligan a dar un motivo si se dejan sin hacer.
+function esCardOpcional(card){
+  const h=card.querySelector('input[name$="_opcional"]');
+  return !!h && h.value==='1';
+}
+function contarBloques(){
+  const r={comp:0,total:0,compOpc:0,totalOpc:0,faltan:[]};
+  cards.forEach(card=>{
+    const fid=card.dataset.formId;
+    const t=parseInt(card.dataset.totalSets)||0;
+    const c=seriesDeTrabajo(STATE.seriesCompletadas[fid]).length;
+    if(esCardOpcional(card)){r.totalOpc+=t;r.compOpc+=c;if(c>0&&c<t){r.total+=0;}}
+    else{
+      r.total+=t;r.comp+=Math.min(c,t);
+      if(c<t)r.faltan.push({nombre:card.querySelector('.cyber-ejercicio-nombre')?.textContent||fid,series:t-c});
+    }
+  });
+  return r;
+}
+
 function actualizarSticky(){
   let comp=0,total=0,vol=0,cargaDistancia=0;
   document.querySelectorAll('.cyber-ejercicio-card').forEach(card=>{
@@ -4366,7 +4517,10 @@ function actualizarSticky(){
   const elS=document.getElementById('series-completadas-sticky');
   const elV=document.getElementById('volumen-acumulado');
   const elE=document.getElementById('ejercicio-actual');
-  if(elS)elS.textContent=comp+'/'+total;
+  const _bl=contarBloques();
+  if(elS)elS.textContent=_bl.totalOpc>0
+    ? _bl.comp+'/'+_bl.total+' · opc. '+_bl.compOpc+'/'+_bl.totalOpc
+    : comp+'/'+total;
   if(elV)elV.textContent=vol>0?textoMetricas(vol,0):textoMetricas(0,cargaDistancia);
   if(elE)elE.textContent=cards[STATE.ejActual]?.querySelector('.cyber-ejercicio-nombre')?.textContent||'--';
   const btnFinal=document.getElementById('btn-mostrar-resumen');
@@ -4595,17 +4749,22 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     mostrarErrorSesion('Completa al menos una serie antes de revisar el cierre.', document.getElementById('btn-mostrar-resumen'));
     return;
   }
-  const esCierreParcial=comp<total;
+  const _bloques=contarBloques();
+  const esCierreParcial=_bloques.comp<_bloques.total;
   document.getElementById('modal-resumen-title').textContent=
     esCierreParcial ? 'Revisar sesión parcial' : 'Revisar entrenamiento';
   document.getElementById('modal-resumen-subtitle').textContent=
-    esCierreParcial ? 'Aún no se ha guardado. Indica el motivo para registrarla.' : 'Comprueba el resumen antes de guardar.';
+    esCierreParcial
+      ? 'Aún no se ha guardado. Faltan del bloque principal: '+_bloques.faltan.map(f=>f.nombre+' ('+f.series+')').join(', ')+'. Indica el motivo para registrarla.'
+      : (_bloques.totalOpc>0&&_bloques.compOpc<_bloques.totalOpc
+          ? 'Bloque principal completo. Los opcionales sin hacer no cuentan como pendientes.'
+          : 'Comprueba el resumen antes de guardar.');
   document.getElementById('modal-save-status').textContent=
-    textoResumenPendienteDeGuardar(comp,total,esCierreParcial);
+    textoResumenPendienteDeGuardar(_bloques.totalOpc>0?_bloques.comp:comp,_bloques.totalOpc>0?_bloques.total:total,esCierreParcial);
   const saveError=document.getElementById('save-error');
   if(saveError)saveError.style.display='none';
   const motivoWrap=document.getElementById('motivo-cierre-wrap');
-  if(motivoWrap)motivoWrap.style.display=comp<total?'block':'none';
+  if(motivoWrap)motivoWrap.style.display=esCierreParcial?'block':'none';
   document.getElementById('hid-series-comp').value=comp;
   document.getElementById('hid-series-tot').value=total;
   document.getElementById('hid-ej-comp').value=ejComp;
@@ -4620,7 +4779,9 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('modal-tiempo').textContent=mins+'m';
   document.getElementById('hid-duracion').value=mins;
   prepararRevisionDuracion(mins, comp);
-  document.getElementById('modal-series').textContent=comp+'/'+total;
+  document.getElementById('modal-series').textContent=_bloques.totalOpc>0
+    ? _bloques.comp+'/'+_bloques.total+' + '+_bloques.compOpc+'/'+_bloques.totalOpc+' opc.'
+    : comp+'/'+total;
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1).replace('.',','):'—';
   // 18-oct-2026: la tarjeta muestra solo reps; segundos y metros van debajo.
   const extra=[];
@@ -4994,7 +5155,7 @@ function textoImpactoTecnica(tecnica){
   if(tecnica==='buena')return 'Técnica buena: esta serie puede apoyar una progresión si el resto de datos acompaña.';
   if(tecnica==='aceptable')return 'Técnica aceptable: se registra y el plan tendrá en cuenta el control antes de progresar.';
   if(tecnica==='comprometida')return 'Técnica comprometida: la carga no progresará hasta recuperar control.';
-  return 'Elige la calidad técnica de la serie.';
+  return 'Técnica sin valorar: toca una opción si quieres valorarla; sin elegir no cuenta como buena.';
 }
 
 function selTecnica(fid, val){
@@ -5026,9 +5187,19 @@ function selTecnica(fid, val){
     document.getElementById('workout-form').appendChild(tecnicaInput);
   }
   tecnicaInput.value = val;
+  // Solo una elección del usuario cuenta como técnica valorada.
+  let origenInput = document.getElementById('tecnica-origen-hid-'+fid+'-'+sn);
+  if(!origenInput){
+    origenInput = document.createElement('input');
+    origenInput.type = 'hidden';
+    origenInput.id = 'tecnica-origen-hid-'+fid+'-'+sn;
+    origenInput.name = fid+'_tecnica_origen_'+sn;
+    document.getElementById('workout-form').appendChild(origenInput);
+  }
+  origenInput.value = 'elegida';
 
   const s = STATE.seriesCompletadas[fid]?.[sn-1];
-  if(s) s.tecnica = val;
+  if(s){ s.tecnica = val; s.tecnicaOrigen = 'elegida'; }
 
   // La elección sucede después de guardar la serie. Actualiza también el
   // borrador para que una recarga o un reintento conserve el valor elegido.
@@ -5195,6 +5366,18 @@ function mostrarEstadoGuardado(texto,botones){
     const b=document.createElement('button');b.type='button';b.className='mbtn';b.textContent=etq;
     b.style.minHeight='44px';b.addEventListener('click',fn);caja.appendChild(b);
   });
+  // Etapa 3: el aviso estaba debajo del desglose, tapado por los botones fijos del
+  // modal. Un estado bloqueante sube al principio del modal (antes del título), donde se ve incluso con texto grande.
+  const cont=document.querySelector('.modal-resumen-full');
+  if(err&&cont){
+    cont.insertBefore(err,cont.firstChild);
+    err.style.marginBottom='12px';
+    if(caja)cont.insertBefore(caja,err.nextSibling);
+    // Con texto grande (130 %) los botones del aviso quedan por debajo: se
+    // deja margen por encima de los botones fijos y se lleva el último a la vista.
+    if(caja){caja.style.scrollMarginBottom='260px';}
+    try{(caja&&caja.lastElementChild||err).scrollIntoView({block:'nearest'});}catch(e){}
+  }
 }
 function _liberarBotonGuardar(etiqueta){
   const btn=document.getElementById('btn-confirmar-guardar');
@@ -5367,6 +5550,16 @@ function sincronizarSeriesConfirmadasConFormulario(form){
       if(checkbox)checkbox.checked = true;
       if(aproximacionInput)aproximacionInput.checked = Boolean(serie.esAproximacion);
       if(serie.tecnica)tecnicaInput.value=serie.tecnica;
+      if(serie.tecnica&&serie.tecnicaOrigen==='elegida'){
+        let origenInput=form.elements.namedItem(fid+'_tecnica_origen_'+sn);
+        if(!origenInput){
+          origenInput=document.createElement('input');
+          origenInput.type='hidden';
+          origenInput.name=fid+'_tecnica_origen_'+sn;
+          form.appendChild(origenInput);
+        }
+        origenInput.value='elegida';
+      }
     });
   });
 }
@@ -5375,7 +5568,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   if (_envioCierreEnCurso) return;
   const completadas=Object.values(STATE.seriesCompletadas)
     .reduce((n,series)=>n+seriesDeTrabajo(series).length,0);
-  const totalPlanificadas=cards.reduce((n,card)=>n+(parseInt(card.dataset.totalSets)||0),0);
+  const _bq=contarBloques();
   const motivo=document.getElementById('motivo-cierre');
   const errorMotivo=document.getElementById('motivo-cierre-error');
   const saveError=document.getElementById('save-error');
@@ -5384,7 +5577,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
     mostrarErrorSesion('Completa al menos una serie antes de revisar el cierre.', document.getElementById('btn-mostrar-resumen'));
     return;
   }
-  if(completadas<totalPlanificadas && (!motivo || !motivo.value)){
+  if(_bq.comp<_bq.total && (!motivo || !motivo.value)){
     if(errorMotivo){errorMotivo.textContent='Selecciona un motivo para el cierre parcial.';errorMotivo.style.display='block';}
     return;
   }

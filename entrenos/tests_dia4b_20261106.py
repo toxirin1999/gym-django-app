@@ -29,7 +29,7 @@ class Plantilla(SimpleTestCase):
         self.src = ACTIVO.read_text(encoding='utf-8')
 
     def test_nota2_opcional_con_la_regla_nueva(self):
-        self.assertIn("{% if not ejercicio.es_principal %}", self.src)
+        self.assertIn("{% if ejercicio.opcional_hoy %}", self.src)
         self.assertNotIn("{% if ejercicio.tipo_ejercicio != 'compuesto_principal' %}\n        {% if modo_reducido", self.src)
 
     def test_nota3_mismo_peso_explicado(self):

@@ -248,6 +248,11 @@ class EstadoBorradorEnNavegador(TestCase):
             if url.endswith('/static/entrenos/js/entrenamiento_activo.js'):
                 return route.fulfill(status=200, content_type='application/javascript',
                                      body=JS_ACTIVO.read_text(encoding='utf-8'))
+            if req.method == 'GET' and url.endswith('/static/css/jds.css'):
+                # Sin la hoja de estilos real las variables quedan sin definir y la
+                # captura no refleja el aspecto verdadero.
+                return route.fulfill(status=200, content_type='text/css',
+                                     body=(BASE.parent / 'static' / 'css' / 'jds.css').read_text(encoding='utf-8'))
             if req.method == 'POST':
                 cuerpo = req.post_data or ''
                 try:
