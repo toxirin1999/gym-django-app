@@ -71,13 +71,33 @@ def _primer_numero(rango_str) -> int:
         return 8
 
 
+def _limites_rango(rep_range_hoy):
+    """(mínimo, máximo) de un rango '6-8', '6–8' o '10'; None si no se puede leer."""
+    import re
+    numeros = re.findall(r'\d+', str(rep_range_hoy or ''))
+    if not numeros:
+        return None
+    bajo, alto = int(numeros[0]), int(numeros[-1])
+    return (min(bajo, alto), max(bajo, alto))
+
+
 def son_rangos_compatibles(reps_anteriores, rep_range_hoy) -> bool:
     """
     True si las reps reales de la última sesión y el rango objetivo de hoy
     pertenecen al mismo bucket de fase (misma familia de estímulo).
+
+    20-nov-2026 (D12): unas reps que caen DENTRO del rango completo de hoy son
+    la misma prescripción aunque el rango cruce la frontera 7/8 de los buckets
+    (6-8 con 8 reps: el tope de su propio rango). Antes se comparaban solo con
+    el bucket del primer número y 8 reps en 6-8 cambiaban de familia, con lo
+    que la regla recalculaba desde el e1RM y podía pedir menos reps sin subir
+    el peso. Fuera del rango (9 en 6-8, 7 en 8-10, 3 en 10-15) todo sigue igual.
     """
     if reps_anteriores is None:
         return False
+    limites = _limites_rango(rep_range_hoy)
+    if limites and limites[0] <= int(reps_anteriores) <= limites[1]:
+        return True
     bucket_anterior = _bucket_desde_reps(int(reps_anteriores))
     bucket_hoy = _bucket_desde_reps(_primer_numero(rep_range_hoy))
     return bucket_anterior == bucket_hoy

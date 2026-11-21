@@ -476,7 +476,10 @@ def _decidir_carga(cliente, ej, hoy):
         _src = _mejor or {'reps': reps_ref, 'rpe': ref.get('rpe')}
         _bruto = reps_para_peso(peso_ref, _src['reps'], _src['rpe'] or ref.get('rpe'), peso, rpe_obj, (1, 99))
         if _bruto is not None and _bruto < minimo:
-            frase_subir += (f' Con ese peso calculo unas {_bruto}: si llegas al RPE {_kg(rpe_obj)} antes de '
+            # 20-nov-2026 (D12): ya no se escribe «calculo unas N» cuando N queda por debajo del objetivo:
+            # el estimador se queda corto (en 262 subidas reales, +4 reps de media) y la frase decía a la vez
+            # «a por 6» y «calculo unas 3». Se conserva solo la salvaguarda de esfuerzo.
+            frase_subir += (f' Con ese peso, si llegas al RPE {_kg(rpe_obj)} antes de '
                             f'las {minimo} reps, para ahí y apúntalo.')
         _dec = {'peso': peso, 'reps': reps_n, 'regla': 'subir', 'frase': frase_subir}
         if _bruto is not None and _bruto < minimo:
@@ -859,8 +862,9 @@ def proxima_vez_texto(cliente, entreno, nombre, tipo_progresion, porque_actual=N
         _donde = f'por encima de {rango[1]}' if _reps_hoy > rango[1] else 'en el tope del rango'
         texto = f'{_reps_hoy} reps con {_kg(peso_hoy)} kg, {_donde}: subo a {_kg(peso)} kg, a por {reps} reps.'
         if decision.get('reps_calculo') is not None:
-            texto += (f' Con ese peso calculo unas {decision["reps_calculo"]}: si llegas al RPE '
-                      f'{_kg(decision["rpe_calculo"])} antes de las {reps} reps, para ahí y apúntalo.')
+            # 20-nov-2026 (D12): misma salvaguarda que en el Plan, sin la predicción que contradice el objetivo.
+            texto += (f' Con ese peso, si llegas al RPE {_kg(decision["rpe_calculo"])} '
+                      f'antes de las {reps} reps, para ahí y apúntalo.')
         accion = 'Subir peso'
         efecto = f'Subirá a {_kg(peso)} kg'
     else:

@@ -69,8 +69,10 @@ class CierreConCalculoHonesto(Base):
         texto, accion = proxima_vez_texto(self.cliente, e, 'Curl con Barra Z', 'peso_reps')
         self.assertEqual(accion, 'Subir peso')
         self.assertIn('Subo a 35 kg'.lower(), texto.lower().replace('subo a', 'subo a'))
-        self.assertIn('calculo unas', texto)
-        self.assertIn('antes de las 8 reps', texto)
+        # 20-nov-2026 (D12): ya no se escribe una predicción de reps por debajo del objetivo (el estimador se
+        # queda corto); se conserva la salvaguarda de esfuerzo.
+        self.assertNotIn('calculo unas', texto)
+        self.assertIn('si llegas al RPE 8 antes de las 8 reps, para ahí y apúntalo', texto)
 
     def test_el_texto_del_briefing_dice_antes_de_las_reps(self):
         from pathlib import Path as P

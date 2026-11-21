@@ -138,7 +138,9 @@ class SubirSinPrometerElMinimo(Base):
         ej = {'nombre': 'Sentadilla Hack', 'repeticiones': '8-12', 'rpe_objetivo': 8, 'tipo_progresion': 'peso_reps'}
         d = decidir_carga(self.cliente, ej, HOY)
         self.assertEqual(d['regla'], 'subir')
-        if 'calculo unas' in d['frase']:
+        # 20-nov-2026 (D12): sin predicción de reps que contradiga el objetivo (antes escribía «calculo unas N»).
+        self.assertNotIn('calculo unas', d['frase'])
+        if 'antes de las' in d['frase']:
             self.assertIn('para ahí y apúntalo', d['frase'])
 
 

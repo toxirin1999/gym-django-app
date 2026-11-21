@@ -139,7 +139,8 @@ def subida_por_encima(log):
     if pesada['reps'] < rango[1]:
         return None
     salto = salto_carga(log.cliente, log.ejercicio)
-    siguiente = a_escala(pesada['peso'] + salto, salto, 'cerca')
+    siguiente = a_escala(pesada['peso'] + salto, salto, 'cerca',
+                         ancla=pesada['peso'] if getattr(salto, 'ancla', None) else None)
     if siguiente <= pesada['peso']:
         siguiente = pesada['peso'] + salto
     return pesada['peso'], pesada['reps'], rango, siguiente

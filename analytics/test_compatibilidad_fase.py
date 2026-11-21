@@ -346,3 +346,90 @@ class TestTechoDescargaPesoUltimaSesion(SimpleTestCase):
         )
         self.assertTrue(r['aplica'])
         self.assertGreater(r['peso'], 20.0)
+
+
+class TestFronteraRangoCompleto(SimpleTestCase):
+    """20-nov-2026 (D12): unas reps dentro del rango completo de hoy son la misma
+    prescripción aunque el rango cruce la frontera 7/8 de los buckets."""
+
+    def test_limites_de_rango_formatos(self):
+        from analytics.planificador_helms.calculo.compatibilidad_fase import _limites_rango
+        self.assertEqual(_limites_rango('6-8'), (6, 8))
+        self.assertEqual(_limites_rango('6–8'), (6, 8))
+        self.assertEqual(_limites_rango('10'), (10, 10))
+        self.assertEqual(_limites_rango('8-6'), (6, 8))
+        self.assertIsNone(_limites_rango(None))
+        self.assertIsNone(_limites_rango('sin rango'))
+
+    def test_seis_siete_y_ocho_en_6_8_son_la_misma_prescripcion(self):
+        for reps in (5, 6, 7, 8):
+            self.assertTrue(son_rangos_compatibles(reps, '6-8'), reps)
+
+    def test_por_encima_del_rango_sigue_siendo_cambio_de_familia(self):
+        self.assertFalse(son_rangos_compatibles(9, '6-8'))
+        self.assertFalse(son_rangos_compatibles(12, '6-8'))
+
+    def test_por_debajo_del_rango_en_otra_familia_se_conserva(self):
+        self.assertFalse(son_rangos_compatibles(7, '8-10'))
+        self.assertFalse(son_rangos_compatibles(7, '8-12'))
+        self.assertTrue(son_rangos_compatibles(8, '8-10'))
+
+    def test_cambios_reales_de_fase_no_cambian(self):
+        self.assertFalse(son_rangos_compatibles(3, '10-15'))
+        self.assertFalse(son_rangos_compatibles(12, '2-4'))
+        self.assertFalse(son_rangos_compatibles(8, '4-6'))
+        self.assertFalse(son_rangos_compatibles(8, '3-5'))
+        self.assertTrue(son_rangos_compatibles(3, '4-6'))
+
+    def test_otros_rangos_que_cruzan_la_frontera(self):
+        self.assertTrue(son_rangos_compatibles(8, '5-8'))
+        self.assertTrue(son_rangos_compatibles(9, '6-10'))
+        self.assertTrue(son_rangos_compatibles(10, '7-10'))
+
+    def test_solo_cambia_donde_hay_reps_dentro_de_un_rango_que_cruza(self):
+        """Contra la regla anterior (bucket del primer número) la nueva solo
+        difiere en reps dentro del rango y de otra familia."""
+        from analytics.planificador_helms.calculo.compatibilidad_fase import _bucket_desde_reps, _primer_numero
+
+        def previa(reps, rango):
+            return _bucket_desde_reps(int(reps)) == _bucket_desde_reps(_primer_numero(rango))
+
+        rangos = ['2-4', '3-5', '4-6', '5-8', '6-8', '6-10', '7-10', '8-10', '8-12', '10-12', '12-15', '10-15', '15-20']
+        diferencias = []
+        for rango in rangos:
+            lo, hi = (int(x) for x in rango.split('-'))
+            for reps in range(1, 31):
+                if previa(reps, rango) != son_rangos_compatibles(reps, rango):
+                    diferencias.append((reps, rango))
+                    self.assertTrue(lo <= reps <= hi)
+                    self.assertFalse(previa(reps, rango))
+                    self.assertTrue(son_rangos_compatibles(reps, rango))
+        self.assertEqual(
+            sorted(diferencias),
+            sorted([(8, '5-8'), (8, '6-8'), (8, '6-10'), (9, '6-10'), (10, '6-10'),
+                    (8, '7-10'), (9, '7-10'), (10, '7-10')]),
+        )
+        # Los rangos que NO cruzan la frontera no cambian en ningún caso.
+        for rango in ('2-4', '3-5', '4-6', '8-10', '8-12', '10-12', '12-15', '10-15', '15-20'):
+            self.assertFalse([d for d in diferencias if d[1] == rango], rango)
+
+    def test_activo_8_reps_en_6_8_no_recalcula_por_cambio_de_fase(self):
+        r = resolver_peso_objetivo(
+            peso_anterior=35.0, reps_anteriores=8, rpe_anterior=7, rep_range_hoy='6-8', rpe_objetivo_hoy=7,
+        )
+        self.assertFalse(r['aplica'])
+
+    def test_activo_9_reps_en_6_8_si_recalcula(self):
+        r = resolver_peso_objetivo(
+            peso_anterior=35.0, reps_anteriores=9, rpe_anterior=7, rep_range_hoy='6-8', rpe_objetivo_hoy=7,
+        )
+        self.assertTrue(r['aplica'])
+        self.assertEqual(r['motivo_tipo'], 'recalculado_fase')
+
+    def test_descarga_siempre_recalcula(self):
+        r = resolver_peso_objetivo(
+            peso_anterior=35.0, reps_anteriores=8, rpe_anterior=7, rep_range_hoy='6-8', rpe_objetivo_hoy=6,
+            es_descarga_hoy=True,
+        )
+        self.assertTrue(r['aplica'])
+        self.assertEqual(r['motivo_tipo'], 'recalculado_descarga')

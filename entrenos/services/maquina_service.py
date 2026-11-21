@@ -248,8 +248,16 @@ SALTO_POLEA_CON_DISCOS_2KG = 2.0
 _TOKENS_ESCALA_2KG = ('laterales en polea', 'y-raise', 'y raise')
 
 
+# 20-nov-2026: David confirma que en los buenos días los discos van de 2 en 2 kg por lado:
+# 4 kg en total entre un salto y el siguiente (no 5, que era lo supuesto el 31/10).
+SALTO_BUENOS_DIAS = 4.0
+_TOKENS_BUENOS_DIAS = ('buenos días', 'buenos dias', 'good morning')
+
+
 def salto_fisico(nombre, equipo=None):
     """Salto de la escala física del equipo, o None si no se reconoce."""
+    if any(t in (nombre or '').casefold() for t in _TOKENS_BUENOS_DIAS):
+        return SALTO_BUENOS_DIAS
     if any(t in (nombre or '').casefold() for t in _TOKENS_ESCALA_2KG):
         return SALTO_POLEA_CON_DISCOS_2KG
     if any(t in (nombre or '').casefold() for t in _SALTO_FINO_BARRA):
@@ -278,6 +286,10 @@ def salto_carga(cliente, nombre):
     base = base_por_nombre(nombre)
     fisico = salto_fisico(nombre, base.equipo if base else None)
     if fisico:
+        if _escala_desde_la_carga(nombre):
+            ancla = ultimo_peso_real(cliente, nombre)
+            if ancla:
+                return SaltoAnclado(fisico, ancla)
         return fisico
     por_defecto = float(base.incremento_kg) if base and base.incremento_kg else 2.5
     # Sin tipo reconocido: lo aprendido solo si es un salto que existe en un
@@ -288,18 +300,72 @@ def salto_carga(cliente, nombre):
     return next((v for v in validos if abs(aprendido - v) < 0.01), 2.5)
 
 
-def a_escala(peso, salto, hacia='cerca'):
+class SaltoAnclado(float):
+    """Un salto de carga cuya escala parte de un peso real (``ancla``) y no de cero.
+
+    21-nov-2026: en los buenos días la barra se carga añadiendo 2 kg por lado (4 kg en total) a lo que ya
+    lleva; si 35 kg es una carga montable, el siguiente es 39, no 40 (múltiplo de 4 desde cero). Se
+    comporta como un ``float`` normal; solo ``a_escala`` lee ``ancla``.
+    """
+
+    def __new__(cls, valor, ancla=None):
+        obj = super().__new__(cls, valor)
+        obj.ancla = float(ancla) if ancla else None
+        return obj
+
+
+# Ejercicios cuya escala parte de la última carga real (se añaden discos a lo que ya lleva la barra).
+_ESCALA_DESDE_LA_CARGA = ('buenos días', 'buenos dias', 'good morning')
+
+
+def _escala_desde_la_carga(nombre):
+    texto = (nombre or '').casefold()
+    return any(t in texto for t in _ESCALA_DESDE_LA_CARGA)
+
+
+def ultimo_peso_real(cliente, nombre):
+    """Peso más alto de trabajo (completado, sin aproximación) de la última sesión de ese ejercicio."""
+    from entrenos.models import SerieRealizada
+
+    try:
+        ultima = (SerieRealizada.objects
+                  .filter(entreno__cliente=cliente, ejercicio__nombre__iexact=nombre, completado=True,
+                          es_aproximacion=False, peso_kg__gt=0)
+                  .order_by('-entreno__fecha', '-entreno_id').values_list('entreno_id', flat=True).first())
+        if ultima is None:
+            return None
+        pesos = SerieRealizada.objects.filter(
+            entreno_id=ultima, ejercicio__nombre__iexact=nombre, completado=True, es_aproximacion=False,
+            peso_kg__gt=0).values_list('peso_kg', flat=True)
+        return float(max(pesos)) if pesos else None
+    except Exception:
+        return None
+
+
+def a_escala(peso, salto, hacia='cerca', ancla=None):
     """Lleva un peso a la escala real: 37,5 con salto 5 → 35 ('abajo') o 40 ('arriba').
 
-    'cerca' redondea al más próximo y, en empate, hacia abajo (más prudente).
+    'cerca' redondea al más próximo y, en empate, hacia abajo (más prudente). Con ``ancla`` (o con un
+    ``SaltoAnclado``) la escala parte de ese peso real: ancla, ancla ± salto, ancla ± 2 saltos…
     """
     import math
+    ancla = ancla if ancla is not None else getattr(salto, 'ancla', None)
     try:
         peso, salto = float(peso), float(salto)
     except (TypeError, ValueError):
         return peso
     if peso <= 0 or salto <= 0:
         return peso
+    if ancla:
+        k = (peso - float(ancla)) / salto
+        if hacia == 'abajo':
+            n = math.floor(k + 1e-9)
+        elif hacia == 'arriba':
+            n = math.ceil(k - 1e-9)
+        else:
+            n = math.floor(k) if k - math.floor(k) <= 0.5 + 1e-9 else math.ceil(k)
+        resultado = float(ancla) + n * salto
+        return round(resultado if resultado >= salto else float(ancla), 2)
     k = peso / salto
     if hacia == 'abajo':
         n = math.floor(k + 1e-9)

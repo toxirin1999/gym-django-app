@@ -474,7 +474,7 @@ def reps_para_peso(peso, reps, rpe, peso_nuevo, rpe_objetivo, rango):
 
 def _redondear_abajo(valor, incremento):
     import math
-    incremento = float(incremento or 2.5)
+    incremento = incremento if getattr(incremento, 'ancla', None) else float(incremento or 2.5)
     # Tolerancia pequeña: el e1RM viene redondeado (19,998 kg debe ser 20).
     return round(math.floor(valor / incremento + 0.02) * incremento, 2)
 
@@ -499,7 +499,7 @@ def techo_peso(lectura, rango_hoy, rpe_objetivo, incremento):
         return None
     minimo, maximo = rango_hoy
     rango_txt = f'{minimo}-{maximo}' if maximo != minimo else f'{minimo}'
-    incremento = float(incremento or 2.5)
+    incremento = incremento if getattr(incremento, 'ancla', None) else float(incremento or 2.5)
 
     if not ref['en_rango']:
         deficit = minimo - reps
