@@ -72,6 +72,8 @@ urlpatterns = [
     # El nombre ('name') se mantiene, pero la ruta es más específica.
     path('cliente/<int:cliente_id>/guardar-entrenamiento-activo/', views.guardar_entrenamiento_activo,
          name='guardar_entrenamiento_activo'),
+    path('cliente/<int:cliente_id>/comprobar-sesion-guardada/<str:token>/', views.comprobar_sesion_guardada,
+         name='comprobar_sesion_guardada'),
     
     # API para persistir sustituciones en caliente
     path('api/cliente/<int:cliente_id>/save-hot-swap/', views.api_save_hot_swap, name='api_save_hot_swap'),

@@ -123,7 +123,9 @@ class TextosDelDia(SimpleTestCase):
         src = ACTIVO.read_text(encoding='utf-8')
         self.assertIn('id="saving-hint"', src)
         self.assertIn('puede que no tengas cobertura', src)
-        self.assertIn('mira el historial antes de reintentar', src)
+        # 21-nov-2026: ya no se manda al historial; hay «Comprobar si llegó» por identificador.
+        self.assertIn('Comprobar si llegó', src)
+        self.assertIn('Comprueba si llegó antes de reintentar', src)
 
     def test_sissy_sin_jerga_de_rango_de_paso(self):
         src = (Path(__file__).parent / 'services' / 'plan_dinamico_service.py').read_text(encoding='utf-8')

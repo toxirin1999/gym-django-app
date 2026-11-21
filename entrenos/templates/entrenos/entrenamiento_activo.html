@@ -1260,6 +1260,12 @@ body{background:
 .contingencia-grid{margin:0 18px 7px;gap:6px;}
 /* 23-oct-2026: sin "Tope kg" (tiempo, peso corporal) tres botones a todo el ancho. */
 .contingencia-grid.sin-tope{grid-template-columns:repeat(4,1fr);}
+.barra-pendientes{margin:0 18px 8px;padding:8px 10px;border-radius:12px;border:1px solid var(--bd);background:rgba(255,255,255,.03);font-size:12px;line-height:1.4;color:var(--td);}
+.barra-pendientes .bp-fila{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+.barra-pendientes .bp-fila+.bp-fila{margin-top:6px;}
+.barra-pendientes .bp-tit{font-size:10px;letter-spacing:1px;text-transform:uppercase;}
+.barra-pendientes .bp-chip{min-height:32px;padding:4px 10px;border-radius:999px;border:1px solid var(--bd);background:transparent;color:var(--tx);font-size:12px;cursor:pointer;}
+.barra-pendientes .bp-accion{color:#fbbf24;}
 .aviso-despues{position:fixed;left:16px;right:16px;bottom:96px;z-index:60;padding:12px 14px;border-radius:12px;background:#0f1f19;border:1px solid rgba(16,185,129,.35);color:#d1fae5;font-size:13px;line-height:1.4;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:opacity .3s;}
 .contingencia-grid .btn-swap-maquina,
 .contingencia-grid .btn-despues,
@@ -2571,6 +2577,329 @@ function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
     : '<div class="serie-feedback"><span id="tecnica-badge-'+fid+'-'+sn+'"></span></div>';
 }
 
+// ── ESTADO PERSISTENTE DEL BORRADOR (21-nov-2026) ───────────────────────────
+// Además de las series, el borrador conserva lo que el usuario decidió durante
+// la sesión: ejercicios pospuestos (en orden), sustituciones con su objetivo,
+// molestias, fallo, tope, el descanso (por su hora de fin) y la propuesta de la
+// serie siguiente. Molestias y sustituciones distinguen su estado:
+//   'local'      solo en este dispositivo; viaja con la sesión al guardarla
+//   'pendiente'  enviado al servidor sin respuesta (hay que comprobarlo)
+//   'confirmado' el servidor lo aceptó
+//   'error'      el servidor o la red lo rechazaron; queda visible para reintentar
+const ESTADO={pospuestos:[],sustituciones:{},molestias:[],fallos:{},topes:{}};
+const _SYNC_URL_HOTSWAP="{% url 'entrenos:api_save_hot_swap' cliente.id %}";
+const _SYNC_URL_MOLESTIA="{% url 'entrenos:api_reportar_molestia' cliente.id %}";
+
+function _nombreDeEjercicio(fid){
+  return document.querySelector('#card-'+fid+' .cyber-ejercicio-nombre')?.textContent?.trim()||'Ejercicio';
+}
+
+// Pospuestos: lista ordenada de fids con series pendientes.
+function marcarPospuesto(fid){
+  if(!fid)return;
+  ESTADO.pospuestos=ESTADO.pospuestos.filter(f=>f!==fid);
+  ESTADO.pospuestos.push(fid);
+}
+function normalizarPospuestos(){
+  ESTADO.pospuestos=ESTADO.pospuestos.filter((fid,i,a)=>{
+    const card=document.getElementById('card-'+fid);
+    return card&&a.indexOf(fid)===i&&tieneSeriesPendientes(card);
+  });
+}
+
+function _estadoPanelSiguiente(fid){
+  const card=document.getElementById('card-'+fid);
+  if(!card)return null;
+  const total=parseInt(card.dataset.totalSets||'0',10)||0;
+  const sn=(STATE.seriesCompletadas[fid]||[]).length+1;
+  if(sn>total)return null;
+  const peso=document.getElementById('peso-'+fid+'-'+sn);
+  const reps=document.getElementById('reps-hid-'+fid+'-'+sn);
+  const banner=document.getElementById('sugerencia-'+fid+'-'+sn);
+  return {
+    sn:sn,
+    peso:peso?peso.value:null,
+    planWeight:peso?(peso.dataset.planWeight||''):null,
+    reps:reps?reps.value:null,
+    banner:banner?{html:banner.innerHTML,display:banner.style.display}:null
+  };
+}
+
+function _estadoDescanso(fid){
+  const t=STATE.timers[fid];
+  const desc=document.getElementById('desc-'+fid);
+  if(!t||!desc||getComputedStyle(desc).display==='none')return null;
+  const prox=document.getElementById('pd-prox-'+fid);
+  const sug=document.getElementById('pd-sugerencia-'+fid);
+  const serie=(STATE.seriesCompletadas[fid]||[])[t.snActual-1];
+  return {
+    endTs:t.endTs,total:t.total,snActual:t.snActual,totalSeries:t.totalSeries,startedAt:t.startedAt,
+    final:t.totalSeries>0&&t.snActual>=t.totalSeries,
+    prox:prox?prox.innerHTML:'',
+    peso:serie?serie.peso:null,
+    sug:(sug&&sug.style.display!=='none')?{html:sug.innerHTML,borderLeftColor:sug.style.borderLeftColor,background:sug.style.background}:null
+  };
+}
+
+function recopilarEstadoExtra(){
+  normalizarPospuestos();
+  const fallos={},topes={},siguiente={},descansos={};
+  cards.forEach(card=>{
+    const fid=card.dataset.formId;
+    const fallo=document.getElementById('fallo-'+fid);
+    if(fallo&&fallo.value)fallos[fid]=fallo.value;
+    const tope=document.getElementById('tope-'+fid);
+    if(tope)topes[fid]=tope.value==='true';
+    const sig=_estadoPanelSiguiente(fid);
+    if(sig)siguiente[fid]=sig;
+    const d=_estadoDescanso(fid);
+    if(d)descansos[fid]=d;
+  });
+  return {v:2,pospuestos:ESTADO.pospuestos.slice(),sustituciones:ESTADO.sustituciones,
+          molestias:ESTADO.molestias,fallos:fallos,topes:topes,siguiente:siguiente,descansos:descansos};
+}
+
+// ── Sustituciones ────────────────────────────────────────────────────────────
+// rec: {fid, original (el ejercicio que había justo antes), sustituyeA (el del plan),
+//       nombre, pesoHistorico, ultimaTexto, repsHistorico, meta, objetivo,
+//       via:'ocupada'|'molestia'|'lesion', estado, error, evento}
+// Las tres vías aplican lo mismo: sustituye_a, objetivo del hueco, peso y tipo de progresión.
+// Lo que cambia es la lista de la que sale la alternativa (la de molestia y la de lesión
+// ya vienen filtradas por las restricciones de la lesión) y si se avisa al plan.
+function aplicarSustitucion(rec){
+  const fid=rec.fid;
+  const card=document.getElementById('card-'+fid);
+  if(!card)return;
+  const h2=card.querySelector('.cyber-ejercicio-nombre');
+  if(h2)h2.textContent=rec.nombre;
+  const hidNombre=card.querySelector('input[name="'+fid+'_nombre"]');
+  if(hidNombre)hidNombre.value=rec.nombre;
+  const total=parseInt(card.dataset.totalSets||'0',10)||0;
+  const hechas=(STATE.seriesCompletadas[fid]||[]).length;
+  const hidSust=card.querySelector('input[name="'+fid+'_sustituye_a"]');
+  if(hidSust&&!hidSust.value)hidSust.value=rec.sustituyeA||rec.original;
+  // Sin datos del tipo de ejercicio (el servidor no pudo enriquecer la alternativa)
+  // no se toca la casilla de peso: solo se cambia lo que se sabe.
+  if(rec.meta&&typeof rec.meta.usa_peso==='boolean')adaptarTarjetaASustituto(fid,rec.meta,rec.pesoHistorico);
+  anotarObjetivoHeredado(fid,rec.objetivo||{},(rec.meta||{}).peso_motivo||'');
+  for(let sn=hechas+1;sn<=total;sn++){
+    const inp=document.getElementById('peso-'+fid+'-'+sn);
+    if(inp){
+      inp.value=rec.pesoHistorico?String(rec.pesoHistorico):'';
+      inp.dataset.planWeight=rec.pesoHistorico?String(rec.pesoHistorico):'';
+      if(rec.pesoHistorico){calcularDiscosInline(fid,sn,rec.pesoHistorico);detectarPR(fid,sn,rec.pesoHistorico);}
+    }
+    const repsPropuestas=(rec.objetivo||{}).reps_objetivo||rec.repsHistorico;
+    if(repsPropuestas){
+      const rh=document.getElementById('reps-hid-'+fid+'-'+sn);
+      const rd=document.getElementById('reps-disp-'+fid+'-'+sn);
+      if(rh)rh.value=repsPropuestas;
+      if(rd)rd.textContent=repsPropuestas;
+    }
+    const reg=document.getElementById('reg-'+fid+'-'+sn);
+    if(reg&&!reg.querySelector('.peso-ultima-vez')){
+      const caja=document.createElement('div');
+      caja.className='peso-ultima-vez';
+      caja.setAttribute('aria-label','Referencia de la última sesión');
+      const g=reg.querySelector('.peso-reps-grid');
+      const z=g?g.querySelector('.peso-zona'):null;
+      if(g)(z?z.after(caja):g.appendChild(caja));
+    }
+    reg?.querySelectorAll('.peso-ultima-vez').forEach(box=>{
+      box.innerHTML='<span class="peso-ultima-vez__label">Sustituye a '+rec.original+'</span>'
+        +'<span class="peso-ultima-vez__value">'+(rec.ultimaTexto?'Última vez '+rec.ultimaTexto:'Sin historial: elige el peso')+'</span>';
+    });
+  }
+}
+
+function sincronizarSustitucion(rec){
+  rec.estado='pendiente';rec.error='';
+  guardarCheckpoint();
+  const fecha=document.getElementById('hid-fecha')?.value||'';
+  return fetch(_SYNC_URL_HOTSWAP,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':'{{ csrf_token }}'},
+    body:JSON.stringify({original_name:rec.original,substitute_name:rec.nombre,fecha:fecha,evento:rec.evento})
+  }).then(r=>r.json().catch(()=>({})).then(d=>({status:r.status,d:d})))
+  .then(({status,d})=>{
+    if(status===200&&d.status==='success'){rec.estado='confirmado';}
+    else if(status===404&&d.codigo==='sin_plan'){rec.estado='local';}  // viaja con la sesión; no hay nada que reintentar
+    else{rec.estado='error';rec.error=(d&&d.message)||('El servidor respondió '+status);}
+  }).catch(()=>{rec.estado='error';rec.error='Sin conexión con el servidor.';})
+  .then(()=>{guardarCheckpoint();});
+}
+
+function registrarSustitucion(rec){
+  const previa=ESTADO.sustituciones[rec.fid];
+  rec.sustituyeA=previa?(previa.sustituyeA||previa.original):rec.original;
+  rec.evento=_nuevoToken();
+  rec.estado='local';rec.error='';rec.ts=Date.now();
+  ESTADO.sustituciones[rec.fid]=rec;
+  aplicarSustitucion(rec);
+  guardarCheckpoint();
+  if(rec.via==='ocupada'||rec.via==='lesion')sincronizarSustitucion(rec);
+}
+
+// ── Molestias ────────────────────────────────────────────────────────────────
+function _molestiaUltima(fid){
+  for(let i=ESTADO.molestias.length-1;i>=0;i--)if(ESTADO.molestias[i].fid===fid)return ESTADO.molestias[i];
+  return null;
+}
+function actualizarBotonMolestia(fid){
+  const rec=_molestiaUltima(fid);
+  const btn=document.getElementById('mol-btn-'+fid);
+  if(!rec||!btn)return;
+  btn.classList.add('activa');
+  btn.textContent='⚠️ '+rec.zona.charAt(0).toUpperCase()+rec.zona.slice(1)+' · '+['','Leve','Moderada','Severa'][rec.severidad]
+    +(rec.estado==='confirmado'?'':' · sin confirmar');
+}
+function aplicarMolestiaEnFormulario(rec){
+  const set=(id,v)=>{const el=document.getElementById(id+rec.fid);if(el)el.value=v;};
+  set('mol-rep-','true');set('mol-zona-',rec.zona);set('mol-sev-',rec.severidad);set('mol-desc-',rec.desc||'');
+  actualizarBotonMolestia(rec.fid);
+}
+function enviarMolestia(rec){
+  rec.estado='pendiente';rec.error='';
+  guardarCheckpoint();actualizarBotonMolestia(rec.fid);
+  const primera=!rec.avisada;
+  return fetch(_SYNC_URL_MOLESTIA,{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':CSRF_TOKEN},
+    body:JSON.stringify({ejercicio_nombre:rec.original,zona:rec.zona,severidad:rec.severidad,descripcion:rec.desc||'',evento:rec.evento})
+  }).then(r=>r.json().catch(()=>({})).then(d=>({ok:r.ok,d:d})))
+  .then(({ok,d})=>{
+    if(ok&&d.status==='ok'){
+      rec.estado='confirmado';
+      if(primera&&window.notificacionesCodeice){
+        const msgs=['','💛 Molestia leve anotada','🟠 Restricción activa creada','🔴 Lesión registrada — toma precauciones'];
+        window.notificacionesCodeice.mostrarNotificacion({
+          icono:['','😐','😬','😣'][rec.severidad],titulo:msgs[rec.severidad],mensaje:d.mensaje||'',tipo:'molestia',duracion:4000});
+      }
+      rec.avisada=true;
+    }else{rec.estado='error';rec.error=(d&&d.message)||'El servidor no aceptó el reporte.';}
+  }).catch(()=>{rec.estado='error';rec.error='Sin conexión con el servidor.';})
+  .then(()=>{guardarCheckpoint();actualizarBotonMolestia(rec.fid);});
+}
+function reintentarMolestia(evento){
+  const rec=ESTADO.molestias.find(m=>m.evento===evento);
+  if(rec)enviarMolestia(rec);
+}
+function reintentarSustitucion(fid){
+  const rec=ESTADO.sustituciones[fid];
+  if(rec&&(rec.via==='ocupada'||rec.via==='lesion'))sincronizarSustitucion(rec);
+}
+
+// ── Barra de pendientes: pospuestos y acciones sin resolver ─────────────────
+function actualizarBarraPendientes(){
+  let barra=document.getElementById('barra-pendientes');
+  const wrap=document.querySelector('.wrap');
+  if(!barra){
+    if(!wrap)return;
+    barra=document.createElement('div');
+    barra.id='barra-pendientes';
+    barra.className='barra-pendientes';
+    barra.setAttribute('role','region');
+    barra.setAttribute('aria-label','Pendientes de la sesión');
+    barra.hidden=true;
+    const primera=document.querySelector('.cyber-ejercicio-card');
+    (primera?.parentNode||wrap).insertBefore(barra,primera?.parentNode?primera:null);
+  }
+  const acciones=[];
+  ESTADO.molestias.forEach(m=>{
+    if(m.estado==='confirmado'||m.estado==='local')return;
+    acciones.push({texto:'Molestia ('+m.zona+') en '+m.original+': '+(m.estado==='error'?'no se pudo enviar. '+(m.error||''):'sin confirmar.'),
+      boton:'Reintentar',fn:()=>reintentarMolestia(m.evento)});
+  });
+  Object.values(ESTADO.sustituciones).forEach(s=>{
+    if(s.via==='molestia'||s.estado==='confirmado'||s.estado==='local')return;
+    acciones.push({texto:'Sustitución de '+s.original+' por '+s.nombre+': '+(s.estado==='error'?'no se pudo confirmar. '+(s.error||''):'sin confirmar.'),
+      boton:'Reintentar',fn:()=>reintentarSustitucion(s.fid)});
+  });
+  normalizarPospuestos();
+  barra.textContent='';
+  if(ESTADO.pospuestos.length){
+    const fila=document.createElement('div');fila.className='bp-fila';
+    const t=document.createElement('span');t.className='bp-tit';t.textContent='Para el final';fila.appendChild(t);
+    ESTADO.pospuestos.forEach((fid,i)=>{
+      const b=document.createElement('button');b.type='button';b.className='bp-chip';
+      b.textContent=(i+1)+' · '+_nombreDeEjercicio(fid);
+      b.addEventListener('click',()=>{const idx=cards.indexOf(document.getElementById('card-'+fid));if(idx>=0)irEjercicio(idx);});
+      fila.appendChild(b);
+    });
+    barra.appendChild(fila);
+  }
+  acciones.forEach(a=>{
+    const fila=document.createElement('div');fila.className='bp-fila bp-accion';fila.setAttribute('role','alert');
+    const s=document.createElement('span');s.textContent=a.texto;fila.appendChild(s);
+    const b=document.createElement('button');b.type='button';b.className='bp-chip';b.textContent=a.boton;
+    b.addEventListener('click',a.fn);fila.appendChild(b);
+    barra.appendChild(fila);
+  });
+  barra.hidden=!(ESTADO.pospuestos.length||acciones.length);
+}
+
+// ── Restaurar lo anterior (se ejecuta con el DOM completo) ──────────────────
+function restaurarEstadoExtra(){
+  let data;
+  try{data=JSON.parse(localStorage.getItem(STORAGE_KEY)||'null');}catch(e){data=null;}
+  if(!data||data.v!==2){try{actualizarBarraPendientes();}catch(e){}return;}
+  try{
+    Object.values(data.sustituciones||{}).forEach(rec=>{
+      if(!document.getElementById('card-'+rec.fid))return;
+      ESTADO.sustituciones[rec.fid]=rec;
+      aplicarSustitucion(rec);
+    });
+    (data.molestias||[]).forEach(rec=>{
+      if(!document.getElementById('card-'+rec.fid))return;
+      ESTADO.molestias.push(rec);
+      aplicarMolestiaEnFormulario(rec);
+    });
+    Object.entries(data.fallos||{}).forEach(([fid,tipo])=>{
+      const input=document.getElementById('fallo-'+fid),btn=document.getElementById('fallo-btn-'+fid);
+      if(!input)return;
+      input.value=tipo;ESTADO.fallos[fid]=tipo;
+      if(btn){btn.classList.add('activo');btn.textContent=tipo==='previsto'?'◉ Fallo previsto':'◉ Fallo no previsto';}
+    });
+    Object.entries(data.topes||{}).forEach(([fid,activo])=>{
+      const input=document.getElementById('tope-'+fid),btn=document.getElementById('tope-btn-'+fid);
+      if(!input)return;
+      input.value=activo?'true':'false';
+      if(btn){
+        btn.classList.toggle('activo',activo);
+        btn.title=activo?'Tope activado: el algoritmo progresará por reps, no por peso':'El peso de la máquina no llega al recomendado';
+      }
+    });
+    ESTADO.pospuestos=(data.pospuestos||[]).filter(fid=>document.getElementById('card-'+fid));
+    // Propuesta de la serie siguiente: campos, mensaje y Guardar vuelven iguales.
+    Object.entries(data.siguiente||{}).forEach(([fid,s])=>{
+      const hechas=(STATE.seriesCompletadas[fid]||[]).length;
+      if(!s||s.sn!==hechas+1)return;
+      const peso=document.getElementById('peso-'+fid+'-'+s.sn);
+      if(peso&&s.peso!==null){peso.value=s.peso;if(s.planWeight)peso.dataset.planWeight=s.planWeight;calcularDiscosInline(fid,s.sn,parseFloat(s.peso)||0);}
+      const rh=document.getElementById('reps-hid-'+fid+'-'+s.sn),rd=document.getElementById('reps-disp-'+fid+'-'+s.sn);
+      if(rh&&s.reps!==null)rh.value=s.reps;
+      const reg=document.getElementById('reg-'+fid+'-'+s.sn);
+      if(rd&&s.reps!==null)rd.textContent=reg?.dataset.usaTiempo==='1'?s.reps+'s':s.reps;
+      const banner=document.getElementById('sugerencia-'+fid+'-'+s.sn);
+      if(banner&&s.banner){banner.innerHTML=s.banner.html;banner.style.display=s.banner.display;}
+    });
+    Object.entries(data.descansos||{}).forEach(([fid,d])=>restaurarDescanso(fid,d));
+    // Ejercicios ya terminados que no estaban en descanso: se rehace su bloque de cierre.
+    cards.forEach(card=>{
+      const fid=card.dataset.formId;
+      const total=parseInt(card.dataset.totalSets||'0',10)||0;
+      const hechas=(STATE.seriesCompletadas[fid]||[]).length;
+      const enDescanso=getComputedStyle(document.getElementById('desc-'+fid)||card).display!=='none'&&STATE.timers[fid];
+      if(total>0&&hechas>=total&&!enDescanso&&!card.querySelector('[data-ej-done]'))saltarDescanso(fid);
+    });
+  }catch(e){console.warn('No se pudo restaurar el estado de la sesión:',e);}
+  try{refrescarBotonesGuardar();}catch(e){}
+  guardarCheckpoint();
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',restaurarEstadoExtra);
+else setTimeout(restaurarEstadoExtra,0);
+
+
 // ── RESTAURAR DESDE localStorage ────────────────────────────────
 (function restaurarSesion(){
   try{
@@ -2638,8 +2967,13 @@ function feedbackSerieHTML(fid,sn,reps,esAproximacion,tecnica){
     // Banner de recuperación
     const banner=document.createElement('div');
     banner.style.cssText='background:rgba(74,222,128,0.08);border-bottom:1px solid rgba(74,222,128,0.3);padding:8px 16px;font-family:var(--fm);font-size:10px;color:var(--ok);letter-spacing:1px;display:flex;justify-content:space-between;align-items:center;';
-    banner.innerHTML='<span>♻️ Sesión recuperada automáticamente</span><button onclick="this.parentElement.remove();localStorage.removeItem(STORAGE_KEY)" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:12px;">×</button>';
-    document.querySelector('.wrap')?.insertBefore(banner,document.querySelector('.cyber-ejercicio-card'));
+    // 21-nov-2026: la × solo oculta el aviso; el borrador se descarta con su propia acción («Descartar borrador»).
+    banner.id='aviso-recuperada';
+    banner.innerHTML='<span>♻️ Sesión recuperada automáticamente</span><button type="button" onclick="this.parentElement.remove()" aria-label="Ocultar este aviso (el borrador se conserva)" style="background:none;border:none;color:var(--td);cursor:pointer;font-size:12px;">×</button>';
+    // 21-nov-2026: la primera tarjeta no es hija directa de .wrap, y el insertBefore
+    // antiguo lanzaba NotFoundError: el aviso nunca llegaba a mostrarse.
+    const primeraTarjeta=document.querySelector('.cyber-ejercicio-card');
+    primeraTarjeta?.parentNode?.insertBefore(banner,primeraTarjeta);
   }catch(e){console.warn('No se pudo restaurar sesión:',e);}
 })();
 
@@ -2738,14 +3072,22 @@ function dejarParaDespues(fid){
     if(tieneSeriesPendientes(cards[i])){destino=i;break;}
   }
   if(destino<0){avisoDespues('Es lo único que te queda: hazlo ahora o revisa y finaliza.');return;}
+  marcarPospuesto(fid);
   irEjercicio(destino);
+  guardarCheckpoint();
   avisoDespues(nombre+', al final: te lo vuelvo a proponer cuando acabes lo demás.');
 }
 
 function siguientePendiente(){
+  // Primero lo que no se pospuso (en el orden del plan); después los pospuestos,
+  // en el orden en que se dejaron para el final.
   for(let paso=1;paso<cards.length;paso++){
     const idx=(STATE.ejActual+paso)%cards.length;
-    if(tieneSeriesPendientes(cards[idx]))return idx;
+    if(tieneSeriesPendientes(cards[idx])&&!ESTADO.pospuestos.includes(cards[idx].dataset.formId))return idx;
+  }
+  for(const fid of ESTADO.pospuestos){
+    const idx=cards.indexOf(document.getElementById('card-'+fid));
+    if(idx>=0&&idx!==STATE.ejActual&&tieneSeriesPendientes(cards[idx]))return idx;
   }
   return -1;
 }
@@ -3283,6 +3625,9 @@ function guardarSeriePanel(fid,sn,total){
   }
   actualizarProgreso();
   actualizarSticky();
+  // El primer checkpoint se escribió antes del ajuste y del descanso: se repite
+  // para que la propuesta de la serie siguiente y la hora de fin queden en el borrador.
+  guardarCheckpoint();
 }
 
 function editarSeriePanel(fid,sn,total){
@@ -3672,13 +4017,15 @@ document.querySelectorAll('.rpe-picker-grid').forEach(grid=>{
 // ── CHECKPOINT localStorage ──────────────────────────────────────
 function guardarCheckpoint(){
   try{
-    localStorage.setItem(STORAGE_KEY,JSON.stringify({
+    localStorage.setItem(STORAGE_KEY,JSON.stringify(Object.assign({
       ejActual:STATE.ejActual,
       seriesCompletadas:STATE.seriesCompletadas,
       ts:Date.now(),
       url:window.location.href  // Para poder recuperar la sesión desde el dashboard
-    }));
-  }catch(e){}
+    },recopilarEstadoExtra())));
+    if(!localStorage.getItem(STORAGE_KEY))throw new Error('sin lectura');
+  }catch(e){_marcarAlmacenFalla();}
+  try{actualizarBarraPendientes();}catch(e){}
 }
 
 // ── LIMPIAR localStorage al guardar ──────────────────────────────
@@ -3690,7 +4037,7 @@ function descartarBorrador(){
   );
   if(!confirmar)return;
   limpiarCheckpoint();
-  try{localStorage.removeItem(_WK_KEY);}catch(e){}
+  try{localStorage.removeItem(_WK_KEY);localStorage.removeItem(TOKEN_KEY);localStorage.removeItem(ENVIO_KEY);}catch(e){}
   _sessionGuardada=true;
   window.location.href="{% url 'entrenos:briefing_entrenamiento' cliente.id %}?fecha={{ fecha|date:'Y-m-d' }}";
 }
@@ -3808,6 +4155,10 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
   const deEl=document.getElementById('pd-de-'+fid);
   if(deEl){const m=Math.floor(segAjustado/60),s=segAjustado%60;deEl.textContent='DE '+m+':'+String(s).padStart(2,'0');}
   actualizarTimerUI(fid);
+  arrancarIntervaloDescanso(fid,timerStartedAt);
+}
+
+function arrancarIntervaloDescanso(fid,timerStartedAt){
   STATE.timers[fid].interval=setInterval(()=>{
     // Usar timestamp real en lugar de contador — inmune a congelación de Safari
     const restante=Math.max(0,Math.round((STATE.timers[fid].endTs-Date.now())/1000));
@@ -3822,6 +4173,48 @@ function iniciarDescanso(fid,totalSeg,snActual,totalSeries){
       setTimeout(()=>{if(STATE.timers[fid]&&STATE.timers[fid].startedAt===timerStartedAt)saltarDescanso(fid);},800);
     }
   },1000);
+}
+
+// 21-nov-2026: el descanso se guarda con su hora de fin. Al volver se muestra lo
+// que queda, o que terminó, sin reiniciar la cuenta ni saltar solo a la serie siguiente.
+function marcarDescansoTerminado(fid){
+  const t=STATE.timers[fid];
+  if(t){if(t.interval)clearInterval(t.interval);t.interval=null;t.seg=0;}
+  actualizarTimerUI(fid);
+  const overlay=document.getElementById('pd-urgente-overlay-'+fid);
+  if(overlay)overlay.style.display='none';
+  const de=document.getElementById('pd-de-'+fid);
+  if(de)de.textContent='TERMINÓ';
+  const btn=document.getElementById('btn-saltar-'+fid);
+  if(btn)btn.textContent='SEGUIR CON LA SIGUIENTE SERIE';
+}
+
+function restaurarDescanso(fid,d){
+  const desc=document.getElementById('desc-'+fid);
+  if(!desc||!d)return;
+  const hechas=(STATE.seriesCompletadas[fid]||[]).length;
+  if(d.snActual!==hechas)return;  // ya no corresponde a la última serie guardada
+  desc.style.display='flex';desc.style.flexDirection='column';
+  const registro=document.getElementById('registro-'+fid);
+  if(registro)registro.style.display='none';
+  const prox=document.getElementById('pd-prox-'+fid);
+  if(prox&&d.prox)prox.innerHTML=d.prox;
+  if(d.peso!==null&&d.peso!==undefined)calcularDiscos(fid,d.peso);
+  const sug=document.getElementById('pd-sugerencia-'+fid);
+  if(sug&&d.sug){sug.innerHTML=d.sug.html;sug.style.borderLeftColor=d.sug.borderLeftColor;sug.style.background=d.sug.background;sug.style.display='block';}
+  if(d.final){
+    iniciarDescanso(fid,0,d.snActual,d.totalSeries);
+  }else{
+    const restante=Math.max(0,Math.round((d.endTs-Date.now())/1000));
+    STATE.timers[fid]={seg:restante,total:d.total,endTs:d.endTs,interval:null,snActual:d.snActual,totalSeries:d.totalSeries,startedAt:d.startedAt};
+    const deEl=document.getElementById('pd-de-'+fid);
+    if(deEl){const m=Math.floor(d.total/60),s=d.total%60;deEl.textContent='DE '+m+':'+String(s).padStart(2,'0');}
+    actualizarTimerUI(fid);
+    if(restante>0)arrancarIntervaloDescanso(fid,d.startedAt);
+    else marcarDescansoTerminado(fid);
+  }
+  const serie=(STATE.seriesCompletadas[fid]||[])[d.snActual-1];
+  if(serie&&serie.tecnica)selTecnica(fid,serie.tecnica);
 }
 
 function actualizarTimerUI(fid){
@@ -3908,6 +4301,8 @@ function saltarDescanso(fid){
   actualizarProgreso();
   actualizarSticky();
   actualizarDots();
+  // El descanso ya no existe: el borrador deja de guardarlo.
+  guardarCheckpoint();
 }
 
 
@@ -4313,8 +4708,9 @@ document.getElementById('btn-ir-al-siguiente').addEventListener('click',()=>{
   // 27-oct-2026 (nota 13): al aplazar, directo al siguiente que queda por hacer,
   // sin pasar por los que ya están hechos.
   if(delta>0){
+    const fidDejado=cards[STATE.ejActual]?.dataset.formId;
     const idx=siguientePendiente();
-    if(idx>=0){irEjercicio(idx);return;}
+    if(idx>=0){marcarPospuesto(fidDejado);irEjercicio(idx);guardarCheckpoint();return;}
   }
   if(delta)navEjercicio(delta,true);
 });
@@ -4498,71 +4894,14 @@ function confirmarSwap(nuevoNombre, pesoHistorico, ultimaTexto, repsHistorico, m
   // 18-nov-2026: el objetivo del hueco se lee ANTES de tocar la tarjeta y se guarda
   // con el ejercicio: es el que se usará para evaluar lo realizado.
   const objetivoHueco = objetivoDelHueco(fid, _swapNombreOriginal);
-
-  // Actualizar nombre visible en el card (27-oct-2026, nota 18: tal cual, no en
-  // mayúsculas; el resumen lo mostraba como otro ejercicio).
-  const card = document.getElementById('card-' + fid);
-  if (card) {
-    const h2 = card.querySelector('.cyber-ejercicio-nombre');
-    if (h2) h2.textContent = nuevoNombre;
-    const hidNombre = card.querySelector(`input[name="${fid}_nombre"]`);
-    if (hidNombre) hidNombre.value = nuevoNombre;
-    // 18-nov-2026 (nota 21): qué ejercicio del plan sustituye (el original, aunque se cambie dos veces).
-    const hidSust = card.querySelector(`input[name="${fid}_sustituye_a"]`);
-    if (hidSust && !hidSust.value) hidSust.value = _swapNombreOriginal;
-  }
-
-  // 18-nov-2026 (notas 14 y 23): la tarjeta se reconstruye según el ejercicio nuevo
-  // (casilla de peso, tipo de progresión, récord, tope), no solo el nombre.
-  adaptarTarjetaASustituto(fid, meta || {}, pesoHistorico);
-  anotarObjetivoHeredado(fid, objetivoHueco, (meta || {}).peso_motivo || '');
-
-  // 27-oct-2026 (nota 15): el peso y la "última vez" del ejercicio nuevo en todas
-  // las series que faltan. Antes se escribía en un campo que no existe y se
-  // quedaban los 60 kg del rumano.
-  const total = parseInt(card?.dataset.totalSets || '0', 10) || 0;
-  const hechas = (STATE.seriesCompletadas[fid] || []).length;
-  for (let sn = hechas + 1; sn <= total; sn++) {
-    const inp = document.getElementById('peso-' + fid + '-' + sn);
-    if (inp) {
-      inp.value = pesoHistorico ? String(pesoHistorico) : '';
-      inp.dataset.planWeight = pesoHistorico ? String(pesoHistorico) : '';
-      if (pesoHistorico) { calcularDiscosInline(fid, sn, pesoHistorico); detectarPR(fid, sn, pesoHistorico); }
-    }
-    // 18-nov-2026: las reps que se proponen son las del hueco del plan; las de otro dia
-    // del ejercicio nuevo solo se citan en «última vez».
-    const repsPropuestas = objetivoHueco.reps_objetivo || repsHistorico;
-    if (repsPropuestas) {
-      const rh = document.getElementById('reps-hid-' + fid + '-' + sn);
-      const rd = document.getElementById('reps-disp-' + fid + '-' + sn);
-      if (rh) rh.value = repsPropuestas;
-      if (rd) rd.textContent = repsPropuestas;
-    }
-    const reg = document.getElementById('reg-' + fid + '-' + sn);
-    if (reg && !reg.querySelector('.peso-ultima-vez')) {
-      // El ejercicio de partida no tenía caja de «última vez» (sin carga): se crea.
-      const caja = document.createElement('div');
-      caja.className = 'peso-ultima-vez';
-      caja.setAttribute('aria-label', 'Referencia de la última sesión');
-      const g = reg.querySelector('.peso-reps-grid');
-      const z = g?.querySelector('.peso-zona');
-      if (g) (z ? z.after(caja) : g.appendChild(caja));
-    }
-    reg?.querySelectorAll('.peso-ultima-vez').forEach(box => {
-      box.innerHTML = '<span class="peso-ultima-vez__label">Sustituye a ' + _swapNombreOriginal + '</span>'
-        + '<span class="peso-ultima-vez__value">' + (ultimaTexto ? 'Última vez ' + ultimaTexto : 'Sin historial: elige el peso') + '</span>';
-    });
-  }
-
-  // Persistir en sesión via api_save_hot_swap
-  const fechaInput = document.getElementById('hid-fecha');
-  const fecha = fechaInput ? fechaInput.value : '';
-  fetch(`{% url 'entrenos:api_save_hot_swap' cliente.id %}`, {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}'},
-    body: JSON.stringify({original_name: _swapNombreOriginal, substitute_name: nuevoNombre, fecha: fecha})
+  // 21-nov-2026: la sustitución queda en el borrador con su objetivo y su estado
+  // (local / pendiente / confirmado / error) y se aplica con la misma función que
+  // se usa al recuperar la sesión.
+  registrarSustitucion({
+    fid: fid, via: 'ocupada', original: _swapNombreOriginal, nombre: nuevoNombre,
+    pesoHistorico: pesoHistorico || 0, ultimaTexto: ultimaTexto || '', repsHistorico: repsHistorico || 0,
+    meta: meta || {}, objetivo: objetivoHueco
   });
-
   cerrarSwapMaquina();
 }
 
@@ -4574,20 +4913,31 @@ function cerrarSwapMaquina() {
 
 // ── Phase 29 — Alternativas por lesión ────────────────────────────────────
 let _altLesionFormId = null;
+let _altLesionLista = [];
+let _altLesionArgs = [];
+
+function escaparHtml(t) {
+  return String(t == null ? '' : t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 async function abrirAlternativasLesion(nombre, grupo, tagsStr, fase, formId) {
   _altLesionFormId = formId;
+  _altLesionArgs = [nombre, grupo, tagsStr, fase, formId];
+  _altLesionLista = [];
   document.getElementById('alt-lesion-ejercicio').textContent = nombre;
   document.getElementById('alt-lesion-lista').innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.4);padding:8px 0;">Buscando alternativas...</div>';
   document.getElementById('modal-alt-lesion-overlay').style.display = 'flex';
 
   const tags = tagsStr ? tagsStr.split(',').filter(t => t.trim()) : [];
   try {
+    const hueco = objetivoDelHueco(formId, nombre);
     const resp = await fetch('{% url "entrenos:api_alternativas_lesion" cliente.id %}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-      body: JSON.stringify({ ejercicio_nombre: nombre, grupo_muscular: grupo, tags_restringidos: tags, fase_lesion: fase }),
+      body: JSON.stringify({ ejercicio_nombre: nombre, grupo_muscular: grupo, tags_restringidos: tags, fase_lesion: fase,
+                             rango: hueco.rango || '', rpe_objetivo: hueco.rpe_objetivo || '' }),
     });
+    if (!resp.ok) throw new Error('http ' + resp.status);
     const data = await resp.json();
     document.getElementById('alt-lesion-nota').textContent = data.nota_general || '';
     const lista = document.getElementById('alt-lesion-lista');
@@ -4595,38 +4945,39 @@ async function abrirAlternativasLesion(nombre, grupo, tagsStr, fase, formId) {
       lista.innerHTML = '<div style="font-size:11px;color:rgba(255,255,255,0.35);font-style:italic;padding:8px 0;">No se encontraron alternativas sin riesgo para este ejercicio en tu biblioteca.</div>';
       return;
     }
-    lista.innerHTML = data.alternativas.map(alt => `
+    _altLesionLista = data.alternativas;
+    lista.innerHTML = data.alternativas.map((alt, i) => `
       <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:9px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);margin-bottom:7px;">
         <div style="flex:1;">
-          <div style="font-size:12px;font-weight:600;color:#fff;">${alt.nombre}</div>
-          <div style="font-size:9px;color:rgba(255,255,255,0.35);">${alt.grupo_muscular}</div>
+          <div style="font-size:12px;font-weight:600;color:#fff;">${escaparHtml(alt.nombre)}</div>
+          <div style="font-size:9px;color:rgba(255,255,255,0.35);">${escaparHtml(alt.grupo_muscular || '')}${alt.ultima ? ' · Última: ' + escaparHtml(alt.ultima) : ''}</div>
         </div>
-        <button onclick="seleccionarAltLesion('${alt.nombre.replace(/'/g,"\\'")}','${nombre.replace(/'/g,"\\'")}','${formId}')"
+        <button type="button" data-alt-lesion="${i}" onclick="seleccionarAltLesion(${i})"
                 style="padding:5px 10px;border-radius:7px;background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.35);color:rgba(245,158,11,0.9);font-size:9px;font-weight:700;cursor:pointer;margin-left:8px;flex-shrink:0;">
           Usar
         </button>
       </div>`).join('');
   } catch(e) {
-    document.getElementById('alt-lesion-lista').innerHTML = '<div style="font-size:11px;color:rgba(239,68,68,0.6);">Error al buscar alternativas.</div>';
+    document.getElementById('alt-lesion-lista').innerHTML = '<div role="alert" style="font-size:11px;color:rgba(239,68,68,0.85);">No se pudieron buscar alternativas. '
+      + '<button type="button" onclick="abrirAlternativasLesion(_altLesionArgs[0],_altLesionArgs[1],_altLesionArgs[2],_altLesionArgs[3],_altLesionArgs[4])" '
+      + 'style="background:none;border:1px solid rgba(239,68,68,0.6);color:rgba(239,68,68,0.85);border-radius:8px;padding:2px 8px;cursor:pointer;">Reintentar</button></div>';
   }
 }
 
-function seleccionarAltLesion(nombreNuevo, nombreOriginal, formId) {
-  // Update the visible exercise name in the card
-  const spanNombre = document.getElementById('ej-nombre-' + formId);
-  if (spanNombre) spanNombre.textContent = nombreNuevo;
-  const hidNombre = document.getElementById('hid-nombre-' + formId);
-  if (hidNombre) hidNombre.value = nombreNuevo;
-
-  // Persist via hot-swap endpoint (motivo = lesion)
-  const fechaInput = document.getElementById('hid-fecha');
-  const fecha = fechaInput ? fechaInput.value : '';
-  fetch('{% url "entrenos:api_save_hot_swap" cliente.id %}', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
-    body: JSON.stringify({ original_name: nombreOriginal, substitute_name: nombreNuevo, fecha: fecha }),
+// 21-nov-2026: antes buscaba elementos que no existen (ej-nombre-…, hid-nombre-…) y la
+// tarjeta no cambiaba. Ahora aplica la misma sustitución que la máquina ocupada.
+function seleccionarAltLesion(idx) {
+  const alt = _altLesionLista[idx];
+  const fid = _altLesionFormId;
+  if (!alt || !fid) return;
+  const nombreOriginal = _altLesionArgs[0];
+  registrarSustitucion({
+    fid: fid, via: 'lesion', original: nombreOriginal, nombre: alt.nombre,
+    pesoHistorico: alt.peso_hueco_kg || alt.peso_historico_kg || 0, ultimaTexto: alt.ultima || '',
+    repsHistorico: alt.reps || 0,
+    meta: {tipo_progresion: alt.tipo_progresion || '', usa_peso: alt.usa_peso === true, pr_peso: alt.pr_peso || 0, peso_motivo: alt.peso_hueco_motivo || ''},
+    objetivo: objetivoDelHueco(fid, nombreOriginal)
   });
-
   cerrarAltLesion();
 }
 
@@ -4737,6 +5088,222 @@ function abrirEnergia(){
 let _sessionGuardada = false;
 let _envioCierreEnCurso = false;
 
+// ── GUARDADO SEGURO (21-nov-2026) ────────────────────────────────
+// Identificador de sesion + huella del contenido + borrador que solo se borra
+// cuando el servidor confirma ESE contenido. Las reglas viven en
+// entrenos/services/guardado_sesion_service.py (la huella se calcula igual aqui).
+const TOKEN_KEY='entreno_activo_token_{{ cliente.id }}_{{ fecha }}';
+const ENVIO_KEY='entreno_activo_envios_{{ cliente.id }}_{{ fecha }}';
+const CHECK_URL="{% url 'entrenos:comprobar_sesion_guardada' cliente.id 'TOKEN_PLACEHOLDER' %}";
+var _almacenFalla=false;
+var _enviosMem={enviadas:[],confirmada:''};
+function _marcarAlmacenFalla(){
+  _almacenFalla=true;
+  if(document.getElementById('aviso-almacen'))return;
+  const b=document.createElement('div');
+  b.id='aviso-almacen';b.setAttribute('role','alert');
+  b.style.cssText='position:sticky;top:0;z-index:9999;padding:10px 14px;background:#7f1d1d;color:#fff;font-size:13px;font-weight:600;text-align:center;';
+  b.textContent='Este móvil no está guardando tu borrador. Si cierras o recargas, se pierde. No cierres la app hasta guardar el entreno.';
+  (document.body||document.documentElement).insertBefore(b,(document.body||document.documentElement).firstChild);
+}
+function _lsGet(k){try{return localStorage.getItem(k);}catch(e){_marcarAlmacenFalla();return null;}}
+function _lsSet(k,v){
+  try{localStorage.setItem(k,v);if(localStorage.getItem(k)!==v)throw new Error('lectura distinta');return true;}
+  catch(e){_marcarAlmacenFalla();return false;}
+}
+function _lsDel(k){try{localStorage.removeItem(k);}catch(e){}}
+(function sondaAlmacenamiento(){_lsSet('entreno_activo_sonda','1');_lsDel('entreno_activo_sonda');})();
+function _nuevoToken(){
+  try{if(window.crypto&&crypto.randomUUID)return crypto.randomUUID().replace(/-/g,'');}catch(e){}
+  let t='';for(let i=0;i<32;i++)t+=Math.floor(Math.random()*16).toString(16);return t;
+}
+const SESION_TOKEN=(function(){
+  let t=_lsGet(TOKEN_KEY);
+  if(!t||!/^[A-Za-z0-9_-]{16,64}$/.test(t)){t=_nuevoToken();_lsSet(TOKEN_KEY,t);}
+  return t;
+})();
+function _leerEnvios(){
+  try{const r=JSON.parse(_lsGet(ENVIO_KEY)||'null');
+    if(r&&Array.isArray(r.enviadas))return {enviadas:r.enviadas,confirmada:r.confirmada||''};}catch(e){}
+  return {enviadas:_enviosMem.enviadas.slice(),confirmada:_enviosMem.confirmada};
+}
+function _guardarEnvios(e){_enviosMem={enviadas:e.enviadas.slice(),confirmada:e.confirmada};_lsSet(ENVIO_KEY,JSON.stringify(e));}
+function limpiarTodoTrasConfirmar(){
+  limpiarCheckpoint();_lsDel(_WK_KEY);_lsDel(TOKEN_KEY);_lsDel(ENVIO_KEY);
+}
+
+// SHA-256 sincrono (crypto.subtle no existe en http ni en algunos webviews).
+function sha256Hex(texto){
+  const bytes=new TextEncoder().encode(texto);
+  const K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  const H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+  const l=bytes.length,total=((l+9+63)>>6)<<6,buf=new Uint8Array(total);
+  buf.set(bytes);buf[l]=0x80;
+  const dv=new DataView(buf.buffer);
+  dv.setUint32(total-8,Math.floor(l/0x20000000),false);dv.setUint32(total-4,(l<<3)>>>0,false);
+  const w=new Uint32Array(64);
+  const rotr=(x,n)=>(x>>>n)|(x<<(32-n));
+  for(let o=0;o<total;o+=64){
+    for(let i=0;i<16;i++)w[i]=dv.getUint32(o+i*4,false);
+    for(let i=16;i<64;i++){
+      const s0=rotr(w[i-15],7)^rotr(w[i-15],18)^(w[i-15]>>>3);
+      const s1=rotr(w[i-2],17)^rotr(w[i-2],19)^(w[i-2]>>>10);
+      w[i]=(w[i-16]+s0+w[i-7]+s1)>>>0;
+    }
+    let [a,b,c,d,e,f,g,h]=H;
+    for(let i=0;i<64;i++){
+      const S1=rotr(e,6)^rotr(e,11)^rotr(e,25),ch=(e&f)^(~e&g);
+      const t1=(h+S1+ch+K[i]+w[i])>>>0;
+      const S0=rotr(a,2)^rotr(a,13)^rotr(a,22),mj=(a&b)^(a&c)^(b&c);
+      const t2=(S0+mj)>>>0;
+      h=g;g=f;f=e;e=(d+t1)>>>0;d=c;c=b;b=a;a=(t1+t2)>>>0;
+    }
+    H[0]=(H[0]+a)>>>0;H[1]=(H[1]+b)>>>0;H[2]=(H[2]+c)>>>0;H[3]=(H[3]+d)>>>0;
+    H[4]=(H[4]+e)>>>0;H[5]=(H[5]+f)>>>0;H[6]=(H[6]+g)>>>0;H[7]=(H[7]+h)>>>0;
+  }
+  return H.map(x=>x.toString(16).padStart(8,'0')).join('');
+}
+// Misma cadena canonica que guardado_sesion_service.cadena_canonica.
+const CLAVES_FUERA_DE_HUELLA=['csrfmiddlewaretoken','sesion_token','huella_contenido','bases_huella','resolver_conflicto','duracion_minutos_real','calorias_quemadas','sello_autoridad_gym','series_completadas','series_totales','ejercicios_completados','ejercicios_totales','volumen_total_sesion','rpe_medio_sesion'];
+function cadenaCanonica(entradas){
+  const por={};
+  entradas.forEach(([k,v])=>{
+    if(typeof v!=='string'||CLAVES_FUERA_DE_HUELLA.indexOf(k)>=0)return;
+    (por[k]=por[k]||[]).push(k+'='+v.replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim());
+  });
+  return Object.keys(por).sort().map(k=>por[k].join('\n')).join('\n');
+}
+function huellaDeFormData(fd){return sha256Hex(cadenaCanonica(Array.from(fd.entries())));}
+function huellaActual(){
+  const form=document.getElementById('workout-form');
+  sincronizarSeriesConfirmadasConFormulario(form);
+  return huellaDeFormData(new FormData(form));
+}
+
+// Estado visible del guardado: mensaje + botones, sin perder nunca el borrador.
+function mostrarEstadoGuardado(texto,botones){
+  const err=document.getElementById('save-error');
+  if(err){err.textContent=texto;err.style.display='block';}
+  let caja=document.getElementById('save-acciones');
+  if(!caja){
+    caja=document.createElement('div');caja.id='save-acciones';
+    caja.style.cssText='display:flex;flex-direction:column;gap:8px;margin-top:10px;';
+    if(err&&err.parentNode)err.parentNode.insertBefore(caja,err.nextSibling);
+  }
+  caja.innerHTML='';
+  (botones||[]).forEach(([etq,fn])=>{
+    const b=document.createElement('button');b.type='button';b.className='mbtn';b.textContent=etq;
+    b.style.minHeight='44px';b.addEventListener('click',fn);caja.appendChild(b);
+  });
+}
+function _liberarBotonGuardar(etiqueta){
+  const btn=document.getElementById('btn-confirmar-guardar');
+  _sessionGuardada=false;_envioCierreEnCurso=false;
+  if(btn){btn.disabled=false;btn.removeAttribute('aria-busy');btn.textContent=etiqueta||'Reintentar guardado';}
+  const ov=document.getElementById('saving-overlay');if(ov)ov.style.display='none';
+}
+function _irAlCierre(id){
+  setTimeout(()=>{window.location.href=`/entrenos/cliente/{{ cliente.id }}/entreno/${id}/cierre/`;},200);
+}
+
+// Una sola vez por respuesta: el borrador solo se borra si lo que el servidor
+// aceptó es EXACTAMENTE lo enviado y lo que hay ahora en el móvil.
+async function resolverConfirmacion(huellaEnviada,data){
+  const env=_leerEnvios();env.confirmada=data.huella||'';_guardarEnvios(env);
+  const actual=await huellaActual();
+  if(data.huella===huellaEnviada&&actual===data.huella){
+    limpiarTodoTrasConfirmar();
+    if(data.refresh_joi){try{fetch('/joi/api/pulso-actual/').catch(()=>{});}catch(e){}}
+    _irAlCierre(data.entreno_id);
+    return;
+  }
+  _liberarBotonGuardar('Enviar la corrección');
+  if(data.huella===huellaEnviada){
+    mostrarEstadoGuardado('Se guardó la versión que enviaste antes. Después cambiaste cosas: siguen aquí, en el móvil, sin enviar. Tu borrador no se ha borrado.',
+      [['Enviar la corrección',()=>ejecutarEnvio()]]);
+  }else{
+    mostrarEstadoGuardado('El servidor aceptó un contenido distinto del que enviaste. Tu borrador sigue en el móvil y no se ha borrado.',
+      [['Ver lo guardado',()=>_irAlCierre(data.entreno_id)],['Reenviar la mía',()=>ejecutarEnvio()]]);
+  }
+}
+async function comprobarSiLlego(){
+  mostrarEstadoGuardado('Comprobando en el servidor…',[]);
+  try{
+    const r=await fetch(CHECK_URL.replace('TOKEN_PLACEHOLDER',SESION_TOKEN),{headers:{'X-Requested-With':'XMLHttpRequest'}});
+    const j=await r.json();
+    if(!j.success)throw new Error(j.error||'sin respuesta');
+    if(!j.existe){
+      mostrarEstadoGuardado('El servidor no ha recibido esta sesión. Tus series siguen aquí, en el móvil. Puedes reintentar.',
+        [['Reintentar guardado',()=>ejecutarEnvio()],['Comprobar otra vez',comprobarSiLlego]]);
+      return;
+    }
+    const env=_leerEnvios();
+    const actual=await huellaActual();
+    if(j.huella===actual){await resolverConfirmacion(actual,{success:true,huella:j.huella,entreno_id:j.entreno_id});return;}
+    if(env.enviadas.indexOf(j.huella)>=0||env.confirmada===j.huella){
+      env.confirmada=j.huella;_guardarEnvios(env);
+      mostrarEstadoGuardado('Llegó una versión anterior de tu sesión; lo que hay ahora en el móvil es distinto y aún no se ha enviado. Tu borrador sigue intacto.',
+        [['Enviar la corrección',()=>ejecutarEnvio()],['Ver lo guardado',()=>_irAlCierre(j.entreno_id)]]);
+      return;
+    }
+    mostrarEstadoGuardado('El servidor tiene esta sesión con un contenido que este móvil no conoce (¿otro dispositivo?). No se ha sobrescrito nada.',
+      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:j.huella})],['Ver lo guardado',()=>_irAlCierre(j.entreno_id)]]);
+  }catch(e){
+    mostrarEstadoGuardado('No se pudo comprobar (¿sin cobertura?). Tus series siguen en el móvil.',
+      [['Comprobar otra vez',comprobarSiLlego],['Reintentar guardado',()=>ejecutarEnvio()]]);
+  }
+}
+
+async function ejecutarEnvio(opts){
+  opts=opts||{};
+  if(_envioCierreEnCurso&&!opts.reintento){/* ya hay uno en curso */}
+  _envioCierreEnCurso=true;_sessionGuardada=true;
+  const btn=document.getElementById('btn-confirmar-guardar');
+  if(btn){btn.disabled=true;btn.setAttribute('aria-busy','true');btn.textContent='Guardando…';}
+  const ov=document.getElementById('saving-overlay');if(ov)ov.style.display='flex';
+  const hint=document.getElementById('saving-hint');
+  const form=document.getElementById('workout-form');
+  document.getElementById('hid-duracion').value=duracionParaGuardar();
+  sincronizarSeriesConfirmadasConFormulario(form);
+  const fd=new FormData(form);
+  const huella=huellaDeFormData(fd);
+  const env=_leerEnvios();
+  if(env.enviadas.indexOf(huella)<0)env.enviadas.push(huella);
+  _guardarEnvios(env);
+  fd.set('sesion_token',SESION_TOKEN);
+  fd.set('bases_huella',Array.from(new Set((env.confirmada?[env.confirmada]:[]).concat(env.enviadas))).join(','));
+  if(opts.resolver)fd.set('resolver_conflicto',opts.resolver);
+  const ctrl=new AbortController();
+  const corte=setTimeout(()=>ctrl.abort(),45000);
+  const aviso=setTimeout(()=>{if(hint)hint.textContent='Tarda más de lo normal, puede que no tengas cobertura. No cierres la app: tus series están guardadas en el móvil.';},20000);
+  let resp=null,data=null;
+  try{
+    resp=await fetch(form.action,{method:'POST',headers:{'X-Requested-With':'XMLHttpRequest'},body:fd,signal:ctrl.signal});
+    const texto=await resp.text();
+    try{data=JSON.parse(texto);}catch(e){data=null;}
+  }catch(e){resp=null;}
+  clearTimeout(corte);clearTimeout(aviso);
+  if(hint)hint.textContent='Esto puede tardar unos segundos';
+  if(resp&&data&&data.success){await resolverConfirmacion(huella,data);return;}
+  _liberarBotonGuardar();
+  if(resp&&data&&data.conflicto){
+    mostrarEstadoGuardado('Esta sesión ya está guardada con otro contenido que este móvil no conoce (¿otro dispositivo?). No se ha sobrescrito nada y tu borrador sigue aquí.',
+      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:data.huella})],['Ver lo guardado',()=>_irAlCierre(data.entreno_id)]]);
+    return;
+  }
+  if(resp&&data&&resp.status>=400&&resp.status<500){
+    // El servidor rechazó el envío antes de guardar nada: no hay duda posible.
+    mostrarEstadoGuardado(data.error||'El servidor no aceptó el guardado. No se ha guardado nada y tu borrador sigue aquí.',[]);
+    return;
+  }
+  // Sin respuesta, tiempo agotado, 5xx o algo que no es JSON: no sabemos si llegó.
+  mostrarEstadoGuardado('No sé si el servidor recibió la sesión. Tus series siguen a salvo en el móvil. Comprueba si llegó antes de reintentar.',
+    [['Comprobar si llegó',comprobarSiLlego],['Reintentar guardado',()=>ejecutarEnvio()]]);
+}
+
+
+// ── FIN GUARDADO SEGURO ──
+
 // RPE global — se muestra en el modal si ninguna serie tiene RPE registrado
 (function(){
   const wrap = document.getElementById('rpe-global-wrap');
@@ -4824,79 +5391,9 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   if(errorMotivo)errorMotivo.style.display='none';
   if(!duracionRevisadaValida())return;
   if(saveError)saveError.style.display='none';
-  const confirmarBtn=document.getElementById('btn-confirmar-guardar');
-  _envioCierreEnCurso = true;
-  confirmarBtn.disabled = true;
-  confirmarBtn.setAttribute('aria-busy','true');
-  confirmarBtn.textContent='Guardando…';
-  _sessionGuardada = true;
-  document.getElementById('hid-duracion').value=duracionParaGuardar();
-  const ov = document.getElementById('saving-overlay');
-  if (ov) ov.style.display = 'flex';
-  // 11-nov-2026 (nota 27): sin cobertura el giro no acababa nunca ni decía nada.
-  const _hint = document.getElementById('saving-hint');
-  const _hintTimer = setTimeout(() => {
-    if (_hint) _hint.textContent = 'Tarda más de lo normal, puede que no tengas cobertura. No cierres la app: tus series están guardadas en el móvil. Si no termina, mira el historial antes de volver a guardar.';
-  }, 20000);
-
-  // AJAX handler with fallback
-  const form = document.getElementById('workout-form');
-  sincronizarSeriesConfirmadasConFormulario(form);
-  const formData = new FormData(form);
-  const clienteId = {{ cliente.id }};
-
-  fetch(form.action, {
-    method: 'POST',
-    headers: {'X-Requested-With': 'XMLHttpRequest'},
-    body: formData
-  })
-  .then(response => response.json())
-  .then(data => {
-    clearTimeout(_hintTimer);
-    if (data.success) {
-      // El borrador y el inicio del reloj solo dejan de ser necesarios cuando
-      // el servidor confirma que la sesión quedó persistida. Safari puede
-      // rechazar localStorage (modo privado/cuota); eso no deshace el POST.
-      try { limpiarCheckpoint(); } catch (error) {
-        console.warn('No se pudo limpiar el checkpoint confirmado:', error);
-      }
-      try { localStorage.removeItem(_WK_KEY); } catch (error) {
-        console.warn('No se pudo limpiar el inicio confirmado:', error);
-      }
-      // Refresh JOI estado in parallel (non-blocking)
-      if (data.refresh_joi) {
-        try { fetch('/joi/api/pulso-actual/').catch(() => {}); } catch (error) {
-          console.warn('No se pudo refrescar JOI:', error);
-        }
-      }
-      // Redirect to post-session summary
-      setTimeout(() => {
-        window.location.href = `/entrenos/cliente/${clienteId}/entreno/${data.entreno_id}/cierre/`;
-      }, 200);
-    } else {
-      throw new Error(data.error || 'No se pudo confirmar el guardado');
-    }
-  })
-  .catch(error => {
-    clearTimeout(_hintTimer);
-    if (_hint) _hint.textContent = 'Esto puede tardar unos segundos';
-    // Conserva series, técnica y hora inicial para que el usuario reintente
-    // sin convertir el segundo intento en una sesión nueva o más corta.
-    _sessionGuardada = false;
-    _envioCierreEnCurso = false;
-    confirmarBtn.disabled = false;
-    confirmarBtn.removeAttribute('aria-busy');
-    confirmarBtn.textContent='Reintentar guardado';
-    if (ov) ov.style.display = 'none';
-    if(saveError){
-      saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.';
-      const _sinRed = error && (error.name === 'TypeError' || /fetch|network|json/i.test(String(error.message || '')));
-      if(_sinRed){
-        saveError.textContent='No llegó la confirmación del servidor (¿sin cobertura?). Puede que el entreno ya se haya guardado: mira el historial antes de reintentar, para no duplicarlo.';
-      }
-      saveError.style.display='block';
-    }
-  });
+  if(saveError)saveError.style.display='none';
+  const _cajaAcc=document.getElementById('save-acciones');if(_cajaAcc)_cajaAcc.innerHTML='';
+  ejecutarEnvio();
 });
 
 // Aviso al salir sin guardar
@@ -4978,6 +5475,10 @@ let MOL = { fid: null, ejNombre: null, zona: null, severidad: null };
 const CSRF_TOKEN = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
 const molestiaOverlay=document.getElementById('mol-overlay');
 const contenidoEntreno=document.querySelector('.wrap');
+// 21-nov-2026: el modal estaba DENTRO de .wrap y .wrap se marca inert al abrirlo, así
+// que ni la zona, ni la severidad, ni las alternativas recibían toques. Se saca del
+// contenedor para que lo inerte sea el fondo y no el propio modal.
+if(molestiaOverlay&&contenidoEntreno&&contenidoEntreno.contains(molestiaOverlay))document.body.appendChild(molestiaOverlay);
 let focoAntesDeMolestia=null;
 
 function controlesMolestia(){
@@ -4995,6 +5496,7 @@ function toggleTopeMaquina(formId) {
   btn.title = !activo
     ? 'Tope activado: el algoritmo progresará por reps, no por peso'
     : 'El peso de la máquina no llega al recomendado';
+  guardarCheckpoint();
 }
 
 function abrirModalMolestia(fid, ejNombre) {
@@ -5072,13 +5574,16 @@ function buscarAlternativas() {
       severidad: MOL.severidad,
       descripcion: document.getElementById('mol-desc-input').value,
       solo_alternativas: true,  // no crear UserInjury todavía
+      rango: objetivoDelHueco(MOL.fid, MOL.ejOriginal).rango || '',
+      rpe_objetivo: objetivoDelHueco(MOL.fid, MOL.ejOriginal).rpe_objetivo || '',
     }),
   })
-  .then(r => r.json())
+  .then(r => { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
   .then(data => {
     if (data.alternativas && data.alternativas.length) {
-      altLista.innerHTML = data.alternativas.map(alt => `
-        <div class="mol-alt-item" onclick="usarAlternativa('${alt.nombre.replace(/'/g,"\\'")}', ${alt.peso_anterior || 0})">
+      MOL.alternativas = data.alternativas;
+      altLista.innerHTML = data.alternativas.map((alt, i) => `
+        <div class="mol-alt-item" onclick="usarAlternativa(${i})">
           <div>
             <div class="mol-alt-nombre">${alt.nombre}</div>
             <div class="mol-alt-motivo">${alt.motivo || ''}${alt.peso_anterior > 0 ? ` · <span style="color:var(--green)">Última: ${alt.peso_anterior}kg${alt.fecha_anterior ? ' ('+alt.fecha_anterior+')' : ''}</span>` : ''}</div>
@@ -5090,33 +5595,30 @@ function buscarAlternativas() {
       altLista.innerHTML = '<div style="font-family:var(--fm);font-size:10px;color:var(--td);padding:4px 0;">No se encontraron alternativas específicas.</div>';
     }
   })
-  .catch(() => { altLista.innerHTML = ''; });
+  .catch(() => {
+    // 21-nov-2026: el error se ve y se puede repetir (antes se vaciaba la lista).
+    altLista.innerHTML = '<div role="alert" style="font-family:var(--fm);font-size:10px;color:var(--r);padding:4px 0;">No se pudieron buscar alternativas. '
+      + '<button type="button" onclick="buscarAlternativas()" style="background:none;border:1px solid var(--r);color:var(--r);border-radius:8px;padding:2px 8px;cursor:pointer;">Reintentar</button></div>';
+  });
 }
 
-function usarAlternativa(nombreAlt, pesoAnterior) {
-  const card = document.getElementById('card-' + MOL.fid);
-  if (card) {
-    // Actualizar nombre visible e input hidden
-    const h2 = card.querySelector('.cyber-ejercicio-nombre');
-    if (h2) h2.textContent = nombreAlt;
-    const hidNombre = card.querySelector(`input[name="${MOL.fid}_nombre"]`);
-    if (hidNombre) hidNombre.value = nombreAlt;
-
-    // Actualizar inputs de peso con el histórico del sustituto
-    if (pesoAnterior > 0) {
-      card.querySelectorAll('.weight-input').forEach(inp => {
-        inp.value = String(Number((pesoAnterior).toFixed(2)));  // 23-oct-2026: 30, no 30.0
-      });
-      // Actualizar también el chip de "Última vez"
-      const chip = card.querySelector('.chip-n');
-      if (chip) chip.textContent = 'Última: ' + fmtKg(pesoAnterior) + ' kg';
-    } else {
-      // Sin historial: dejar a 0 para que el usuario introduzca el peso
-      card.querySelectorAll('.weight-input').forEach(inp => { inp.value = '0.0'; });
-    }
-  }
+function usarAlternativa(idx) {
+  const alt = (MOL.alternativas || [])[idx];
+  if (!alt) return;
+  // 21-nov-2026: queda en el borrador como sustitución por molestia y se aplica con la
+  // misma función que la máquina ocupada y que la recuperación: sustituye_a, objetivo del
+  // hueco, peso y tipo de progresión. La lista ya viene filtrada por la zona de la molestia.
+  const peso = alt.peso_hueco_kg || alt.peso_historico_kg || alt.peso_anterior || 0;
+  registrarSustitucion({
+    fid: MOL.fid, via: 'molestia', original: MOL.ejOriginal, nombre: alt.nombre,
+    pesoHistorico: peso, ultimaTexto: alt.ultima || '', repsHistorico: alt.reps || 0,
+    meta: (typeof alt.usa_peso === 'boolean')
+      ? {tipo_progresion: alt.tipo_progresion || '', usa_peso: alt.usa_peso, pr_peso: alt.pr_peso || 0, peso_motivo: alt.peso_hueco_motivo || ''}
+      : {},
+    objetivo: objetivoDelHueco(MOL.fid, MOL.ejOriginal)
+  });
   // ejOriginal conserva el ejercicio que causó molestia (para el reporte de lesión)
-  MOL.ejNombre = nombreAlt;
+  MOL.ejNombre = alt.nombre;
   confirmarMolestia();
 }
 
@@ -5135,46 +5637,17 @@ function confirmarMolestia() {
 
   const desc = document.getElementById('mol-desc-input').value.trim();
 
-  // Guardar en inputs ocultos del form
-  document.getElementById('mol-rep-' + MOL.fid).value = 'true';
-  document.getElementById('mol-zona-' + MOL.fid).value = MOL.zona;
-  document.getElementById('mol-sev-' + MOL.fid).value = MOL.severidad;
-  document.getElementById('mol-desc-' + MOL.fid).value = desc;
-
-  // Marcar botón ⚠️ como activo
-  const btnMol = document.getElementById('mol-btn-' + MOL.fid);
-  if (btnMol) {
-    btnMol.classList.add('activa');
-    btnMol.textContent = '⚠️ ' + MOL.zona.charAt(0).toUpperCase() + MOL.zona.slice(1) + ' · ' + ['','Leve','Moderada','Severa'][MOL.severidad];
-  }
-
-  // Llamada real al backend — siempre bajo el ejercicio ORIGINAL (el que causó la molestia)
-  fetch("{% url 'entrenos:api_reportar_molestia' cliente.id %}", {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
-    body: JSON.stringify({
-      ejercicio_nombre: MOL.ejOriginal,
-      zona: MOL.zona,
-      severidad: MOL.severidad,
-      descripcion: desc,
-    }),
-  })
-  .then(r => r.json())
-  .then(data => {
-    // Notificación sutil según severidad
-    const msgs = ['', '💛 Molestia leve anotada', '🟠 Restricción activa creada', '🔴 Lesión registrada — toma precauciones'];
-    if (window.notificacionesCodeice) {
-      window.notificacionesCodeice.mostrarNotificacion({
-        icono: ['','😐','😬','😣'][MOL.severidad],
-        titulo: msgs[MOL.severidad],
-        mensaje: data.mensaje || '',
-        tipo: 'molestia',
-        duracion: 4000,
-      });
-    }
-  })
-  .catch(() => {});
-
+  // 21-nov-2026: la molestia queda en el borrador con un identificador de evento.
+  // Un reintento lo reutiliza y el servidor no crea otra lesión. Mientras no haya
+  // respuesta del servidor se ve «sin confirmar» y se puede reintentar.
+  // Siempre bajo el ejercicio ORIGINAL (el que causó la molestia).
+  const rec = {
+    fid: MOL.fid, original: MOL.ejOriginal, zona: MOL.zona, severidad: MOL.severidad,
+    desc: desc, evento: _nuevoToken(), estado: 'pendiente', error: '', avisada: false, ts: Date.now()
+  };
+  ESTADO.molestias.push(rec);
+  aplicarMolestiaEnFormulario(rec);
+  enviarMolestia(rec);
   cerrarModalMolestia();
 }
 
@@ -5198,6 +5671,7 @@ function seleccionarFallo(tipo) {
   btn.textContent = tipo === 'previsto' ? '◉ Fallo previsto' :
                     tipo === 'no_previsto' ? '◉ Fallo no previsto' : '◉ Fallo';
   document.getElementById('fallo-dialog').close();
+  guardarCheckpoint();
 }
 
 document.getElementById('fallo-dialog').addEventListener('click', event => {

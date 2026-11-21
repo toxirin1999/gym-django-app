@@ -199,26 +199,36 @@ class ContratoTemplateCierreParcialTests(TestCase):
     def test_js_bloquea_doble_submit_y_restaura_en_error(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
         self.assertIn('if (_envioCierreEnCurso) return;', source)
-        self.assertIn('_envioCierreEnCurso = true;', source)
-        self.assertIn('confirmarBtn.disabled = true;', source)
-        self.assertIn('_envioCierreEnCurso = false;', source)
-        self.assertIn('confirmarBtn.disabled = false;', source)
+        # 21-nov-2026: el envio vive en ejecutarEnvio() y el desbloqueo en _liberarBotonGuardar().
+        self.assertIn('_envioCierreEnCurso=true;', source)
+        self.assertIn('btn.disabled=true;', source)
+        self.assertIn('_envioCierreEnCurso=false;', source)
+        self.assertIn('btn.disabled=false;', source)
 
     def test_js_confirmacion_del_servidor_no_falla_por_limpieza_local_o_refresh_joi(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
-        success_branch = source.split('if (data.success) {', 1)[1].split('} else {', 1)[0]
-        self.assertIn('try { limpiarCheckpoint(); } catch', success_branch)
-        self.assertIn('try { localStorage.removeItem(_WK_KEY); } catch', success_branch)
-        self.assertIn("try { fetch('/joi/api/pulso-actual/')", success_branch)
-        self.assertIn('window.location.href =', success_branch)
+        # La limpieza solo ocurre en resolverConfirmacion, tras comprobar la huella.
+        confirmacion = source.split('async function resolverConfirmacion', 1)[1].split('async function comprobarSiLlego', 1)[0]
+        self.assertIn('limpiarTodoTrasConfirmar();', confirmacion)
+        self.assertIn("try{fetch('/joi/api/pulso-actual/')", confirmacion)
+        self.assertIn('window.location.href=', source)
+        limpieza = source.split('function limpiarTodoTrasConfirmar', 1)[1].split('}', 1)[0]
+        self.assertIn('limpiarCheckpoint();', limpieza)
+        self.assertIn('_lsDel(_WK_KEY);', limpieza)
+        # _lsDel y limpiarCheckpoint tragan sus propios errores de almacenamiento.
+        self.assertIn('function _lsDel(k){try{localStorage.removeItem(k);}catch(e){}}', source)
+        self.assertIn('function limpiarCheckpoint(){try{localStorage.removeItem(STORAGE_KEY);}catch(e){}}', source)
 
     def test_js_muestra_error_real_y_solo_conserva_checkpoint_en_fallo(self):
         source = open('entrenos/templates/entrenos/entrenamiento_activo.html', encoding='utf-8').read()
-        self.assertIn("saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.'", source)
+        self.assertIn("data.error||'El servidor no aceptó el guardado.", source)
+        self.assertIn('function mostrarEstadoGuardado', source)
         self.assertNotIn('window.alert(', source)
-        catch_branch = source.split('.catch(error => {', 1)[1].split('});', 1)[0]
-        self.assertNotIn('limpiarCheckpoint()', catch_branch)
-        self.assertNotIn('localStorage.removeItem(_WK_KEY)', catch_branch)
+        envio = source.split('async function ejecutarEnvio', 1)[1].split('// ── FIN GUARDADO SEGURO', 1)[0]
+        fallo = envio.split('_liberarBotonGuardar();', 1)[1]
+        self.assertNotIn('limpiarCheckpoint()', fallo)
+        self.assertNotIn('limpiarTodoTrasConfirmar', fallo)
+        self.assertNotIn('localStorage.removeItem(_WK_KEY)', fallo)
 
 
 class IntegracionTransversalCierreParcialTests(TestCase):

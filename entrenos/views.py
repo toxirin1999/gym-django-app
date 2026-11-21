@@ -4889,6 +4889,23 @@ def _bloquear_cliente_para_guardar(cliente):
 
 
 @login_required
+@require_http_methods(["GET"])
+def comprobar_sesion_guardada(request, cliente_id, token):
+    """Estado de ESA sesion (por su identificador) para el boton «Comprobar si llego»."""
+    from entrenos.services import guardado_sesion_service as gs
+    cliente_qs = Cliente.objects.all()
+    if not (request.user.is_staff or request.user.is_superuser):
+        cliente_qs = cliente_qs.filter(user=request.user)
+    cliente = get_object_or_404(cliente_qs, id=cliente_id)
+    if not gs.token_valido(token):
+        return JsonResponse({'success': False, 'error': 'Identificador de sesion no valido.'}, status=400)
+    entreno = EntrenoRealizado.objects.filter(cliente=cliente, sesion_token=token).first()
+    if entreno is None:
+        return JsonResponse({'success': True, 'existe': False})
+    return JsonResponse({'success': True, **gs.estado_de_sesion(entreno)})
+
+
+@login_required
 @require_http_methods(["POST"])
 @transaction.atomic
 def guardar_entrenamiento_activo(request, cliente_id):
@@ -4988,19 +5005,55 @@ def guardar_entrenamiento_activo(request, cliente_id):
         # el mismo cierre sin escribir nada. Si el primero falla, su transacción
         # se deshace y el segundo guarda.
         _bloquear_cliente_para_guardar(cliente)
-        _ya_guardado = EntrenoRealizado.objects.select_for_update().filter(
-            cliente=cliente, fecha=fecha, rutina__nombre=rutina_nombre,
-            fuente_datos='manual', fecha_ejecucion=timezone.localdate(),
-        ).order_by('-id').first()
-        if _ya_guardado is not None:
-            if _es_ajax:
+        from entrenos.services import guardado_sesion_service as _gs
+        _token = (request.POST.get('sesion_token') or '').strip()
+        if _token and not _gs.token_valido(_token):
+            return JsonResponse({'success': False, 'error': 'Identificador de sesion no valido.'}, status=400)
+        _huella = _gs.huella_de_post(request.POST)
+        _entreno_existente = None
+        _origen_correccion = ''
+        if _token:
+            # 21-nov-2026: la sesion se reconoce por su identificador, no por
+            # rutina y dia. Sirve pasada la medianoche y distingue dos sesiones
+            # reales de la misma rutina.
+            _entreno_existente = _gs.buscar_sesion(cliente, _token)
+            _accion, _origen_correccion = _gs.decidir(
+                _entreno_existente, _huella, _gs.bases_de_post(request.POST),
+                (request.POST.get('resolver_conflicto') or '').strip(),
+            )
+            if _accion == _gs.IGUAL:
+                if _es_ajax:
+                    return JsonResponse({
+                        'success': True, 'ya_guardado': True,
+                        'entreno_id': _entreno_existente.id,
+                        'huella': _entreno_existente.huella_contenido,
+                        'revision': _entreno_existente.revision,
+                        'volumen': float(_entreno_existente.volumen_total_kg or 0),
+                    })
+                return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=_entreno_existente.id)
+            if _accion == _gs.CONFLICTO:
+                transaction.set_rollback(True)
                 return JsonResponse({
-                    'success': True,
-                    'entreno_id': _ya_guardado.id,
-                    'ya_guardado': True,
-                    'volumen': float(_ya_guardado.volumen_total_kg or 0),
-                })
-            return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=_ya_guardado.id)
+                    'success': False, 'conflicto': True,
+                    'error': 'La sesion guardada tiene otro contenido que no conoces. No se ha sobrescrito.',
+                    **_gs.estado_de_sesion(_entreno_existente),
+                }, status=409)
+        else:
+            # Clientes antiguos sin identificador: se mantiene la defensa de la nota 31.
+            _ya_guardado = EntrenoRealizado.objects.select_for_update().filter(
+                cliente=cliente, fecha=fecha, rutina__nombre=rutina_nombre,
+                fuente_datos='manual', fecha_ejecucion=timezone.localdate(),
+            ).order_by('-id').first()
+            if _ya_guardado is not None:
+                if _es_ajax:
+                    return JsonResponse({
+                        'success': True,
+                        'entreno_id': _ya_guardado.id,
+                        'ya_guardado': True,
+                        'volumen': float(_ya_guardado.volumen_total_kg or 0),
+                    })
+                return redirect('entrenos:post_entreno_resumen', cliente_id=cliente.id, entreno_id=_ya_guardado.id)
+        _es_correccion = _entreno_existente is not None
         rutina_obj, _ = Rutina.objects.get_or_create(nombre=rutina_nombre)
 
         # El cronómetro puede llevar días abierto: una duración imposible se
@@ -5021,8 +5074,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
             )
         _calorias_raw = request.POST.get('calorias_quemadas')
 
-        entreno = EntrenoRealizado(
+        _entreno_nuevo = EntrenoRealizado(
             cliente=cliente, fecha=fecha, fecha_ejecucion=timezone.localdate(), rutina=rutina_obj, fuente_datos='manual',
+            sesion_token=_token or None, huella_contenido=_huella,
             duracion_minutos=_duracion_min,
             calorias_quemadas=int(_calorias_raw) if _calorias_raw and _calorias_raw.isdigit() else None,
             notas_liftin=request.POST.get('notas_liftin', '').strip(),
@@ -5038,6 +5092,20 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 autoridad_ejecucion.estado_causal if autoridad_ejecucion else None
             ),
         )
+        if _es_correccion:
+            # Correccion de la misma sesion: se conserva su identidad (id, fecha,
+            # autoridad, latch de gamificacion) y se rehacen sus hijos y efectos.
+            entreno = _entreno_existente
+            _correccion = _gs.preparar_correccion(entreno, _huella, _origen_correccion)
+            entreno.duracion_minutos = _entreno_nuevo.duracion_minutos
+            entreno.calorias_quemadas = _entreno_nuevo.calorias_quemadas
+            entreno.notas_liftin = _entreno_nuevo.notas_liftin
+            entreno.estado_cierre = _entreno_nuevo.estado_cierre
+            entreno.motivo_cierre = _entreno_nuevo.motivo_cierre
+            entreno.huella_contenido = _huella
+            entreno.revision = _correccion.revision_resultante
+        else:
+            entreno = _entreno_nuevo
         # Los post_save intermedios no deben observar una sesión a medio construir.
         entreno._defer_cierre_aprendizaje_gym = True
         entreno.save()
@@ -5344,7 +5412,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
 
         # Cerrar SesionProgramada pendiente si el usuario completó desde una sesión pendiente
         _sesion_prog_id = request.POST.get('sesion_programada_id', '').strip()
-        if _sesion_prog_id:
+        if _sesion_prog_id and not _es_correccion:
             from entrenos.services.sesion_recomendada import (
                 CierreSesionProgramadaInvalido, cerrar_sesion_programada,
             )
@@ -5488,7 +5556,7 @@ def guardar_entrenamiento_activo(request, cliente_id):
                     from joi.services import generar_mensaje_joi as _joi_gen
                     from django.core.cache import cache as _cache
                     _joi_lock = f'joi_entreno_lock_{cliente.pk}'
-                    if not _cache.get(_joi_lock):
+                    if not _es_correccion and not _cache.get(_joi_lock):
                         _cache.set(_joi_lock, True, 300)
                         _prs = [getattr(r, 'ejercicio_nombre', str(r)) for r in records_nuevos[:3]]
                         _lesion_zona = None
@@ -5516,6 +5584,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
                 # 2. Verificar Logros (24-oct-2026: apagado con GAMIFICACION_ACTIVA)
                 from django.conf import settings as _settings_gam
                 if not getattr(_settings_gam, 'GAMIFICACION_ACTIVA', False):
+                    raise _GamificacionApagada()
+                if _es_correccion:
+                    # Puntos, logros y desafios se premian una sola vez (latch).
                     raise _GamificacionApagada()
                 logros_nuevos = LogrosService.verificar_logros_sesion(sesion_gam)
                 for logro in logros_nuevos:
@@ -5583,6 +5654,9 @@ def guardar_entrenamiento_activo(request, cliente_id):
             return JsonResponse({
                 'success': True,
                 'entreno_id': entreno.id,
+                'huella': entreno.huella_contenido,
+                'revision': entreno.revision,
+                'corregida': _es_correccion,
                 'rpe_final': float(rpe_final) if rpe_final is not None else None,
                 'volumen': float(entreno.volumen_total_kg or 0),
                 'refresh_joi': True,
@@ -9453,7 +9527,10 @@ def api_save_hot_swap(request, cliente_id):
         # Obtener el plan de la sesión
         plan_str = request.session.get(f'plan_anual_{cliente_id}')
         if not plan_str:
-            return JsonResponse({'status': 'error', 'message': 'No se encontró el plan en la sesión'}, status=404)
+            # 21-nov-2026: no es un fallo recuperable: el plan en sesion es una
+            # cache. La sustitucion viaja con el guardado de la sesion.
+            return JsonResponse({'status': 'error', 'codigo': 'sin_plan',
+                                 'message': 'No se encontró el plan en la sesión'}, status=404)
 
         try:
             plan = json.loads(plan_str)
@@ -9466,11 +9543,22 @@ def api_save_hot_swap(request, cliente_id):
         entreno_dia = entrenos_dict.get(fecha_str)
         if not entreno_dia:
             return JsonResponse(
-                {'status': 'error', 'message': f'No se encontró entrenamiento para la fecha {fecha_str}'}, status=404)
+                {'status': 'error', 'codigo': 'sin_plan',
+                 'message': f'No se encontró entrenamiento para la fecha {fecha_str}'}, status=404)
 
         # Buscar el ejercicio a sustituir
         ejercicios = entreno_dia.get('ejercicios', [])
         sustituido = False
+
+        # 21-nov-2026: un reintento no debe fallar porque la primera llamada ya
+        # aplico la sustitucion: mismo original y mismo sustituto es exito.
+        for ej in ejercicios:
+            razon = ej.get('bio_substitution_reason') or {}
+            if (ej.get('nombre', '').lower() == substitute_name.lower()
+                    and ej.get('was_bio_substituted')
+                    and str(razon.get('original', '')).lower() == original_name.lower()):
+                return JsonResponse({'status': 'success', 'repetido': True,
+                                     'message': 'Sustitución ya guardada'})
 
         for ej in ejercicios:
             if ej.get('nombre', '').lower() == original_name.lower():
@@ -9491,7 +9579,7 @@ def api_save_hot_swap(request, cliente_id):
             request.session.modified = True
             return JsonResponse({'status': 'success', 'message': 'Sustitución guardada exitosamente'})
         else:
-            return JsonResponse({'status': 'error',
+            return JsonResponse({'status': 'error', 'codigo': 'sin_original',
                                  'message': 'No se encontró el ejercicio original en el plan de hoy (quizás ya fue sustituido o borrado).'},
                                 status=404)
 
@@ -9569,6 +9657,80 @@ def _tipo_y_marca_de_ejercicio(nombre, cliente_id):
     return tipo, marca
 
 
+def _datos_sustituto(cliente_obj, nombre_ej, rango_hueco='', rpe_hueco=None):
+    """Datos que el movil necesita para aplicar un ejercicio sustituto (21-nov-2026).
+
+    Es el enriquecimiento que ya hacia ``api_alternativas_maquina`` (peso de la
+    ultima sesion real, peso para el rango del hueco, tipo de progresion y marca)
+    sacado a una funcion para que la sustitucion por molestia y por lesion use
+    exactamente lo mismo que la de maquina ocupada.
+    """
+    from entrenos.models import EjercicioRealizado
+    from entrenos.services.ultima_sesion_service import kg as _kg_txt, ultima_sesion
+    cliente_id = cliente_obj.id
+    # 27-oct-2026 (nota 15): de las series reales (la que entró), no la
+    # media del resumen; y con su "última vez" para la pantalla.
+    peso_hist = reps_hist = ultima = None
+    peso_hueco = motivo_hueco = None
+    lectura = ultima_sesion(cliente_obj, nombre_ej, timezone.localdate() + timedelta(days=1))
+    if lectura and lectura['referencia']['peso'] > 0:
+        ref = lectura['referencia']
+        peso_hist = round(float(ref['peso']), 2)
+        reps_hist = int(round(float(ref.get('reps_mediana') or ref['reps'])))
+        ultima = f"{_kg_txt(peso_hist)} kg × {reps_hist}"
+        peso_hueco = peso_hist
+        if rango_hueco:
+            from analytics.planificador_helms.calculo.compatibilidad_fase import resolver_peso_objetivo
+            from entrenos.services.maquina_service import salto_fisico
+            from entrenos.services.ultima_sesion_service import rpe_efectivo
+            salto = salto_fisico(nombre_ej) or 2.5
+            try:
+                res = resolver_peso_objetivo(
+                    peso_anterior=peso_hist, reps_anteriores=reps_hist,
+                    rpe_anterior=rpe_efectivo(ref.get('rpe')),
+                    rep_range_hoy=rango_hueco,
+                    rpe_objetivo_hoy=rpe_hueco or 8,
+                    redondear_fn=lambda p: round(round(p / salto) * salto, 1),
+                )
+            except Exception:
+                res = {'aplica': False}
+            if res.get('aplica') and res.get('peso'):
+                peso_hueco = float(res['peso'])
+                motivo_hueco = (f'Peso para {rango_hueco} reps (la última vez '
+                                f'{_kg_txt(peso_hist)} kg × {reps_hist}).')
+    else:
+        ej_realizado = EjercicioRealizado.objects.filter(
+            nombre_ejercicio__iexact=nombre_ej, entreno__cliente_id=cliente_id,
+        ).order_by('-entreno__fecha', '-id').first()
+        if ej_realizado and ej_realizado.peso_kg:
+            peso_hist = round(float(ej_realizado.peso_kg), 1)
+
+    # 18-nov-2026 (notas 14 y 23): el cambio de sissy (solo reps) a hack squat
+    # dejó la tarjeta sin casilla de peso y se guardó con 0 kg: el
+    # navegador necesita saber qué tipo de ejercicio es el nuevo.
+    tipo_nuevo, pr_nuevo = _tipo_y_marca_de_ejercicio(nombre_ej, cliente_id)
+    return {
+        'nombre': nombre_ej,
+        'peso_historico_kg': peso_hist,
+        'reps': reps_hist,
+        'ultima': ultima,
+        'tipo_progresion': tipo_nuevo,
+        'usa_peso': tipo_nuevo in ('peso_reps', 'peso_corporal_lastre'),
+        'pr_peso': pr_nuevo,
+        'peso_hueco_kg': peso_hueco,
+        'peso_hueco_motivo': motivo_hueco,
+    }
+
+
+def _rango_y_rpe_del_hueco(data):
+    rango = str(data.get('rango') or '').strip().replace(' ', '')
+    try:
+        rpe = float(data.get('rpe_objetivo')) if data.get('rpe_objetivo') not in (None, '') else None
+    except (TypeError, ValueError):
+        rpe = None
+    return rango, rpe
+
+
 @login_required
 @require_POST
 def api_alternativas_maquina(request, cliente_id):
@@ -9612,61 +9774,9 @@ def api_alternativas_maquina(request, cliente_id):
 
         # Enriquecer con peso histórico
         alternativas = []
-        from entrenos.services.ultima_sesion_service import kg as _kg_txt, ultima_sesion
         cliente_obj = get_object_or_404(Cliente, id=cliente_id, user=request.user)
         for nombre_ej in candidatos[:3]:
-            # 27-oct-2026 (nota 15): de las series reales (la que entró), no la
-            # media del resumen; y con su "última vez" para la pantalla.
-            peso_hist = reps_hist = ultima = None
-            peso_hueco = motivo_hueco = None
-            lectura = ultima_sesion(cliente_obj, nombre_ej, timezone.localdate() + timedelta(days=1))
-            if lectura and lectura['referencia']['peso'] > 0:
-                ref = lectura['referencia']
-                peso_hist = round(float(ref['peso']), 2)
-                reps_hist = int(round(float(ref.get('reps_mediana') or ref['reps'])))
-                ultima = f"{_kg_txt(peso_hist)} kg × {reps_hist}"
-                peso_hueco = peso_hist
-                if rango_hueco:
-                    from analytics.planificador_helms.calculo.compatibilidad_fase import resolver_peso_objetivo
-                    from entrenos.services.maquina_service import salto_fisico
-                    from entrenos.services.ultima_sesion_service import rpe_efectivo
-                    salto = salto_fisico(nombre_ej) or 2.5
-                    try:
-                        res = resolver_peso_objetivo(
-                            peso_anterior=peso_hist, reps_anteriores=reps_hist,
-                            rpe_anterior=rpe_efectivo(ref.get('rpe')),
-                            rep_range_hoy=rango_hueco,
-                            rpe_objetivo_hoy=rpe_hueco or 8,
-                            redondear_fn=lambda p: round(round(p / salto) * salto, 1),
-                        )
-                    except Exception:
-                        res = {'aplica': False}
-                    if res.get('aplica') and res.get('peso'):
-                        peso_hueco = float(res['peso'])
-                        motivo_hueco = (f'Peso para {rango_hueco} reps (la última vez '
-                                        f'{_kg_txt(peso_hist)} kg × {reps_hist}).')
-            else:
-                ej_realizado = EjercicioRealizado.objects.filter(
-                    nombre_ejercicio__iexact=nombre_ej, entreno__cliente_id=cliente_id,
-                ).order_by('-entreno__fecha', '-id').first()
-                if ej_realizado and ej_realizado.peso_kg:
-                    peso_hist = round(float(ej_realizado.peso_kg), 1)
-
-            # 18-nov-2026 (notas 14 y 23): el cambio de sissy (solo reps) a hack squat
-            # dejó la tarjeta sin casilla de peso y se guardó con 0 kg: el
-            # navegador necesita saber qué tipo de ejercicio es el nuevo.
-            tipo_nuevo, pr_nuevo = _tipo_y_marca_de_ejercicio(nombre_ej, cliente_id)
-            alternativas.append({
-                'nombre': nombre_ej,
-                'peso_historico_kg': peso_hist,
-                'reps': reps_hist,
-                'ultima': ultima,
-                'tipo_progresion': tipo_nuevo,
-                'usa_peso': tipo_nuevo in ('peso_reps', 'peso_corporal_lastre'),
-                'pr_peso': pr_nuevo,
-                'peso_hueco_kg': peso_hueco,
-                'peso_hueco_motivo': motivo_hueco,
-            })
+            alternativas.append(_datos_sustituto(cliente_obj, nombre_ej, rango_hueco, rpe_hueco))
 
         return JsonResponse({'status': 'ok', 'alternativas': alternativas})
 
@@ -9699,6 +9809,23 @@ def api_alternativas_lesion(request, cliente_id):
             buscar_alternativas_lesion, nota_prudente_lesion,
         )
         alternativas = buscar_alternativas_lesion(nombre, grupo, tags, fase)
+
+        # 21-nov-2026: la alternativa que se acepta se aplica con la misma
+        # sustitucion que la maquina ocupada (sustituye_a, objetivo del hueco,
+        # peso y tipo de progresion). La lista sigue filtrada por las
+        # restricciones de la lesion; aqui solo se anaden los datos.
+        cliente_obj = (Cliente.objects.filter(id=cliente_id, user=request.user).first()
+                       if request.user.is_authenticated else None)
+        if cliente_obj is not None:
+            rango_h, rpe_h = _rango_y_rpe_del_hueco(data)
+            for alt in alternativas:
+                try:
+                    extra = _datos_sustituto(cliente_obj, alt['nombre'], rango_h, rpe_h)
+                except Exception as e:
+                    logger.warning('api_alternativas_lesion: sin datos de %s: %s', alt.get('nombre'), e)
+                    continue
+                extra.pop('nombre', None)
+                alt.update(extra)
 
         return JsonResponse({
             'status': 'ok',
@@ -9753,6 +9880,14 @@ def api_reportar_molestia(request, cliente_id):
         severidad = int(data.get('severidad', 1))
         descripcion = data.get('descripcion', '').strip()
         solo_alternativas = bool(data.get('solo_alternativas', False))
+        # 21-nov-2026: identificador del reporte. Un reintento (mismo evento) no
+        # crea otra lesion ni vuelve a escalar la existente.
+        import re
+        evento = str(data.get('evento') or '').strip()
+        if evento and not re.match(r'^[A-Za-z0-9_-]{8,64}$', evento):
+            return JsonResponse({'status': 'error', 'message': 'Identificador de evento no válido'}, status=400)
+        marca_evento = f'[evento:{evento}]' if evento else ''
+        evento_repetido = False
 
         tags_zona = ZONA_TAGS_MAP.get(zona, [])
         alternativas = []
@@ -9763,37 +9898,50 @@ def api_reportar_molestia(request, cliente_id):
             fase_str = SEVERIDAD_FASE.get(severidad, 'SUB_AGUDA')
             gravedad_val = SEVERIDAD_GRAVEDAD.get(severidad, 4)
 
-            # Buscar lesión activa en la misma zona para no duplicar
-            lesion_existente = UserInjury.objects.filter(
-                cliente=cliente,
-                zona_afectada__iexact=zona.title(),
-                activa=True,
-            ).first()
+            with transaction.atomic():
+                # Serializa los reportes del mismo cliente: dos envios iguales a la
+                # vez no pueden crear dos lesiones.
+                Cliente.objects.select_for_update().filter(pk=cliente.pk).first()
+                if marca_evento and UserInjury.objects.filter(
+                        cliente=cliente, notas_medicas__contains=marca_evento).exists():
+                    evento_repetido = True
+                    lesion_creada = True
+                else:
+                    # Buscar lesión activa en la misma zona para no duplicar
+                    lesion_existente = UserInjury.objects.filter(
+                        cliente=cliente,
+                        zona_afectada__iexact=zona.title(),
+                        activa=True,
+                    ).first()
 
-            if lesion_existente:
-                # Escalar si la nueva severidad es mayor
-                fases_orden = ['RECUPERADO', 'RETORNO', 'SUB_AGUDA', 'AGUDA']
-                if fases_orden.index(fase_str) > fases_orden.index(lesion_existente.fase):
-                    lesion_existente.fase = fase_str
-                    lesion_existente.gravedad = max(lesion_existente.gravedad, gravedad_val)
-                    if descripcion:
-                        lesion_existente.notas_medicas = (lesion_existente.notas_medicas or '') + f'\n[{zona.title()}] {descripcion}'
-                    lesion_existente.save()
-                lesion_creada = True
-            else:
-                notas = f'Reportada durante entrenamiento activo. Ejercicio: {ejercicio_nombre}.'
-                if descripcion:
-                    notas += f' Descripción: {descripcion}'
-                UserInjury.objects.create(
-                    cliente=cliente,
-                    zona_afectada=zona.title(),
-                    fase=fase_str,
-                    gravedad=gravedad_val,
-                    activa=True,
-                    tags_restringidos=tags_zona,
-                    notas_medicas=notas,
-                )
-                lesion_creada = True
+                    if lesion_existente:
+                        # Escalar si la nueva severidad es mayor
+                        fases_orden = ['RECUPERADO', 'RETORNO', 'SUB_AGUDA', 'AGUDA']
+                        if fases_orden.index(fase_str) > fases_orden.index(lesion_existente.fase):
+                            lesion_existente.fase = fase_str
+                            lesion_existente.gravedad = max(lesion_existente.gravedad, gravedad_val)
+                            if descripcion:
+                                lesion_existente.notas_medicas = (lesion_existente.notas_medicas or '') + f'\n[{zona.title()}] {descripcion}'
+                            if marca_evento:
+                                lesion_existente.notas_medicas = (lesion_existente.notas_medicas or '') + f' {marca_evento}'
+                            lesion_existente.save()
+                        lesion_creada = True
+                    else:
+                        notas = f'Reportada durante entrenamiento activo. Ejercicio: {ejercicio_nombre}.'
+                        if descripcion:
+                            notas += f' Descripción: {descripcion}'
+                        if marca_evento:
+                            notas += f' {marca_evento}'
+                        UserInjury.objects.create(
+                            cliente=cliente,
+                            zona_afectada=zona.title(),
+                            fase=fase_str,
+                            gravedad=gravedad_val,
+                            activa=True,
+                            tags_restringidos=tags_zona,
+                            notas_medicas=notas,
+                        )
+                        lesion_creada = True
 
         # ── Buscar alternativas siempre que haya tags ────────────────────
         if ejercicio_nombre and tags_zona:
@@ -9831,12 +9979,21 @@ def api_reportar_molestia(request, cliente_id):
             except Exception:
                 alt['peso_anterior'] = 0
                 alt['fecha_anterior'] = None
+            # 21-nov-2026: mismos datos que la sustitucion de maquina ocupada.
+            try:
+                rango_h, rpe_h = _rango_y_rpe_del_hueco(data)
+                extra = _datos_sustituto(cliente, alt['nombre'], rango_h, rpe_h)
+                extra.pop('nombre', None)
+                alt.update(extra)
+            except Exception as e:
+                logger.warning('api_reportar_molestia: sin datos de %s: %s', alt.get('nombre'), e)
 
         return JsonResponse({
             'status': 'ok',
             'severidad': severidad,
             'zona': zona,
             'lesion_creada': lesion_creada,
+            'repetido': evento_repetido,
             'alternativas': alternativas,
             'mensaje': {
                 1: 'Molestia leve anotada. Continúa con precaución.',

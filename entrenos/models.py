@@ -415,6 +415,16 @@ class EntrenoRealizado(models.Model):
         ],
     )
     procesado_gamificacion = models.BooleanField(default=False)
+    # 21-nov-2026 (paquete guardado): identidad de la sesion y del contenido aceptado.
+    sesion_token = models.CharField(
+        max_length=64, null=True, blank=True,
+        help_text='Identificador creado por el movil al empezar la sesion; un reintento lo reutiliza.',
+    )
+    huella_contenido = models.CharField(
+        max_length=64, blank=True, default='',
+        help_text='SHA-256 del contenido aceptado por el servidor (ver guardado_sesion_service).',
+    )
+    revision = models.PositiveIntegerField(default=1, help_text='Sube con cada correccion aceptada.')
     estado_cierre = models.CharField(max_length=12, choices=ESTADOS_CIERRE, default=ESTADO_COMPLETA, db_index=True)
     motivo_cierre = models.CharField(max_length=20, choices=MOTIVOS_CIERRE, blank=True, default='')
 
@@ -592,6 +602,13 @@ class EntrenoRealizado(models.Model):
 
     class Meta:
         ordering = ['-fecha']
+        constraints = [
+            # Los NULL no chocan entre si: las sesiones antiguas no tienen token.
+            models.UniqueConstraint(
+                fields=['cliente', 'sesion_token'],
+                name='uniq_entreno_cliente_sesion_token',
+            ),
+        ]
         indexes = [
             models.Index(fields=['cliente', 'fecha'], name='entreno_cliente_fecha_idx'),
         ]
@@ -1304,6 +1321,21 @@ class ActividadRealizada(models.Model):
         super().save(*args, **kwargs)
 
 
+class CorreccionSesionGym(models.Model):
+    """Traza de una correccion aceptada sobre una sesion ya guardada."""
+    entreno = models.ForeignKey(EntrenoRealizado, on_delete=models.CASCADE, related_name='correcciones')
+    revision_resultante = models.PositiveIntegerField()
+    huella_anterior = models.CharField(max_length=64, blank=True, default='')
+    huella_nueva = models.CharField(max_length=64, blank=True, default='')
+    origen = models.CharField(max_length=20, default='reintento')
+    snapshot_anterior = models.JSONField(default=dict, blank=True)
+    efectos = models.JSONField(default=dict, blank=True)
+    creada_en = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-creada_en']
+
+
 class GymDecisionLog(models.Model):
     MOTIVO_CODIGO_CHOICES = [
         ('', 'Sin clasificar'),
@@ -1394,6 +1426,12 @@ class GymDecisionLog(models.Model):
     senales_al_decidir = models.JSONField(default=dict, blank=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_evaluacion = models.DateTimeField(null=True, blank=True)
+    # 21-nov-2026: correccion de la sesion de origen que dejo esta decision
+    # como hecho historico (ya se uso en una sesion posterior).
+    correccion = models.ForeignKey(
+        'entrenos.CorreccionSesionGym', null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='decisiones_conservadas',
+    )
 
     class Meta:
         ordering = ['-fecha_creacion']

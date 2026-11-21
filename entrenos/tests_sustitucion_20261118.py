@@ -76,13 +76,17 @@ class Sustitucion(Comun):
     def test_plantilla_reconstruye_la_tarjeta(self):
         activo = Path('entrenos/templates/entrenos/entrenamiento_activo.html').read_text(encoding='utf-8')
         self.assertIn('function adaptarTarjetaASustituto', activo)
-        self.assertIn('adaptarTarjetaASustituto(fid, meta || {}, pesoHistorico);', activo)
+        # 21-nov-2026: la sustitucion se aplica con aplicarSustitucion (la misma al recuperar el borrador).
+        self.assertIn('adaptarTarjetaASustituto(fid,rec.meta,rec.pesoHistorico)', activo)
+        # La alternativa de molestia y la de lesion usan esa misma funcion (D5).
+        self.assertIn("via: 'molestia'", activo)
+        self.assertIn("via: 'lesion'", activo)
         self.assertIn("'_tipo_progresion\"]'", activo)
         self.assertIn('alt.usa_peso === true', activo)
         cierre = Path('entrenos/templates/entrenos/post_entreno_resumen.html').read_text(encoding='utf-8')
         self.assertIn('Cambiado: {{ s.original }}', cierre)
         self.assertIn("_sustituye_a", activo)
-        self.assertIn("hidSust.value = _swapNombreOriginal", activo)
+        self.assertIn("hidSust.value=rec.sustituyeA||rec.original", activo)
         self.assertIn("sustituye_a=request.POST.get(f'{form_id}_sustituye_a'", Path('entrenos/views.py').read_text(encoding='utf-8'))
 
 
@@ -251,7 +255,7 @@ class ObjetivoDelHueco(Comun):
         self.assertIn('Objetivo del hueco de ', activo)
         self.assertIn("rango: (objetivoDelHueco(formId, nombre).rango || '')", activo)
         self.assertIn('const objetivoHueco = objetivoDelHueco(fid, _swapNombreOriginal);', activo)
-        self.assertIn('objetivoHueco.reps_objetivo || repsHistorico', activo)
+        self.assertIn('(rec.objetivo||{}).reps_objetivo||rec.repsHistorico', activo)
         cierre = Path('entrenos/templates/entrenos/post_entreno_resumen.html').read_text(encoding='utf-8')
         self.assertIn('objetivo del hueco: {{ s.objetivo }}', cierre)
 

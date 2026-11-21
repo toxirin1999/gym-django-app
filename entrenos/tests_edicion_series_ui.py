@@ -110,15 +110,18 @@ class EdicionSeriesUIRegressionTests(TestCase):
         self.assertIn("guardarCheckpoint()", self.tecnica)
 
     def test_confirmar_conserva_borrador_y_reloj_hasta_confirmacion_del_servidor(self):
-        success = self.confirmar.index("if (data.success")
-        limpiar = self.confirmar.index("limpiarCheckpoint()")
-        quitar_reloj = self.confirmar.index("localStorage.removeItem(_WK_KEY)")
-
-        self.assertGreater(limpiar, success)
-        self.assertGreater(quitar_reloj, success)
+        # 21-nov-2026: borrador, reloj, token y envios se limpian en un solo punto,
+        # y solo cuando el servidor confirmo EXACTAMENTE el contenido actual.
+        self.assertEqual(self.source.count("limpiarTodoTrasConfirmar();"), 1)
+        confirmacion = self.source.split("async function resolverConfirmacion", 1)[1]
+        self.assertGreater(
+            confirmacion.index("limpiarTodoTrasConfirmar();"),
+            confirmacion.index("data.huella===huellaEnviada&&actual===data.huella"),
+        )
 
     def test_error_de_red_no_hace_post_tradicional_ni_pierde_el_reintento(self):
-        catch = self.confirmar.split(".catch", 1)[1]
-        self.assertNotIn("form.submit()", catch)
-        self.assertIn("_sessionGuardada = false", catch)
-        self.assertIn("ov.style.display = 'none'", catch)
+        envio = self.source.split("async function ejecutarEnvio", 1)[1].split("// ── FIN GUARDADO SEGURO", 1)[0]
+        self.assertNotIn("form.submit()", envio)
+        liberar = self.source.split("function _liberarBotonGuardar", 1)[1].split("function _irAlCierre", 1)[0]
+        self.assertIn("_sessionGuardada=false", liberar)
+        self.assertIn("ov.style.display='none'", liberar)

@@ -71,17 +71,16 @@ class EntrenamientoActivoContractTests(SimpleTestCase):
 
     def test_confirmacion_de_cierre_expone_guardado_y_bloquea_doble_envio(self):
         self.assertIn("if (_envioCierreEnCurso) return;", self.source)
-        self.assertIn("confirmarBtn.setAttribute('aria-busy','true');", self.source)
-        self.assertIn("confirmarBtn.textContent='Guardando…';", self.source)
-        self.assertIn("confirmarBtn.textContent='Reintentar guardado';", self.source)
+        self.assertIn("btn.setAttribute('aria-busy','true');", self.source)
+        self.assertIn("btn.textContent='Guardando…';", self.source)
+        self.assertIn("btn.textContent=etiqueta||'Reintentar guardado';", self.source)
         self.assertIn('id="saving-overlay" role="status" aria-live="assertive"', self.source)
 
     def test_error_de_guardado_permanece_visible_y_conserva_el_borrador(self):
         """Un corte de red debe explicar el reintento sin depender solo de alert()."""
         self.assertIn('id="save-error" role="alert"', self.source)
-        self.assertIn("saveError.textContent=error.message || 'No se pudo guardar el entrenamiento.'", self.source)
-        self.assertIn("saveError.style.display='block';", self.source)
-        self.assertIn("saveError.style.display='none';", self.source)
+        self.assertIn("err.textContent=texto;err.style.display='block';", self.source)
+        self.assertIn("if(saveError)saveError.style.display='none';", self.source)
 
     def test_validaciones_de_accion_se_muestran_dentro_de_la_sesion(self):
         """RPE y cierre vacío no deben interrumpir con alerts nativos."""
