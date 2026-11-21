@@ -10511,6 +10511,8 @@ def briefing_entrenamiento(request, cliente_id):
             ej['reps_objetivo'] = alerta_tope['reps_objetivo']
             ej['reps_min'] = alerta_tope['reps_objetivo']
             ej['reps_max'] = alerta_tope['reps_objetivo']
+        from entrenos.services.ultima_sesion_service import sincronizar_peso_recomendado
+        sincronizar_peso_recomendado(ej)
         tipo_progresion = ej.get('tipo_progresion') or 'peso_reps'
         ej['usa_tiempo'] = tipo_progresion == 'progresion_tiempo'
         ej['usa_distancia'] = tipo_progresion == 'progresion_distancia'

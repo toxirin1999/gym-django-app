@@ -957,3 +957,25 @@ def peso_contractual(ej):
         return float(valor or 0)
     except (TypeError, ValueError):
         return 0.0
+
+def sincronizar_peso_recomendado(ej):
+    """Alinea peso_recomendado_kg con el peso contractual (el que usa el entrenamiento activo).
+
+    Si la decision de carga fijo un peso distinto al propuesto por el planificador,
+    el briefing y el calentamiento deben partir de ese peso. Devuelve True si cambio algo.
+    """
+    if 'peso_recomendado_kg' not in ej:
+        return False
+    pc = peso_contractual(ej)
+    if pc <= 0:
+        return False
+    try:
+        actual = float(ej.get('peso_recomendado_kg') or 0)
+    except (TypeError, ValueError):
+        actual = 0.0
+    if abs(actual - pc) <= 1e-9:
+        return False
+    ej.setdefault('peso_propuesto_planificador_kg', actual)
+    ej['peso_recomendado_kg'] = pc
+    return True
+
