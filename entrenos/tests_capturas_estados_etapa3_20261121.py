@@ -18,6 +18,7 @@ class _H:
 
 
 class _Comun:
+    _esperar_resumen_quieto = _Preparacion._esperar_resumen_quieto
     _abrir = _H.B._abrir
     _ir = _H.B._ir
     _recargar = _H.B._recargar
@@ -113,6 +114,35 @@ class EstadosDiaNormal(_Comun, TestCase):
 
         self._con_navegador(caso)
 
+    def _comprobar_conflicto_resoluble(self):
+        """Con un conflicto pendiente: solo acciones que lo resuelven y todo el contenido accesible."""
+        v = self.ev("""()=>{const ov=document.getElementById('modal-resumen-overlay');
+          const cont=document.querySelector('.modal-resumen-full');
+          const guardar=document.getElementById('btn-confirmar-guardar');
+          const acciones=[...document.querySelectorAll('#save-acciones button')].map(b=>b.textContent.trim());
+          const visibles=[...ov.querySelectorAll('button')].filter(b=>{const s=getComputedStyle(b),r=b.getBoundingClientRect();
+              return s.display!=='none'&&s.visibility!=='hidden'&&r.width>0}).map(b=>b.textContent.trim());
+          const pos=getComputedStyle(document.querySelector('.mr-actions')).position;
+          return {guardarOculto:getComputedStyle(guardar).display==='none',acciones,visibles,pos,
+                  enConflicto:cont.classList.contains('en-conflicto')}}""")
+        self.assertTrue(v['enConflicto'], v)
+        self.assertTrue(v['guardarOculto'], v)
+        self.assertEqual(v['acciones'], ['Aplicar la mía encima', 'Ver lo guardado'], v)
+        self.assertNotIn('Reintentar guardado', v['visibles'], v)
+        self.assertNotIn('Guardar entrenamiento', v['visibles'], v)
+        self.assertEqual(v['pos'], 'static', 'el pie no debe ser fijo ni tapar contenido')
+        # Cada pieza del contenido se puede llevar a la vista y nada la cubre.
+        for sel in ['#save-error', '#save-acciones button:first-child', '#save-acciones button:last-child',
+                    '#modal-resumen-title', '#modal-resumen-subtitle', '#modal-series',
+                    '#modal-ejercicios-lista', '#btn-volver-editar']:
+            r = self.ev("""(s)=>{const e=document.querySelector(s);if(!e)return {falta:true};
+              e.scrollIntoView({block:'center'});
+              const q=e.getBoundingClientRect();
+              const top=document.elementFromPoint(q.left+q.width/2,Math.min(Math.max(q.top+Math.min(q.height,8),1),innerHeight-1));
+              return {ok:!!top&&(e===top||e.contains(top)||top.contains(e)),top:top&&(top.id||top.className||top.tagName)}}""", sel)
+            self.assertFalse(r.get('falta'), sel)
+            self.assertTrue(r['ok'], (sel, r))
+
     def _conflicto(self, zoom):
         def caso():
             self._ir()
@@ -130,14 +160,9 @@ class EstadosDiaNormal(_Comun, TestCase):
             visible = self.ev("""()=>{const t=document.body.innerText;
               return t.includes('Aplicar la mía encima')&&t.includes('Ver lo guardado')}""")
             self.assertTrue(visible)
-            vista = self.ev("""()=>{const z=parseFloat(document.documentElement.style.zoom)||1;
-              const e=document.getElementById('save-error').getBoundingClientRect();
-              const bots=[...document.querySelectorAll('#save-acciones button')].map(b=>b.getBoundingClientRect());
-              const fijo=document.getElementById('btn-confirmar-guardar').getBoundingClientRect();
-              return {errTop:e.top, fijoTop:fijo.top, n:bots.length,
-                      botonesVisibles:bots.length===2&&bots.every(b=>b.top>=0&&b.bottom<=fijo.top+1)}}""")
-            self.assertGreaterEqual(vista['errTop'], 0, vista)
-            self.assertTrue(vista['botonesVisibles'], vista)
+            self._comprobar_conflicto_resoluble()
+            self.ev("()=>{document.querySelector('.modal-resumen-full').scrollTop=0}")
+            self.page.wait_for_timeout(200)
             if zoom:
                 d = os.environ.get('CAPTURAS_MODO_REDUCIDO')
                 if d:
@@ -145,6 +170,66 @@ class EstadosDiaNormal(_Comun, TestCase):
                     self.page.screenshot(path=os.path.join(d, 'A15_conflicto_130real.png'))
             else:
                 self._foto('A15_conflicto', zoom130=False)
+
+        self._con_navegador(caso)
+
+    def _enviar_cierre(self):
+        self.ev("()=>document.getElementById('btn-mostrar-resumen').click()")
+        self.page.wait_for_timeout(500)
+        self.ev("""()=>{const m=document.getElementById('motivo-cierre');
+          if(m){m.selectedIndex=Math.min(1,m.options.length-1);m.dispatchEvent(new Event('change',{bubbles:true}));}
+          document.getElementById('btn-confirmar-guardar').click();}""")
+        self.page.wait_for_timeout(600)
+
+    def _pulsar(self, texto):
+        self.ev("""(t)=>[...document.querySelectorAll('#save-acciones button')].find(b=>b.textContent.trim()===t).click()""", texto)
+        self.page.wait_for_timeout(600)
+
+    def test_aplicar_la_mia_usa_la_revision_actual_y_detecta_otro_cambio_concurrente(self):
+        """El conflicto lleva la huella que el servidor tiene AHORA; si cambia otra vez antes de
+        aplicar, el servidor vuelve a avisar y «Aplicar la mía» pasa a usar la nueva."""
+        if not _PLAYWRIGHT:
+            self.skipTest('sin Playwright')
+
+        def caso():
+            self._ir()
+            def servidor(cuerpo):
+                s = str(cuerpo)
+                if 'name="resolver_conflicto"\r\n\r\nh2' in s:
+                    return 200, {'success': True, 'huella': 'x', 'entreno_id': 7}
+                if 'name="resolver_conflicto"\r\n\r\nh1' in s:   # otro móvil ya cambió a h2
+                    return 409, {'conflicto': True, 'huella': 'h2', 'entreno_id': 7, 'revision': 3}
+                return 409, {'conflicto': True, 'huella': 'h1', 'entreno_id': 7, 'revision': 2}
+            self.red['otro'] = servidor
+            self._guardar_serie(0, 1, rpe=8)
+            self._enviar_cierre()
+            self._pulsar('Aplicar la mía encima')       # intenta con h1; otro móvil ya cambió a h2
+            self.assertEqual(self.ev('()=>document.getElementById("save-error").textContent.includes("otro contenido")'), True)
+            self._pulsar('Aplicar la mía encima')       # ahora con h2
+            envios = [c for k, c in self.llamadas if k == 'otro' and 'resolver_conflicto' in str(c)]
+            self.assertEqual(len(envios), 2, self.llamadas)
+            self.assertIn('h1', str(envios[0]))
+            self.assertNotIn('h2', str(envios[0]))
+            self.assertIn('h2', str(envios[1]))
+            self.assertEqual(self.errores_js, [])
+
+        self._con_navegador(caso)
+
+    def test_el_conflicto_pendiente_sobrevive_a_volver_a_editar(self):
+        if not _PLAYWRIGHT:
+            self.skipTest('sin Playwright')
+
+        def caso():
+            self._ir()
+            self.red['otro'] = (409, {'conflicto': True, 'huella': 'abc', 'entreno_id': 1})
+            self._guardar_serie(0, 1, rpe=8)
+            self._enviar_cierre()
+            self.ev("()=>document.getElementById('btn-volver-editar').click()")
+            self.page.wait_for_timeout(500)
+            self.ev("()=>document.getElementById('btn-mostrar-resumen').click()")
+            self._esperar_resumen_quieto()
+            self._comprobar_conflicto_resoluble()
+            self.assertEqual(self.errores_js, [])
 
         self._con_navegador(caso)
 

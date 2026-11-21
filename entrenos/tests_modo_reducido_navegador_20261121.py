@@ -63,6 +63,25 @@ class _Preparacion:
             os.makedirs(d, exist_ok=True)
             self.page.screenshot(path=os.path.join(d, nombre + '.png'))
 
+    def _esperar_resumen_quieto(self):
+        """Resumen abierto Y sin animaciones en curso (fundido, anillos, barras)."""
+        self.page.wait_for_function(
+            "()=>getComputedStyle(document.getElementById('modal-resumen-overlay')).opacity==='1'",
+            timeout=3000)
+        self.page.wait_for_function(
+            """()=>document.getAnimations().filter(a=>a.playState==='running'&&a.effect&&
+               a.effect.getTiming().iterations!==Infinity).length===0""", timeout=4000)
+        self.page.wait_for_timeout(1200)
+
+    def _capas_visibles(self):
+        """Elementos de descanso/técnica/pie/avisos que se ven fuera del resumen."""
+        return self.ev("""()=>{
+          const ov=document.getElementById('modal-resumen-overlay');
+          const visible=e=>{const s=getComputedStyle(e),r=e.getBoundingClientRect();
+            return s.display!=='none'&&s.visibility!=='hidden'&&parseFloat(s.opacity)>0&&r.width>0&&r.height>0};
+          return [...document.querySelectorAll('.pantalla-descanso,.pd-tecnica-wrap,.sticky,#barra-pendientes,.nav-ej,.aviso-despues')]
+            .filter(e=>!ov.contains(e)&&visible(e)).map(e=>e.className||e.id)}""")
+
 
 
 class ModoReducidoRecorrido(_Preparacion, TestCase):
@@ -97,12 +116,31 @@ class ModoReducidoRecorrido(_Preparacion, TestCase):
                return {motivoVisible:!!w&&w.style.display!=='none',
                        sub:document.getElementById('modal-resumen-subtitle').textContent,
                        titulo:document.getElementById('modal-resumen-title').textContent}}""")
-            self.page.wait_for_function("()=>{const m=document.getElementById('modal-resumen');return m&&getComputedStyle(m).opacity==='1'}", timeout=3000) if self.ev("()=>!!document.getElementById('modal-resumen')") else None
-            self.page.wait_for_timeout(1000)
+            self._esperar_resumen_quieto()
             self._captura('3_resumen')
             self.assertFalse(r['motivoVisible'], r)
             self.assertEqual(r['titulo'], 'Revisar entrenamiento')
             self.assertIn('opcionales sin hacer', r['sub'])
+            # Principales 6/6 · opcionales 0/9: el trabajo opcional sin hacer no se
+            # presenta como pendiente (no «6/15»).
+            c = self.ev("""()=>{const b=contarBloques();
+              return {comp:b.comp,total:b.total,compOpc:b.compOpc,totalOpc:b.totalOpc,
+                      val:document.getElementById('modal-series').textContent,
+                      lbl:document.getElementById('modal-series-lbl').textContent,
+                      opc:document.getElementById('modal-series-opc').textContent,
+                      opcOculto:document.getElementById('modal-series-opc').hidden,
+                      pct:document.getElementById('modal-cumpl-pct')?.textContent,
+                      estado:document.getElementById('modal-save-status').textContent,
+                      texto:document.getElementById('modal-resumen-overlay').innerText}}""")
+            self.assertGreater(c['totalOpc'], 0, c)
+            self.assertEqual(c['comp'], c['total'], c)
+            self.assertEqual(c['val'], f"{c['comp']}/{c['total']}", c)
+            self.assertEqual(c['lbl'], 'Principales', c)
+            self.assertFalse(c['opcOculto'], c)
+            self.assertEqual(c['opc'], f"opcionales {c['compOpc']}/{c['totalOpc']}", c)
+            self.assertNotIn(f"{c['comp']}/{c['total'] + c['totalOpc']}", c['texto'], c)
+            self.assertIn('series principales', c['estado'], c)
+            self.assertEqual(self._capas_visibles(), [])
             self.assertEqual(self.errores_js, [])
 
         self._con_navegador(caso)
@@ -116,13 +154,44 @@ class ModoReducidoRecorrido(_Preparacion, TestCase):
             r = self._guardar_serie(0, 1)
             self.assertEqual(r['error'], '')
             self.page.wait_for_timeout(200)
+            # Descanso y valoración de técnica ACTIVOS en el momento de finalizar.
+            self.assertNotEqual(self.ev('(f)=>getComputedStyle(document.getElementById("desc-"+f)).display', r['fid']), 'none')
+            self.assertGreater(len(self._capas_visibles()), 0, 'antes de abrir el resumen sí hay capas de descanso')
             r = self.ev("""()=>{const b=contarBloques();document.getElementById('btn-mostrar-resumen').click();
               return {faltan:b.faltan.length,titulo:document.getElementById('modal-resumen-title').textContent,
                       sub:document.getElementById('modal-resumen-subtitle').textContent}}""")
+            self._esperar_resumen_quieto()
             self._captura('4_parcial')
-            if r['faltan']:
-                self.assertEqual(r['titulo'], 'Revisar sesión parcial')
-                self.assertIn('Faltan del bloque principal', r['sub'])
+            self.assertTrue(r['faltan'], r)
+            self.assertEqual(r['titulo'], 'Revisar sesión parcial')
+            self.assertIn('Faltan del bloque principal', r['sub'])
+            # Exclusión de pantallas y capas, ya terminadas las animaciones.
+            self.assertEqual(self._capas_visibles(), [])
+            tapado = self.ev("""()=>{const ov=document.getElementById('modal-resumen-overlay');const out=[];
+              for(const fx of [.1,.5,.9])for(const fy of [.05,.3,.55,.8,.97]){
+                const e=document.elementFromPoint(innerWidth*fx,innerHeight*fy);
+                if(!e||!ov.contains(e))out.push([fx,fy,e&&(e.className||e.id||e.tagName)]);}
+              return out}""")
+            self.assertEqual(tapado, [], 'solo el resumen recibe el toque')
+            # La técnica no viene marcada: sin valorar, sin «buena por defecto».
+            t = self.ev("""()=>({marcadas:document.querySelectorAll('.btn-tecnica[aria-pressed="true"],.btn-tecnica.sel-buena').length,
+                 texto:document.body.innerText.includes('por defecto'),
+                 serie:STATE.seriesCompletadas[cards[0].dataset.formId][0]})""")
+            self.assertEqual(t['marcadas'], 0, t)
+            self.assertFalse(t['texto'], t)
+            self.assertFalse(t['serie'].get('tecnica'), t)
+            # También con texto grande al 130 %.
+            self.page.evaluate("()=>{document.documentElement.style.zoom='1.3'}")
+            self.page.wait_for_timeout(300)
+            self.assertEqual(self._capas_visibles(), [])
+            self._captura('4_parcial_130')
+            self.page.evaluate("()=>{document.documentElement.style.zoom=''}")
+            # Al volver a editar, el descanso y la barra vuelven (no se pierde nada).
+            self.ev('()=>cerrarResumen()')
+            self.page.wait_for_timeout(500)
+            self.assertGreater(len(self._capas_visibles()), 0)
+            self.assertFalse(self.ev('()=>document.body.classList.contains("resumen-abierto")'))
+            self.assertEqual(self.errores_js, [])
 
         self._con_navegador(caso)
 

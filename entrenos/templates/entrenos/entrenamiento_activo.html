@@ -332,6 +332,14 @@ input{background:transparent!important;border:none!important;outline:none!import
 /* ── MODAL RESUMEN (full-screen) ── */
 .modal-ov{position:fixed;inset:0;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s;}
 .modal-ov.active{opacity:1;pointer-events:all;}
+/* Exclusión de pantallas: con el resumen abierto no queda nada de descanso,
+   técnica, barra inferior ni avisos por debajo (se ocultan al terminar el fundido). */
+body.resumen-abierto .pantalla-descanso,
+body.resumen-abierto .sticky,
+body.resumen-abierto .aviso-despues,
+body.resumen-abierto #barra-pendientes,
+body.resumen-abierto .nav-ej,
+body.resumen-abierto #notif-container{visibility:hidden;transition:visibility 0s linear .3s;}
 .modal-resumen-full{
   position:absolute;inset:0;background:#000;
   display:flex;flex-direction:column;
@@ -386,6 +394,8 @@ input{background:transparent!important;border:none!important;outline:none!import
   box-shadow:0 120px 0 0 #000;
 }
 #modal-save-status:empty{display:none;}
+/* Conflicto pendiente: el pie deja de ser fijo (no tapa título ni desglose, ni a 130 %). */
+.modal-resumen-full.en-conflicto .mr-actions{position:static;margin-bottom:0;box-shadow:none;margin-top:16px;}
 .mbtn-ok{
   width:100%;height:56px;font-size:16px;font-weight:700;
   background:var(--green);border:none;color:#000;
@@ -2389,7 +2399,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6.5 6.5h11"/><path d="M6.5 17.5h11"/><path d="M3 12h18"/><circle cx="6.5" cy="6.5" r="1.5"/><circle cx="17.5" cy="6.5" r="1.5"/><circle cx="6.5" cy="17.5" r="1.5"/><circle cx="17.5" cy="17.5" r="1.5"/></svg>
         </span>
         <span class="mr-stat-val" id="modal-series">0/0</span>
-        <span class="mr-stat-lbl">Series</span>
+        <span class="mr-stat-lbl" id="modal-series-lbl">Series</span>
+        <span class="mr-stat-lbl" id="modal-series-opc" hidden style="margin-top:2px;text-transform:none;letter-spacing:0;"></span>
       </div>
       <div class="mr-stat-card">
         <span class="mr-stat-icon" style="color:#E67E22">
@@ -4688,6 +4699,9 @@ function abrirResumen(){
   resumenOverlay.removeAttribute('inert');
   resumenOverlay.classList.add('active');
   resumenOverlay.setAttribute('aria-hidden','false');
+  // Etapa 3: una sola pantalla a la vez. Con el resumen abierto, descanso, técnica,
+  // barra inferior y avisos se retiran (CSS, al acabar el fundido) y no reciben foco.
+  document.body.classList.add('resumen-abierto');
   requestAnimationFrame(()=>resumenDialog?.focus());
 }
 
@@ -4695,6 +4709,7 @@ function cerrarResumen(){
   if(_envioCierreEnCurso)return;
   _minRevision=null;
   resumenOverlay.classList.remove('active');
+  document.body.classList.remove('resumen-abierto');
   resumenOverlay.setAttribute('aria-hidden','true');
   resumenOverlay.setAttribute('inert','');
   requestAnimationFrame(()=>focoAntesDeResumen?.focus?.());
@@ -4725,8 +4740,10 @@ document.addEventListener('keydown',event=>{
   }
 });
 
-function textoResumenPendienteDeGuardar(completadas,total,esParcial){
-  const series=`${completadas}/${total} series`;
+function textoResumenPendienteDeGuardar(completadas,total,esParcial,opcionales){
+  const series=opcionales
+    ? `${completadas}/${total} series principales y ${opcionales} opcionales`
+    : `${completadas}/${total} series`;
   if(esParcial){
     return `Al guardar, se registrarán ${series} como cierre parcial junto con el motivo indicado. La próxima decisión del plan usará estos datos.`;
   }
@@ -4760,9 +4777,10 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
           ? 'Bloque principal completo. Los opcionales sin hacer no cuentan como pendientes.'
           : 'Comprueba el resumen antes de guardar.');
   document.getElementById('modal-save-status').textContent=
-    textoResumenPendienteDeGuardar(_bloques.totalOpc>0?_bloques.comp:comp,_bloques.totalOpc>0?_bloques.total:total,esCierreParcial);
+    textoResumenPendienteDeGuardar(_bloques.totalOpc>0?_bloques.comp:comp,_bloques.totalOpc>0?_bloques.total:total,esCierreParcial,
+      _bloques.totalOpc>0?(_bloques.compOpc+'/'+_bloques.totalOpc):'');
   const saveError=document.getElementById('save-error');
-  if(saveError)saveError.style.display='none';
+  if(saveError&&!_conflictoPendiente)saveError.style.display='none';
   const motivoWrap=document.getElementById('motivo-cierre-wrap');
   if(motivoWrap)motivoWrap.style.display=esCierreParcial?'block':'none';
   document.getElementById('hid-series-comp').value=comp;
@@ -4779,9 +4797,14 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('modal-tiempo').textContent=mins+'m';
   document.getElementById('hid-duracion').value=mins;
   prepararRevisionDuracion(mins, comp);
-  document.getElementById('modal-series').textContent=_bloques.totalOpc>0
-    ? _bloques.comp+'/'+_bloques.total+' + '+_bloques.compOpc+'/'+_bloques.totalOpc+' opc.'
-    : comp+'/'+total;
+  // Con opcionales: «Principales 6/6 · opcionales 0/9». Las opcionales sin hacer
+  // no se presentan como trabajo pendiente (ni en la cifra, ni en el %).
+  const _conOpc=_bloques.totalOpc>0;
+  document.getElementById('modal-series').textContent=_conOpc?(_bloques.comp+'/'+_bloques.total):(comp+'/'+total);
+  const _lblSer=document.getElementById('modal-series-lbl');
+  if(_lblSer)_lblSer.textContent=_conOpc?'Principales':'Series';
+  const _opcSer=document.getElementById('modal-series-opc');
+  if(_opcSer){_opcSer.hidden=!_conOpc;_opcSer.textContent=_conOpc?('opcionales '+_bloques.compOpc+'/'+_bloques.totalOpc):'';}
   document.getElementById('modal-rpe-avg').textContent=rpeAvg?rpeAvg.toFixed(1).replace('.',','):'—';
   // 18-oct-2026: la tarjeta muestra solo reps; segundos y metros van debajo.
   const extra=[];
@@ -4805,7 +4828,9 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   },150);
 
   // Barra cumplimiento
-  const cumplPct=total>0?Math.round(comp/total*100):0;
+  const cumplPct=_conOpc
+    ? (_bloques.total>0?Math.round(_bloques.comp/_bloques.total*100):0)
+    : (total>0?Math.round(comp/total*100):0);
   const fillEl=document.getElementById('modal-cumpl-fill');
   const pctEl=document.getElementById('modal-cumpl-pct');
   if(fillEl)setTimeout(()=>{fillEl.style.width=cumplPct+'%';},100);
@@ -4829,7 +4854,8 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
     const completo=scs.length>=t&&t>0;
     if(volEj>mejorVol){mejorVol=volEj;mejorNombre=nombre;}
     const icon=completo?'<span style="color:var(--ok);margin-right:4px;">✓</span>':'<span style="color:var(--td);margin-right:4px;">○</span>';
-    html+='<div class="modal-ej">'+icon+'<span class="modal-ej-nombre">'+nombre+'</span>'
+    const etqOpc=(_conOpc&&esCardOpcional(card))?' <span style="color:var(--td);font-weight:400;font-size:11px;">(opcional)</span>':'';
+    html+='<div class="modal-ej">'+icon+'<span class="modal-ej-nombre">'+nombre+etqOpc+'</span>'
       +'<span class="modal-ej-stats">'+scs.length+'/'+t+' · '+metricasEj+'</span></div>';
   });
   document.getElementById('modal-ejercicios-lista').innerHTML=html;
@@ -4846,6 +4872,7 @@ document.getElementById('btn-mostrar-resumen').addEventListener('click',()=>{
   document.getElementById('modal-moti-sub').textContent=frase.s;
 
   abrirResumen();
+  if(_conflictoPendiente)mostrarEstadoGuardado(_conflictoPendiente.texto,_conflictoPendiente.botones,{conflicto:true});
   // 23-oct-2026: sin contenido visible, el recuadro secundario se veía como una
   // raya vacía bajo las tarjetas de "Revisar entrenamiento".
   requestAnimationFrame(()=>{
@@ -5352,7 +5379,23 @@ function huellaActual(){
 }
 
 // Estado visible del guardado: mensaje + botones, sin perder nunca el borrador.
-function mostrarEstadoGuardado(texto,botones){
+// Etapa 3: mientras haya un conflicto pendiente solo se ofrecen las acciones que
+// pueden resolverlo (aplicar la mía / ver lo guardado) y se conserva el resto del
+// contenido accesible: el pie deja de ser fijo y no tapa el título ni el desglose.
+// El conflicto sobrevive a «Volver a editar»: al reabrir el resumen se vuelve a ver.
+let _conflictoPendiente=null;
+function mostrarEstadoGuardado(texto,botones,opts){
+  opts=opts||{};
+  _conflictoPendiente=opts.conflicto?{texto:texto,botones:botones}:null;
+  const contModal=document.querySelector('.modal-resumen-full');
+  if(contModal)contModal.classList.toggle('en-conflicto',!!opts.conflicto);
+  const btnGuardar=document.getElementById('btn-confirmar-guardar');
+  if(btnGuardar)btnGuardar.style.display=opts.conflicto?'none':'';
+  if(opts.conflicto){
+    // «Aún no se ha guardado» sería falso: ya hay una versión guardada distinta.
+    const sub=document.getElementById('modal-resumen-subtitle');
+    if(sub)sub.textContent='Ya hay una versión guardada distinta. Tu borrador sigue aquí: elige arriba qué hacer.';
+  }
   const err=document.getElementById('save-error');
   if(err){err.textContent=texto;err.style.display='block';}
   let caja=document.getElementById('save-acciones');
@@ -5430,7 +5473,7 @@ async function comprobarSiLlego(){
       return;
     }
     mostrarEstadoGuardado('El servidor tiene esta sesión con un contenido que este móvil no conoce (¿otro dispositivo?). No se ha sobrescrito nada.',
-      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:j.huella})],['Ver lo guardado',()=>_irAlCierre(j.entreno_id)]]);
+      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:j.huella})],['Ver lo guardado',()=>_irAlCierre(j.entreno_id)]],{conflicto:true});
   }catch(e){
     mostrarEstadoGuardado('No se pudo comprobar (¿sin cobertura?). Tus series siguen en el móvil.',
       [['Comprobar otra vez',comprobarSiLlego],['Reintentar guardado',()=>ejecutarEnvio()]]);
@@ -5471,7 +5514,7 @@ async function ejecutarEnvio(opts){
   _liberarBotonGuardar();
   if(resp&&data&&data.conflicto){
     mostrarEstadoGuardado('Esta sesión ya está guardada con otro contenido que este móvil no conoce (¿otro dispositivo?). No se ha sobrescrito nada y tu borrador sigue aquí.',
-      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:data.huella})],['Ver lo guardado',()=>_irAlCierre(data.entreno_id)]]);
+      [['Aplicar la mía encima',()=>ejecutarEnvio({resolver:data.huella})],['Ver lo guardado',()=>_irAlCierre(data.entreno_id)]],{conflicto:true});
     return;
   }
   if(resp&&data&&resp.status>=400&&resp.status<500){
@@ -5584,7 +5627,7 @@ document.getElementById('btn-confirmar-guardar').addEventListener('click',()=>{
   if(errorMotivo)errorMotivo.style.display='none';
   if(!duracionRevisadaValida())return;
   if(saveError)saveError.style.display='none';
-  if(saveError)saveError.style.display='none';
+  _conflictoPendiente=null;
   const _cajaAcc=document.getElementById('save-acciones');if(_cajaAcc)_cajaAcc.innerHTML='';
   ejecutarEnvio();
 });
